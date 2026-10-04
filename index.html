@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>सारथी AI</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f7fb;
+      color: #222;
+      min-height: 100vh;
+    }
+
+    .app {
+      max-width: 700px;
+      margin: auto;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: #ffffff;
+      padding: 18px;
+      border-bottom: 1px solid #ddd;
+      text-align: center;
+    }
+
+    header h1 {
+      font-size: 26px;
+    }
+
+    header p {
+      margin-top: 6px;
+      color: #666;
+    }
+
+    #chat {
+      flex: 1;
+      padding: 18px;
+      overflow-y: auto;
+    }
+
+    .message {
+      margin-bottom: 14px;
+      padding: 12px 14px;
+      border-radius: 14px;
+      max-width: 90%;
+      line-height: 1.5;
+      white-space: pre-wrap;
+    }
+
+    .user {
+      background: #dcecff;
+      margin-left: auto;
+    }
+
+    .assistant {
+      background: white;
+      border: 1px solid #ddd;
+    }
+
+    .welcome {
+      text-align: center;
+      margin: 40px 10px;
+    }
+
+    .welcome h2 {
+      margin-bottom: 10px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      padding: 10px 14px;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 11px 15px;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    #searchButton {
+      background: #222;
+      color: white;
+    }
+
+    #sendButton {
+      background: #1769e0;
+      color: white;
+    }
+
+    .input-area {
+      background: white;
+      border-top: 1px solid #ddd;
+      padding: 12px;
+      display: flex;
+      gap: 8px;
+    }
+
+    #messageInput {
+      flex: 1;
+      border: 1px solid #ccc;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 16px;
+      outline: none;
+    }
+
+    #status {
+      text-align: center;
+      font-size: 13px;
+      color: #777;
+      padding: 5px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="app">
+
+    <header>
+      <h1>सारथी AI</h1>
+      <p>आपका निजी हिंदी AI सहायक</p>
+    </header>
+
+    <main id="chat">
+
+      <div class="welcome" id="welcome">
+        <h2>नमस्ते, मैं सारथी हूँ। 👋</h2>
+        <p>आज किसमें मदद करूँ?</p>
+      </div>
+
+    </main>
+
+    <div id="status"></div>
+
+    <div class="actions">
+      <button id="searchButton">
+        🌐 इंटरनेट सर्च
+      </button>
+    </div>
+
+    <div class="input-area">
+      <input
+        id="messageInput"
+        type="text"
+        placeholder="अपना सवाल लिखें..."
+        autocomplete="off"
+      >
+
+      <button id="sendButton">
+        भेजें
+      </button>
+    </div>
+
+  </div>
+
+  <script>
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("messageInput");
+    const sendButton = document.getElementById("sendButton");
+    const searchButton = document.getElementById("searchButton");
+    const status = document.getElementById("status");
+    const welcome = document.getElementById("welcome");
+
+    let messages = [];
+
+    function addMessage(role, content) {
+      if (welcome) {
+        welcome.remove();
+      }
+
+      const div = document.createElement("div");
+
+      div.className = "message " +
+        (role === "user" ? "user" : "assistant");
+
+      div.textContent = content;
+
+      chat.appendChild(div);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    async function sendMessage(useSearch = false) {
+      const text = input.value.trim();
+
+      if (!text) {
+        return;
+      }
+
+      addMessage("user", text);
+
+      messages.push({
+        role: "user",
+        content: text
+      });
+
+      input.value = "";
+      status.textContent = "सारथी जवाब तैयार कर रहा है...";
+
+      sendButton.disabled = true;
+      searchButton.disabled = true;
+
+      try {
+        const response = await fetch("/api/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            messages: messages,
+            webSearch: useSearch
+          })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.error || "जवाब नहीं मिल पाया।"
+          );
+        }
+
+        const reply = data.reply || "कोई जवाब नहीं मिला।";
+
+        addMessage("assistant", reply);
+
+        messages.push({
+          role: "assistant",
+          content: reply
+        });
+
+        status.textContent = "";
+
+      } catch (error) {
+        addMessage(
+          "assistant",
+          "अभी जवाब नहीं मिल पाया। कृपया फिर से कोशिश करें।"
+        );
+
+        status.textContent = "";
+      }
+
+      sendButton.disabled = false;
+      searchButton.disabled = false;
+
+      input.focus();
+    }
+
+    sendButton.addEventListener("click", () => {
+      sendMessage(false);
+    });
+
+    searchButton.addEventListener("click", () => {
+      sendMessage(true);
+    });
+
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter") {
+        sendMessage(false);
+      }
+    });
+  </script>
+
+</body>
+</html>
