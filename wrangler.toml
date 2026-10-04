@@ -1,3 +1,3 @@
 name = "sarathi-ai"
 main = "worker.js"
-compatibility_date = "2026-10-05"
+compatibility_date = "2026-10-04"
