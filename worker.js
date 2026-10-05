@@ -13,13 +13,14 @@ export default {
     }
 
     // =========================
-    // AI CHAT API
+    // CHAT API
     // =========================
     if (url.pathname === "/api/chat") {
       if (request.method !== "POST") {
         return json(
           {
             error: "Only POST requests are allowed.",
+            code: "METHOD_NOT_ALLOWED",
           },
           405
         );
@@ -29,7 +30,7 @@ export default {
     }
 
     // =========================
-    // CLOUDFLARE ASSETS
+    // WEBSITE FILES
     // =========================
     if (env.ASSETS) {
       return env.ASSETS.fetch(request);
@@ -45,30 +46,30 @@ export default {
 };
 
 
-// ==================================================
-// CHAT HANDLER
-// ==================================================
+// ============================================================
+// MAIN CHAT HANDLER
+// ============================================================
 
 async function handleChat(request, env) {
   try {
-    // ----------------------------------------------
+    // --------------------------------------------------------
     // API KEY CHECK
-    // ----------------------------------------------
+    // --------------------------------------------------------
 
     if (!env.GROQ_API_KEY) {
       return json(
         {
           error:
-            "GROQ_API_KEY Cloudflare में configured नहीं है।",
+            "GROQ_API_KEY Cloudflare Secret में configured नहीं है।",
           code: "MISSING_API_KEY",
         },
         500
       );
     }
 
-    // ----------------------------------------------
-    // READ REQUEST
-    // ----------------------------------------------
+    // --------------------------------------------------------
+    // READ JSON
+    // --------------------------------------------------------
 
     let body;
 
@@ -83,6 +84,10 @@ async function handleChat(request, env) {
         400
       );
     }
+
+    // --------------------------------------------------------
+    // VALIDATE MESSAGES
+    // --------------------------------------------------------
 
     if (!body || !Array.isArray(body.messages)) {
       return json(
@@ -104,9 +109,9 @@ async function handleChat(request, env) {
       );
     }
 
-    // ----------------------------------------------
+    // --------------------------------------------------------
     // CLEAN MESSAGES
-    // ----------------------------------------------
+    // --------------------------------------------------------
 
     const messages = body.messages
       .slice(-20)
@@ -127,7 +132,10 @@ async function handleChat(request, env) {
           content,
         };
       })
-      .filter((message) => message.content.length > 0);
+      .filter(
+        (message) =>
+          message.content.length > 0
+      );
 
     if (messages.length === 0) {
       return json(
@@ -139,25 +147,26 @@ async function handleChat(request, env) {
       );
     }
 
-    // ----------------------------------------------
-    // SEARCH FLAG
-    // ----------------------------------------------
+    // --------------------------------------------------------
+    // SEARCH MODE
+    // --------------------------------------------------------
 
-    const useSearch = body.webSearch === true;
+    const useSearch =
+      body.webSearch === true;
 
-    // ----------------------------------------------
-    // SYSTEM PROMPT
-    // ----------------------------------------------
+    // ========================================================
+    // SARATHI SYSTEM PROMPT
+    // ========================================================
 
     const systemPrompt = `
 तुम "सारथी AI" हो।
 
-मुख्य उद्देश्य:
-उपयोगकर्ता को सही, स्पष्ट, प्राकृतिक, भरोसेमंद और उपयोगी उत्तर देना।
+तुम्हारा मुख्य उद्देश्य:
+सही, स्पष्ट, प्राकृतिक, भरोसेमंद और उपयोगी उत्तर देना।
 
-========================
+==================================================
 सामान्य नियम
-========================
+==================================================
 
 1. मुख्य उत्तर हिंदी में दो।
 2. भाषा आसान और स्वाभाविक रखो।
@@ -167,87 +176,54 @@ async function handleChat(request, env) {
 6. निश्चित जानकारी न हो तो उसे निश्चित तथ्य की तरह मत लिखो।
 7. प्रश्न में जो पूछा है उसी पर केंद्रित रहो।
 8. अनावश्यक जानकारी मत जोड़ो।
-9. एक बात बार-बार मत दोहराओ।
-10. जरूरत के अनुसार headings और numbered points इस्तेमाल करो।
-11. तारीख, व्यक्ति, घटना, वैज्ञानिक तथ्य, सूत्र और गणना जाँचकर दो।
-12. उदाहरण को सार्वभौमिक नियम मत बनाओ।
-13. परीक्षा में केवल लंबा दिखाने के लिए तथ्य मत जोड़ो।
+9. एक ही बात बार-बार मत दोहराओ।
+10. नकली citation या source मत बनाओ।
+11. नकली quotation मत बनाओ।
+12. मनगढ़ंत व्यक्ति, तारीख, संख्या या घटना मत बनाओ।
+13. गणना में अनुमान लगाकर उत्तर मत दो।
+14. अगर जानकारी उपलब्ध नहीं है तो साफ बताओ।
 
-========================
+==================================================
 STUDY CENTER
-========================
+==================================================
 
 2 अंक:
-छोटा और सीधा उत्तर।
+बहुत छोटा और सीधा उत्तर।
 
 5 अंक:
-परिभाषा/छोटी भूमिका + लगभग 4–6 मुख्य बिंदु + आवश्यक उदाहरण।
+छोटी भूमिका/परिभाषा +
+लगभग 4–6 मुख्य बिंदु +
+जरूरत हो तो छोटा उदाहरण +
+छोटा निष्कर्ष।
 
 10 अंक:
-भूमिका + headings + पर्याप्त व्याख्या + उदाहरण + निष्कर्ष।
+भूमिका +
+स्पष्ट headings +
+पर्याप्त आसान व्याख्या +
+उदाहरण +
+निष्कर्ष।
 
 12 अंक:
-संक्षिप्त भूमिका + स्पष्ट headings + पर्याप्त व्याख्या + आवश्यक उदाहरण + निष्कर्ष।
+संक्षिप्त भूमिका +
+स्पष्ट headings +
+विस्तृत लेकिन आसान व्याख्या +
+उदाहरण +
+निष्कर्ष।
 
-"संक्षेप में" हो तो छोटा उत्तर दो।
+केवल उत्तर लंबा दिखाने के लिए advanced जानकारी मत जोड़ो।
 
-"अंतर बताइए" हो तो तुलना/तालिका उपयोग करो।
-
-"समझाइए" हो तो परिभाषा + व्याख्या + उदाहरण दो।
-
-केवल कारण पूछे हों तो मुख्यतः कारण दो।
-केवल परिणाम पूछे हों तो मुख्यतः परिणाम दो।
-कारण, घटना और परिणाम को आपस में मत मिलाओ।
-
-========================
+==================================================
 इतिहास
-========================
-
-इतिहास में:
-- तथ्य, तारीख, व्यक्ति और घटना सही रखो।
-- कारण, घटना और परिणाम अलग रखो।
-- बिना आवश्यकता प्रतिशत या संख्या मत दो।
-- अनिश्चित आँकड़े मत गढ़ो।
-- नकली उद्धरण मत बनाओ।
-- बिना आधार किसी व्यक्ति को भ्रष्ट, अक्षम या स्वार्थी मत कहो।
-- किसी व्यक्ति के विचारों को बढ़ा-चढ़ाकर मत बताओ।
-
-विशेष रूप से फ्रांसीसी क्रांति में:
+==================================================
 
 प्रथम एस्टेट = पादरी वर्ग।
+
 द्वितीय एस्टेट = कुलीन वर्ग।
-तृतीय एस्टेट = सामान्य जनता का बड़ा वर्ग, जिसमें बुर्जुआ, किसान और शहरी श्रमिक शामिल थे।
 
-तृतीय एस्टेट का सटीक प्रतिशत सामान्य उत्तर में मत दो।
+तृतीय एस्टेट = सामान्य जनता का बड़ा वर्ग,
+जिसमें बुर्जुआ, किसान और शहरी श्रमिक शामिल थे।
 
-प्रथम और द्वितीय एस्टेट को अनेक विशेषाधिकार प्राप्त थे।
-तृतीय एस्टेट पर करों का असमान और भारी बोझ था।
-
-फ्रांस गंभीर वित्तीय संकट और राज्य ऋण से जूझ रहा था।
-
-सात वर्षीय युद्ध (1756–1763) और अमेरिकी स्वतंत्रता संग्राम में फ्रांस की भागीदारी ने वित्तीय दबाव बढ़ाया।
-
-खराब मौसम, फसल की समस्या और अनाज की बढ़ती कीमतें खाद्य संकट के महत्वपूर्ण कारण थे।
-
-करों के नामों की अनावश्यक सूची मत बनाओ।
-जरूरत हो तो "प्रत्यक्ष और अप्रत्यक्ष करों का असमान बोझ" कहो।
-
-लुई XVI को बिना आधार "अक्षम", "अयोग्य" आदि मत कहो।
-
-एस्टेट्स-जनरल 1614 के बाद 1789 में फिर बुलाया गया।
-1789 में इसे वित्तीय और राजनीतिक संकट की पृष्ठभूमि में बुलाया गया।
-
-14 जुलाई 1789 को जनता ने बास्तील के किले पर हमला किया।
-बास्तील की घटना को फ्रांसीसी क्रांति का कारण मत बताओ जब प्रश्न केवल कारण पूछ रहा हो।
-
-वोल्तेयर, रूसो और मोंतेस्क्यू प्रबोधन विचारकों के प्रमुख उदाहरण हैं।
-उनके विचारों को एक ही विचार या एक ही नारे का संयुक्त स्रोत मत बताओ।
-
-"स्वतंत्रता, समानता, बंधुत्व" को इन तीनों विचारकों का सीधा संयुक्त उद्धरण मत बताओ।
-
-रोबेस्पिएर को प्रमुख प्रबोधन दार्शनिक मत बताओ।
-
-फ्रांसीसी क्रांति के कारण पूछे जाने पर मुख्य ढाँचा:
+फ्रांसीसी क्रांति के प्रमुख कारण:
 
 1. सामाजिक असमानता
 2. करों का असमान बोझ
@@ -256,141 +232,130 @@ STUDY CENTER
 5. निरंकुश राजतंत्र और राजनीतिक प्रतिनिधित्व की समस्या
 6. प्रबोधन के विचार
 
-कोई व्यक्ति, कर का नाम, प्रतिशत, संख्या, प्रस्ताव या घटना केवल इसलिए मत जोड़ो कि उत्तर लंबा लगे।
+यदि प्रश्न केवल कारण पूछता है,
+तो घटना या परिणाम को कारण बनाकर मत लिखो।
 
-विशेष रूप से ये मनगढ़ंत नाम कभी मत बनाओ:
-"चार्ल्स-एंजेलिक वॉल्टेयर"
-"फ्रेडरिक वॉन हंबोल्ट"
+14 जुलाई 1789 की बास्तील घटना
+फ्रांसीसी क्रांति का महत्वपूर्ण घटनाक्रम थी।
+इसे केवल "कारण" के रूप में मत लिखो।
 
-बिना आधार "दो-तीन गुना", "90 प्रतिशत", "सभी कर केवल तृतीय एस्टेट देता था" जैसी निश्चित बातें मत लिखो।
-
-========================
+==================================================
 CHEMISTRY
-========================
+==================================================
 
-परमाणु:
-किसी तत्व की पहचान बनाए रखने वाली मूल इकाई।
-इसमें नाभिक और इलेक्ट्रॉन होते हैं।
-नाभिक में प्रोटॉन और सामान्यतः न्यूट्रॉन होते हैं।
-Hydrogen-1 में न्यूट्रॉन नहीं होता।
+परमाणु, अणु, आयन, तत्व और यौगिक
+को आपस में मत मिलाओ।
 
-अणु:
-दो या अधिक परमाणुओं से बनी स्वतंत्र इकाई हो सकता है।
-H2, O2, N2, H2O और CO2 उदाहरण हैं।
+NaCl को सामान्यतः आयनिक यौगिक की
+formula unit बताओ, molecule नहीं।
 
-हर अणु को केवल सहसंयोजक बंध से बना हुआ मत बताओ।
-
-NaCl को सामान्यतः आयनिक यौगिक की formula unit बताओ, molecule नहीं।
-
-आयनिक यौगिक और molecule को एक ही चीज मत बताओ।
-
-Diamond और graphite जैसे giant covalent network को molecular substance मत बताओ।
-
-B2H6 सहसंयोजक यौगिक है।
-
-========================
+==================================================
 PHYSICS
-========================
+==================================================
 
-न्यूटन के नियमों में net external force का सही प्रयोग करो।
+जड़त्व =
+वस्तु की अपनी अवस्था में परिवर्तन का विरोध करने की प्रवृत्ति।
 
-यदि कुल बाहरी बल शून्य हो तो विराम की वस्तु विराम में रहती है और गतिशील वस्तु सीधी रेखा में समान वेग से चलती रहती है।
+न्यूटन का प्रथम नियम:
+यदि किसी वस्तु पर कुल बाहरी बल शून्य है,
+तो विराम की वस्तु विराम में रहती है और
+गतिशील वस्तु समान वेग से सीधी रेखा में चलती रहती है।
 
-जड़त्व = अवस्था में परिवर्तन का विरोध करने की प्रवृत्ति।
+अनावश्यक calculus, vector notation
+या advanced derivation मत दो।
 
-अधिक द्रव्यमान वाली वस्तु में सामान्यतः अधिक जड़त्व होता है।
+Numerical में:
 
-कार्य:
-बल के कारण विस्थापन होने पर कार्य किया जाता है।
+दिया गया
+→ सूत्र
+→ मान रखना
+→ calculation
+→ अंतिम उत्तर
 
-W = F s cosθ
-
-W = कार्य
-F = बल
-s = विस्थापन
-θ = बल और विस्थापन के बीच कोण
-
-SI इकाई = जूल
-1 J = 1 N·m
-
-गणितीय प्रश्न में:
-दिए गए मान → सूत्र → मान रखना → गणना → अंतिम उत्तर।
-
-========================
-MATHEMATICS
-========================
-
-गणना ध्यान से करो।
-महत्वपूर्ण steps दिखाओ।
-समीकरण के दोनों पक्षों पर समान क्रिया करो।
-अंतिम उत्तर स्पष्ट लिखो।
-जहाँ संभव हो calculation की जाँच करो।
-इकाई हो तो सही इकाई लिखो।
-
-========================
+==================================================
 BIOLOGY
-========================
+==================================================
 
-प्रकाश संश्लेषण:
-हरे पौधे प्रकाश ऊर्जा की सहायता से कार्बन डाइऑक्साइड और जल से मुख्यतः ग्लूकोज जैसे कार्बनिक पदार्थ बनाते हैं और ऑक्सीजन छोड़ते हैं।
+प्रकाश संश्लेषण के सामान्य प्रश्न में
+मुख्य बातें:
 
-मुख्य आवश्यक बातें:
 प्रकाश
+क्लोरोफिल
 कार्बन डाइऑक्साइड
 जल
-क्लोरोफिल
+कार्बनिक पदार्थ/ग्लूकोज का निर्माण
+ऑक्सीजन का निकलना
 
-प्रकाश = ऊर्जा।
-क्लोरोफिल = प्रकाश-अवशोषक वर्णक।
-कार्बन डाइऑक्साइड और जल = कच्चे पदार्थ।
+सामान्य प्रश्न में बिना आवश्यकता:
 
-इन्हें "चार तत्व" मत बताओ।
+Photosystem I
+Photosystem II
+ATP
+NADPH
+Calvin cycle
+thylakoid
+stroma
 
-सामान्य समीकरण:
-6CO2 + 6H2O → C6H12O6 + 6O2
+जैसी advanced जानकारी मत दो।
 
-========================
+==================================================
+MATHEMATICS
+==================================================
+
+गणना ध्यान से करो।
+
+महत्वपूर्ण steps दिखाओ।
+
+अंतिम उत्तर स्पष्ट लिखो।
+
+जहाँ संभव हो calculation की जाँच करो।
+
+==================================================
 INTERNET SEARCH
-========================
+==================================================
 
 यदि इंटरनेट खोज चालू है:
-- वर्तमान जानकारी के लिए browser search का उपयोग करो।
-- आज/अभी/लेटेस्ट/वर्तमान जैसी जानकारी में ताजा स्रोतों को प्राथमिकता दो।
-- खोज के बिना current information सत्यापित होने का दावा मत करो।
-- नकली source या citation मत बनाओ।
-- खोज परिणामों में अंतर हो तो सावधानी से बताओ।
 
-यदि इंटरनेट खोज उपलब्ध नहीं है तो वर्तमान जानकारी को सत्यापित तथ्य की तरह मत बताओ।
+1. वर्तमान जानकारी के लिए search का उपयोग करो।
+2. आज/अभी/latest/current जैसी जानकारी में
+   ताजा जानकारी को प्राथमिकता दो।
+3. नकली source मत बनाओ।
+4. नकली citation मत बनाओ।
+5. Search असफल हो तो current information
+   को verified fact की तरह मत बताओ।
 
-========================
-अंतिम जाँच
-========================
+==================================================
+FINAL SELF-CHECK
+==================================================
 
-उत्तर भेजने से पहले जाँचो:
+उत्तर देने से पहले अपने उत्तर को internally जाँचो:
 
-क्या प्रश्न सही समझा?
+क्या प्रश्न सही समझा गया?
+क्या उत्तर सही विषय का है?
 क्या तथ्य सही हैं?
 क्या तारीख सही है?
-क्या व्यक्ति और घटना सही हैं?
+क्या व्यक्ति सही है?
 क्या formula सही है?
 क्या calculation सही है?
-क्या उत्तर माँगे गए अंकों के अनुसार है?
-क्या कोई अनावश्यक संख्या है?
+क्या अंक के अनुसार उत्तर की लंबाई सही है?
+क्या कोई advanced जानकारी बिना जरूरत जोड़ दी?
 क्या कोई मनगढ़ंत नाम है?
-क्या कोई नकली उद्धरण है?
-क्या कारण और घटना अलग हैं?
-क्या कारण और परिणाम अलग हैं?
+क्या कोई मनगढ़ंत संख्या है?
+क्या कोई नकली quotation है?
+क्या कारण और घटना आपस में मिल गए?
+क्या कारण और परिणाम आपस में मिल गए?
 क्या कोई बात दोहराई गई है?
 
-गलत जानकारी देने से बेहतर है कि अनिश्चित बात छोड़ दी जाए।
+यदि गलती हो तो उत्तर भेजने से पहले सुधारो।
 `;
 
-    // ----------------------------------------------
-    // BASE PAYLOAD
-    // ----------------------------------------------
+    // ========================================================
+    // MAIN GROQ REQUEST
+    // ========================================================
 
     const payload = {
       model: "openai/gpt-oss-120b",
+
       messages: [
         {
           role: "system",
@@ -399,21 +364,18 @@ INTERNET SEARCH
         ...messages,
       ],
 
-      // GPT-OSS के लिए modern parameter
       max_completion_tokens: 4096,
 
-      // factual answers में randomness कम
       temperature: 0.2,
 
-      // reasoning को unnecessarily बहुत लंबा न होने दें
       reasoning_effort: "low",
 
       stream: false,
     };
 
-    // ----------------------------------------------
-    // INTERNET SEARCH
-    // ----------------------------------------------
+    // --------------------------------------------------------
+    // SEARCH
+    // --------------------------------------------------------
 
     if (useSearch) {
       payload.tools = [
@@ -425,42 +387,38 @@ INTERNET SEARCH
       payload.tool_choice = "required";
     }
 
-    // ----------------------------------------------
-    // FIRST REQUEST
-    // ----------------------------------------------
+    // --------------------------------------------------------
+    // CALL GROQ
+    // --------------------------------------------------------
 
     let result = await callGroq(
       payload,
-      env.GROQ_API_KEY
+      env.GROQ_API_KEY,
+      55000
     );
 
-    // ----------------------------------------------
-    // RETRY TRANSIENT ERRORS
-    // ----------------------------------------------
+    // --------------------------------------------------------
+    // RETRY
+    // --------------------------------------------------------
 
     if (
-      result.retryable &&
-      !result.ok
+      !result.ok &&
+      result.retryable
     ) {
       await sleep(1200);
 
       result = await callGroq(
         payload,
-        env.GROQ_API_KEY
+        env.GROQ_API_KEY,
+        55000
       );
     }
 
-    // ----------------------------------------------
+    // ========================================================
     // SEARCH FALLBACK
-    // ----------------------------------------------
+    // ========================================================
 
     if (!result.ok && useSearch) {
-      // Search failure होने पर पूरी वेबसाइट को error
-      // देने के बजाय सामान्य AI answer देने की कोशिश।
-      //
-      // लेकिन AI को स्पष्ट बताया जाता है कि उसने
-      // इंटरनेट से जानकारी verify नहीं की है।
-
       const fallbackPayload = {
         model: "openai/gpt-oss-120b",
 
@@ -472,62 +430,80 @@ INTERNET SEARCH
               `
 
 महत्वपूर्ण:
-इस अनुरोध में इंटरनेट खोज अस्थायी रूप से उपलब्ध नहीं हो पाई।
-इसलिए वर्तमान/आज/लेटेस्ट जानकारी को सत्यापित तथ्य के रूप में मत बताओ।
-यदि प्रश्न वर्तमान जानकारी मांगता है तो साफ बताओ कि उसे अभी सत्यापित नहीं किया जा सका।`,
+इस अनुरोध में इंटरनेट खोज उपलब्ध नहीं हो पाई।
+इसलिए आज/अभी/latest/current जानकारी को
+verified current fact की तरह मत बताओ।
+`,
           },
+
           ...messages,
         ],
 
         max_completion_tokens: 4096,
+
         temperature: 0.2,
+
         reasoning_effort: "low",
+
         stream: false,
       };
 
       let fallback = await callGroq(
         fallbackPayload,
-        env.GROQ_API_KEY
+        env.GROQ_API_KEY,
+        55000
       );
 
       if (
-        fallback.retryable &&
-        !fallback.ok
+        !fallback.ok &&
+        fallback.retryable
       ) {
         await sleep(1200);
 
         fallback = await callGroq(
           fallbackPayload,
-          env.GROQ_API_KEY
+          env.GROQ_API_KEY,
+          55000
         );
       }
 
-      if (fallback.ok && fallback.reply) {
+      if (
+        fallback.ok &&
+        fallback.reply
+      ) {
+        const checked =
+          await selfCheckAndCorrect(
+            messages,
+            fallback.reply,
+            env.GROQ_API_KEY
+          );
+
         return json({
-          reply: fallback.reply,
+          reply: checked.reply,
           searchUnavailable: true,
+          selfChecked:
+            checked.selfChecked,
+          selfCorrected:
+            checked.selfCorrected,
         });
       }
     }
 
-    // ----------------------------------------------
+    // ========================================================
     // FINAL ERROR
-    // ----------------------------------------------
+    // ========================================================
 
     if (!result.ok) {
       return json(
         {
           error: result.error,
           code: result.code,
-          requestId: result.requestId || null,
+          requestId:
+            result.requestId || null,
         },
         result.status || 502
       );
     }
-
-    // ----------------------------------------------
-    // SUCCESS
-    // ----------------------------------------------
 
     if (!result.reply) {
       return json(
@@ -535,14 +511,30 @@ INTERNET SEARCH
           error:
             "Groq ने खाली उत्तर लौटाया। कृपया फिर कोशिश करें।",
           code: "EMPTY_GROQ_RESPONSE",
-          requestId: result.requestId || null,
+          requestId:
+            result.requestId || null,
         },
         502
       );
     }
 
+    // ========================================================
+    // SELF-CHECK + SELF-CORRECTION
+    // ========================================================
+
+    const checked =
+      await selfCheckAndCorrect(
+        messages,
+        result.reply,
+        env.GROQ_API_KEY
+      );
+
     return json({
-      reply: result.reply,
+      reply: checked.reply,
+      selfChecked:
+        checked.selfChecked,
+      selfCorrected:
+        checked.selfCorrected,
     });
 
   } catch (error) {
@@ -552,6 +544,7 @@ INTERNET SEARCH
           error instanceof Error
             ? error.message
             : String(error),
+
         code: "WORKER_ERROR",
       },
       500
@@ -560,44 +553,316 @@ INTERNET SEARCH
 }
 
 
-// ==================================================
-// GROQ REQUEST
-// ==================================================
+// ============================================================
+// SELF CHECK + SELF CORRECTION
+// ============================================================
 
-async function callGroq(payload, apiKey) {
-  const controller = new AbortController();
-
-  // Cloudflare Worker को अनावश्यक रूप से लंबे समय
-  // तक लटकने से रोकें।
-  const timeout = setTimeout(
-    () => controller.abort(),
-    55000
-  );
-
+async function selfCheckAndCorrect(
+  messages,
+  answer,
+  apiKey
+) {
   try {
-    const response = await fetch(
-      "https://api.groq.com/openai/v1/chat/completions",
-      {
-        method: "POST",
+    const checkerPrompt = `
+तुम "सारथी AI Quality Checker" हो।
 
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-          Accept: "application/json",
+नीचे उपयोगकर्ता का प्रश्न और AI का उत्तर दिया गया है।
+
+तुम्हारा काम केवल quality check करना है।
+
+जाँच करो:
+
+1. क्या उत्तर प्रश्न का सही उत्तर देता है?
+2. क्या कोई factual error है?
+3. क्या कोई मनगढ़ंत तथ्य है?
+4. क्या कोई गलत नाम/date/number है?
+5. क्या गणना गलत है?
+6. क्या परीक्षा के marks के अनुसार उत्तर है?
+7. क्या अनावश्यक advanced जानकारी है?
+8. क्या प्रश्न और उत्तर का विषय अलग हो गया है?
+9. क्या कोई बात दोहराई गई है?
+10. क्या भाषा स्पष्ट है?
+
+यदि उत्तर सही है:
+needs_correction = false
+
+यदि गलती है:
+needs_correction = true
+और corrected_answer में पूरा सही उत्तर दो।
+
+महत्वपूर्ण:
+- केवल छोटी गलती हो तो भी corrected_answer पूरा उत्तर होना चाहिए।
+- नई जानकारी केवल तभी जोड़ो जब वह जरूरी और विश्वसनीय हो।
+- facts मत गढ़ो।
+- प्रश्न का उत्तर बदलकर कोई दूसरा उत्तर मत दो।
+`;
+
+    const conversationText =
+      messages
+        .map(
+          (m) =>
+            `${m.role}: ${m.content}`
+        )
+        .join("\n\n");
+
+    const checkerPayload = {
+      model: "openai/gpt-oss-120b",
+
+      messages: [
+        {
+          role: "system",
+          content: checkerPrompt,
         },
 
-        body: JSON.stringify(payload),
+        {
+          role: "user",
+          content: `
+USER CONVERSATION:
 
-        signal: controller.signal,
-      }
+${conversationText}
+
+AI ANSWER:
+
+${answer}
+`,
+        },
+      ],
+
+      max_completion_tokens: 4096,
+
+      temperature: 0,
+
+      reasoning_effort: "low",
+
+      stream: false,
+
+      response_format: {
+        type: "json_schema",
+
+        json_schema: {
+          name: "sarathi_quality_check",
+
+          strict: true,
+
+          schema: {
+            type: "object",
+
+            properties: {
+              needs_correction: {
+                type: "boolean",
+              },
+
+              issues: {
+                type: "array",
+
+                items: {
+                  type: "string",
+                },
+              },
+
+              corrected_answer: {
+                type: "string",
+              },
+            },
+
+            required: [
+              "needs_correction",
+              "issues",
+              "corrected_answer",
+            ],
+
+            additionalProperties: false,
+          },
+        },
+      },
+    };
+
+    let check = await callGroq(
+      checkerPayload,
+      apiKey,
+      20000
     );
 
-    const raw = await response.text();
+    if (
+      !check.ok &&
+      check.retryable
+    ) {
+      await sleep(700);
+
+      check = await callGroq(
+        checkerPayload,
+        apiKey,
+        20000
+      );
+    }
+
+    // --------------------------------------------------------
+    // CHECKER FAILS
+    // --------------------------------------------------------
+
+    if (!check.ok || !check.raw) {
+      return {
+        reply: answer,
+        selfChecked: false,
+        selfCorrected: false,
+      };
+    }
+
+    // --------------------------------------------------------
+    // PARSE CHECK RESULT
+    // --------------------------------------------------------
+
+    let report;
+
+    try {
+      report =
+        JSON.parse(check.raw);
+    } catch {
+      return {
+        reply: answer,
+        selfChecked: false,
+        selfCorrected: false,
+      };
+    }
+
+    if (
+      typeof report.needs_correction !==
+      "boolean"
+    ) {
+      return {
+        reply: answer,
+        selfChecked: false,
+        selfCorrected: false,
+      };
+    }
+
+    // --------------------------------------------------------
+    // NO CORRECTION REQUIRED
+    // --------------------------------------------------------
+
+    if (
+      report.needs_correction === false
+    ) {
+      return {
+        reply: answer,
+        selfChecked: true,
+        selfCorrected: false,
+      };
+    }
+
+    // --------------------------------------------------------
+    // CORRECTED ANSWER VALIDATION
+    // --------------------------------------------------------
+
+    const corrected =
+      typeof report.corrected_answer ===
+      "string"
+        ? report.corrected_answer.trim()
+        : "";
+
+    if (!corrected) {
+      return {
+        reply: answer,
+        selfChecked: true,
+        selfCorrected: false,
+      };
+    }
+
+    // --------------------------------------------------------
+    // SAFETY CHECK:
+    // Don't allow a wildly oversized correction.
+    // --------------------------------------------------------
+
+    const maximumAllowed =
+      Math.max(
+        answer.length * 2.5,
+        20000
+      );
+
+    if (
+      corrected.length >
+      maximumAllowed
+    ) {
+      return {
+        reply: answer,
+        selfChecked: true,
+        selfCorrected: false,
+      };
+    }
+
+    // --------------------------------------------------------
+    // CORRECTION ACCEPTED
+    // --------------------------------------------------------
+
+    return {
+      reply: corrected,
+      selfChecked: true,
+      selfCorrected: true,
+    };
+
+  } catch {
+    // सबसे महत्वपूर्ण सुरक्षा:
+    // Self-check में error हो तो original answer सुरक्षित रहेगा।
+
+    return {
+      reply: answer,
+      selfChecked: false,
+      selfCorrected: false,
+    };
+  }
+}
+
+
+// ============================================================
+// GROQ API
+// ============================================================
+
+async function callGroq(
+  payload,
+  apiKey,
+  timeoutMs
+) {
+  const controller =
+    new AbortController();
+
+  const timeout =
+    setTimeout(() => {
+      controller.abort();
+    }, timeoutMs);
+
+  try {
+    const response =
+      await fetch(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {
+          method: "POST",
+
+          headers: {
+            Authorization:
+              `Bearer ${apiKey}`,
+
+            "Content-Type":
+              "application/json",
+
+            Accept:
+              "application/json",
+          },
+
+          body: JSON.stringify(payload),
+
+          signal: controller.signal,
+        }
+      );
+
+    const raw =
+      await response.text();
 
     let data;
 
     try {
-      data = raw ? JSON.parse(raw) : {};
+      data = raw
+        ? JSON.parse(raw)
+        : {};
     } catch {
       data = {
         error: {
@@ -609,10 +874,18 @@ async function callGroq(payload, apiKey) {
     }
 
     const requestId =
-      response.headers.get("x-request-id") ||
-      response.headers.get("x-groq-request-id") ||
+      response.headers.get(
+        "x-request-id"
+      ) ||
+      response.headers.get(
+        "x-groq-request-id"
+      ) ||
       data?.id ||
       null;
+
+    // --------------------------------------------------------
+    // API ERROR
+    // --------------------------------------------------------
 
     if (!response.ok) {
       const message =
@@ -621,7 +894,6 @@ async function callGroq(payload, apiKey) {
         raw ||
         `Groq API error (${response.status})`;
 
-      // इन errors पर retry करना उपयोगी है।
       const retryable =
         response.status === 408 ||
         response.status === 409 ||
@@ -632,11 +904,18 @@ async function callGroq(payload, apiKey) {
         ok: false,
         retryable,
         status: response.status,
-        code: data?.error?.code || `HTTP_${response.status}`,
+        code:
+          data?.error?.code ||
+          `HTTP_${response.status}`,
         error: message,
         requestId,
+        raw: null,
       };
     }
+
+    // --------------------------------------------------------
+    // GET FIRST CHOICE
+    // --------------------------------------------------------
 
     const choice =
       Array.isArray(data?.choices)
@@ -644,9 +923,34 @@ async function callGroq(payload, apiKey) {
         : null;
 
     const reply =
-      typeof choice?.message?.content === "string"
+      typeof choice?.message?.content ===
+      "string"
         ? choice.message.content.trim()
         : "";
+
+    // --------------------------------------------------------
+    // CHECKER RAW JSON SUPPORT
+    // --------------------------------------------------------
+
+    if (
+      payload.response_format &&
+      raw
+    ) {
+      return {
+        ok: true,
+        reply: "",
+        raw:
+          typeof choice?.message?.content ===
+          "string"
+            ? choice.message.content.trim()
+            : raw,
+        requestId,
+      };
+    }
+
+    // --------------------------------------------------------
+    // NORMAL ANSWER
+    // --------------------------------------------------------
 
     if (!reply) {
       return {
@@ -657,12 +961,14 @@ async function callGroq(payload, apiKey) {
         error:
           "Groq response आया लेकिन उसमें कोई text answer नहीं था।",
         requestId,
+        raw: null,
       };
     }
 
     return {
       ok: true,
       reply,
+      raw: null,
       requestId,
     };
 
@@ -679,13 +985,17 @@ async function callGroq(payload, apiKey) {
       ok: false,
       retryable: true,
       status: 504,
+
       code: isTimeout
         ? "GROQ_TIMEOUT"
         : "GROQ_NETWORK_ERROR",
+
       error: isTimeout
         ? "Groq से जवाब आने में बहुत समय लगा।"
         : `Groq connection error: ${message}`,
+
       requestId: null,
+      raw: null,
     };
 
   } finally {
@@ -694,33 +1004,43 @@ async function callGroq(payload, apiKey) {
 }
 
 
-// ==================================================
+// ============================================================
 // HELPERS
-// ==================================================
+// ============================================================
 
 function sleep(ms) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
+  return new Promise(
+    (resolve) => setTimeout(resolve, ms)
+  );
 }
 
 
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+
+    "Access-Control-Allow-Methods":
+      "POST, OPTIONS",
+
+    "Access-Control-Allow-Headers":
+      "Content-Type",
   };
 }
 
 
-function json(data, status = 200) {
+function json(
+  data,
+  status = 200
+) {
   return new Response(
     JSON.stringify(data),
+
     {
       status,
+
       headers: {
         ...corsHeaders(),
+
         "Content-Type":
           "application/json; charset=utf-8",
       },
