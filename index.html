@@ -151,6 +151,11 @@
       color: #222;
     }
 
+    #speakButton.active {
+      background: #dcecff;
+      color: #1769e0;
+    }
+
     #quizButton {
       background: #eee;
       color: #222;
@@ -562,6 +567,8 @@
 
   let brightness = 100;
 
+  let isSpeaking = false;
+
 
   // ==========================================================
   // STATUS
@@ -635,17 +642,12 @@
     customText = null
   ) {
 
-    // --------------------------------------------------------
-    // सबसे पहले सवाल सुरक्षित करो
-    // --------------------------------------------------------
-
     const text =
       customText !== null
         ? String(customText).trim()
         : input.value.trim();
 
 
-    // खाली सवाल Worker को कभी नहीं भेजना
     if (!text) {
 
       setStatus(
@@ -655,10 +657,6 @@
       return;
     }
 
-
-    // --------------------------------------------------------
-    // USER MESSAGE
-    // --------------------------------------------------------
 
     addMessage(
       "user",
@@ -671,11 +669,6 @@
       content: text
     });
 
-
-    // --------------------------------------------------------
-    // अब input खाली करो
-    // सवाल पहले ही text variable में सुरक्षित है
-    // --------------------------------------------------------
 
     input.value = "";
 
@@ -694,11 +687,6 @@
 
     try {
 
-      // ------------------------------------------------------
-      // IMPORTANT:
-      // Worker को message + history भेजना है
-      // ------------------------------------------------------
-
       const response =
         await fetch(
           API_BASE + "/api/chat",
@@ -712,13 +700,10 @@
 
             body: JSON.stringify({
 
-              // वर्तमान सवाल
               message: text,
 
-              // पिछली बातचीत
               history: messages,
 
-              // Search ON/OFF
               webSearch: Boolean(useSearch)
 
             })
@@ -742,10 +727,6 @@
       }
 
 
-      // ------------------------------------------------------
-      // SERVER ERROR
-      // ------------------------------------------------------
-
       if (!response.ok) {
 
         throw new Error(
@@ -756,10 +737,6 @@
         );
       }
 
-
-      // ------------------------------------------------------
-      // Worker का सही field: answer
-      // ------------------------------------------------------
 
       const reply =
         data?.answer ||
@@ -781,11 +758,6 @@
         content: reply
       });
 
-
-      // ------------------------------------------------------
-      // SELF CHECK
-      // Worker selfChecked भेजता है
-      // ------------------------------------------------------
 
       if (
         data?.selfChecked === true
@@ -844,7 +816,6 @@
     "click",
     () => {
 
-      // Search ON है तो true जाएगा
       sendMessage(
         searchMode
       );
@@ -935,6 +906,93 @@
 
 
   // ==========================================================
+  // CLEAN TEXT FOR SPEECH
+  // ==========================================================
+  // AI के Markdown चिन्ह हटाए जाते हैं।
+  // स्क्रीन पर दिखने वाला जवाब नहीं बदलेगा।
+  // केवल आवाज में साफ टेक्स्ट पढ़ा जाएगा।
+  // ==========================================================
+
+  function cleanTextForSpeech(text) {
+
+    if (!text) {
+      return "";
+    }
+
+
+    return String(text)
+
+      // Code blocks हटाएँ
+      .replace(
+        /```[\s\S]*?```/g,
+        " "
+      )
+
+      // Inline code
+      .replace(
+        /`([^`]+)`/g,
+        "$1"
+      )
+
+      // Images
+      .replace(
+        /!\[([^\]]*)\]\([^)]+\)/g,
+        "$1"
+      )
+
+      // Markdown links
+      .replace(
+        /\[([^\]]+)\]\([^)]+\)/g,
+        "$1"
+      )
+
+      // Heading symbols
+      .replace(
+        /#{1,6}\s*/g,
+        ""
+      )
+
+      // Markdown bullet at line start
+      .replace(
+        /^\s*[-*+]\s+/gm,
+        ""
+      )
+
+      // Numbered list
+      .replace(
+        /^\s*\d+\.\s+/gm,
+        ""
+      )
+
+      // Bold / italic / strike symbols
+      .replace(
+        /[*_~]+/g,
+        ""
+      )
+
+      // Quote symbol
+      .replace(
+        />\s?/g,
+        ""
+      )
+
+      // HTML tags
+      .replace(
+        /<\/?[^>]+>/g,
+        " "
+      )
+
+      // Extra spaces
+      .replace(
+        /\s+/g,
+        " "
+      )
+
+      .trim();
+  }
+
+
+  // ==========================================================
   // TEXT TO SPEECH
   // ==========================================================
 
@@ -965,12 +1023,51 @@
     }
 
 
+    // अगर पहले से बोल रहा है तो रोक दें
+    if (isSpeaking) {
+
+      speechSynthesis.cancel();
+
+      isSpeaking = false;
+
+      speakButton.classList.remove(
+        "active"
+      );
+
+      speakButton.textContent =
+        "🔊 सुनें";
+
+      setStatus("");
+
+      return;
+    }
+
+
+    // ========================================================
+    // IMPORTANT:
+    // आवाज में केवल साफ किया हुआ text जाएगा
+    // ========================================================
+
+    const cleanText =
+      cleanTextForSpeech(text);
+
+
+    if (!cleanText) {
+
+      setStatus(
+        "इस जवाब में सुनाने योग्य टेक्स्ट नहीं है"
+      );
+
+      return;
+    }
+
+
     speechSynthesis.cancel();
 
 
     const utterance =
       new SpeechSynthesisUtterance(
-        text
+        cleanText
       );
 
 
@@ -984,8 +1081,46 @@
       1;
 
 
+    // उपलब्ध हो तो Hindi voice चुनें
+    try {
+
+      const voices =
+        speechSynthesis.getVoices();
+
+      const hindiVoice =
+        voices.find(
+          (voice) =>
+            voice.lang &&
+            voice.lang
+              .toLowerCase()
+              .startsWith("hi")
+        );
+
+      if (hindiVoice) {
+        utterance.voice =
+          hindiVoice;
+      }
+
+    } catch (error) {
+
+      console.log(
+        "Hindi voice selection unavailable:",
+        error
+      );
+    }
+
+
     utterance.onstart =
       () => {
+
+        isSpeaking = true;
+
+        speakButton.classList.add(
+          "active"
+        );
+
+        speakButton.textContent =
+          "⏹️ रोकें";
 
         setStatus(
           "🔊 पढ़कर सुना रहा हूँ..."
@@ -997,12 +1132,30 @@
     utterance.onend =
       () => {
 
+        isSpeaking = false;
+
+        speakButton.classList.remove(
+          "active"
+        );
+
+        speakButton.textContent =
+          "🔊 सुनें";
+
         setStatus("");
       };
 
 
     utterance.onerror =
       () => {
+
+        isSpeaking = false;
+
+        speakButton.classList.remove(
+          "active"
+        );
+
+        speakButton.textContent =
+          "🔊 सुनें";
 
         setStatus(
           "आवाज़ चलाने में समस्या हुई"
@@ -1407,7 +1560,6 @@
                 "application/json"
             },
 
-            // Worker को image चाहिए
             body: JSON.stringify({
 
               image:
@@ -1447,7 +1599,6 @@
       }
 
 
-      // Worker का सही field = answer
       const reply =
         data?.answer ||
         "फोटो से कोई जवाब नहीं मिला।";
