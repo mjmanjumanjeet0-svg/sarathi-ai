@@ -87,10 +87,6 @@ async function handleChat(request, env) {
     );
   }
 
-  // ==========================================================
-  // CLEAN MESSAGES
-  // ==========================================================
-
   const messages = body.messages
     .slice(-20)
     .map((message) => {
@@ -168,7 +164,7 @@ MARKS CONTROL
 5 अंक:
 - सरल परिभाषा/भूमिका।
 - लगभग 4–6 मुख्य बिंदु।
-- छोटा उदाहरण यदि उपयोगी हो।
+- छोटा उदाहरण केवल जरूरत होने पर।
 - छोटा निष्कर्ष।
 - उत्तर मध्यम लंबाई का हो।
 - विश्वविद्यालय स्तर की अनावश्यक advanced detail नहीं।
@@ -191,9 +187,13 @@ MARKS CONTROL
 
 यदि प्रश्न में 5 अंक हैं:
 
-उत्तर को सरल और exam-friendly रखो।
+उत्तर सरल और exam-friendly होना चाहिए।
 
-इन advanced terms को केवल तभी इस्तेमाल करो जब प्रश्न विशेष रूप से इनके बारे में पूछे:
+यदि सामान्य प्रश्न है तो अनावश्यक advanced
+scientific terminology का उपयोग मत करो।
+
+इन terms को केवल तभी इस्तेमाल करो जब प्रश्न
+विशेष रूप से इनके बारे में पूछे:
 
 ATP
 NADPH
@@ -204,26 +204,57 @@ electron transport chain
 carbon fixation
 proton gradient
 
-यदि प्रश्न केवल "प्रकाश संश्लेषण क्या है?" जैसे सामान्य 5 अंक के प्रश्न का है,
-तो इन terms की जरूरत नहीं है।
-
 ============================================================
-PHOTOSYNTHESIS FACTS
+PHOTOSYNTHESIS
 ============================================================
 
-प्रकाश संश्लेषण के सामान्य उत्तर में:
+यदि सामान्य 5 अंक का प्रश्न "प्रकाश संश्लेषण क्या है?"
+या इसी प्रकार का प्रश्न हो:
 
-- हरे पौधे प्रकाश ऊर्जा का उपयोग करते हैं।
-- जल और कार्बन डाइऑक्साइड से भोजन बनता है।
-- क्लोरोफिल प्रकाश को अवशोषित करता है।
-- प्रकाश संश्लेषण के दौरान ऑक्सीजन वातावरण में छोड़ी जाती है।
-- पौधे दिन और रात दोनों समय श्वसन करते हैं।
+- सरल परिभाषा दो।
+- लगभग 4–6 मुख्य बिंदु दो।
+- क्लोरोफिल का उल्लेख किया जा सकता है।
+- जल और कार्बन डाइऑक्साइड का उल्लेख करो।
+- भोजन बनने की बात बताओ।
+- ऑक्सीजन निकलने की बात बताओ।
+- छोटा महत्व/निष्कर्ष दो।
+
+सामान्य 5 अंक के उत्तर में इनका उपयोग मत करो:
+
+ATP
+NADPH
+Calvin cycle
+Photosystem
+Photosystem I
+Photosystem II
+electron transport chain
+carbon fixation
+proton gradient
+इलेक्ट्रॉन
+हाइड्रोजन आयन
+जल का विभाजन
+प्रकाश अभिक्रिया
+अंधकार अभिक्रिया
+जैविक पदार्थ
+ऊर्जा भंडारण
 
 यह गलत नहीं लिखना:
 
 "पौधे रात में ऑक्सीजन छोड़ते हैं।"
 
-यदि रात और oxygen का उल्लेख हो तो वैज्ञानिक रूप से सही भाषा रखो।
+सही वैज्ञानिक बात:
+पौधे दिन और रात दोनों समय श्वसन करते हैं।
+
+============================================================
+PHOTOSYNTHESIS FACTS
+============================================================
+
+- हरे पौधे प्रकाश की सहायता से भोजन बनाते हैं।
+- पौधे जड़ों द्वारा मिट्टी से जल प्राप्त करते हैं।
+- पत्तियाँ वायु से कार्बन डाइऑक्साइड लेती हैं।
+- क्लोरोफिल प्रकाश को ग्रहण करता है।
+- प्रकाश संश्लेषण में ऑक्सीजन वातावरण में छोड़ी जाती है।
+- पौधे दिन और रात दोनों समय श्वसन करते हैं।
 
 ============================================================
 HISTORY
@@ -265,6 +296,7 @@ INTERNET SEARCH
 ============================================================
 
 यदि Internet Search मांगा गया है:
+
 - current information के लिए search उपयोग करो।
 - current facts को verify करने की कोशिश करो।
 - available sources/citations को बनाए रखो।
@@ -302,8 +334,11 @@ CONSISTENCY
     ],
 
     max_completion_tokens: 4096,
+
     temperature: 0.2,
+
     reasoning_effort: "low",
+
     stream: false,
   };
 
@@ -332,7 +367,7 @@ CONSISTENCY
   );
 
   // ==========================================================
-  // MAIN RETRY
+  // RETRY
   // ==========================================================
 
   if (!result.ok && result.retryable) {
@@ -358,14 +393,21 @@ CONSISTENCY
           role: "system",
           content:
             systemPrompt +
-            "\n\nInternet search अभी उपलब्ध नहीं है। Current जानकारी को verified न मानें।",
+            `
+
+Internet search अभी उपलब्ध नहीं है।
+Current जानकारी को independently verified न मानें।
+`,
         },
         ...messages,
       ],
 
       max_completion_tokens: 4096,
+
       temperature: 0.2,
+
       reasoning_effort: "low",
+
       stream: false,
     };
 
@@ -378,12 +420,15 @@ CONSISTENCY
     if (result.ok) {
       result.reply =
         result.reply +
-        "\n\n⚠️ Internet search इस समय उपलब्ध नहीं हो सका, इसलिए current जानकारी की स्वतंत्र पुष्टि नहीं हुई है।";
+        `
+
+⚠️ Internet search इस समय उपलब्ध नहीं हो सका,
+इसलिए current जानकारी की स्वतंत्र पुष्टि नहीं हुई है।`;
     }
   }
 
   // ==========================================================
-  // MAIN GROQ FAILURE
+  // ERROR
   // ==========================================================
 
   if (!result.ok) {
@@ -392,18 +437,17 @@ CONSISTENCY
         error: "Groq request failed.",
         code: result.code || "GROQ_ERROR",
         status: result.status || 502,
-        requestId: result.requestId || null,
-        detail: result.error || null,
+        requestId:
+          result.requestId || null,
+        detail:
+          result.error || null,
       },
       result.status || 502
     );
   }
 
   // ==========================================================
-  // FINAL SELF CHECK
-  //
-  // IMPORTANT:
-  // Self-Check कभी main answer को fail नहीं करेगा।
+  // SELF CHECK
   // ==========================================================
 
   let checked;
@@ -416,19 +460,24 @@ CONSISTENCY
     );
   } catch {
     checked = {
-      answer: deterministicFactCheck(
-        messages,
-        result.reply
-      ),
+      answer:
+        deterministicFactCheck(
+          messages,
+          result.reply
+        ),
+
       selfChecked: false,
+
       selfCorrected: false,
+
       factChecked: false,
+
       finalReviewed: false,
     };
   }
 
   // ==========================================================
-  // ALWAYS RETURN MAIN ANSWER
+  // FINAL RESPONSE
   // ==========================================================
 
   return json({
@@ -460,65 +509,70 @@ async function finalSelfCheck(
   originalAnswer,
   apiKey
 ) {
-  // ----------------------------------------------------------
-  // STEP 1
-  // Deterministic corrections
-  // ----------------------------------------------------------
-
-  let answer = deterministicFactCheck(
-    messages,
-    originalAnswer
-  );
+  let answer =
+    deterministicFactCheck(
+      messages,
+      originalAnswer
+    );
 
   const firstChanged =
     answer !== originalAnswer;
 
-  // ----------------------------------------------------------
-  // STEP 2
-  // Detect marks
-  // ----------------------------------------------------------
+  const question =
+    messages
+      .filter(
+        (m) => m.role === "user"
+      )
+      .map(
+        (m) => m.content
+      )
+      .join("\n");
 
-  const question = messages
-    .filter((m) => m.role === "user")
-    .map((m) => m.content)
-    .join("\n");
+  const marks =
+    detectMarks(question);
 
-  const marks = detectMarks(question);
-
-  // ----------------------------------------------------------
-  // STEP 3
-  // Detect overly advanced 5-mark photosynthesis answer
-  // ----------------------------------------------------------
+  // ==========================================================
+  // STRICT 5 MARKS PHOTOSYNTHESIS
+  // ==========================================================
 
   if (
     marks === 5 &&
-    isPhotosynthesisQuestion(question) &&
-    hasAdvancedPhotosynthesisTerms(answer)
+    isPhotosynthesisQuestion(question)
   ) {
-    const simplified =
-      await simplifyPhotosynthesisAnswer(
-        question,
-        answer,
-        apiKey
+    const needsSimpleRewrite =
+      hasAdvancedPhotosynthesisTerms(
+        answer
+      ) ||
+      answer.length > 1800 ||
+      /शैवाल|बैक्टीरिया|जैविक पदार्थ|कार्बन डाइऑक्साइड का स्थिरीकरण|जल का विभाजन/.test(
+        answer
       );
 
-    if (
-      simplified.ok &&
-      simplified.reply &&
-      simplified.reply.length > 20
-    ) {
-      answer =
-        deterministicFactCheck(
-          messages,
-          simplified.reply
+    if (needsSimpleRewrite) {
+      const simplified =
+        await simplifyPhotosynthesisAnswer(
+          question,
+          answer,
+          apiKey
         );
+
+      if (
+        simplified.ok &&
+        simplified.reply &&
+        simplified.reply.length >= 20
+      ) {
+        answer =
+          deterministicFactCheck(
+            messages,
+            simplified.reply
+          );
+      }
     }
   }
 
-  // ----------------------------------------------------------
-  // STEP 4
-  // AI final quality check
-  // ----------------------------------------------------------
+  // ==========================================================
+  // AI QUALITY CHECK
+  // ==========================================================
 
   const report =
     await runQualityChecker(
@@ -528,19 +582,15 @@ async function finalSelfCheck(
       apiKey
     );
 
-  // ----------------------------------------------------------
-  // If checker fails:
-  // return working answer.
-  // ----------------------------------------------------------
-
   if (!report.ok) {
     return {
-      answer: normalizeAnswer(
-        deterministicFactCheck(
-          messages,
-          answer
-        )
-      ),
+      answer:
+        normalizeAnswer(
+          deterministicFactCheck(
+            messages,
+            answer
+          )
+        ),
 
       selfChecked: false,
 
@@ -548,18 +598,19 @@ async function finalSelfCheck(
         firstChanged ||
         answer !== originalAnswer,
 
-      factChecked: firstChanged,
+      factChecked:
+        firstChanged,
 
       finalReviewed: false,
     };
   }
 
-  // ----------------------------------------------------------
-  // STEP 5
-  // Apply checker correction only if safe
-  // ----------------------------------------------------------
+  // ==========================================================
+  // AI CORRECTION
+  // ==========================================================
 
   let finalAnswer = answer;
+
   let corrected = false;
 
   if (
@@ -583,14 +634,14 @@ async function finalSelfCheck(
       !tooLarge
     ) {
       finalAnswer = candidate;
+
       corrected = true;
     }
   }
 
-  // ----------------------------------------------------------
-  // STEP 6
-  // Deterministic check AGAIN
-  // ----------------------------------------------------------
+  // ==========================================================
+  // FACT CHECK AGAIN
+  // ==========================================================
 
   finalAnswer =
     deterministicFactCheck(
@@ -598,45 +649,55 @@ async function finalSelfCheck(
       finalAnswer
     );
 
-  // ----------------------------------------------------------
-  // STEP 7
-  // Final advanced-term protection
-  // ----------------------------------------------------------
+  // ==========================================================
+  // FINAL PHOTOSYNTHESIS SIMPLIFICATION
+  // ==========================================================
 
   if (
     marks === 5 &&
-    isPhotosynthesisQuestion(question) &&
-    hasAdvancedPhotosynthesisTerms(finalAnswer)
+    isPhotosynthesisQuestion(question)
   ) {
-    const simplified =
-      await simplifyPhotosynthesisAnswer(
-        question,
-        finalAnswer,
-        apiKey
+    const stillTooAdvanced =
+      hasAdvancedPhotosynthesisTerms(
+        finalAnswer
+      ) ||
+      finalAnswer.length > 1800 ||
+      /शैवाल|बैक्टीरिया|जैविक पदार्थ|कार्बन डाइऑक्साइड का स्थिरीकरण|जल का विभाजन/.test(
+        finalAnswer
       );
 
-    if (
-      simplified.ok &&
-      simplified.reply &&
-      simplified.reply.length >= 20
-    ) {
-      finalAnswer =
-        deterministicFactCheck(
-          messages,
-          simplified.reply
+    if (stillTooAdvanced) {
+      const simplified =
+        await simplifyPhotosynthesisAnswer(
+          question,
+          finalAnswer,
+          apiKey
         );
 
-      corrected = true;
+      if (
+        simplified.ok &&
+        simplified.reply &&
+        simplified.reply.length >= 20
+      ) {
+        finalAnswer =
+          deterministicFactCheck(
+            messages,
+            simplified.reply
+          );
+
+        corrected = true;
+      }
     }
   }
 
-  // ----------------------------------------------------------
-  // STEP 8
-  // Final cleanup
-  // ----------------------------------------------------------
+  // ==========================================================
+  // NORMALIZE
+  // ==========================================================
 
   finalAnswer =
-    normalizeAnswer(finalAnswer);
+    normalizeAnswer(
+      finalAnswer
+    );
 
   return {
     answer: finalAnswer,
@@ -644,7 +705,8 @@ async function finalSelfCheck(
     selfChecked: true,
 
     selfCorrected:
-      firstChanged || corrected,
+      firstChanged ||
+      corrected,
 
     factChecked:
       report.factCheckPassed === true ||
@@ -662,34 +724,45 @@ async function finalSelfCheck(
 
 function detectMarks(question) {
   const text =
-    String(question || "").toLowerCase();
+    String(question || "")
+      .toLowerCase();
 
   if (
-    /12\s*अंक|12\s*marks|12\s*mark/.test(text)
+    /12\s*अंक|12\s*marks|12\s*mark/.test(
+      text
+    )
   ) {
     return 12;
   }
 
   if (
-    /10\s*अंक|10\s*marks|10\s*mark/.test(text)
+    /10\s*अंक|10\s*marks|10\s*mark/.test(
+      text
+    )
   ) {
     return 10;
   }
 
   if (
-    /5\s*अंक|5\s*marks|5\s*mark/.test(text)
+    /5\s*अंक|5\s*marks|5\s*mark/.test(
+      text
+    )
   ) {
     return 5;
   }
 
   if (
-    /2\s*अंक|2\s*marks|2\s*mark/.test(text)
+    /2\s*अंक|2\s*marks|2\s*mark/.test(
+      text
+    )
   ) {
     return 2;
   }
 
   if (
-    /1\s*अंक|1\s*mark|1\s*marks/.test(text)
+    /1\s*अंक|1\s*mark|1\s*marks/.test(
+      text
+    )
   ) {
     return 1;
   }
@@ -702,9 +775,12 @@ function detectMarks(question) {
 // PHOTOSYNTHESIS DETECTOR
 // ============================================================
 
-function isPhotosynthesisQuestion(question) {
+function isPhotosynthesisQuestion(
+  question
+) {
   const text =
-    String(question || "").toLowerCase();
+    String(question || "")
+      .toLowerCase();
 
   return (
     text.includes("प्रकाश संश्लेषण") ||
@@ -714,14 +790,17 @@ function isPhotosynthesisQuestion(question) {
 
 
 // ============================================================
-// ADVANCED PHOTOSYNTHESIS TERM DETECTOR
+// ADVANCED PHOTOSYNTHESIS DETECTOR
 // ============================================================
 
-function hasAdvancedPhotosynthesisTerms(answer) {
+function hasAdvancedPhotosynthesisTerms(
+  answer
+) {
   const text =
-    String(answer || "").toLowerCase();
+    String(answer || "")
+      .toLowerCase();
 
-  const terms = [
+  const advancedTerms = [
     "atp",
     "nadph",
     "calvin cycle",
@@ -731,18 +810,26 @@ function hasAdvancedPhotosynthesisTerms(answer) {
     "electron transport chain",
     "carbon fixation",
     "proton gradient",
+
     "इलेक्ट्रॉन परिवहन",
     "प्रोटॉन ग्रेडिएंट",
     "कार्बन स्थिरीकरण",
+    "कार्बन-फिक्सेशन",
+    "कार्बन फिक्सेशन",
     "कैल्विन चक्र",
+
     "इलेक्ट्रॉन",
     "हाइड्रोजन आयन",
+    "जल का विभाजन",
     "प्रकाश अभिक्रिया",
     "अंधकार अभिक्रिया",
+    "जैविक पदार्थ",
+    "ऊर्जा भंडारण",
   ];
 
-  return terms.some((term) =>
-    text.includes(term)
+  return advancedTerms.some(
+    (term) =>
+      text.includes(term)
   );
 }
 
@@ -757,7 +844,7 @@ async function simplifyPhotosynthesisAnswer(
   apiKey
 ) {
   const prompt = `
-तुम परीक्षा के लिए उत्तर सुधारने वाले संपादक हो।
+तुम "सारथी AI" के परीक्षा-उत्तर सुधारक हो।
 
 प्रश्न:
 ${question}
@@ -767,20 +854,117 @@ ${answer}
 
 यह सामान्य 5 अंक का प्रश्न है।
 
-काम:
+तुम्हारा काम मौजूदा उत्तर को बिल्कुल सरल,
+साफ और परीक्षा में लिखने योग्य हिंदी में
+दोबारा लिखना है।
 
-- उत्तर को बहुत सरल हिंदी में दोबारा लिखो।
-- परिभाषा रखो।
-- लगभग 4–6 मुख्य बिंदु रखो।
-- छोटा निष्कर्ष दो।
-- स्कूल/कॉलेज परीक्षा में लिखने योग्य भाषा रखो।
-- अनावश्यक वैज्ञानिक विवरण हटाओ।
-- ATP, NADPH, Calvin cycle, Photosystem जैसी advanced terminology हटाओ।
-- इलेक्ट्रॉन और हाइड्रोजन आयन जैसी अत्यधिक तकनीकी जानकारी भी हटाओ।
-- "रात में पौधे ऑक्सीजन छोड़ते हैं" मत लिखो।
-- यह लिख सकते हो कि पौधे दिन और रात दोनों समय श्वसन करते हैं।
-- कोई गलत वैज्ञानिक तथ्य मत रखो।
-- केवल पूरा अंतिम उत्तर दो।
+================================================
+अनिवार्य नियम
+================================================
+
+1. सबसे पहले एक आसान परिभाषा दो।
+
+2. उसके बाद केवल 4 से 6 मुख्य बिंदु दो।
+
+3. अंत में छोटा "महत्व" या "निष्कर्ष" दो।
+
+4. भाषा ऐसी हो जिसे सामान्य कॉलेज विद्यार्थी
+आसानी से समझ और याद कर सके।
+
+5. उत्तर बहुत ज्यादा बड़ा नहीं होना चाहिए।
+
+6. निम्न advanced शब्दों/विवरणों का उपयोग मत करो:
+
+ATP
+NADPH
+Calvin cycle
+Photosystem
+Photosystem I
+Photosystem II
+electron transport chain
+carbon fixation
+proton gradient
+इलेक्ट्रॉन
+हाइड्रोजन आयन
+जल का विभाजन
+प्रकाश अभिक्रिया
+अंधकार अभिक्रिया
+जैविक पदार्थ
+ऊर्जा भंडारण
+
+7. "कार्बन-फिक्सेशन" जैसे शब्द भी बिल्कुल मत लिखो।
+
+8. "शैवाल और कुछ बैक्टीरिया" जैसी अतिरिक्त जानकारी
+सामान्य 5 अंक के प्रश्न में मत दो।
+
+9. "सूर्य के प्रकाश ऊर्जा" जैसी गलत भाषा नहीं होनी चाहिए।
+
+सही भाषा:
+"सूर्य के प्रकाश की ऊर्जा"
+
+10. यह तथ्य सही रहना चाहिए:
+
+पौधे जल और कार्बन डाइऑक्साइड की सहायता से
+प्रकाश की उपस्थिति में भोजन बनाते हैं।
+
+11. क्लोरोफिल का उल्लेख किया जा सकता है।
+
+12. जल के लिए लिख सकते हो:
+
+"पौधे जड़ों द्वारा मिट्टी से जल प्राप्त करते हैं।"
+
+13. कार्बन डाइऑक्साइड के लिए लिख सकते हो:
+
+"पत्तियाँ वायु से कार्बन डाइऑक्साइड लेती हैं।"
+
+14. ऑक्सीजन के लिए लिख सकते हो:
+
+"इस प्रक्रिया में ऑक्सीजन वातावरण में छोड़ी जाती है।"
+
+15. रात के बारे में अनावश्यक चर्चा मत करो।
+
+16. यह कभी मत लिखो:
+
+"पौधे रात में ऑक्सीजन छोड़ते हैं।"
+
+17. यह भी मत लिखो:
+
+"पौधे केवल रात में श्वसन करते हैं।"
+
+18. उत्तर में अनावश्यक उदाहरण मत जोड़ो।
+
+19. "सरसों हमें खाने योग्य पत्ते प्रदान करती है"
+जैसे अनावश्यक उदाहरण मत दो।
+
+20. उत्तर में कोई वैज्ञानिक गलती नहीं होनी चाहिए।
+
+================================================
+वांछित संरचना
+================================================
+
+**प्रकाश संश्लेषण**
+
+[2–3 वाक्यों की सरल परिभाषा]
+
+**मुख्य बिंदु**
+
+1. ...
+2. ...
+3. ...
+4. ...
+5. ...
+
+**महत्व**
+
+[1–2 छोटे वाक्य]
+
+**निष्कर्ष**
+
+[1 छोटा वाक्य]
+
+केवल अंतिम उत्तर दो।
+कोई टिप्पणी, विश्लेषण या यह मत बताओ कि
+तुमने उत्तर सुधारा है।
 `;
 
   const payload = {
@@ -793,9 +977,12 @@ ${answer}
       },
     ],
 
-    max_completion_tokens: 1800,
-    temperature: 0.1,
+    max_completion_tokens: 1600,
+
+    temperature: 0.05,
+
     reasoning_effort: "low",
+
     stream: false,
   };
 
@@ -818,7 +1005,7 @@ async function runQualityChecker(
   apiKey
 ) {
   const prompt = `
-तुम Sarathi AI Final Quality Checker हो।
+तुम "Sarathi AI Final Quality Checker" हो।
 
 प्रश्न:
 ${question}
@@ -844,19 +1031,58 @@ needs_correction = false
 
 यदि सुधार जरूरी है:
 needs_correction = true
+
 और corrected_answer में पूरा सुधरा हुआ उत्तर दो।
+
+================================================
+5 MARKS PHOTOSYNTHESIS
+================================================
 
 यदि marks = 5 और सामान्य प्रकाश संश्लेषण का प्रश्न है:
 
-- उत्तर सरल होना चाहिए।
-- ATP नहीं।
-- NADPH नहीं।
-- Calvin cycle नहीं।
-- Photosystem नहीं।
-- Electron transport chain नहीं।
-- Carbon fixation नहीं।
-- Proton gradient नहीं।
-- अनावश्यक electron/hydrogen-ion detail नहीं।
+उत्तर सरल होना चाहिए।
+
+नहीं होना चाहिए:
+
+ATP
+NADPH
+Calvin cycle
+Photosystem
+Photosystem I
+Photosystem II
+Electron transport chain
+Carbon fixation
+Proton gradient
+इलेक्ट्रॉन
+हाइड्रोजन आयन
+जल का विभाजन
+प्रकाश अभिक्रिया
+अंधकार अभिक्रिया
+जैविक पदार्थ
+ऊर्जा भंडारण
+कार्बन-फिक्सेशन
+
+उत्तर में:
+
+- सरल परिभाषा
+- 4–6 मुख्य बिंदु
+- छोटा महत्व/निष्कर्ष
+
+होना चाहिए।
+
+अनावश्यक शैवाल/बैक्टीरिया की जानकारी
+नहीं जोड़नी है।
+
+"सूर्य के प्रकाश ऊर्जा" नहीं।
+"सूर्य के प्रकाश की ऊर्जा" सही है।
+
+यह गलत नहीं होना चाहिए:
+
+"पौधे रात में ऑक्सीजन छोड़ते हैं।"
+
+================================================
+OUTPUT
+================================================
 
 केवल यह JSON दो:
 
@@ -880,8 +1106,11 @@ needs_correction = true
     ],
 
     max_completion_tokens: 2500,
+
     temperature: 0,
+
     reasoning_effort: "low",
+
     stream: false,
   };
 
@@ -913,7 +1142,9 @@ needs_correction = true
   }
 
   const parsed =
-    parseCheckerJSON(result.reply);
+    parseCheckerJSON(
+      result.reply
+    );
 
   if (!parsed) {
     return {
@@ -928,7 +1159,8 @@ needs_correction = true
       parsed.needs_correction === true,
 
     correctedAnswer:
-      typeof parsed.corrected_answer === "string"
+      typeof parsed.corrected_answer ===
+      "string"
         ? parsed.corrected_answer
         : "",
 
@@ -953,17 +1185,24 @@ function parseCheckerJSON(text) {
   let clean =
     String(text).trim();
 
-  // Remove markdown code fences
   clean = clean
-    .replace(/^```json\s*/i, "")
-    .replace(/^```\s*/i, "")
-    .replace(/\s*```$/i, "")
+    .replace(
+      /^```json\s*/i,
+      ""
+    )
+    .replace(
+      /^```\s*/i,
+      ""
+    )
+    .replace(
+      /\s*```$/i,
+      ""
+    )
     .trim();
 
   try {
     return JSON.parse(clean);
   } catch {
-    // Try extracting first JSON object
     const start =
       clean.indexOf("{");
 
@@ -997,8 +1236,14 @@ function parseCheckerJSON(text) {
 
 function cleanCheckerAnswer(text) {
   return String(text || "")
-    .replace(/^```[\w-]*\s*/i, "")
-    .replace(/\s*```$/i, "")
+    .replace(
+      /^```[\w-]*\s*/i,
+      ""
+    )
+    .replace(
+      /\s*```$/i,
+      ""
+    )
     .trim();
 }
 
@@ -1017,26 +1262,28 @@ function deterministicFactCheck(
   const question =
     messages
       .filter(
-        (m) => m.role === "user"
+        (m) =>
+          m.role === "user"
       )
       .map(
-        (m) => m.content
+        (m) =>
+          m.content
       )
       .join("\n")
       .toLowerCase();
 
   // ==========================================================
-  // PHOTOSYNTHESIS
+  // PHOTOSYNTHESIS FACT PROTECTION
   // ==========================================================
 
   if (
-    question.includes("प्रकाश संश्लेषण") ||
-    question.includes("photosynthesis")
+    question.includes(
+      "प्रकाश संश्लेषण"
+    ) ||
+    question.includes(
+      "photosynthesis"
+    )
   ) {
-    // --------------------------------------------------------
-    // Wrong affirmative night-oxygen claims
-    // --------------------------------------------------------
-
     const badPatterns = [
       /रात में[^।\n]{0,80}ऑक्सीजन छोड़ता है/g,
       /रात में[^।\n]{0,80}ऑक्सीजन छोड़ती है/g,
@@ -1051,71 +1298,75 @@ function deterministicFactCheck(
       /रात्रि में[^।\n]{0,80}ऑक्सीजन छोड़ते हैं/g,
     ];
 
-    for (const pattern of badPatterns) {
-      text = text.replace(
-        pattern,
-        (match) => {
-          if (
-            /नहीं/.test(match) ||
-            /नही/.test(match)
-          ) {
-            return match;
-          }
+    for (
+      const pattern of badPatterns
+    ) {
+      text =
+        text.replace(
+          pattern,
+          (match) => {
+            if (
+              /नहीं/.test(
+                match
+              ) ||
+              /नही/.test(
+                match
+              )
+            ) {
+              return match;
+            }
 
-          return "प्रकाश संश्लेषण के दौरान पौधे ऑक्सीजन वातावरण में छोड़ते हैं";
-        }
-      );
+            return "प्रकाश संश्लेषण के दौरान पौधे ऑक्सीजन वातावरण में छोड़ते हैं";
+          }
+        );
     }
 
-    // --------------------------------------------------------
-    // Common grammar mistakes
-    // --------------------------------------------------------
+    text =
+      text.replace(
+        /जड़ों द्वारा जमीनी से/g,
+        "जड़ों द्वारा जमीन से"
+      );
 
-    text = text.replace(
-      /जड़ों द्वारा जमीनी से/g,
-      "जड़ों द्वारा जमीन से"
-    );
+    text =
+      text.replace(
+        /जमीनी से/g,
+        "जमीन से"
+      );
 
-    text = text.replace(
-      /जमीनी से/g,
-      "जमीन से"
-    );
+    text =
+      text.replace(
+        /रात में श्वसन के लिए ऑक्सीजन छोड़ता है/g,
+        "प्रकाश संश्लेषण के दौरान ऑक्सीजन वातावरण में छोड़ता है"
+      );
 
-    // --------------------------------------------------------
-    // Incorrect night respiration sentence
-    // --------------------------------------------------------
+    text =
+      text.replace(
+        /रात में श्वसन के लिए ऑक्सीजन छोड़ती है/g,
+        "प्रकाश संश्लेषण के दौरान ऑक्सीजन वातावरण में छोड़ती है"
+      );
 
-    text = text.replace(
-      /रात में श्वसन के लिए ऑक्सीजन छोड़ता है/g,
-      "प्रकाश संश्लेषण के दौरान ऑक्सीजन वातावरण में छोड़ता है"
-    );
+    text =
+      text.replace(
+        /रात में श्वसन के लिए ऑक्सीजन छोड़ते हैं/g,
+        "प्रकाश संश्लेषण के दौरान ऑक्सीजन वातावरण में छोड़ते हैं"
+      );
 
-    text = text.replace(
-      /रात में श्वसन के लिए ऑक्सीजन छोड़ती है/g,
-      "प्रकाश संश्लेषण के दौरान ऑक्सीजन वातावरण में छोड़ती है"
-    );
+    text =
+      text.replace(
+        /पौधे केवल रात में श्वसन करते हैं/g,
+        "पौधे दिन और रात दोनों समय श्वसन करते हैं"
+      );
 
-    text = text.replace(
-      /रात में श्वसन के लिए ऑक्सीजन छोड़ते हैं/g,
-      "प्रकाश संश्लेषण के दौरान ऑक्सीजन वातावरण में छोड़ते हैं"
-    );
-
-    // --------------------------------------------------------
-    // Wrong "only at night respiration"
-    // --------------------------------------------------------
-
-    text = text.replace(
-      /पौधे केवल रात में श्वसन करते हैं/g,
-      "पौधे दिन और रात दोनों समय श्वसन करते हैं"
-    );
-
-    text = text.replace(
-      /पौधे सिर्फ रात में श्वसन करते हैं/g,
-      "पौधे दिन और रात दोनों समय श्वसन करते हैं"
-    );
+    text =
+      text.replace(
+        /पौधे सिर्फ रात में श्वसन करते हैं/g,
+        "पौधे दिन और रात दोनों समय श्वसन करते हैं"
+      );
   }
 
-  return normalizeAnswer(text);
+  return normalizeAnswer(
+    text
+  );
 }
 
 
@@ -1125,9 +1376,18 @@ function deterministicFactCheck(
 
 function normalizeAnswer(text) {
   return String(text || "")
-    .replace(/\r\n/g, "\n")
-    .replace(/[ \t]+/g, " ")
-    .replace(/\n{3,}/g, "\n\n")
+    .replace(
+      /\r\n/g,
+      "\n"
+    )
+    .replace(
+      /[ \t]+/g,
+      " "
+    )
+    .replace(
+      /\n{3,}/g,
+      "\n\n"
+    )
     .trim();
 }
 
@@ -1146,7 +1406,8 @@ async function callGroq(
 
   const timeout =
     setTimeout(
-      () => controller.abort(),
+      () =>
+        controller.abort(),
       timeoutMs
     );
 
@@ -1160,12 +1421,15 @@ async function callGroq(
           headers: {
             "Authorization":
               `Bearer ${apiKey}`,
+
             "Content-Type":
               "application/json",
           },
 
           body:
-            JSON.stringify(payload),
+            JSON.stringify(
+              payload
+            ),
 
           signal:
             controller.signal,
@@ -1193,10 +1457,6 @@ async function callGroq(
       data = null;
     }
 
-    // --------------------------------------------------------
-    // HTTP ERROR
-    // --------------------------------------------------------
-
     if (!response.ok) {
       return {
         ok: false,
@@ -1217,42 +1477,53 @@ async function callGroq(
 
         error:
           data?.error?.message ||
-          raw.slice(0, 1000),
+          raw.slice(
+            0,
+            1000
+          ),
       };
     }
-
-    // --------------------------------------------------------
-    // INVALID JSON
-    // --------------------------------------------------------
 
     if (!data) {
       return {
         ok: false,
+
         retryable: true,
+
         status: 502,
-        code: "INVALID_GROQ_JSON",
+
+        code:
+          "INVALID_GROQ_JSON",
+
         requestId,
-        error: raw.slice(0, 1000),
+
+        error:
+          raw.slice(
+            0,
+            1000
+          ),
       };
     }
-
-    // --------------------------------------------------------
-    // EXTRACT CONTENT
-    // --------------------------------------------------------
 
     const content =
       data?.choices?.[0]?.message?.content;
 
     if (
-      typeof content !== "string"
+      typeof content !==
+      "string"
     ) {
       return {
         ok: false,
+
         retryable: false,
+
         status: 502,
+
         code:
           "INVALID_GROQ_RESPONSE",
+
         requestId,
+
         error:
           "Groq returned no usable message content.",
       };
@@ -1278,7 +1549,8 @@ async function callGroq(
       status: 504,
 
       code:
-        error?.name === "AbortError"
+        error?.name ===
+        "AbortError"
           ? "GROQ_TIMEOUT"
           : "GROQ_NETWORK_ERROR",
 
@@ -1289,7 +1561,9 @@ async function callGroq(
         "Network error",
     };
   } finally {
-    clearTimeout(timeout);
+    clearTimeout(
+      timeout
+    );
   }
 }
 
@@ -1315,11 +1589,15 @@ function sleep(ms) {
 
 function corsHeaders() {
   return {
-    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Origin":
+      "*",
+
     "Access-Control-Allow-Methods":
       "POST, OPTIONS",
+
     "Access-Control-Allow-Headers":
       "Content-Type",
+
     "Access-Control-Max-Age":
       "86400",
   };
