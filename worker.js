@@ -2,6 +2,7 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
+    // CORS
     if (request.method === "OPTIONS") {
       return new Response(null, {
         headers: {
@@ -12,6 +13,7 @@ export default {
       });
     }
 
+    // AI Chat API
     if (url.pathname === "/api/chat" && request.method === "POST") {
       try {
         const body = await request.json();
@@ -22,7 +24,10 @@ export default {
 
         if (!env.GROQ_API_KEY) {
           return json(
-            { error: "GROQ_API_KEY is not configured in Cloudflare." },
+            {
+              error:
+                "GROQ_API_KEY is not configured in Cloudflare.",
+            },
             500
           );
         }
@@ -34,7 +39,9 @@ export default {
               message.role === "assistant"
                 ? "assistant"
                 : "user",
-            content: String(message.content || "").slice(0, 8000),
+            content: String(
+              message.content || ""
+            ).slice(0, 8000),
           }));
 
         const useSearch = body.webSearch === true;
@@ -83,7 +90,7 @@ Chemistry के लिए विशेष नियम:
 13. परमाणु को "एक ही मूलभूत कण से बना" मत बताओ।
 परमाणु में नाभिक तथा उसके चारों ओर इलेक्ट्रॉन होते हैं।
 नाभिक में प्रोटॉन और सामान्यतः न्यूट्रॉन होते हैं।
-ध्यान रहे: सामान्य हाइड्रोजन-1 परमाणु में न्यूट्रॉन नहीं होता।
+सामान्य हाइड्रोजन-1 परमाणु में न्यूट्रॉन नहीं होता।
 
 14. अणु दो या दो से अधिक परमाणुओं से बनी स्वतंत्र इकाई हो सकता है।
 सामान्य अणुओं में परमाणु सहसंयोजक (covalent) बंध से जुड़े होते हैं।
@@ -107,57 +114,66 @@ H₂O, CO₂, O₂, N₂ और H₂।
 
 21. रासायनिक सूत्र और समीकरणों को ध्यान से लिखो।
 
+22. अणु के संदर्भ में धात्विक बंध को सामान्य अणु-निर्माण बंध के रूप में मत बताओ।
+
+23. यह सामान्य दावा मत करो कि सभी अणु परमाणुओं से अधिक स्थिर होते हैं।
+केवल प्रश्न के संदर्भ में वैज्ञानिक रूप से उचित स्थिरता की बात करो।
+
 Physics के लिए विशेष नियम:
 
-22. सूत्र सही लिखो और symbols का सही अर्थ बताओ।
+24. सूत्र सही लिखो और symbols का सही अर्थ बताओ।
 
-23. Newton के नियमों में "परिणामी बाहरी बल (net external force)" का सही संदर्भ रखो।
+25. Newton के नियमों में "परिणामी बाहरी बल (net external force)" का सही संदर्भ रखो।
 
-24. Physics numerical को चरण-दर-चरण हल करो।
+26. Physics numerical को चरण-दर-चरण हल करो।
 
 Mathematics के लिए विशेष नियम:
 
-25. गणना दोबारा जाँचो।
+27. गणना दोबारा जाँचो।
 
-26. महत्वपूर्ण calculation steps दिखाओ।
+28. महत्वपूर्ण calculation steps दिखाओ।
 
-27. अंतिम उत्तर स्पष्ट रूप से लिखो।
+29. अंतिम उत्तर स्पष्ट रूप से लिखो।
 
 Study Center:
 
-28. परीक्षा के प्रश्न का उत्तर लिखने योग्य भाषा में दो।
+30. परीक्षा के प्रश्न का उत्तर लिखने योग्य भाषा में दो।
 
-29. 2 अंक = छोटा और सीधा उत्तर।
+31. 2 अंक = छोटा और सीधा उत्तर।
 
-30. 5 अंक = मध्यम विस्तार।
+32. 5 अंक = मध्यम विस्तार।
 
-31. 10 या 12 अंक = परिचय, मुख्य बिंदु/शीर्षक, व्याख्या, उदाहरण और निष्कर्ष जहाँ आवश्यक हो।
+33. 10 या 12 अंक = परिचय, मुख्य बिंदु/शीर्षक, व्याख्या, उदाहरण और निष्कर्ष जहाँ आवश्यक हो।
 
-32. केवल उत्तर लंबा करने के लिए अनावश्यक बातें मत जोड़ो।
+34. केवल उत्तर लंबा करने के लिए अनावश्यक बातें मत जोड़ो।
 
-33. सामान्य उत्तर में अनावश्यक citation formatting जैसे [1], [2], 【1†...】 मत दिखाओ।
+35. सामान्य उत्तर में अनावश्यक citation formatting जैसे [1], [2], 【1†...】 मत दिखाओ।
 
 Internet Search:
 
-34. Internet Search चालू होने पर वर्तमान या बदलने वाली जानकारी के लिए search का उपयोग करो।
+36. Internet Search चालू होने पर वर्तमान या बदलने वाली जानकारी के लिए search का उपयोग करो।
 
-35. Search से मिली जानकारी को समझकर सरल हिंदी में प्रस्तुत करो।
+37. Search से मिली जानकारी को समझकर सरल हिंदी में प्रस्तुत करो।
 
-36. Search उपलब्ध न हो तो Internet verification का झूठा दावा मत करो।
+38. Search उपलब्ध न हो तो Internet verification का झूठा दावा मत करो।
 
-37. अलग-अलग search results में विरोधाभास हो तो बिना आधार के किसी एक को निश्चित तथ्य मत बताओ।
+39. अलग-अलग search results में विरोधाभास हो तो बिना आधार के किसी एक को निश्चित तथ्य मत बताओ।
 
 भाषा:
 
-38. उपयोगकर्ता हिंदी में पूछे तो मुख्य उत्तर हिंदी में दो।
+40. उपयोगकर्ता हिंदी में पूछे तो मुख्य उत्तर हिंदी में दो।
 
-39. अनावश्यक अंग्रेजी वाक्य मत मिलाओ।
+41. अनावश्यक अंग्रेजी वाक्य मत मिलाओ।
 
-40. उत्तर साफ headings और numbered points में दो जहाँ उपयोगी हो।
+42. उत्तर साफ headings और numbered points में दो जहाँ उपयोगी हो।
 
 सबसे महत्वपूर्ण:
+
 सही और वैज्ञानिक रूप से सटीक उत्तर देना केवल लंबा उत्तर देने से अधिक महत्वपूर्ण है।
+
 यदि जानकारी कम हो तो गलत जानकारी जोड़ने के बजाय सीमित लेकिन सही उत्तर दो।
+
+यदि प्रश्न परीक्षा के लिए हो तो उत्तर ऐसा दो जिसे विद्यार्थी आसानी से समझकर परीक्षा में लिख सके।
 `;
 
         const payload = {
@@ -174,6 +190,7 @@ Internet Search:
           max_tokens: 4096,
         };
 
+        // Internet Search
         if (useSearch) {
           payload.tools = [
             {
@@ -190,8 +207,10 @@ Internet Search:
             method: "POST",
 
             headers: {
-              Authorization: `Bearer ${env.GROQ_API_KEY}`,
-              "Content-Type": "application/json",
+              Authorization:
+                `Bearer ${env.GROQ_API_KEY}`,
+              "Content-Type":
+                "application/json",
             },
 
             body: JSON.stringify(payload),
@@ -217,43 +236,60 @@ Internet Search:
         if (!reply) {
           return json(
             {
-              error: "Groq returned no answer.",
+              error:
+                "Groq returned no answer.",
             },
             502
           );
         }
 
-        return json({ reply });
+        return json({
+          reply,
+        });
 
       } catch (error) {
         return json(
           {
-            error: "Server error. Please try again.",
+            error:
+              "Server error. Please try again.",
           },
           500
         );
       }
     }
 
+    // Website files
     if (env.ASSETS) {
       return env.ASSETS.fetch(request);
     }
 
-    return new Response("Sarathi AI is running.", {
-      status: 200,
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-      },
-    });
+    return new Response(
+      "Sarathi AI is running.",
+      {
+        status: 200,
+        headers: {
+          "Content-Type":
+            "text/plain; charset=utf-8",
+        },
+      }
+    );
   },
 };
 
+
+// JSON helper
 function json(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      "Access-Control-Allow-Origin": "*",
-    },
-  });
+  return new Response(
+    JSON.stringify(data),
+    {
+      status,
+      headers: {
+        "Content-Type":
+          "application/json; charset=utf-8",
+
+        "Access-Control-Allow-Origin":
+          "*",
+      },
+    }
+  );
 }
