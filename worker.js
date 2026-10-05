@@ -101,7 +101,9 @@ async function handleChat(request, env) {
         content = message.content;
       } else if (message?.content != null) {
         try {
-          content = JSON.stringify(message.content);
+          content = JSON.stringify(
+            message.content
+          );
         } catch {
           content = "";
         }
@@ -145,7 +147,7 @@ async function handleChat(request, env) {
 5. बिना जरूरत advanced terminology मत दो।
 6. गलत या संदिग्ध तथ्य मत लिखो।
 7. प्रश्न से बाहर की जानकारी मत जोड़ो।
-8. एक ही उत्तर में विरोधाभासी बातें मत लिखो।
+8. विरोधाभासी बातें मत लिखो।
 9. गणित की calculation दोबारा जाँचो।
 10. विज्ञान के facts जाँचो।
 11. इतिहास में तारीख, व्यक्ति, घटना और कारण-परिणाम जाँचो।
@@ -164,10 +166,9 @@ MARKS CONTROL
 5 अंक:
 - सरल परिभाषा/भूमिका।
 - लगभग 4–6 मुख्य बिंदु।
-- छोटा उदाहरण केवल जरूरत होने पर।
 - छोटा निष्कर्ष।
 - उत्तर मध्यम लंबाई का हो।
-- विश्वविद्यालय स्तर की अनावश्यक advanced detail नहीं।
+- अनावश्यक advanced detail नहीं।
 
 10 अंक:
 - भूमिका।
@@ -182,51 +183,42 @@ MARKS CONTROL
 - भूमिका, headings, व्याख्या, उदाहरण और निष्कर्ष।
 
 ============================================================
-5 MARKS STRICT LEVEL
+5 MARKS STRICT RULE
 ============================================================
 
-यदि प्रश्न में 5 अंक हैं:
+यदि प्रश्न में 5 अंक हैं तो उत्तर सरल और
+परीक्षा में लिखने योग्य होना चाहिए।
 
-उत्तर सरल और exam-friendly होना चाहिए।
-
-यदि सामान्य प्रश्न है तो अनावश्यक advanced
-scientific terminology का उपयोग मत करो।
-
-इन terms को केवल तभी इस्तेमाल करो जब प्रश्न
-विशेष रूप से इनके बारे में पूछे:
-
-ATP
-NADPH
-Calvin cycle
-Photosystem I
-Photosystem II
-electron transport chain
-carbon fixation
-proton gradient
+सामान्य प्रश्न में अनावश्यक advanced terminology
+का उपयोग मत करो।
 
 ============================================================
 PHOTOSYNTHESIS
 ============================================================
 
-यदि सामान्य 5 अंक का प्रश्न "प्रकाश संश्लेषण क्या है?"
-या इसी प्रकार का प्रश्न हो:
+यदि प्रश्न सामान्य है:
+
+"प्रकाश संश्लेषण क्या है?"
+
+तो:
 
 - सरल परिभाषा दो।
-- लगभग 4–6 मुख्य बिंदु दो।
-- क्लोरोफिल का उल्लेख किया जा सकता है।
-- जल और कार्बन डाइऑक्साइड का उल्लेख करो।
+- 4–6 मुख्य बिंदु दो।
+- क्लोरोफिल का उल्लेख कर सकते हो।
+- जल का उल्लेख करो।
+- कार्बन डाइऑक्साइड का उल्लेख करो।
 - भोजन बनने की बात बताओ।
 - ऑक्सीजन निकलने की बात बताओ।
-- छोटा महत्व/निष्कर्ष दो।
+- छोटा महत्व या निष्कर्ष दो।
 
-सामान्य 5 अंक के उत्तर में इनका उपयोग मत करो:
+सामान्य 5 अंक के उत्तर में ये terms मत दो:
 
 ATP
 NADPH
 Calvin cycle
-Photosystem
 Photosystem I
 Photosystem II
+Photosystem
 electron transport chain
 carbon fixation
 proton gradient
@@ -237,59 +229,46 @@ proton gradient
 अंधकार अभिक्रिया
 जैविक पदार्थ
 ऊर्जा भंडारण
+कार्बन-फिक्सेशन
+
+जब तक प्रश्न विशेष रूप से इन विषयों के बारे में
+नहीं पूछता।
 
 यह गलत नहीं लिखना:
 
 "पौधे रात में ऑक्सीजन छोड़ते हैं।"
 
-सही वैज्ञानिक बात:
 पौधे दिन और रात दोनों समय श्वसन करते हैं।
 
 ============================================================
-PHOTOSYNTHESIS FACTS
+SCIENCE
 ============================================================
 
-- हरे पौधे प्रकाश की सहायता से भोजन बनाते हैं।
-- पौधे जड़ों द्वारा मिट्टी से जल प्राप्त करते हैं।
-- पत्तियाँ वायु से कार्बन डाइऑक्साइड लेती हैं।
-- क्लोरोफिल प्रकाश को ग्रहण करता है।
-- प्रकाश संश्लेषण में ऑक्सीजन वातावरण में छोड़ी जाती है।
-- पौधे दिन और रात दोनों समय श्वसन करते हैं।
+वैज्ञानिक तथ्य सही रखो।
 
 ============================================================
 HISTORY
 ============================================================
 
-- तारीख जाँचो।
-- व्यक्ति और घटना का संबंध जाँचो।
-- कारण और परिणाम अलग रखो।
-- अनुमान को तथ्य की तरह मत लिखो।
+तारीख, व्यक्ति, घटना और कारण-परिणाम जाँचो।
 
 ============================================================
 CHEMISTRY
 ============================================================
 
-- Formula जाँचो।
-- Chemical equation जाँचो।
-- Equation balance जाँचो।
-- पदार्थ और product सही रखो।
+Formula और chemical equation जाँचो।
 
 ============================================================
 PHYSICS
 ============================================================
 
-- Formula जाँचो।
-- Units जाँचो।
-- Given values जाँचो।
-- Calculation दोबारा करो।
+Formula, unit और calculation जाँचो।
 
 ============================================================
 MATHEMATICS
 ============================================================
 
-- Formula सही लगाओ।
-- हर calculation जाँचो।
-- Final answer दोबारा verify करो।
+हर calculation दोबारा verify करो।
 
 ============================================================
 INTERNET SEARCH
@@ -297,9 +276,10 @@ INTERNET SEARCH
 
 यदि Internet Search मांगा गया है:
 
-- current information के लिए search उपयोग करो।
-- current facts को verify करने की कोशिश करो।
-- available sources/citations को बनाए रखो।
+- current information खोजो।
+- उपलब्ध sources/citations बनाए रखो।
+- current information को बिना verification के
+  निश्चित तथ्य की तरह मत लिखो।
 
 ============================================================
 FINAL RULE
@@ -312,8 +292,6 @@ MARKS
 LANGUAGE
 RELEVANCE
 CONSISTENCY
-
-जरूरत हो तो उत्तर सुधारो।
 
 सिर्फ अंतिम उत्तर दो।
 `;
@@ -357,7 +335,7 @@ CONSISTENCY
   }
 
   // ==========================================================
-  // MAIN REQUEST
+  // MAIN GROQ REQUEST
   // ==========================================================
 
   let result = await callGroq(
@@ -367,7 +345,7 @@ CONSISTENCY
   );
 
   // ==========================================================
-  // RETRY
+  // RETRY ONLY MAIN REQUEST
   // ==========================================================
 
   if (!result.ok && result.retryable) {
@@ -418,9 +396,7 @@ Current जानकारी को independently verified न मानें�
     );
 
     if (result.ok) {
-      result.reply =
-        result.reply +
-        `
+      result.reply += `
 
 ⚠️ Internet search इस समय उपलब्ध नहीं हो सका,
 इसलिए current जानकारी की स्वतंत्र पुष्टि नहीं हुई है।`;
@@ -428,15 +404,17 @@ Current जानकारी को independently verified न मानें�
   }
 
   // ==========================================================
-  // ERROR
+  // MAIN ERROR
   // ==========================================================
 
   if (!result.ok) {
     return json(
       {
         error: "Groq request failed.",
-        code: result.code || "GROQ_ERROR",
-        status: result.status || 502,
+        code:
+          result.code || "GROQ_ERROR",
+        status:
+          result.status || 502,
         requestId:
           result.requestId || null,
         detail:
@@ -447,7 +425,7 @@ Current जानकारी को independently verified न मानें�
   }
 
   // ==========================================================
-  // SELF CHECK
+  // LIGHTWEIGHT SELF CHECK
   // ==========================================================
 
   let checked;
@@ -467,11 +445,8 @@ Current जानकारी को independently verified न मानें�
         ),
 
       selfChecked: false,
-
       selfCorrected: false,
-
       factChecked: false,
-
       finalReviewed: false,
     };
   }
@@ -482,26 +457,26 @@ Current जानकारी को independently verified न मानें�
 
   return json({
     reply:
-      checked?.answer ||
+      checked.answer ||
       result.reply,
 
     selfChecked:
-      checked?.selfChecked === true,
+      checked.selfChecked === true,
 
     selfCorrected:
-      checked?.selfCorrected === true,
+      checked.selfCorrected === true,
 
     factChecked:
-      checked?.factChecked === true,
+      checked.factChecked === true,
 
     finalReviewed:
-      checked?.finalReviewed === true,
+      checked.finalReviewed === true,
   });
 }
 
 
 // ============================================================
-// FINAL SELF CHECK
+// LIGHTWEIGHT SELF CHECK
 // ============================================================
 
 async function finalSelfCheck(
@@ -521,10 +496,12 @@ async function finalSelfCheck(
   const question =
     messages
       .filter(
-        (m) => m.role === "user"
+        (m) =>
+          m.role === "user"
       )
       .map(
-        (m) => m.content
+        (m) =>
+          m.content
       )
       .join("\n");
 
@@ -532,23 +509,15 @@ async function finalSelfCheck(
     detectMarks(question);
 
   // ==========================================================
-  // STRICT 5 MARKS PHOTOSYNTHESIS
+  // 5 MARKS PHOTOSYNTHESIS
   // ==========================================================
 
   if (
     marks === 5 &&
-    isPhotosynthesisQuestion(question)
+    isPhotosynthesisQuestion(question) &&
+    needsSimplePhotosynthesisRewrite(answer)
   ) {
-    const needsSimpleRewrite =
-      hasAdvancedPhotosynthesisTerms(
-        answer
-      ) ||
-      answer.length > 1800 ||
-      /शैवाल|बैक्टीरिया|जैविक पदार्थ|कार्बन डाइऑक्साइड का स्थिरीकरण|जल का विभाजन/.test(
-        answer
-      );
-
-    if (needsSimpleRewrite) {
+    try {
       const simplified =
         await simplifyPhotosynthesisAnswer(
           question,
@@ -567,154 +536,74 @@ async function finalSelfCheck(
             simplified.reply
           );
       }
+    } catch {
+      // मुख्य उत्तर सुरक्षित रखें।
     }
   }
 
   // ==========================================================
-  // AI QUALITY CHECK
+  // FINAL DETERMINISTIC CHECK
   // ==========================================================
 
-  const report =
-    await runQualityChecker(
-      question,
-      answer,
-      marks,
-      apiKey
-    );
-
-  if (!report.ok) {
-    return {
-      answer:
-        normalizeAnswer(
-          deterministicFactCheck(
-            messages,
-            answer
-          )
-        ),
-
-      selfChecked: false,
-
-      selfCorrected:
-        firstChanged ||
-        answer !== originalAnswer,
-
-      factChecked:
-        firstChanged,
-
-      finalReviewed: false,
-    };
-  }
-
-  // ==========================================================
-  // AI CORRECTION
-  // ==========================================================
-
-  let finalAnswer = answer;
-
-  let corrected = false;
-
-  if (
-    report.needsCorrection === true &&
-    typeof report.correctedAnswer === "string"
-  ) {
-    const candidate =
-      cleanCheckerAnswer(
-        report.correctedAnswer
-      );
-
-    const tooLarge =
-      candidate.length >
-      Math.max(
-        answer.length * 2.5,
-        20000
-      );
-
-    if (
-      candidate.length >= 20 &&
-      !tooLarge
-    ) {
-      finalAnswer = candidate;
-
-      corrected = true;
-    }
-  }
-
-  // ==========================================================
-  // FACT CHECK AGAIN
-  // ==========================================================
-
-  finalAnswer =
+  answer =
     deterministicFactCheck(
       messages,
-      finalAnswer
-    );
-
-  // ==========================================================
-  // FINAL PHOTOSYNTHESIS SIMPLIFICATION
-  // ==========================================================
-
-  if (
-    marks === 5 &&
-    isPhotosynthesisQuestion(question)
-  ) {
-    const stillTooAdvanced =
-      hasAdvancedPhotosynthesisTerms(
-        finalAnswer
-      ) ||
-      finalAnswer.length > 1800 ||
-      /शैवाल|बैक्टीरिया|जैविक पदार्थ|कार्बन डाइऑक्साइड का स्थिरीकरण|जल का विभाजन/.test(
-        finalAnswer
-      );
-
-    if (stillTooAdvanced) {
-      const simplified =
-        await simplifyPhotosynthesisAnswer(
-          question,
-          finalAnswer,
-          apiKey
-        );
-
-      if (
-        simplified.ok &&
-        simplified.reply &&
-        simplified.reply.length >= 20
-      ) {
-        finalAnswer =
-          deterministicFactCheck(
-            messages,
-            simplified.reply
-          );
-
-        corrected = true;
-      }
-    }
-  }
-
-  // ==========================================================
-  // NORMALIZE
-  // ==========================================================
-
-  finalAnswer =
-    normalizeAnswer(
-      finalAnswer
+      answer
     );
 
   return {
-    answer: finalAnswer,
+    answer:
+      normalizeAnswer(answer),
 
     selfChecked: true,
 
     selfCorrected:
       firstChanged ||
-      corrected,
+      answer !== originalAnswer,
 
     factChecked:
-      report.factCheckPassed === true ||
-      firstChanged,
+      firstChanged ||
+      answer !== originalAnswer,
 
     finalReviewed:
-      report.finalReviewPassed === true,
+      true,
   };
+}
+
+
+// ============================================================
+// SHOULD SIMPLIFY PHOTOSYNTHESIS?
+// ============================================================
+
+function needsSimplePhotosynthesisRewrite(
+  answer
+) {
+  const text =
+    String(answer || "");
+
+  if (
+    text.length > 1800
+  ) {
+    return true;
+  }
+
+  if (
+    hasAdvancedPhotosynthesisTerms(
+      text
+    )
+  ) {
+    return true;
+  }
+
+  if (
+    /शैवाल|बैक्टीरिया|जैविक पदार्थ|कार्बन डाइऑक्साइड का स्थिरीकरण|जल का विभाजन/.test(
+      text
+    )
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 
@@ -783,8 +672,12 @@ function isPhotosynthesisQuestion(
       .toLowerCase();
 
   return (
-    text.includes("प्रकाश संश्लेषण") ||
-    text.includes("photosynthesis")
+    text.includes(
+      "प्रकाश संश्लेषण"
+    ) ||
+    text.includes(
+      "photosynthesis"
+    )
   );
 }
 
@@ -800,7 +693,7 @@ function hasAdvancedPhotosynthesisTerms(
     String(answer || "")
       .toLowerCase();
 
-  const advancedTerms = [
+  const terms = [
     "atp",
     "nadph",
     "calvin cycle",
@@ -827,7 +720,7 @@ function hasAdvancedPhotosynthesisTerms(
     "ऊर्जा भंडारण",
   ];
 
-  return advancedTerms.some(
+  return terms.some(
     (term) =>
       text.includes(term)
   );
@@ -854,26 +747,22 @@ ${answer}
 
 यह सामान्य 5 अंक का प्रश्न है।
 
-तुम्हारा काम मौजूदा उत्तर को बिल्कुल सरल,
-साफ और परीक्षा में लिखने योग्य हिंदी में
-दोबारा लिखना है।
+इसे बहुत सरल, साफ और परीक्षा में लिखने योग्य
+हिंदी में दोबारा लिखो।
 
-================================================
-अनिवार्य नियम
-================================================
+नियम:
 
-1. सबसे पहले एक आसान परिभाषा दो।
+1. आसान परिभाषा दो।
 
-2. उसके बाद केवल 4 से 6 मुख्य बिंदु दो।
+2. 4 से 6 मुख्य बिंदु दो।
 
-3. अंत में छोटा "महत्व" या "निष्कर्ष" दो।
+3. छोटा महत्व या निष्कर्ष दो।
 
-4. भाषा ऐसी हो जिसे सामान्य कॉलेज विद्यार्थी
-आसानी से समझ और याद कर सके।
+4. सामान्य कॉलेज विद्यार्थी आसानी से समझ सके।
 
-5. उत्तर बहुत ज्यादा बड़ा नहीं होना चाहिए।
+5. उत्तर बहुत बड़ा नहीं होना चाहिए।
 
-6. निम्न advanced शब्दों/विवरणों का उपयोग मत करो:
+6. ये शब्द बिल्कुल मत लिखो:
 
 ATP
 NADPH
@@ -891,60 +780,46 @@ proton gradient
 अंधकार अभिक्रिया
 जैविक पदार्थ
 ऊर्जा भंडारण
+कार्बन-फिक्सेशन
 
-7. "कार्बन-फिक्सेशन" जैसे शब्द भी बिल्कुल मत लिखो।
+7. "शैवाल और कुछ बैक्टीरिया" जैसी अतिरिक्त
+जानकारी सामान्य 5 अंक के उत्तर में मत दो।
 
-8. "शैवाल और कुछ बैक्टीरिया" जैसी अतिरिक्त जानकारी
-सामान्य 5 अंक के प्रश्न में मत दो।
+8. "सूर्य के प्रकाश ऊर्जा" मत लिखो।
 
-9. "सूर्य के प्रकाश ऊर्जा" जैसी गलत भाषा नहीं होनी चाहिए।
-
-सही भाषा:
+सही:
 "सूर्य के प्रकाश की ऊर्जा"
 
-10. यह तथ्य सही रहना चाहिए:
-
-पौधे जल और कार्बन डाइऑक्साइड की सहायता से
-प्रकाश की उपस्थिति में भोजन बनाते हैं।
-
-11. क्लोरोफिल का उल्लेख किया जा सकता है।
-
-12. जल के लिए लिख सकते हो:
+9. लिख सकते हो:
 
 "पौधे जड़ों द्वारा मिट्टी से जल प्राप्त करते हैं।"
 
-13. कार्बन डाइऑक्साइड के लिए लिख सकते हो:
+10. लिख सकते हो:
 
 "पत्तियाँ वायु से कार्बन डाइऑक्साइड लेती हैं।"
 
-14. ऑक्सीजन के लिए लिख सकते हो:
+11. लिख सकते हो:
 
-"इस प्रक्रिया में ऑक्सीजन वातावरण में छोड़ी जाती है।"
+"क्लोरोफिल प्रकाश को ग्रहण करता है।"
 
-15. रात के बारे में अनावश्यक चर्चा मत करो।
+12. लिख सकते हो:
 
-16. यह कभी मत लिखो:
+"प्रकाश संश्लेषण में पौधे अपना भोजन बनाते हैं
+और ऑक्सीजन वातावरण में छोड़ते हैं।"
+
+13. रात के बारे में अनावश्यक चर्चा मत करो।
+
+14. यह कभी मत लिखो:
 
 "पौधे रात में ऑक्सीजन छोड़ते हैं।"
 
-17. यह भी मत लिखो:
+15. कोई अनावश्यक उदाहरण मत जोड़ो।
 
-"पौधे केवल रात में श्वसन करते हैं।"
-
-18. उत्तर में अनावश्यक उदाहरण मत जोड़ो।
-
-19. "सरसों हमें खाने योग्य पत्ते प्रदान करती है"
-जैसे अनावश्यक उदाहरण मत दो।
-
-20. उत्तर में कोई वैज्ञानिक गलती नहीं होनी चाहिए।
-
-================================================
-वांछित संरचना
-================================================
+वांछित संरचना:
 
 **प्रकाश संश्लेषण**
 
-[2–3 वाक्यों की सरल परिभाषा]
+सरल परिभाषा।
 
 **मुख्य बिंदु**
 
@@ -956,19 +831,18 @@ proton gradient
 
 **महत्व**
 
-[1–2 छोटे वाक्य]
+1–2 छोटे वाक्य।
 
 **निष्कर्ष**
 
-[1 छोटा वाक्य]
+एक छोटा वाक्य।
 
 केवल अंतिम उत्तर दो।
-कोई टिप्पणी, विश्लेषण या यह मत बताओ कि
-तुमने उत्तर सुधारा है।
 `;
 
   const payload = {
-    model: "openai/gpt-oss-120b",
+    model:
+      "openai/gpt-oss-120b",
 
     messages: [
       {
@@ -977,7 +851,7 @@ proton gradient
       },
     ],
 
-    max_completion_tokens: 1600,
+    max_completion_tokens: 1200,
 
     temperature: 0.05,
 
@@ -989,262 +863,8 @@ proton gradient
   return callGroq(
     apiKey,
     payload,
-    15000
+    20000
   );
-}
-
-
-// ============================================================
-// AI QUALITY CHECKER
-// ============================================================
-
-async function runQualityChecker(
-  question,
-  answer,
-  marks,
-  apiKey
-) {
-  const prompt = `
-तुम "Sarathi AI Final Quality Checker" हो।
-
-प्रश्न:
-${question}
-
-अंक:
-${marks || "अज्ञात"}
-
-उत्तर:
-${answer}
-
-उत्तर को इन चीजों पर जाँचो:
-
-1. तथ्य सही हैं?
-2. प्रश्न का उत्तर दिया गया है?
-3. marks के अनुसार लंबाई सही है?
-4. भाषा और grammar सही है?
-5. कोई contradiction है?
-6. कोई unnecessary advanced information है?
-7. Science में कोई गलत तथ्य है?
-
-यदि उत्तर सही है:
-needs_correction = false
-
-यदि सुधार जरूरी है:
-needs_correction = true
-
-और corrected_answer में पूरा सुधरा हुआ उत्तर दो।
-
-================================================
-5 MARKS PHOTOSYNTHESIS
-================================================
-
-यदि marks = 5 और सामान्य प्रकाश संश्लेषण का प्रश्न है:
-
-उत्तर सरल होना चाहिए।
-
-नहीं होना चाहिए:
-
-ATP
-NADPH
-Calvin cycle
-Photosystem
-Photosystem I
-Photosystem II
-Electron transport chain
-Carbon fixation
-Proton gradient
-इलेक्ट्रॉन
-हाइड्रोजन आयन
-जल का विभाजन
-प्रकाश अभिक्रिया
-अंधकार अभिक्रिया
-जैविक पदार्थ
-ऊर्जा भंडारण
-कार्बन-फिक्सेशन
-
-उत्तर में:
-
-- सरल परिभाषा
-- 4–6 मुख्य बिंदु
-- छोटा महत्व/निष्कर्ष
-
-होना चाहिए।
-
-अनावश्यक शैवाल/बैक्टीरिया की जानकारी
-नहीं जोड़नी है।
-
-"सूर्य के प्रकाश ऊर्जा" नहीं।
-"सूर्य के प्रकाश की ऊर्जा" सही है।
-
-यह गलत नहीं होना चाहिए:
-
-"पौधे रात में ऑक्सीजन छोड़ते हैं।"
-
-================================================
-OUTPUT
-================================================
-
-केवल यह JSON दो:
-
-{
-  "needs_correction": false,
-  "issues": [],
-  "corrected_answer": "",
-  "fact_check_passed": true,
-  "final_review_passed": true
-}
-`;
-
-  const payload = {
-    model: "openai/gpt-oss-120b",
-
-    messages: [
-      {
-        role: "system",
-        content: prompt,
-      },
-    ],
-
-    max_completion_tokens: 2500,
-
-    temperature: 0,
-
-    reasoning_effort: "low",
-
-    stream: false,
-  };
-
-  let result =
-    await callGroq(
-      apiKey,
-      payload,
-      12000
-    );
-
-  if (
-    !result.ok &&
-    result.retryable
-  ) {
-    await sleep(400);
-
-    result =
-      await callGroq(
-        apiKey,
-        payload,
-        12000
-      );
-  }
-
-  if (!result.ok) {
-    return {
-      ok: false,
-    };
-  }
-
-  const parsed =
-    parseCheckerJSON(
-      result.reply
-    );
-
-  if (!parsed) {
-    return {
-      ok: false,
-    };
-  }
-
-  return {
-    ok: true,
-
-    needsCorrection:
-      parsed.needs_correction === true,
-
-    correctedAnswer:
-      typeof parsed.corrected_answer ===
-      "string"
-        ? parsed.corrected_answer
-        : "",
-
-    factCheckPassed:
-      parsed.fact_check_passed === true,
-
-    finalReviewPassed:
-      parsed.final_review_passed === true,
-  };
-}
-
-
-// ============================================================
-// SAFE JSON PARSER
-// ============================================================
-
-function parseCheckerJSON(text) {
-  if (!text) {
-    return null;
-  }
-
-  let clean =
-    String(text).trim();
-
-  clean = clean
-    .replace(
-      /^```json\s*/i,
-      ""
-    )
-    .replace(
-      /^```\s*/i,
-      ""
-    )
-    .replace(
-      /\s*```$/i,
-      ""
-    )
-    .trim();
-
-  try {
-    return JSON.parse(clean);
-  } catch {
-    const start =
-      clean.indexOf("{");
-
-    const end =
-      clean.lastIndexOf("}");
-
-    if (
-      start >= 0 &&
-      end > start
-    ) {
-      try {
-        return JSON.parse(
-          clean.slice(
-            start,
-            end + 1
-          )
-        );
-      } catch {
-        return null;
-      }
-    }
-  }
-
-  return null;
-}
-
-
-// ============================================================
-// CLEAN CHECKER ANSWER
-// ============================================================
-
-function cleanCheckerAnswer(text) {
-  return String(text || "")
-    .replace(
-      /^```[\w-]*\s*/i,
-      ""
-    )
-    .replace(
-      /\s*```$/i,
-      ""
-    )
-    .trim();
 }
 
 
@@ -1272,10 +892,6 @@ function deterministicFactCheck(
       .join("\n")
       .toLowerCase();
 
-  // ==========================================================
-  // PHOTOSYNTHESIS FACT PROTECTION
-  // ==========================================================
-
   if (
     question.includes(
       "प्रकाश संश्लेषण"
@@ -1284,6 +900,10 @@ function deterministicFactCheck(
       "photosynthesis"
     )
   ) {
+    // ------------------------------------------
+    // गलत रात/ऑक्सीजन वाक्य
+    // ------------------------------------------
+
     const badPatterns = [
       /रात में[^।\n]{0,80}ऑक्सीजन छोड़ता है/g,
       /रात में[^।\n]{0,80}ऑक्सीजन छोड़ती है/g,
@@ -1321,6 +941,16 @@ function deterministicFactCheck(
         );
     }
 
+    // ------------------------------------------
+    // छोटे भाषा सुधार
+    // ------------------------------------------
+
+    text =
+      text.replace(
+        /सूर्य के प्रकाश ऊर्जा/g,
+        "सूर्य के प्रकाश की ऊर्जा"
+      );
+
     text =
       text.replace(
         /जड़ों द्वारा जमीनी से/g,
@@ -1331,24 +961,6 @@ function deterministicFactCheck(
       text.replace(
         /जमीनी से/g,
         "जमीन से"
-      );
-
-    text =
-      text.replace(
-        /रात में श्वसन के लिए ऑक्सीजन छोड़ता है/g,
-        "प्रकाश संश्लेषण के दौरान ऑक्सीजन वातावरण में छोड़ता है"
-      );
-
-    text =
-      text.replace(
-        /रात में श्वसन के लिए ऑक्सीजन छोड़ती है/g,
-        "प्रकाश संश्लेषण के दौरान ऑक्सीजन वातावरण में छोड़ती है"
-      );
-
-    text =
-      text.replace(
-        /रात में श्वसन के लिए ऑक्सीजन छोड़ते हैं/g,
-        "प्रकाश संश्लेषण के दौरान ऑक्सीजन वातावरण में छोड़ते हैं"
       );
 
     text =
