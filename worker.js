@@ -2,10 +2,9 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // =========================================================
+    // =========================
     // CORS
-    // =========================================================
-
+    // =========================
     if (request.method === "OPTIONS") {
       return new Response(null, {
         status: 204,
@@ -13,10 +12,9 @@ export default {
       });
     }
 
-    // =========================================================
-    // CHAT API
-    // =========================================================
-
+    // =========================
+    // API
+    // =========================
     if (url.pathname === "/api/chat") {
       if (request.method !== "POST") {
         return json(
@@ -31,10 +29,9 @@ export default {
       return handleChat(request, env);
     }
 
-    // =========================================================
-    // WEBSITE FILES
-    // =========================================================
-
+    // =========================
+    // WEBSITE ASSETS
+    // =========================
     if (env.ASSETS) {
       return env.ASSETS.fetch(request);
     }
@@ -48,1151 +45,733 @@ export default {
   },
 };
 
-// =============================================================
-// MAIN CHAT
-// =============================================================
+// ============================================================
+// MAIN CHAT HANDLER
+// ============================================================
 
 async function handleChat(request, env) {
-  try {
-    // =========================================================
-    // API KEY CHECK
-    // =========================================================
+  const apiKey = env.GROQ_API_KEY;
 
-    if (!env.GROQ_API_KEY) {
-      return json(
-        {
-          error:
-            "GROQ_API_KEY Cloudflare Secret में configured नहीं है।",
-          code: "MISSING_API_KEY",
-        },
-        500
-      );
-    }
-
-    // =========================================================
-    // READ REQUEST
-    // =========================================================
-
-    let body;
-
-    try {
-      body = await request.json();
-    } catch {
-      return json(
-        {
-          error: "Request JSON सही नहीं है।",
-          code: "INVALID_JSON",
-        },
-        400
-      );
-    }
-
-    if (!body || !Array.isArray(body.messages)) {
-      return json(
-        {
-          error: "Messages उपलब्ध नहीं हैं।",
-          code: "INVALID_MESSAGES",
-        },
-        400
-      );
-    }
-
-    if (body.messages.length === 0) {
-      return json(
-        {
-          error: "कृपया कोई प्रश्न लिखें।",
-          code: "EMPTY_MESSAGES",
-        },
-        400
-      );
-    }
-
-    // =========================================================
-    // CLEAN MESSAGES
-    // =========================================================
-
-    const messages = body.messages
-      .slice(-20)
-      .map((message) => {
-        const role =
-          message?.role === "assistant"
-            ? "assistant"
-            : "user";
-
-        const content = String(
-          message?.content ?? ""
-        )
-          .trim()
-          .slice(0, 8000);
-
-        return {
-          role,
-          content,
-        };
-      })
-      .filter(
-        (message) =>
-          message.content.length > 0
-      );
-
-    if (messages.length === 0) {
-      return json(
-        {
-          error: "प्रश्न खाली है।",
-          code: "EMPTY_QUESTION",
-        },
-        400
-      );
-    }
-
-    const useSearch =
-      body.webSearch === true;
-
-    // =========================================================
-    // SYSTEM PROMPT
-    // =========================================================
-
-    const systemPrompt = `
-तुम "सारथी AI" हो।
-
-तुम्हारा उद्देश्य है:
-सही, सरल, भरोसेमंद और उपयोगी उत्तर देना।
-
-==================================================
-GENERAL RULES
-==================================================
-
-1. मुख्य उत्तर हिंदी में दो।
-2. उपयोगकर्ता की भाषा और स्तर के अनुसार उत्तर दो।
-3. अनावश्यक अंग्रेजी मत लिखो।
-4. जरूरी अंग्रेजी शब्द हो तो उसका अर्थ बताओ।
-5. तथ्य मत गढ़ो।
-6. नकली तारीख, संख्या, नाम या citation मत बनाओ।
-7. प्रश्न से बाहर की जानकारी मत जोड़ो।
-8. एक ही बात बार-बार मत दोहराओ।
-9. उत्तर जरूरत से ज्यादा technical मत बनाओ।
-10. परीक्षा के प्रश्न में सीधे लिखने योग्य उत्तर दो।
-11. यदि किसी तथ्य को लेकर निश्चितता नहीं है तो उसे तथ्य की तरह मत गढ़ो।
-12. उदाहरण देते समय उदाहरण का तथ्य भी सही रखो।
-
-==================================================
-MARKS CONTROL
-==================================================
-
-यदि 1 अंक:
-- सीधा उत्तर।
-- बहुत छोटा।
-
-यदि 2 अंक:
-- छोटी परिभाषा।
-- 1–2 मुख्य बातें।
-
-यदि 5 अंक:
-- 2–3 पंक्ति की भूमिका या परिभाषा।
-- लगभग 4–6 मुख्य बिंदु।
-- जरूरत हो तो छोटा उदाहरण।
-- छोटा निष्कर्ष।
-- आसान भाषा।
-- अनावश्यक technical detail नहीं।
-
-यदि 10 अंक:
-- भूमिका।
-- headings।
-- 5–7 मुख्य बिंदु।
-- आवश्यक व्याख्या।
-- उदाहरण।
-- निष्कर्ष।
-
-यदि 12 अंक:
-- भूमिका।
-- headings।
-- 6–8 मुख्य बिंदु।
-- पर्याप्त व्याख्या।
-- उदाहरण।
-- निष्कर्ष।
-
-==================================================
-IMPORTANT COMPLEXITY RULE
-==================================================
-
-सही जानकारी होने का मतलब यह नहीं है कि
-हर technical जानकारी उत्तर में डालना जरूरी है।
-
-यदि technical जानकारी प्रश्न का उत्तर देने के लिए
-आवश्यक नहीं है तो उसे छोड़ दो।
-
-==================================================
-PHOTOSYNTHESIS
-==================================================
-
-यदि सामान्य प्रश्न हो:
-
-"प्रकाश संश्लेषण क्या है?"
-
-तो उत्तर आसान school/college level पर रखो।
-
-सामान्य 5 अंक के उत्तर में इन technical terms को
-अनावश्यक रूप से मत जोड़ो:
-
-Photosystem I
-Photosystem II
-ATP
-NADPH
-Calvin cycle
-electron transport chain
-thylakoid
-stroma
-reaction center
-electron transfer
-proton transfer
-water splitting
-biochemical pathway
-molecular mechanism
-प्रकाश अभिक्रिया
-अंधकार अभिक्रिया
-
-सामान्य उत्तर में यह पर्याप्त है:
-
-- सूर्य का प्रकाश
-- क्लोरोफिल
-- जल
-- कार्बन डाइऑक्साइड
-- भोजन/ग्लूकोज़ का निर्माण
-- ऑक्सीजन का वातावरण में निकलना
-
-==================================================
-IMPORTANT PHOTOSYNTHESIS FACT
-==================================================
-
-प्रकाश संश्लेषण के बारे में यह गलती मत करना:
-
-"पौधा रात में प्रकाश संश्लेषण करके ऑक्सीजन छोड़ता है।"
-
-यह सामान्य उत्तर में गलत है।
-
-प्रकाश संश्लेषण के दौरान ऑक्सीजन का उत्पादन होता है
-और पौधे वातावरण में ऑक्सीजन छोड़ते हैं।
-
-श्वसन अलग प्रक्रिया है और पौधों में दिन-रात होता है।
-
-इसलिए किसी सामान्य उदाहरण में:
-
-"रात में श्वसन के लिए ऑक्सीजन छोड़ता है"
-
-जैसा वाक्य मत लिखो।
-
-==================================================
-HISTORY
-==================================================
-
-यदि केवल कारण पूछे जाएँ,
-तो घटनाओं और परिणामों को कारण मत बनाओ।
-
-फ्रांसीसी क्रांति के कारणों के उदाहरण:
-
-1. सामाजिक असमानता
-2. करों का असमान बोझ
-3. आर्थिक और वित्तीय संकट
-4. खाद्य संकट
-5. निरंकुश राजतंत्र
-6. राजनीतिक प्रतिनिधित्व की समस्या
-7. प्रबोधन के विचार
-
-14 जुलाई 1789 की बास्तील घटना एक महत्वपूर्ण घटना थी,
-लेकिन उसे केवल "कारण" के उत्तर में मुख्य कारण मत बनाओ।
-
-==================================================
-CHEMISTRY
-==================================================
-
-परमाणु, अणु, आयन, तत्व और यौगिक को
-आपस में मत मिलाओ।
-
-NaCl को सामान्यतः आयनिक यौगिक की
-formula unit बताओ, molecule नहीं।
-
-==================================================
-PHYSICS
-==================================================
-
-बिना आवश्यकता advanced mathematics मत जोड़ो।
-
-Numerical में:
-
-दिया गया
-→ सूत्र
-→ मान रखना
-→ calculation
-→ अंतिम उत्तर
-
-==================================================
-MATHEMATICS
-==================================================
-
-सभी जरूरी steps दिखाओ।
-
-Calculation जाँचो।
-
-अंतिम उत्तर स्पष्ट लिखो।
-
-==================================================
-INTERNET SEARCH
-==================================================
-
-यदि web search चालू है:
-
-- current जानकारी के लिए search करो।
-- आज/latest/current जैसी जानकारी में ताजा स्रोतों को प्राथमिकता दो।
-- नकली citation मत बनाओ।
-- search उपलब्ध न हो तो current information को verified current fact मत बताओ।
-
-==================================================
-FINAL CHECK
-==================================================
-
-उत्तर भेजने से पहले जाँचो:
-
-1. प्रश्न सही समझा?
-2. विषय सही है?
-3. marks सही हैं?
-4. उत्तर जरूरत से ज्यादा technical तो नहीं?
-5. कोई अनावश्यक advanced term तो नहीं?
-6. कोई अनावश्यक mechanism तो नहीं?
-7. कोई factual error तो नहीं?
-8. कोई उदाहरण गलत तो नहीं?
-9. कोई बात दोहराई तो नहीं?
-10. उत्तर परीक्षा में सीधे लिखा जा सकता है?
-11. भाषा आसान है?
-
-यदि समस्या मिले,
-तो उत्तर भेजने से पहले उसे सुधारो।
-`;
-
-    // =========================================================
-    // MAIN GROQ PAYLOAD
-    // =========================================================
-
-    const payload = {
-      model: "openai/gpt-oss-120b",
-
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt,
-        },
-        ...messages,
-      ],
-
-      max_completion_tokens: 4096,
-
-      temperature: 0.2,
-
-      reasoning_effort: "low",
-
-      stream: false,
-    };
-
-    // =========================================================
-    // BROWSER SEARCH
-    // =========================================================
-
-    if (useSearch) {
-      payload.tools = [
-        {
-          type: "browser_search",
-        },
-      ];
-
-      payload.tool_choice = "required";
-    }
-
-    // =========================================================
-    // MAIN REQUEST
-    // =========================================================
-
-    let result = await callGroq(
-      payload,
-      env.GROQ_API_KEY,
-      useSearch ? 60000 : 45000
-    );
-
-    // =========================================================
-    // MAIN RETRY
-    // =========================================================
-
-    if (!result.ok && result.retryable) {
-      await sleep(1000);
-
-      result = await callGroq(
-        payload,
-        env.GROQ_API_KEY,
-        useSearch ? 60000 : 45000
-      );
-    }
-
-    // =========================================================
-    // SEARCH FALLBACK
-    // =========================================================
-
-    if (!result.ok && useSearch) {
-      const fallbackPayload = {
-        model: "openai/gpt-oss-120b",
-
-        messages: [
-          {
-            role: "system",
-            content:
-              systemPrompt +
-              `
-
-इंटरनेट खोज इस समय उपलब्ध नहीं हो पाई।
-इसलिए current/latest जानकारी को
-verified current fact की तरह मत बताओ।
-`,
-          },
-          ...messages,
-        ],
-
-        max_completion_tokens: 4096,
-
-        temperature: 0.2,
-
-        reasoning_effort: "low",
-
-        stream: false,
-      };
-
-      let fallback = await callGroq(
-        fallbackPayload,
-        env.GROQ_API_KEY,
-        45000
-      );
-
-      if (!fallback.ok && fallback.retryable) {
-        await sleep(1000);
-
-        fallback = await callGroq(
-          fallbackPayload,
-          env.GROQ_API_KEY,
-          45000
-        );
-      }
-
-      if (fallback.ok && fallback.reply) {
-        const checked =
-          await selfCheckAndCorrect(
-            messages,
-            fallback.reply,
-            env.GROQ_API_KEY
-          );
-
-        return json({
-          reply: checked.reply,
-          searchUnavailable: true,
-          selfChecked: checked.selfChecked,
-          selfCorrected: checked.selfCorrected,
-          factChecked: checked.factChecked,
-        });
-      }
-    }
-
-    // =========================================================
-    // MAIN ERROR
-    // =========================================================
-
-    if (!result.ok) {
-      return json(
-        {
-          error: result.error,
-          code: result.code,
-          requestId:
-            result.requestId || null,
-        },
-        result.status || 502
-      );
-    }
-
-    // =========================================================
-    // EMPTY MAIN ANSWER
-    // =========================================================
-
-    if (!result.reply) {
-      return json(
-        {
-          error:
-            "Groq ने खाली उत्तर लौटाया। कृपया फिर कोशिश करें।",
-          code: "EMPTY_GROQ_RESPONSE",
-          requestId:
-            result.requestId || null,
-        },
-        502
-      );
-    }
-
-    // =========================================================
-    // FACT CHECK + SELF CHECK
-    // =========================================================
-
-    const checked =
-      await selfCheckAndCorrect(
-        messages,
-        result.reply,
-        env.GROQ_API_KEY
-      );
-
-    return json({
-      reply: checked.reply,
-      selfChecked: checked.selfChecked,
-      selfCorrected: checked.selfCorrected,
-      factChecked: checked.factChecked,
-    });
-  } catch (error) {
+  if (!apiKey) {
     return json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : String(error),
-        code: "WORKER_ERROR",
+        error: "GROQ_API_KEY is not configured.",
+        code: "MISSING_API_KEY",
       },
       500
     );
   }
-}
 
-// =============================================================
-// DETERMINISTIC FACT CHECK
-// =============================================================
-//
-// यह हिस्सा AI पर निर्भर नहीं है।
-// कुछ स्पष्ट और ज्ञात factual patterns को सीधे पकड़ता है.
-//
-// =============================================================
+  let body;
 
-function deterministicFactCheck(
-  messages,
-  answer
-) {
-  const userText = messages
-    .filter(
-      (message) =>
-        message.role === "user"
-    )
-    .map(
-      (message) =>
-        message.content
-    )
-    .join("\n")
-    .toLowerCase();
-
-  let corrected = answer;
-  const issues = [];
-
-  const isPhotosynthesisQuestion =
-    userText.includes("प्रकाश संश्लेषण") ||
-    userText.includes("photosynthesis");
-
-  // =========================================================
-  // PHOTOSYNTHESIS FIX 1
-  // =========================================================
-
-  if (isPhotosynthesisQuestion) {
-    const badNightPatterns = [
-      /रात में[^।\n]{0,120}ऑक्सीजन छोड़/,
-      /रात को[^।\n]{0,120}ऑक्सीजन छोड़/,
-      /रात्रि में[^।\n]{0,120}ऑक्सीजन छोड़/,
-      /रात में[^।\n]{0,120}oxygen छोड़/,
-      /at night[^.\n]{0,120}release oxygen/i,
-      /night[^.\n]{0,120}releases oxygen/i,
-    ];
-
-    for (const pattern of badNightPatterns) {
-      if (pattern.test(corrected)) {
-        corrected = corrected.replace(
-          pattern,
-          "श्वसन के दौरान पौधे ऑक्सीजन का उपयोग करते हैं"
-        );
-
-        issues.push(
-          "रात में ऑक्सीजन छोड़ने वाली गलत बात सुधारी गई।"
-        );
-
-        break;
-      }
-    }
-  }
-
-  // =========================================================
-  // PHOTOSYNTHESIS FIX 2
-  // =========================================================
-
-  if (isPhotosynthesisQuestion) {
-    const wrongGroundPhrase =
-      /जमीनी से/g;
-
-    if (wrongGroundPhrase.test(corrected)) {
-      corrected = corrected.replace(
-        wrongGroundPhrase,
-        "जमीन से"
-      );
-
-      issues.push(
-        "जमीनी से → जमीन से सुधारा गया।"
-      );
-    }
-  }
-
-  // =========================================================
-  // PHOTOSYNTHESIS FIX 3
-  // =========================================================
-
-  if (isPhotosynthesisQuestion) {
-    const wrongRootPhrase =
-      /जड़ों द्वारा जमीनी/g;
-
-    if (wrongRootPhrase.test(corrected)) {
-      corrected = corrected.replace(
-        wrongRootPhrase,
-        "जड़ों द्वारा जमीन"
-      );
-
-      issues.push(
-        "जल के स्रोत से जुड़ी भाषा सुधारी गई।"
-      );
-    }
-  }
-
-  // =========================================================
-  // REMOVE OBVIOUSLY WRONG NIGHT CLAIMS
-  // =========================================================
-
-  if (isPhotosynthesisQuestion) {
-    const replacements = [
-      {
-        pattern:
-          /और रात में श्वसन के लिए ऑक्सीजन छोड़ता है/gi,
-        replacement:
-          "और प्रकाश संश्लेषण के दौरान ऑक्सीजन वातावरण में छोड़ता है",
-      },
-      {
-        pattern:
-          /और रात में श्वसन के लिए ऑक्सीजन छोड़ती है/gi,
-        replacement:
-          "और प्रकाश संश्लेषण के दौरान ऑक्सीजन वातावरण में छोड़ती है",
-      },
-      {
-        pattern:
-          /रात में श्वसन के लिए ऑक्सीजन छोड़ता है/gi,
-        replacement:
-          "प्रकाश संश्लेषण के दौरान ऑक्सीजन वातावरण में छोड़ता है",
-      },
-      {
-        pattern:
-          /रात में श्वसन के लिए ऑक्सीजन छोड़ती है/gi,
-        replacement:
-          "प्रकाश संश्लेषण के दौरान ऑक्सीजन वातावरण में छोड़ती है",
-      },
-    ];
-
-    for (const item of replacements) {
-      if (item.pattern.test(corrected)) {
-        corrected = corrected.replace(
-          item.pattern,
-          item.replacement
-        );
-
-        issues.push(
-          "प्रकाश संश्लेषण और श्वसन से जुड़ा factual error सुधारा गया।"
-        );
-      }
-    }
-  }
-
-  // =========================================================
-  // NORMALIZE EXCESSIVE SPACES
-  // =========================================================
-
-  corrected = corrected
-    .replace(/[ \t]{2,}/g, " ")
-    .replace(/\n{4,}/g, "\n\n")
-    .trim();
-
-  return {
-    answer: corrected,
-    changed:
-      corrected !== answer,
-    issues,
-  };
-}
-
-// =============================================================
-// SELF CHECK + SELF CORRECTION
-// =============================================================
-
-async function selfCheckAndCorrect(
-  messages,
-  answer,
-  apiKey
-) {
   try {
-    // ========================================================
-    // FIRST: DETERMINISTIC FACT CHECK
-    // ========================================================
+    body = await request.json();
+  } catch {
+    return json(
+      {
+        error: "Invalid JSON request.",
+        code: "INVALID_JSON",
+      },
+      400
+    );
+  }
 
-    const factResult =
-      deterministicFactCheck(
-        messages,
-        answer
-      );
+  if (!body || !Array.isArray(body.messages)) {
+    return json(
+      {
+        error: "messages array is required.",
+        code: "INVALID_MESSAGES",
+      },
+      400
+    );
+  }
 
-    let workingAnswer =
-      factResult.answer;
+  // ==========================================================
+  // CLEAN MESSAGES
+  // ==========================================================
 
-    const factChanged =
-      factResult.changed;
+  const messages = body.messages
+    .slice(-20)
+    .map((message) => {
+      const role =
+        message?.role === "assistant" ? "assistant" : "user";
 
-    // ========================================================
-    // AI CHECKER PROMPT
-    // ========================================================
+      let content = "";
 
-    const checkerPrompt = `
-तुम "सारथी AI Quality Checker" हो।
+      if (typeof message?.content === "string") {
+        content = message.content;
+      } else if (message?.content != null) {
+        try {
+          content = JSON.stringify(message.content);
+        } catch {
+          content = "";
+        }
+      }
 
-तुम्हें user का प्रश्न और AI का उत्तर दिया जाएगा।
+      content = content.slice(0, 8000);
 
-उत्तर को सख्ती से जाँचो और जरूरत होने पर
-पूरा corrected answer दो।
+      return {
+        role,
+        content,
+      };
+    })
+    .filter((message) => message.content.trim().length > 0);
 
-==================================================
-PRIMARY GOAL
-==================================================
+  if (messages.length === 0) {
+    return json(
+      {
+        error: "At least one message is required.",
+        code: "EMPTY_MESSAGES",
+      },
+      400
+    );
+  }
 
-उत्तर:
+  const useSearch = body.webSearch === true;
 
-- factual रूप से सही हो
-- प्रश्न के अनुसार हो
-- marks के अनुसार हो
-- आसान भाषा में हो
-- परीक्षा में सीधे लिखा जा सके
-- अनावश्यक technical detail से मुक्त हो
+  // ==========================================================
+  // SYSTEM PROMPT
+  // ==========================================================
 
-==================================================
-MARKS CHECK
-==================================================
+  const systemPrompt = `
+तुम "सारथी AI" हो — एक सुरक्षित, सरल, तथ्य-जाँच करने वाला हिंदी AI सहायक।
 
-1 अंक:
-- बहुत छोटा सीधा उत्तर।
+मुख्य नियम:
 
-2 अंक:
-- छोटी परिभाषा।
-- 1–2 मुख्य बातें।
+1. उपयोगकर्ता के प्रश्न का सीधा उत्तर दो।
+2. भाषा सरल और स्वाभाविक हिंदी रखो।
+3. अगर प्रश्न परीक्षा/Study Center से जुड़ा है तो exam-ready उत्तर दो।
+4. प्रश्न में जितने अंक मांगे गए हैं, उसी के अनुसार उत्तर की लंबाई और कठिनाई रखो।
+5. बिना जरूरत बहुत advanced terminology मत दो।
+6. अगर कोई तथ्य निश्चित नहीं है तो उसे तथ्य की तरह मत लिखो।
+7. प्रश्न से बाहर की अनावश्यक जानकारी मत जोड़ो।
+8. उत्तर में कोई ऐसी बात मत लिखो जो अगले ही वाक्य में उससे contradict करे।
+9. गणित में calculation दोबारा जाँचो।
+10. विज्ञान में scientific facts दोबारा जाँचो।
+11. इतिहास में तारीख, घटना, व्यक्ति और कारण-परिणाम जाँचो।
+12. भाषा और grammar की गलतियाँ सुधारो।
 
-5 अंक:
-- 2–3 पंक्ति की भूमिका/परिभाषा।
+============================================================
+MARKS CONTROL
+============================================================
+
+यदि प्रश्न में 1 अंक:
+- केवल बहुत छोटा और सीधा उत्तर।
+
+यदि 2 अंक:
+- लगभग 2–4 मुख्य वाक्य/बिंदु।
+- अनावश्यक उदाहरण और लंबा निष्कर्ष नहीं।
+
+यदि 5 अंक:
+- परिभाषा/भूमिका।
 - लगभग 4–6 मुख्य बिंदु।
 - जरूरत हो तो छोटा उदाहरण।
 - छोटा निष्कर्ष।
-- आसान भाषा।
+- बहुत advanced university-level detail नहीं।
 
-10/12 अंक:
-- पर्याप्त विस्तार।
-- headings और मुख्य बिंदु।
-- आवश्यक व्याख्या।
-- उदाहरण।
+यदि 10 अंक:
+- भूमिका।
+- स्पष्ट headings।
+- पर्याप्त मुख्य बिंदु।
+- उदाहरण/व्याख्या जहाँ जरूरी हो।
 - निष्कर्ष।
 
-==================================================
-FACTUAL ACCURACY
-==================================================
+यदि 12 अंक:
+- विस्तृत लेकिन विषय पर केंद्रित उत्तर।
+- भूमिका, headings, मुख्य व्याख्या, उदाहरण और निष्कर्ष।
+- उत्तर exam-ready होना चाहिए।
 
-हर महत्वपूर्ण factual statement जाँचो।
+यदि marks स्पष्ट नहीं हैं:
+- प्रश्न के स्तर के अनुसार संतुलित उत्तर दो।
 
-यदि कोई बात गलत है,
-तो उसे सुधारो।
-
-यदि कोई बात संदिग्ध है और
-बिना verification के निश्चित रूप से नहीं कही जा सकती,
-तो उसे तथ्य की तरह प्रस्तुत मत करो।
-
-==================================================
-PHOTOSYNTHESIS
-==================================================
+============================================================
+PHOTOSYNTHESIS SPECIAL FACT CHECK
+============================================================
 
 यदि प्रश्न प्रकाश संश्लेषण से संबंधित है:
 
-सामान्य 5 अंक के उत्तर में
-अनावश्यक रूप से यह terms मत रखो:
+सही मुख्य बातें:
+- हरे पौधे प्रकाश ऊर्जा का उपयोग करते हैं।
+- कार्बन डाइऑक्साइड और जल से भोजन/ग्लूकोज़ बनता है।
+- क्लोरोफिल प्रकाश को अवशोषित करता है।
+- प्रकाश संश्लेषण के दौरान ऑक्सीजन वातावरण में छोड़ी जाती है।
+- पौधे दिन और रात दोनों समय श्वसन करते हैं।
+- "रात में प्रकाश संश्लेषण करके ऑक्सीजन छोड़ते हैं" जैसा दावा मत करो।
+- यह मत लिखो कि पौधे केवल रात में श्वसन करते हैं।
+- बहुत छोटे exam answer में Photosystem, ATP, NADPH, Calvin cycle जैसी advanced details तभी दो जब प्रश्न विशेष रूप से उन्हीं के बारे में हो।
 
-Photosystem I
-Photosystem II
-ATP
-NADPH
-Calvin cycle
-electron transport chain
-thylakoid
-stroma
-reaction center
-electron transfer
-proton transfer
-water splitting
-biochemical pathway
-molecular mechanism
-प्रकाश अभिक्रिया
-अंधकार अभिक्रिया
+विशेष रूप से यह गलत दावा नहीं होना चाहिए:
+"पौधा रात में श्वसन के लिए ऑक्सीजन छोड़ता है।"
 
-लेकिन सबसे महत्वपूर्ण:
+सही विचार:
+"पौधे श्वसन के दौरान ऑक्सीजन का उपयोग करते हैं। प्रकाश संश्लेषण के दौरान ऑक्सीजन निकलती है।"
 
-"रात में श्वसन के लिए ऑक्सीजन छोड़ता है"
+============================================================
+HISTORY FACT CHECK
+============================================================
 
-जैसा कथन गलत है।
+इतिहास के उत्तर में:
+- तारीख और घटना का संबंध जाँचो।
+- व्यक्ति और घटना को गलत तरीके से न जोड़ो।
+- कारण और परिणाम अलग रखो।
+- अनुमान को निश्चित तथ्य की तरह मत लिखो।
+- यदि मतभेद हो तो स्पष्ट भाषा में बताओ।
 
-श्वसन और प्रकाश संश्लेषण को आपस में मत मिलाओ।
+============================================================
+CHEMISTRY FACT CHECK
+============================================================
 
-प्रकाश संश्लेषण के दौरान ऑक्सीजन वातावरण में
-छोड़ी जाती है।
+- Chemical formula जाँचो।
+- Equation balance जाँचो।
+- पदार्थों के नाम और formula का मिलान जाँचो।
+- गलत reaction या गलत product मत लिखो।
 
-पौधों में श्वसन दिन और रात दोनों होता है।
+============================================================
+PHYSICS FACT CHECK
+============================================================
 
-==================================================
-EXAMPLE CHECK
-==================================================
+- Formula जाँचो।
+- Units जाँचो।
+- Numerical calculation दोबारा करो।
+- Given values और final answer का मिलान करो।
+- Direction/sign जहाँ जरूरी हो वहाँ जाँचो।
 
-यदि उत्तर में उदाहरण दिया गया है,
-तो उदाहरण की factual correctness भी जाँचो।
+============================================================
+MATHEMATICS FACT CHECK
+============================================================
 
-गलत उदाहरण को सुधारो या हटा दो।
+- Calculation दोबारा करो।
+- Formula सही लगाओ।
+- Intermediate steps में arithmetic error मत रहने दो।
+- Final answer को original question से मिलाओ।
 
-==================================================
-HISTORY
-==================================================
+============================================================
+INTERNET SEARCH
+============================================================
 
-कारण और घटना अलग रखो।
+यदि web search उपलब्ध है और उपयोगकर्ता ने Internet Search मांगा है:
+- current information के लिए search का उपयोग करो।
+- search result से मिले तथ्य और सामान्य knowledge को अलग समझो।
+- current information को बिना verification के निश्चित मत बताओ।
+- उपलब्ध sources/citations को बनाए रखो।
 
-यदि "कारण" पूछे गए हैं,
-तो केवल घटना को कारण मत बनाओ।
+============================================================
+FINAL RESPONSE RULE
+============================================================
 
-==================================================
-CHEMISTRY
-==================================================
+उत्तर देने से पहले खुद से जाँचो:
 
-परमाणु, अणु, आयन, तत्व और यौगिक
-को आपस में मत मिलाओ।
+A. क्या मैंने प्रश्न का सही उत्तर दिया?
+B. क्या तथ्य सही हैं?
+C. क्या marks के अनुसार उत्तर की लंबाई सही है?
+D. क्या भाषा और grammar सही है?
+E. क्या कोई contradictory statement है?
+F. क्या कोई अनावश्यक advanced information है?
+G. क्या उदाहरण सही है?
+H. क्या conclusion सही है?
 
-NaCl को सामान्यतः ionic compound की
-formula unit बताओ, molecule नहीं।
+अगर कोई गलती मिले तो उत्तर को सुधारो और फिर दोबारा जाँचो।
 
-==================================================
-PHYSICS
-==================================================
-
-अनावश्यक advanced mathematics मत जोड़ो।
-
-Numerical:
-
-दिया गया
-→ सूत्र
-→ मान रखना
-→ calculation
-→ अंतिम उत्तर
-
-==================================================
-MATHEMATICS
-==================================================
-
-Calculation दोबारा जाँचो।
-
-जरूरी steps दिखाओ।
-
-==================================================
-FINAL QUALITY TEST
-==================================================
-
-जाँचो:
-
-1. प्रश्न सही समझा?
-2. विषय सही है?
-3. marks सही हैं?
-4. factual error है?
-5. example सही है?
-6. अनावश्यक technical detail है?
-7. advanced mechanism है?
-8. repetition है?
-9. भाषा आसान है?
-10. क्या उत्तर परीक्षा में सीधे लिखा जा सकता है?
-
-यदि कोई समस्या है,
-तो corrected_answer में पूरा सुधरा हुआ उत्तर दो।
-
-यदि कोई समस्या नहीं है,
-तो corrected_answer में वही उत्तर दो।
-
-सिर्फ "सही है" मत लिखो।
+सिर्फ अंतिम साफ और उपयोगी उत्तर दो।
 `;
 
-    const conversationText =
-      messages
-        .map(
-          (message) =>
-            `${message.role}: ${message.content}`
-        )
-        .join("\n\n");
+// ============================================================
+// GROQ REQUEST
+// ============================================================
 
-    const checkerPayload = {
-      model: "openai/gpt-oss-120b",
+  const payload = {
+    model: "openai/gpt-oss-120b",
 
+    messages: [
+      {
+        role: "system",
+        content: systemPrompt,
+      },
+      ...messages,
+    ],
+
+    max_completion_tokens: 4096,
+    temperature: 0.2,
+    reasoning_effort: "low",
+    stream: false,
+  };
+
+  // ==========================================================
+  // INTERNET SEARCH
+  // ==========================================================
+
+  if (useSearch) {
+    payload.tools = [
+      {
+        type: "browser_search",
+      },
+    ];
+
+    payload.tool_choice = "required";
+  }
+
+  let result = await callGroq(apiKey, payload, useSearch ? 60000 : 45000);
+
+  // ==========================================================
+  // RETRY
+  // ==========================================================
+
+  if (!result.ok && result.retryable) {
+    await sleep(1000);
+
+    result = await callGroq(
+      apiKey,
+      payload,
+      useSearch ? 60000 : 45000
+    );
+  }
+
+  // ==========================================================
+  // SEARCH FALLBACK
+  // ==========================================================
+
+  if (!result.ok && useSearch) {
+    const fallbackPayload = {
+      ...payload,
+      tools: undefined,
+      tool_choice: undefined,
       messages: [
         {
           role: "system",
-          content: checkerPrompt,
+          content:
+            systemPrompt +
+            "\n\nInternet search इस समय उपलब्ध नहीं हो सका। Current जानकारी को verified न मानें।",
         },
-        {
-          role: "user",
-          content: `
-USER:
+        ...messages,
+      ],
+    };
 
-${conversationText}
+    result = await callGroq(apiKey, fallbackPayload, 45000);
+
+    if (result.ok) {
+      result.reply =
+        result.reply +
+        "\n\n⚠️ Internet search इस समय उपलब्ध नहीं हो सका, इसलिए current जानकारी की स्वतंत्र पुष्टि नहीं हुई है।";
+    }
+  }
+
+  // ==========================================================
+  // GROQ FAILURE
+  // ==========================================================
+
+  if (!result.ok) {
+    return json(
+      {
+        error: "अभी जवाब नहीं मिल पाया। कृपया फिर से कोशिश करें।",
+        code: result.code || "GROQ_ERROR",
+        requestId: result.requestId || null,
+      },
+      result.status || 502
+    );
+  }
+
+  // ==========================================================
+  // FINAL SELF-CHECK + SELF-CORRECTION
+  // ==========================================================
+
+  const checked = await finalSelfCheck(
+    messages,
+    result.reply,
+    apiKey
+  );
+
+  // ==========================================================
+  // FINAL RESPONSE
+  // ==========================================================
+
+  return json({
+    reply: checked.answer,
+    selfChecked: checked.selfChecked,
+    selfCorrected: checked.selfCorrected,
+    factChecked: checked.factChecked,
+    finalReviewed: checked.finalReviewed,
+  });
+}
+
+// ============================================================
+// FINAL SELF-CHECK SYSTEM
+// ============================================================
+
+async function finalSelfCheck(messages, originalAnswer, apiKey) {
+  // ----------------------------------------------------------
+  // STEP 1: Deterministic fact correction
+  // ----------------------------------------------------------
+
+  let answer = deterministicFactCheck(messages, originalAnswer);
+
+  const deterministicChanged = answer !== originalAnswer;
+
+  // ----------------------------------------------------------
+  // STEP 2: AI structured self-check
+  // ----------------------------------------------------------
+
+  const checkerPrompt = `
+तुम Sarathi AI के Final Quality Controller हो।
+
+तुम्हें एक USER QUESTION और AI ANSWER दिया जाएगा।
+
+तुम्हारा काम उत्तर को 5 स्तरों पर जाँचना है:
+
+1. FACT CHECK
+2. MARKS / LENGTH CHECK
+3. LANGUAGE / GRAMMAR CHECK
+4. RELEVANCE CHECK
+5. CONTRADICTION / CONSISTENCY CHECK
+
+विशेष नियम:
+
+- उत्तर में तथ्यात्मक गलती हो तो सुधारो।
+- grammar/typing गलती हो तो सुधारो।
+- प्रश्न से बाहर की जानकारी हटाओ।
+- marks के अनुसार उत्तर की लंबाई रखो।
+- 5 marks के उत्तर को जरूरत से ज्यादा advanced मत बनाओ।
+- 10/12 marks में पर्याप्त explanation रखो।
+- सही उत्तर को केवल style के लिए अनावश्यक रूप से मत बदलो।
+- Photosynthesis में "रात में पौधे ऑक्सीजन छोड़ते हैं" जैसा गलत दावा स्वीकार मत करो।
+- पौधे श्वसन दिन और रात दोनों करते हैं।
+- Photosynthesis के दौरान oxygen release होती है।
+- वैज्ञानिक उत्तर में contradiction नहीं होना चाहिए।
+- यदि उत्तर पहले से सही है तो उसे लगभग वैसा ही रखो।
+
+महत्वपूर्ण:
+यदि कोई correction जरूरी हो तो पूरा corrected answer दो।
+सिर्फ correction की सूची मत दो।
+
+JSON के अलावा कुछ मत लिखो।
+`;
+
+  const userQuestion = messages
+    .filter((m) => m.role === "user")
+    .map((m) => m.content)
+    .join("\n")
+    .slice(-12000);
+
+  const checkerPayload = {
+    model: "openai/gpt-oss-120b",
+
+    messages: [
+      {
+        role: "system",
+        content: checkerPrompt,
+      },
+      {
+        role: "user",
+        content: `
+USER QUESTION:
+${userQuestion}
 
 AI ANSWER:
+${answer}
+        `,
+      },
+    ],
 
-${workingAnswer}
+    temperature: 0,
+    max_completion_tokens: 4096,
+    reasoning_effort: "low",
+    stream: false,
 
-AUTOMATIC FACT CHECK NOTES:
+    response_format: {
+      type: "json_schema",
+      json_schema: {
+        name: "sarathi_final_check",
+        strict: true,
+        schema: {
+          type: "object",
+          properties: {
+            needs_correction: {
+              type: "boolean",
+            },
 
-${
-  factResult.issues.length > 0
-    ? factResult.issues.join("\n")
-    : "कोई deterministic fact issue नहीं मिला।"
-}
-`,
-        },
-      ],
-
-      max_completion_tokens: 4096,
-
-      temperature: 0,
-
-      reasoning_effort: "low",
-
-      stream: false,
-
-      response_format: {
-        type: "json_schema",
-
-        json_schema: {
-          name: "sarathi_quality_check",
-
-          strict: true,
-
-          schema: {
-            type: "object",
-
-            properties: {
-              needs_correction: {
-                type: "boolean",
-              },
-
-              issues: {
-                type: "array",
-
-                items: {
-                  type: "string",
-                },
-              },
-
-              corrected_answer: {
+            issues: {
+              type: "array",
+              items: {
                 type: "string",
               },
             },
 
-            required: [
-              "needs_correction",
-              "issues",
-              "corrected_answer",
-            ],
+            corrected_answer: {
+              type: "string",
+            },
 
-            additionalProperties: false,
+            fact_check_passed: {
+              type: "boolean",
+            },
+
+            marks_check_passed: {
+              type: "boolean",
+            },
+
+            language_check_passed: {
+              type: "boolean",
+            },
+
+            relevance_check_passed: {
+              type: "boolean",
+            },
+
+            final_review_passed: {
+              type: "boolean",
+            },
           },
+
+          required: [
+            "needs_correction",
+            "issues",
+            "corrected_answer",
+            "fact_check_passed",
+            "marks_check_passed",
+            "language_check_passed",
+            "relevance_check_passed",
+            "final_review_passed",
+          ],
+
+          additionalProperties: false,
         },
       },
-    };
+    },
+  };
 
-    // ========================================================
-    // CHECKER REQUEST
-    // ========================================================
+  let check = await callGroq(apiKey, checkerPayload, 12000);
 
-    let check = await callGroq(
-      checkerPayload,
-      apiKey,
-      12000
-    );
+  // Retry checker once
+  if (!check.ok && check.retryable) {
+    await sleep(500);
 
-    // ========================================================
-    // CHECKER RETRY
-    // ========================================================
+    check = await callGroq(apiKey, checkerPayload, 12000);
+  }
 
-    if (!check.ok && check.retryable) {
-      await sleep(500);
+  // ----------------------------------------------------------
+  // STEP 3: Checker failed
+  // ----------------------------------------------------------
 
-      check = await callGroq(
-        checkerPayload,
-        apiKey,
-        12000
-      );
-    }
-
-    // ========================================================
-    // CHECKER FAILED
-    //
-    // IMPORTANT:
-    // Deterministic fact correction is still preserved.
-    // ========================================================
-
-    if (!check.ok || !check.raw) {
-      return {
-        reply: workingAnswer,
-        selfChecked: false,
-        selfCorrected: factChanged,
-        factChecked: true,
-      };
-    }
-
-    // ========================================================
-    // PARSE CHECKER JSON
-    // ========================================================
-
-    let report;
-
-    try {
-      report = JSON.parse(check.raw);
-    } catch {
-      return {
-        reply: workingAnswer,
-        selfChecked: false,
-        selfCorrected: factChanged,
-        factChecked: true,
-      };
-    }
-
-    // ========================================================
-    // VALIDATE CHECKER RESULT
-    // ========================================================
-
-    if (
-      typeof report?.needs_correction !==
-      "boolean"
-    ) {
-      return {
-        reply: workingAnswer,
-        selfChecked: false,
-        selfCorrected: factChanged,
-        factChecked: true,
-      };
-    }
-
-    // ========================================================
-    // GET AI CORRECTED ANSWER
-    // ========================================================
-
-    const corrected =
-      typeof report.corrected_answer ===
-      "string"
-        ? report.corrected_answer.trim()
-        : "";
-
-    // ========================================================
-    // IF AI CHECKER HAS NO USABLE CORRECTION
-    // ========================================================
-
-    if (!corrected) {
-      return {
-        reply: workingAnswer,
-        selfChecked: true,
-        selfCorrected: factChanged,
-        factChecked: true,
-      };
-    }
-
-    // ========================================================
-    // PREVENT EMPTY / HUGE / UNREALISTIC REWRITE
-    // ========================================================
-
-    const maximumAllowed =
-      Math.max(
-        workingAnswer.length * 2.5,
-        20000
-      );
-
-    if (
-      corrected.length >
-      maximumAllowed
-    ) {
-      return {
-        reply: workingAnswer,
-        selfChecked: true,
-        selfCorrected: factChanged,
-        factChecked: true,
-      };
-    }
-
-    // ========================================================
-    // AI CHECKER RESULT
-    //
-    // Even if checker says no correction,
-    // deterministic fact correction is preserved.
-    // ========================================================
-
-    if (!report.needs_correction) {
-      return {
-        reply: workingAnswer,
-        selfChecked: true,
-        selfCorrected: factChanged,
-        factChecked: true,
-      };
-    }
-
-    // ========================================================
-    // FINAL ANSWER
-    // ========================================================
-
+  if (!check.ok) {
     return {
-      reply: corrected,
-      selfChecked: true,
-      selfCorrected:
-        factChanged || true,
-      factChecked: true,
-    };
-  } catch {
-    // ========================================================
-    // EMERGENCY FALLBACK
-    // ========================================================
-
-    const factResult =
-      deterministicFactCheck(
-        messages,
-        answer
-      );
-
-    return {
-      reply: factResult.answer,
+      answer,
       selfChecked: false,
-      selfCorrected:
-        factResult.changed,
-      factChecked: true,
+      selfCorrected: deterministicChanged,
+      factChecked: deterministicChanged,
+      finalReviewed: false,
     };
   }
+
+  // ----------------------------------------------------------
+  // STEP 4: Parse checker result
+  // ----------------------------------------------------------
+
+  let report;
+
+  try {
+    report = JSON.parse(check.reply);
+  } catch {
+    return {
+      answer,
+      selfChecked: false,
+      selfCorrected: deterministicChanged,
+      factChecked: deterministicChanged,
+      finalReviewed: false,
+    };
+  }
+
+  // ----------------------------------------------------------
+  // STEP 5: Validate corrected answer
+  // ----------------------------------------------------------
+
+  let finalAnswer = answer;
+  let selfCorrected = deterministicChanged;
+
+  if (
+    report.needs_correction === true &&
+    typeof report.corrected_answer === "string"
+  ) {
+    const corrected = report.corrected_answer.trim();
+
+    // Never replace a good answer with an empty/absurdly huge answer.
+    const tooLarge =
+      corrected.length >
+      Math.max(answer.length * 2.5, 20000);
+
+    if (corrected.length > 0 && !tooLarge) {
+      finalAnswer = corrected;
+      selfCorrected = true;
+    }
+  }
+
+  // ----------------------------------------------------------
+  // STEP 6: Run deterministic fact check AGAIN
+  // ----------------------------------------------------------
+
+  const secondPass = deterministicFactCheck(
+    messages,
+    finalAnswer
+  );
+
+  if (secondPass !== finalAnswer) {
+    finalAnswer = secondPass;
+    selfCorrected = true;
+  }
+
+  // ----------------------------------------------------------
+  // STEP 7: Final cleanup
+  // ----------------------------------------------------------
+
+  finalAnswer = normalizeAnswer(finalAnswer);
+
+  return {
+    answer: finalAnswer,
+
+    selfChecked: true,
+
+    selfCorrected,
+
+    factChecked:
+      report.fact_check_passed === true ||
+      deterministicChanged,
+
+    finalReviewed:
+      report.final_review_passed === true,
+  };
 }
 
-// =============================================================
-// GROQ API
-// =============================================================
+// ============================================================
+// DETERMINISTIC FACT CHECK
+// ============================================================
 
-async function callGroq(
-  payload,
-  apiKey,
-  timeoutMs
-) {
-  const controller =
-    new AbortController();
+function deterministicFactCheck(messages, answer) {
+  let text = String(answer || "");
+
+  const question = messages
+    .filter((m) => m.role === "user")
+    .map((m) => m.content)
+    .join("\n")
+    .toLowerCase();
+
+  // ==========================================================
+  // PHOTOSYNTHESIS CHECK
+  // ==========================================================
+
+  const isPhotosynthesis =
+    question.includes("प्रकाश संश्लेषण") ||
+    question.includes("photosynthesis");
+
+  if (isPhotosynthesis) {
+    // --------------------------------------------------------
+    // Wrong: "रात में ... ऑक्सीजन छोड़ता है"
+    // Only target affirmative claims.
+    // Do NOT touch sentences containing negation.
+    // --------------------------------------------------------
+
+    const badNightPatterns = [
+      /रात में[^।\n]{0,100}ऑक्सीजन छोड़ता है/g,
+      /रात में[^।\n]{0,100}ऑक्सीजन छोड़ती है/g,
+      /रात में[^।\n]{0,100}ऑक्सीजन छोड़ते हैं/g,
+      /रात को[^।\n]{0,100}ऑक्सीजन छोड़ता है/g,
+      /रात को[^।\n]{0,100}ऑक्सीजन छोड़ती है/g,
+      /रात को[^।\n]{0,100}ऑक्सीजन छोड़ते हैं/g,
+      /रात्रि में[^।\n]{0,100}ऑक्सीजन छोड़ता है/g,
+      /रात्रि में[^।\n]{0,100}ऑक्सीजन छोड़ती है/g,
+      /रात्रि में[^।\n]{0,100}ऑक्सीजन छोड़ते हैं/g,
+    ];
+
+    for (const pattern of badNightPatterns) {
+      text = text.replace(pattern, (match) => {
+        // Avoid changing scientifically correct negative sentences.
+        if (
+          /नहीं/.test(match) ||
+          /नही/.test(match)
+        ) {
+          return match;
+        }
+
+        return "प्रकाश संश्लेषण के दौरान पौधे ऑक्सीजन वातावरण में छोड़ते हैं";
+      });
+    }
+
+    // English accidental claims
+    text = text.replace(
+      /at night[^.\n]{0,100}release oxygen/gi,
+      "during photosynthesis, plants release oxygen"
+    );
+
+    text = text.replace(
+      /plants release oxygen at night/gi,
+      "plants release oxygen during photosynthesis"
+    );
+
+    // --------------------------------------------------------
+    // Grammar fixes
+    // --------------------------------------------------------
+
+    text = text.replace(
+      /जड़ों द्वारा जमीनी से/g,
+      "जड़ों द्वारा जमीन से"
+    );
+
+    text = text.replace(
+      /जमीनी से/g,
+      "जमीन से"
+    );
+
+    // --------------------------------------------------------
+    // Common incorrect sentence
+    // --------------------------------------------------------
+
+    text = text.replace(
+      /और रात में श्वसन के लिए ऑक्सीजन छोड़ता है/g,
+      "और प्रकाश संश्लेषण के दौरान ऑक्सीजन वातावरण में छोड़ता है"
+    );
+
+    text = text.replace(
+      /और रात में श्वसन के लिए ऑक्सीजन छोड़ती है/g,
+      "और प्रकाश संश्लेषण के दौरान ऑक्सीजन वातावरण में छोड़ती है"
+    );
+
+    text = text.replace(
+      /और रात में श्वसन के लिए ऑक्सीजन छोड़ते हैं/g,
+      "और प्रकाश संश्लेषण के दौरान ऑक्सीजन वातावरण में छोड़ते हैं"
+    );
+
+    // --------------------------------------------------------
+    // Correct another common misconception
+    // --------------------------------------------------------
+
+    text = text.replace(
+      /पौधे केवल रात में श्वसन करते हैं/gi,
+      "पौधे दिन और रात दोनों समय श्वसन करते हैं"
+    );
+
+    text = text.replace(
+      /पौधे सिर्फ रात में श्वसन करते हैं/gi,
+      "पौधे दिन और रात दोनों समय श्वसन करते हैं"
+    );
+  }
+
+  return normalizeAnswer(text);
+}
+
+// ============================================================
+// ANSWER NORMALIZATION
+// ============================================================
+
+function normalizeAnswer(text) {
+  return String(text || "")
+    .replace(/\r\n/g, "\n")
+    .replace(/[ \t]+/g, " ")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+// ============================================================
+// GROQ API CALL
+// ============================================================
+
+async function callGroq(apiKey, payload, timeoutMs) {
+  const controller = new AbortController();
 
   const timeout = setTimeout(() => {
     controller.abort();
@@ -1205,64 +784,36 @@ async function callGroq(
         method: "POST",
 
         headers: {
-          Authorization:
-            `Bearer ${apiKey}`,
-
-          "Content-Type":
-            "application/json",
-
-          Accept:
-            "application/json",
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
         },
 
-        body:
-          JSON.stringify(payload),
+        body: JSON.stringify(payload),
 
-        signal:
-          controller.signal,
+        signal: controller.signal,
       }
     );
 
-    const raw =
-      await response.text();
-
-    let data;
-
-    try {
-      data = raw
-        ? JSON.parse(raw)
-        : {};
-    } catch {
-      data = {
-        error: {
-          message:
-            raw ||
-            "Groq ने invalid response दिया।",
-        },
-      };
-    }
-
     const requestId =
-      response.headers.get(
-        "x-request-id"
-      ) ||
-      response.headers.get(
-        "x-groq-request-id"
-      ) ||
-      data?.id ||
+      response.headers.get("x-request-id") ||
+      response.headers.get("x-groq-request-id") ||
       null;
 
-    // ========================================================
-    // API ERROR
-    // ========================================================
+    const rawText = await response.text();
+
+    let data = null;
+
+    try {
+      data = JSON.parse(rawText);
+    } catch {
+      data = null;
+    }
+
+    // --------------------------------------------------------
+    // HTTP ERROR
+    // --------------------------------------------------------
 
     if (!response.ok) {
-      const message =
-        data?.error?.message ||
-        data?.message ||
-        raw ||
-        `Groq API error (${response.status})`;
-
       const retryable =
         response.status === 408 ||
         response.status === 409 ||
@@ -1271,149 +822,78 @@ async function callGroq(
 
       return {
         ok: false,
-
         retryable,
-
-        status:
-          response.status,
-
-        code:
-          data?.error?.code ||
-          `HTTP_${response.status}`,
-
-        error: message,
-
+        status: response.status,
+        code: `GROQ_HTTP_${response.status}`,
         requestId,
-
-        raw: null,
+        error:
+          data?.error?.message ||
+          rawText.slice(0, 1000) ||
+          "Groq request failed.",
       };
     }
 
-    // ========================================================
-    // READ CHOICE
-    // ========================================================
+    // --------------------------------------------------------
+    // INVALID JSON
+    // --------------------------------------------------------
 
-    const choice =
-      Array.isArray(data?.choices)
-        ? data.choices[0]
-        : null;
-
-    const content =
-      typeof choice?.message?.content ===
-      "string"
-        ? choice.message.content.trim()
-        : "";
-
-    // ========================================================
-    // STRUCTURED OUTPUT
-    // ========================================================
-
-    if (payload.response_format) {
-      if (!content) {
-        return {
-          ok: false,
-
-          retryable: true,
-
-          status: 502,
-
-          code:
-            "EMPTY_CHECK_RESPONSE",
-
-          error:
-            "Self-check ने खाली response दिया।",
-
-          requestId,
-
-          raw: null,
-        };
-      }
-
-      return {
-        ok: true,
-
-        reply: "",
-
-        raw: content,
-
-        requestId,
-      };
-    }
-
-    // ========================================================
-    // NORMAL EMPTY RESPONSE
-    // ========================================================
-
-    if (!content) {
+    if (!data) {
       return {
         ok: false,
-
         retryable: true,
-
         status: 502,
-
-        code:
-          "EMPTY_RESPONSE",
-
-        error:
-          "Groq response आया लेकिन उसमें कोई text answer नहीं था।",
-
+        code: "INVALID_GROQ_JSON",
         requestId,
-
-        raw: null,
       };
     }
 
-    // ========================================================
-    // NORMAL RESPONSE
-    // ========================================================
+    // --------------------------------------------------------
+    // EXTRACT CONTENT
+    // --------------------------------------------------------
+
+    const content =
+      data?.choices?.[0]?.message?.content;
+
+    if (typeof content !== "string") {
+      return {
+        ok: false,
+        retryable: false,
+        status: 502,
+        code: "INVALID_GROQ_RESPONSE",
+        requestId,
+      };
+    }
 
     return {
       ok: true,
-
-      reply: content,
-
-      raw: null,
-
+      reply: content.trim(),
       requestId,
+      status: response.status,
     };
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : String(error);
-
-    const isTimeout =
-      error?.name ===
-      "AbortError";
+    const aborted =
+      error?.name === "AbortError";
 
     return {
       ok: false,
-
       retryable: true,
-
       status: 504,
-
-      code: isTimeout
+      code: aborted
         ? "GROQ_TIMEOUT"
         : "GROQ_NETWORK_ERROR",
-
-      error: isTimeout
-        ? "Groq से जवाब आने में बहुत समय लगा।"
-        : `Groq connection error: ${message}`,
-
       requestId: null,
-
-      raw: null,
+      error:
+        error?.message ||
+        "Network error.",
     };
   } finally {
     clearTimeout(timeout);
   }
 }
 
-// =============================================================
+// ============================================================
 // SLEEP
-// =============================================================
+// ============================================================
 
 function sleep(ms) {
   return new Promise((resolve) => {
@@ -1421,44 +901,30 @@ function sleep(ms) {
   });
 }
 
-// =============================================================
+// ============================================================
 // CORS
-// =============================================================
+// ============================================================
 
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
-
-    "Access-Control-Allow-Methods":
-      "POST, OPTIONS",
-
-    "Access-Control-Allow-Headers":
-      "Content-Type",
-
-    "Access-Control-Max-Age":
-      "86400",
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
   };
 }
 
-// =============================================================
+// ============================================================
 // JSON RESPONSE
-// =============================================================
+// ============================================================
 
-function json(
-  data,
-  status = 200
-) {
-  return new Response(
-    JSON.stringify(data),
-    {
-      status,
+function json(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
 
-      headers: {
-        ...corsHeaders(),
-
-        "Content-Type":
-          "application/json; charset=utf-8",
-      },
-    }
-  );
+    headers: {
+      ...corsHeaders(),
+      "Content-Type": "application/json; charset=utf-8",
+    },
+  });
 }
