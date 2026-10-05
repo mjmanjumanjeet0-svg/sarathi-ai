@@ -31,21 +31,17 @@ export default {
       });
     }
 
-    function sleep(ms) {
-      return new Promise((resolve) => setTimeout(resolve, ms));
+    function cleanText(value, max = 4500) {
+      if (typeof value !== "string") return "";
+      return value.trim().slice(0, max);
     }
 
     function getRequestId() {
       return crypto.randomUUID();
     }
 
-    function cleanText(value, max = 4500) {
-      if (typeof value !== "string") return "";
-      return value.trim().slice(0, max);
-    }
-
     // =========================================================
-    // MARK-BASED ANSWER LENGTH
+    // ANSWER LENGTH
     // =========================================================
     function getAnswerLimit(marks) {
       const m = Number(marks);
@@ -72,13 +68,97 @@ export default {
 
       const marks = Number(match[1]);
 
-      if (!Number.isFinite(marks)) return null;
-
-      return marks;
+      return Number.isFinite(marks) ? marks : null;
     }
 
     // =========================================================
-    // PHOTOSYNTHESIS SIMPLE ANSWER
+    // AUTO SEARCH DETECTION
+    // =========================================================
+    function needsLiveSearch(question) {
+      const q = question.toLowerCase();
+
+      const liveSearchWords = [
+        "आज",
+        "अभी",
+        "वर्तमान",
+        "लेटेस्ट",
+        "नवीनतम",
+        "ताज़ा",
+        "ताजा",
+        "आज का",
+        "आज की",
+        "आज के",
+        "अभी का",
+        "अभी की",
+        "वर्तमान का",
+        "वर्तमान की",
+        "वर्तमान के",
+
+        "भाव",
+        "कीमत",
+        "कीमते",
+        "कीमतें",
+        "रेट",
+        "दाम",
+        "मूल्य",
+
+        "सोने का भाव",
+        "सोने की कीमत",
+        "सोने का रेट",
+        "सोने के दाम",
+
+        "चांदी का भाव",
+        "चाँदी का भाव",
+        "चांदी की कीमत",
+        "चाँदी की कीमत",
+
+        "पेट्रोल का भाव",
+        "डीजल का भाव",
+
+        "मौसम",
+        "तापमान",
+
+        "समाचार",
+        "न्यूज़",
+        "न्यूज",
+        "खबर",
+        "खबरें",
+        "ताजा खबर",
+        "ताज़ा खबर",
+
+        "आज का मैच",
+        "आज का स्कोर",
+        "लाइव स्कोर",
+
+        "ट्रेन की स्थिति",
+        "ट्रेन अभी",
+        "ट्रेन का समय",
+        "ट्रेन लेट",
+        "कितनी लेट",
+
+        "वर्तमान सरकार",
+        "वर्तमान मुख्यमंत्री",
+        "वर्तमान प्रधानमंत्री",
+
+        "current",
+        "today",
+        "latest",
+        "now",
+        "live",
+        "price",
+        "rate",
+        "weather",
+        "news",
+        "score"
+      ];
+
+      return liveSearchWords.some((word) =>
+        q.includes(word)
+      );
+    }
+
+    // =========================================================
+    // SIMPLE PHOTOSYNTHESIS ANSWER
     // =========================================================
     function simplePhotosynthesisAnswer() {
       return `प्रकाश संश्लेषण
@@ -104,7 +184,7 @@ export default {
     }
 
     // =========================================================
-    // SIMPLE SELF-CHECK
+    // SELF CHECK
     // =========================================================
     function finalSelfCheck(answer, question, marks) {
       let result = answer || "";
@@ -112,13 +192,14 @@ export default {
       const q = question.toLowerCase();
 
       // -------------------------------------------------------
-      // Special rule:
-      // "प्रकाश संश्लेषण क्या है? 5 अंक"
-      // should remain simple and exam-friendly.
+      // Photosynthesis 5 marks
       // -------------------------------------------------------
       if (
         q.includes("प्रकाश संश्लेषण") &&
-        (marks === 5 || /5\s*(?:अंक|marks?)/i.test(question))
+        (
+          marks === 5 ||
+          /5\s*(?:अंक|marks?)/i.test(question)
+        )
       ) {
         return simplePhotosynthesisAnswer();
       }
@@ -142,8 +223,13 @@ export default {
         ];
 
         for (const term of advancedTerms) {
+          const escaped = term.replace(
+            /[.*+?^${}()|[\]\\]/g,
+            "\\$&"
+          );
+
           result = result.replace(
-            new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"),
+            new RegExp(escaped, "gi"),
             ""
           );
         }
@@ -157,7 +243,7 @@ export default {
     }
 
     // =========================================================
-    // GROQ CALL
+    // GROQ API
     // =========================================================
     async function callGroq({
       messages,
@@ -166,23 +252,23 @@ export default {
       useSearch = false,
     }) {
       if (!env.GROQ_API_KEY) {
-        throw new Error("GROQ_API_KEY is not configured.");
+        throw new Error(
+          "GROQ_API_KEY is not configured."
+        );
       }
 
       const body = {
         model,
         messages,
-        temperature: 0.2,
+        temperature: useSearch ? 0.2 : 0.2,
         max_completion_tokens: maxCompletionTokens,
         stream: false,
         reasoning_effort: "low",
       };
 
-      // -------------------------------------------------------
-      // IMPORTANT:
-      // Internet Search is enabled directly through API.
-      // Groq says GPT-OSS 20B supports browser_search.
-      // -------------------------------------------------------
+      // =======================================================
+      // BROWSER SEARCH
+      // =======================================================
       if (useSearch) {
         body.tools = [
           {
@@ -190,6 +276,7 @@ export default {
           },
         ];
 
+        // Search को अनिवार्य करो
         body.tool_choice = "required";
       }
 
@@ -197,10 +284,13 @@ export default {
         "https://api.groq.com/openai/v1/chat/completions",
         {
           method: "POST",
+
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${env.GROQ_API_KEY}`,
+            Authorization:
+              `Bearer ${env.GROQ_API_KEY}`,
           },
+
           body: JSON.stringify(body),
         }
       );
@@ -222,6 +312,7 @@ export default {
           "Groq request failed.";
 
         const error = new Error(message);
+
         error.status = response.status;
         error.payload = payload;
 
@@ -234,29 +325,35 @@ export default {
         !Array.isArray(payload.choices) ||
         !payload.choices[0]
       ) {
-        throw new Error("Groq returned an invalid response.");
+        throw new Error(
+          "Groq returned an invalid response."
+        );
       }
 
       const choice = payload.choices[0];
 
       const content =
-        choice?.message?.content ??
-        "";
+        choice?.message?.content ?? "";
 
       return {
         content:
           typeof content === "string"
             ? content.trim()
             : String(content),
+
         raw: payload,
       };
     }
 
     // =========================================================
-    // CHAT SYSTEM PROMPT
+    // SYSTEM PROMPT
     // =========================================================
-    function buildSystemPrompt({ marks, useSearch }) {
-      const answerLimit = getAnswerLimit(marks);
+    function buildSystemPrompt({
+      marks,
+      useSearch,
+    }) {
+      const answerLimit =
+        getAnswerLimit(marks);
 
       let prompt = `
 तुम "सारथी AI" हो।
@@ -268,27 +365,36 @@ export default {
 1. उपयोगकर्ता की भाषा में उत्तर दो।
 2. जहाँ संभव हो आसान हिंदी का प्रयोग करो।
 3. पढ़ाई के प्रश्न में परीक्षा के हिसाब से उत्तर दो।
-4. अनावश्यक कठिन शब्द और बहुत advanced जानकारी मत भरो।
-5. यदि प्रश्न में अंक दिए गए हैं तो उसी के अनुसार उत्तर की लंबाई रखो।
+4. अनावश्यक कठिन और advanced जानकारी मत भरो।
+5. यदि प्रश्न में अंक दिए गए हैं तो उसी के अनुसार उत्तर दो।
 6. छोटे प्रश्न का बहुत लंबा उत्तर मत दो।
-7. यदि तथ्य निश्चित नहीं है तो उसे बनाकर मत लिखो।
+7. तथ्य निश्चित नहीं है तो उसे बनाकर मत लिखो।
 8. उपयोगकर्ता को सीधे उत्तर दो।
 9. बिना जरूरत के यह मत कहना कि "मैं AI हूँ"।
 10. उत्तर को साफ headings और points में देना ठीक है।
 `;
 
+      // -------------------------------------------------------
+      // MARKS
+      // -------------------------------------------------------
       if (marks) {
         prompt += `
 
 इस प्रश्न के ${marks} अंक हैं।
 
 उत्तर लगभग ${answerLimit} completion tokens के भीतर रखो।
-${marks <= 5
-  ? "यह छोटा परीक्षा-उत्तर है। बहुत advanced technical details से बचो।"
-  : "अंक के अनुसार पर्याप्त विस्तार दो।"}
+
+${
+  marks <= 5
+    ? "यह छोटा परीक्षा-उत्तर है। बहुत advanced technical details से बचो।"
+    : "अंक के अनुसार पर्याप्त विस्तार दो।"
+}
 `;
       }
 
+      // -------------------------------------------------------
+      // INTERNET SEARCH
+      // -------------------------------------------------------
       if (useSearch) {
         prompt += `
 
@@ -298,19 +404,26 @@ IMPORTANT INTERNET SEARCH RULES:
 
 तुम्हें browser_search tool का उपयोग करना ही है।
 
-बिना इंटरनेट खोजे यह मत कहना:
-"मेरे पास रीयल-टाइम जानकारी नहीं है"
-या
+Search किए बिना यह मत कहना:
+
+"मेरे पास रीयल-टाइम जानकारी नहीं है।"
+
 "मैं वर्तमान जानकारी नहीं देख सकता।"
 
-Search से प्राप्त जानकारी को पढ़कर उत्तर दो।
+"मेरे पास इंटरनेट की सुविधा नहीं है।"
 
-अगर प्रश्न आज की कीमत, आज का भाव, मौसम, समाचार,
-ट्रेन की वर्तमान स्थिति, वर्तमान सरकारी जानकारी,
-वर्तमान खेल परिणाम या अन्य real-time जानकारी से संबंधित है,
-तो पुरानी जानकारी के आधार पर उत्तर मत बनाओ।
+पहले Internet Search से जानकारी प्राप्त करो।
 
-जहाँ संभव हो स्रोत का नाम या URL भी उत्तर में बताओ।
+फिर Search से मिली जानकारी के आधार पर उत्तर दो।
+
+यदि प्रश्न आज की कीमत, आज का भाव, वर्तमान रेट,
+मौसम, समाचार, ट्रेन की वर्तमान स्थिति,
+वर्तमान सरकारी जानकारी, लाइव स्कोर या अन्य
+real-time जानकारी से संबंधित है तो पुरानी जानकारी
+के आधार पर उत्तर मत बनाओ।
+
+जहाँ Search से स्रोत उपलब्ध हों,
+उनके आधार पर जानकारी दो।
 `;
       }
 
@@ -324,10 +437,12 @@ Search से प्राप्त जानकारी को पढ़कर
       request.method === "POST" &&
       url.pathname === "/api/chat"
     ) {
-      const requestId = getRequestId();
+      const requestId =
+        getRequestId();
 
       try {
-        const body = await request.json();
+        const body =
+          await request.json();
 
         const question = cleanText(
           body?.message ||
@@ -336,96 +451,138 @@ Search से प्राप्त जानकारी को पढ़कर
           4500
         );
 
-        const webSearch = Boolean(
-          body?.webSearch ??
-          body?.useSearch ??
-          false
-        );
-
-        const history = Array.isArray(body?.history)
-          ? body.history
-          : [];
-
         if (!question) {
           return json(
             {
-              error: "प्रश्न खाली है।",
+              error:
+                "प्रश्न खाली है।",
               requestId,
             },
             400
           );
         }
 
+        // =====================================================
+        // USER SEARCH BUTTON
+        // =====================================================
+        const userSearchFlag =
+          body?.webSearch === true ||
+          body?.useSearch === true;
+
+        // =====================================================
+        // AUTOMATIC SEARCH
+        // =====================================================
+        const automaticSearch =
+          needsLiveSearch(question);
+
+        // =====================================================
+        // FINAL SEARCH DECISION
+        // =====================================================
+        const webSearch =
+          userSearchFlag ||
+          automaticSearch;
+
+        const history =
+          Array.isArray(body?.history)
+            ? body.history
+            : [];
+
         const marks =
           body?.marks != null
             ? Number(body.marks)
             : extractMarks(question);
 
-        // -----------------------------------------------------
-        // Keep conversation small to reduce token usage.
-        // -----------------------------------------------------
-        const safeHistory = history
-          .slice(-12)
-          .map((item) => {
-            const role =
-              item?.role === "assistant"
-                ? "assistant"
-                : "user";
+        // =====================================================
+        // SMALL HISTORY
+        // =====================================================
+        const safeHistory =
+          history
+            .slice(-12)
+            .map((item) => {
+              const role =
+                item?.role === "assistant"
+                  ? "assistant"
+                  : "user";
 
-            return {
-              role,
-              content: cleanText(
-                item?.content || "",
-                4500
-              ),
-            };
-          })
-          .filter((item) => item.content);
+              return {
+                role,
 
+                content: cleanText(
+                  item?.content || "",
+                  4500
+                ),
+              };
+            })
+            .filter(
+              (item) => item.content
+            );
+
+        // =====================================================
+        // MESSAGES
+        // =====================================================
         const messages = [
           {
             role: "system",
-            content: buildSystemPrompt({
-              marks,
-              useSearch: webSearch,
-            }),
+
+            content:
+              buildSystemPrompt({
+                marks,
+                useSearch: webSearch,
+              }),
           },
+
           ...safeHistory,
+
           {
             role: "user",
             content: question,
           },
         ];
 
-        const maxTokens = getAnswerLimit(marks);
+        const maxTokens =
+          getAnswerLimit(marks);
 
-        // -----------------------------------------------------
-        // SEARCH REQUEST
-        // -----------------------------------------------------
+        // =====================================================
+        // INTERNET SEARCH REQUEST
+        // =====================================================
         if (webSearch) {
           try {
-            const result = await callGroq({
-              messages,
-              model: "openai/gpt-oss-20b",
-              maxCompletionTokens: Math.min(
-                maxTokens,
-                768
-              ),
-              useSearch: true,
-            });
+            const result =
+              await callGroq({
+                messages,
 
-            let answer = result.content;
+                model:
+                  "openai/gpt-oss-20b",
 
-            answer = finalSelfCheck(
-              answer,
-              question,
-              marks
-            );
+                maxCompletionTokens:
+                  Math.min(
+                    maxTokens,
+                    768
+                  ),
+
+                useSearch: true,
+              });
+
+            let answer =
+              result.content;
+
+            answer =
+              finalSelfCheck(
+                answer,
+                question,
+                marks
+              );
 
             return json({
               answer,
+
               selfChecked: true,
+
               webSearch: true,
+
+              autoSearch:
+                automaticSearch,
+
               requestId,
             });
           } catch (searchError) {
@@ -435,61 +592,90 @@ Search से प्राप्त जानकारी को पढ़कर
             );
 
             const status =
-              searchError?.status || 500;
+              searchError?.status ||
+              500;
 
             // -------------------------------------------------
-            // Special rate-limit message
+            // RATE LIMIT
             // -------------------------------------------------
             if (status === 429) {
               return json(
                 {
                   answer:
                     "अभी Internet Search की सीमा पूरी हो गई है। थोड़ी देर बाद फिर कोशिश करें।",
+
                   selfChecked: false,
+
                   webSearch: true,
-                  errorCode: "RATE_LIMIT",
+
+                  errorCode:
+                    "RATE_LIMIT",
+
                   requestId,
                 },
+
                 429
               );
             }
 
+            // -------------------------------------------------
+            // SEARCH FAILED
+            // -------------------------------------------------
             return json(
               {
                 answer:
                   "Internet Search अभी उपलब्ध नहीं हो पाया। थोड़ी देर बाद फिर कोशिश करें।",
+
                 selfChecked: false,
+
                 webSearch: true,
-                errorCode: "SEARCH_FAILED",
+
+                errorCode:
+                  "SEARCH_FAILED",
+
                 requestId,
               },
+
               502
             );
           }
         }
 
-        // -----------------------------------------------------
-        // NORMAL CHAT
-        // -----------------------------------------------------
-        const result = await callGroq({
-          messages,
-          model: "openai/gpt-oss-20b",
-          maxCompletionTokens: maxTokens,
-          useSearch: false,
-        });
+        // =====================================================
+        // NORMAL AI CHAT
+        // =====================================================
+        const result =
+          await callGroq({
+            messages,
 
-        let answer = result.content;
+            model:
+              "openai/gpt-oss-20b",
 
-        answer = finalSelfCheck(
-          answer,
-          question,
-          marks
-        );
+            maxCompletionTokens:
+              maxTokens,
+
+            useSearch: false,
+          });
+
+        let answer =
+          result.content;
+
+        answer =
+          finalSelfCheck(
+            answer,
+            question,
+            marks
+          );
 
         return json({
           answer,
+
           selfChecked: true,
+
           webSearch: false,
+
+          autoSearch: false,
+
           requestId,
         });
       } catch (error) {
@@ -499,16 +685,21 @@ Search से प्राप्त जानकारी को पढ़कर
         );
 
         const status =
-          error?.status || 500;
+          error?.status ||
+          500;
 
         if (status === 429) {
           return json(
             {
               answer:
                 "अभी AI की token/rate limit पूरी हो गई है। थोड़ी देर बाद फिर कोशिश करें।",
-              errorCode: "RATE_LIMIT",
+
+              errorCode:
+                "RATE_LIMIT",
+
               requestId,
             },
+
             429
           );
         }
@@ -517,9 +708,13 @@ Search से प्राप्त जानकारी को पढ़कर
           {
             answer:
               "अभी जवाब नहीं मिल पाया। कृपया फिर से कोशिश करें।",
-            errorCode: "CHAT_FAILED",
+
+            errorCode:
+              "CHAT_FAILED",
+
             requestId,
           },
+
           502
         );
       }
@@ -532,43 +727,51 @@ Search से प्राप्त जानकारी को पढ़कर
       request.method === "POST" &&
       url.pathname === "/api/vision"
     ) {
-      const requestId = getRequestId();
+      const requestId =
+        getRequestId();
 
       try {
-        const body = await request.json();
+        const body =
+          await request.json();
 
         const image =
           typeof body?.image === "string"
             ? body.image
             : "";
 
-        const question = cleanText(
-          body?.question ||
-          body?.message ||
-          "इस फोटो को समझाकर बताओ।",
-          2500
-        );
+        const question =
+          cleanText(
+            body?.question ||
+            body?.message ||
+            "इस फोटो को समझाकर बताओ।",
+            2500
+          );
 
         if (!image) {
           return json(
             {
-              error: "फोटो नहीं मिली।",
+              error:
+                "फोटो नहीं मिली।",
+
               requestId,
             },
+
             400
           );
         }
 
-        // -----------------------------------------------------
-        // Prevent extremely large requests.
-        // -----------------------------------------------------
-        if (image.length > 20000000) {
+        if (
+          image.length >
+          20000000
+        ) {
           return json(
             {
               error:
                 "फोटो बहुत बड़ी है। कृपया छोटी फोटो भेजें।",
+
               requestId,
             },
+
             413
           );
         }
@@ -578,8 +781,10 @@ Search से प्राप्त जानकारी को पढ़कर
             {
               error:
                 "GROQ_API_KEY configured नहीं है।",
+
               requestId,
             },
+
             500
           );
         }
@@ -587,6 +792,7 @@ Search से प्राप्त जानकारी को पढ़कर
         const visionMessages = [
           {
             role: "system",
+
             content: `
 तुम सारथी AI हो।
 
@@ -594,22 +800,27 @@ Search से प्राप्त जानकारी को पढ़कर
 सरल और स्पष्ट हिंदी में उत्तर दो।
 
 अगर फोटो में प्रश्न है तो उसे समझकर उत्तर दो।
-अगर फोटो में कोई दस्तावेज है तो दिखाई दे रही जानकारी
-के आधार पर बताओ।
+
+अगर फोटो में कोई दस्तावेज है तो दिखाई दे रही
+जानकारी के आधार पर बताओ।
 
 जो जानकारी फोटो में साफ दिखाई नहीं देती,
 उसे अनुमान से मत बनाओ।
 `,
           },
+
           {
             role: "user",
+
             content: [
               {
                 type: "text",
                 text: question,
               },
+
               {
                 type: "image_url",
+
                 image_url: {
                   url: image,
                 },
@@ -618,16 +829,26 @@ Search से प्राप्त जानकारी को पढ़कर
           },
         ];
 
-        const result = await callGroq({
-          messages: visionMessages,
-          model: "qwen/qwen3.8-27b",
-          maxCompletionTokens: 1024,
-          useSearch: false,
-        });
+        const result =
+          await callGroq({
+            messages:
+              visionMessages,
+
+            model:
+              "qwen/qwen3.8-27b",
+
+            maxCompletionTokens:
+              1024,
+
+            useSearch: false,
+          });
 
         return json({
-          answer: result.content,
+          answer:
+            result.content,
+
           selfChecked: true,
+
           requestId,
         });
       } catch (error) {
@@ -637,16 +858,21 @@ Search से प्राप्त जानकारी को पढ़कर
         );
 
         const status =
-          error?.status || 500;
+          error?.status ||
+          500;
 
         if (status === 429) {
           return json(
             {
               answer:
                 "अभी फोटो AI की token/rate limit पूरी हो गई है। थोड़ी देर बाद फिर कोशिश करें।",
-              errorCode: "RATE_LIMIT",
+
+              errorCode:
+                "RATE_LIMIT",
+
               requestId,
             },
+
             429
           );
         }
@@ -655,48 +881,62 @@ Search से प्राप्त जानकारी को पढ़कर
           {
             answer:
               "फोटो को समझने में अभी समस्या आ गई। कृपया फिर से कोशिश करें।",
-            errorCode: "VISION_FAILED",
+
+            errorCode:
+              "VISION_FAILED",
+
             requestId,
           },
+
           502
         );
       }
     }
 
     // =========================================================
-    // DEFAULT / WEBSITE
+    // HOME
     // =========================================================
     if (
       request.method === "GET" &&
       url.pathname === "/"
     ) {
       if (env.ASSETS) {
-        return env.ASSETS.fetch(request);
+        return env.ASSETS.fetch(
+          request
+        );
       }
 
       return new Response(
         "Sarathi AI Worker is running.",
         {
           status: 200,
+
           headers: {
             ...corsHeaders,
-            "Content-Type": "text/plain; charset=utf-8",
+
+            "Content-Type":
+              "text/plain; charset=utf-8",
           },
         }
       );
     }
 
-    // ---------------------------------------------------------
-    // Try Cloudflare Assets for other website files.
-    // ---------------------------------------------------------
+    // =========================================================
+    // CLOUDFLARE ASSETS
+    // =========================================================
     if (env.ASSETS) {
       try {
-        return env.ASSETS.fetch(request);
+        return env.ASSETS.fetch(
+          request
+        );
       } catch {
-        // Ignore and continue to 404.
+        // Continue to 404
       }
     }
 
+    // =========================================================
+    // 404
+    // =========================================================
     return json(
       {
         error: "Not Found",
