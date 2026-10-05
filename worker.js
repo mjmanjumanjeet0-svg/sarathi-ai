@@ -51,6 +51,9 @@ export default {
 
 async function handleChat(request, env) {
   try {
+    // =========================
+    // API KEY CHECK
+    // =========================
     if (!env.GROQ_API_KEY) {
       return json(
         {
@@ -140,7 +143,7 @@ async function handleChat(request, env) {
       body.webSearch === true;
 
     // ========================================================
-    // MAIN SYSTEM PROMPT
+    // SYSTEM PROMPT
     // ========================================================
 
     const systemPrompt = `
@@ -177,7 +180,7 @@ MARKS CONTROL
 - 1–2 मुख्य बातें।
 
 यदि 5 अंक:
-- 2–3 पंक्ति की भूमिका/परिभाषा।
+- 2–3 पंक्ति की भूमिका या परिभाषा।
 - लगभग 4–6 मुख्य बिंदु।
 - जरूरत हो तो छोटा उदाहरण।
 - छोटा निष्कर्ष।
@@ -217,13 +220,14 @@ IMPORTANT COMPLEXITY RULE
 PHOTOSYNTHESIS
 ==================================================
 
-सामान्य 5 अंक के प्रश्न में:
+यदि सामान्य प्रश्न हो:
 
 "प्रकाश संश्लेषण क्या है?"
 
-का उत्तर आसान स्तर पर रखो।
+तो उत्तर आसान स्तर पर रखो।
 
-इन terms को सामान्य उत्तर में मत जोड़ो:
+सामान्य 5 अंक के उत्तर में इन technical terms को
+अनावश्यक रूप से मत जोड़ो:
 
 Photosystem I
 Photosystem II
@@ -260,7 +264,7 @@ water splitting
 SAFE PHOTOSYNTHESIS LEVEL
 ==================================================
 
-सामान्य 5 अंक के प्रश्न के लिए इस स्तर की जानकारी पर्याप्त है:
+सामान्य 5 अंक के प्रश्न के लिए यह स्तर पर्याप्त है:
 
 प्रकाश संश्लेषण वह प्रक्रिया है जिसमें हरे पौधे
 सूर्य के प्रकाश और क्लोरोफिल की सहायता से
@@ -339,12 +343,12 @@ Calculation जाँचो।
 INTERNET SEARCH
 ==================================================
 
-यदि web search उपलब्ध और चालू है:
+यदि web search चालू है:
 
 - current जानकारी के लिए search करो।
 - आज/latest/current जैसी जानकारी में ताजा स्रोतों को प्राथमिकता दो।
 - नकली citation मत बनाओ।
-- search उपलब्ध न हो तो current information को verified fact मत बताओ।
+- search उपलब्ध न हो तो current information को verified current fact मत बताओ।
 
 ==================================================
 FINAL CHECK
@@ -368,7 +372,7 @@ FINAL CHECK
 `;
 
     // ========================================================
-    // GROQ PAYLOAD
+    // MAIN GROQ PAYLOAD
     // ========================================================
 
     const payload = {
@@ -392,7 +396,7 @@ FINAL CHECK
     };
 
     // ========================================================
-    // WEB SEARCH
+    // BROWSER SEARCH
     // ========================================================
 
     if (useSearch) {
@@ -412,23 +416,20 @@ FINAL CHECK
     let result = await callGroq(
       payload,
       env.GROQ_API_KEY,
-      55000
+      useSearch ? 60000 : 45000
     );
 
     // ========================================================
-    // RETRY
+    // MAIN RETRY
     // ========================================================
 
-    if (
-      !result.ok &&
-      result.retryable
-    ) {
-      await sleep(1200);
+    if (!result.ok && result.retryable) {
+      await sleep(1000);
 
       result = await callGroq(
         payload,
         env.GROQ_API_KEY,
-        55000
+        useSearch ? 60000 : 45000
       );
     }
 
@@ -436,10 +437,7 @@ FINAL CHECK
     // SEARCH FALLBACK
     // ========================================================
 
-    if (
-      !result.ok &&
-      useSearch
-    ) {
+    if (!result.ok && useSearch) {
       const fallbackPayload = {
         model: "openai/gpt-oss-120b",
 
@@ -455,7 +453,6 @@ FINAL CHECK
 verified current fact की तरह मत बताओ।
 `,
           },
-
           ...messages,
         ],
 
@@ -471,26 +468,20 @@ verified current fact की तरह मत बताओ।
       let fallback = await callGroq(
         fallbackPayload,
         env.GROQ_API_KEY,
-        55000
+        45000
       );
 
-      if (
-        !fallback.ok &&
-        fallback.retryable
-      ) {
-        await sleep(1200);
+      if (!fallback.ok && fallback.retryable) {
+        await sleep(1000);
 
         fallback = await callGroq(
           fallbackPayload,
           env.GROQ_API_KEY,
-          55000
+          45000
         );
       }
 
-      if (
-        fallback.ok &&
-        fallback.reply
-      ) {
+      if (fallback.ok && fallback.reply) {
         const checked =
           await selfCheckAndCorrect(
             messages,
@@ -501,16 +492,14 @@ verified current fact की तरह मत बताओ।
         return json({
           reply: checked.reply,
           searchUnavailable: true,
-          selfChecked:
-            checked.selfChecked,
-          selfCorrected:
-            checked.selfCorrected,
+          selfChecked: checked.selfChecked,
+          selfCorrected: checked.selfCorrected,
         });
       }
     }
 
     // ========================================================
-    // ERROR
+    // MAIN ERROR
     // ========================================================
 
     if (!result.ok) {
@@ -525,13 +514,16 @@ verified current fact की तरह मत बताओ।
       );
     }
 
+    // ========================================================
+    // EMPTY MAIN ANSWER
+    // ========================================================
+
     if (!result.reply) {
       return json(
         {
           error:
             "Groq ने खाली उत्तर लौटाया। कृपया फिर कोशिश करें।",
-          code:
-            "EMPTY_GROQ_RESPONSE",
+          code: "EMPTY_GROQ_RESPONSE",
           requestId:
             result.requestId || null,
         },
@@ -541,6 +533,10 @@ verified current fact की तरह मत बताओ।
 
     // ========================================================
     // SELF CHECK
+    //
+    // IMPORTANT:
+    // Self-check fail होने पर original answer वापस जाएगा.
+    // इसलिए checker की समस्या से main answer fail नहीं होगा.
     // ========================================================
 
     const checked =
@@ -552,10 +548,8 @@ verified current fact की तरह मत बताओ।
 
     return json({
       reply: checked.reply,
-      selfChecked:
-        checked.selfChecked,
-      selfCorrected:
-        checked.selfCorrected,
+      selfChecked: checked.selfChecked,
+      selfCorrected: checked.selfCorrected,
     });
   } catch (error) {
     return json(
@@ -564,7 +558,6 @@ verified current fact की तरह मत बताओ।
           error instanceof Error
             ? error.message
             : String(error),
-
         code: "WORKER_ERROR",
       },
       500
@@ -587,7 +580,7 @@ async function selfCheckAndCorrect(
 
 तुम्हें user का प्रश्न और AI का उत्तर दिया जाएगा।
 
-उत्तर को बहुत सख्ती से जाँचो।
+उत्तर को सख्ती से जाँचो।
 
 ==================================================
 MARKS CHECK
@@ -660,11 +653,11 @@ water splitting
 PHOTOSYNTHESIS QUALITY TEST
 ==================================================
 
-यदि user ने केवल:
+यदि user ने:
 
 "प्रकाश संश्लेषण क्या है? 5 अंक"
 
-पूछा है, तो उत्तर में सामान्यतः:
+पूछा है, तो सामान्यतः:
 
 - परिभाषा
 - प्रकाश
@@ -717,13 +710,12 @@ FINAL CHECK
 सिर्फ "सही है" मत लिखो।
 `;
 
-    const conversationText =
-      messages
-        .map(
-          (message) =>
-            `${message.role}: ${message.content}`
-        )
-        .join("\n\n");
+    const conversationText = messages
+      .map(
+        (message) =>
+          `${message.role}: ${message.content}`
+      )
+      .join("\n\n");
 
     const checkerPayload = {
       model: "openai/gpt-oss-120b",
@@ -733,7 +725,6 @@ FINAL CHECK
           role: "system",
           content: checkerPrompt,
         },
-
         {
           role: "user",
           content: `
@@ -774,7 +765,6 @@ ${answer}
 
               issues: {
                 type: "array",
-
                 items: {
                   type: "string",
                 },
@@ -797,29 +787,38 @@ ${answer}
       },
     };
 
+    // ========================================================
+    // CHECKER REQUEST
+    // ========================================================
+
     let check = await callGroq(
       checkerPayload,
       apiKey,
-      20000
+      12000
     );
 
-    if (
-      !check.ok &&
-      check.retryable
-    ) {
-      await sleep(700);
+    // ========================================================
+    // CHECKER RETRY
+    // ========================================================
+
+    if (!check.ok && check.retryable) {
+      await sleep(500);
 
       check = await callGroq(
         checkerPayload,
         apiKey,
-        20000
+        12000
       );
     }
 
-    if (
-      !check.ok ||
-      !check.raw
-    ) {
+    // ========================================================
+    // CHECKER FAILED
+    //
+    // IMPORTANT:
+    // Original answer is preserved.
+    // ========================================================
+
+    if (!check.ok || !check.raw) {
       return {
         reply: answer,
         selfChecked: false,
@@ -827,12 +826,14 @@ ${answer}
       };
     }
 
+    // ========================================================
+    // PARSE CHECKER JSON
+    // ========================================================
+
     let report;
 
     try {
-      report = JSON.parse(
-        check.raw
-      );
+      report = JSON.parse(check.raw);
     } catch {
       return {
         reply: answer,
@@ -841,8 +842,12 @@ ${answer}
       };
     }
 
+    // ========================================================
+    // VALIDATE CHECKER RESULT
+    // ========================================================
+
     if (
-      typeof report.needs_correction !==
+      typeof report?.needs_correction !==
       "boolean"
     ) {
       return {
@@ -852,15 +857,21 @@ ${answer}
       };
     }
 
-    if (
-      !report.needs_correction
-    ) {
+    // ========================================================
+    // NO CORRECTION REQUIRED
+    // ========================================================
+
+    if (!report.needs_correction) {
       return {
         reply: answer,
         selfChecked: true,
         selfCorrected: false,
       };
     }
+
+    // ========================================================
+    // GET CORRECTED ANSWER
+    // ========================================================
 
     const corrected =
       typeof report.corrected_answer ===
@@ -876,7 +887,10 @@ ${answer}
       };
     }
 
-    // Prevent an accidental huge rewrite.
+    // ========================================================
+    // SAFETY AGAINST HUGE REWRITE
+    // ========================================================
+
     const maximumAllowed =
       Math.max(
         answer.length * 2.5,
@@ -894,12 +908,17 @@ ${answer}
       };
     }
 
+    // ========================================================
+    // RETURN CORRECTED ANSWER
+    // ========================================================
+
     return {
       reply: corrected,
       selfChecked: true,
       selfCorrected: true,
     };
   } catch {
+    // Never allow Self-Check to break the main AI.
     return {
       reply: answer,
       selfChecked: false,
@@ -920,36 +939,34 @@ async function callGroq(
   const controller =
     new AbortController();
 
-  const timeout =
-    setTimeout(() => {
-      controller.abort();
-    }, timeoutMs);
+  const timeout = setTimeout(() => {
+    controller.abort();
+  }, timeoutMs);
 
   try {
-    const response =
-      await fetch(
-        "https://api.groq.com/openai/v1/chat/completions",
-        {
-          method: "POST",
+    const response = await fetch(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        method: "POST",
 
-          headers: {
-            Authorization:
-              `Bearer ${apiKey}`,
+        headers: {
+          Authorization:
+            `Bearer ${apiKey}`,
 
-            "Content-Type":
-              "application/json",
+          "Content-Type":
+            "application/json",
 
-            Accept:
-              "application/json",
-          },
+          Accept:
+            "application/json",
+        },
 
-          body:
-            JSON.stringify(payload),
+        body:
+          JSON.stringify(payload),
 
-          signal:
-            controller.signal,
-        }
-      );
+        signal:
+          controller.signal,
+      }
+    );
 
     const raw =
       await response.text();
@@ -979,6 +996,10 @@ async function callGroq(
       ) ||
       data?.id ||
       null;
+
+    // ========================================================
+    // API ERROR
+    // ========================================================
 
     if (!response.ok) {
       const message =
@@ -1013,28 +1034,26 @@ async function callGroq(
       };
     }
 
+    // ========================================================
+    // READ CHOICE
+    // ========================================================
+
     const choice =
-      Array.isArray(
-        data?.choices
-      )
+      Array.isArray(data?.choices)
         ? data.choices[0]
         : null;
 
     const content =
-      typeof choice
-        ?.message
-        ?.content ===
+      typeof choice?.message?.content ===
       "string"
         ? choice.message.content.trim()
         : "";
 
-    // =========================
-    // STRUCTURED CHECK RESPONSE
-    // =========================
+    // ========================================================
+    // STRUCTURED OUTPUT
+    // ========================================================
 
-    if (
-      payload.response_format
-    ) {
+    if (payload.response_format) {
       if (!content) {
         return {
           ok: false,
@@ -1066,9 +1085,9 @@ async function callGroq(
       };
     }
 
-    // =========================
+    // ========================================================
     // NORMAL EMPTY RESPONSE
-    // =========================
+    // ========================================================
 
     if (!content) {
       return {
@@ -1089,6 +1108,10 @@ async function callGroq(
         raw: null,
       };
     }
+
+    // ========================================================
+    // NORMAL RESPONSE
+    // ========================================================
 
     return {
       ok: true,
@@ -1138,14 +1161,9 @@ async function callGroq(
 // ============================================================
 
 function sleep(ms) {
-  return new Promise(
-    (resolve) => {
-      setTimeout(
-        resolve,
-        ms
-      );
-    }
-  );
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 // ============================================================
@@ -1154,19 +1172,21 @@ function sleep(ms) {
 
 function corsHeaders() {
   return {
-    "Access-Control-Allow-Origin":
-      "*",
+    "Access-Control-Allow-Origin": "*",
 
     "Access-Control-Allow-Methods":
       "POST, OPTIONS",
 
     "Access-Control-Allow-Headers":
       "Content-Type",
+
+    "Access-Control-Max-Age":
+      "86400",
   };
 }
 
 // ============================================================
-// JSON
+// JSON RESPONSE
 // ============================================================
 
 function json(
