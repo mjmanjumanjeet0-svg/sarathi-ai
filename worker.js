@@ -2,26 +2,22 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // =========================================================
+    // =========================
     // CORS
-    // =========================================================
+    // =========================
     if (request.method === "OPTIONS") {
       return new Response(null, {
-        status: 204,
         headers: corsHeaders(),
       });
     }
 
-    // =========================================================
+    // =========================
     // CHAT API
-    // =========================================================
+    // =========================
     if (url.pathname === "/api/chat") {
       if (request.method !== "POST") {
         return json(
-          {
-            error: "Only POST requests are allowed.",
-            code: "METHOD_NOT_ALLOWED",
-          },
+          { error: "Method Not Allowed" },
           405
         );
       }
@@ -29,16 +25,13 @@ export default {
       return handleChat(request, env);
     }
 
-    // =========================================================
-    // PHOTO / VISION API
-    // =========================================================
+    // =========================
+    // VISION API
+    // =========================
     if (url.pathname === "/api/vision") {
       if (request.method !== "POST") {
         return json(
-          {
-            error: "Only POST requests are allowed.",
-            code: "METHOD_NOT_ALLOWED",
-          },
+          { error: "Method Not Allowed" },
           405
         );
       }
@@ -46,9 +39,9 @@ export default {
       return handleVision(request, env);
     }
 
-    // =========================================================
-    // WEBSITE
-    // =========================================================
+    // =========================
+    // WEBSITE / ASSETS
+    // =========================
     if (env.ASSETS) {
       return env.ASSETS.fetch(request);
     }
@@ -57,20 +50,19 @@ export default {
       status: 200,
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
+        ...corsHeaders(),
       },
     });
   },
 };
 
 
-// ============================================================
-// MAIN CHAT
-// ============================================================
+// ======================================================
+// CHAT
+// ======================================================
 
 async function handleChat(request, env) {
-  const apiKey = env.GROQ_API_KEY;
-
-  if (!apiKey) {
+  if (!env.GROQ_API_KEY) {
     return json(
       {
         error: "GROQ_API_KEY is not configured.",
@@ -94,18 +86,37 @@ async function handleChat(request, env) {
     );
   }
 
-  if (!body || !Array.isArray(body.messages)) {
+  if (!body || typeof body !== "object") {
     return json(
       {
-        error: "messages array is required.",
-        code: "INVALID_MESSAGES",
+        error: "Invalid request body.",
+        code: "INVALID_BODY",
       },
       400
     );
   }
 
-  const messages = body.messages
-    .slice(-20)
+  // --------------------------------------------------
+  // Messages
+  // --------------------------------------------------
+
+  const rawMessages = Array.isArray(body.messages)
+    ? body.messages
+    : [];
+
+  if (rawMessages.length === 0) {
+    return json(
+      {
+        error: "No messages provided.",
+        code: "NO_MESSAGES",
+      },
+      400
+    );
+  }
+
+  // Keep history small to save tokens.
+  const messages = rawMessages
+    .slice(-12)
     .map((message) => {
       const role =
         message?.role === "assistant"
@@ -118,203 +129,57 @@ async function handleChat(request, env) {
         content = message.content;
       } else if (message?.content != null) {
         try {
-          content = JSON.stringify(
-            message.content
-          );
+          content = JSON.stringify(message.content);
         } catch {
-          content = "";
+          content = String(message.content);
         }
       }
 
       return {
         role,
-        content: content.slice(0, 8000),
+        content: String(content).slice(0, 4500),
       };
     })
-    .filter(
-      (message) =>
-        message.content.trim().length > 0
-    );
+    .filter((m) => m.content.trim());
 
   if (messages.length === 0) {
     return json(
       {
-        error: "At least one message is required.",
+        error: "No usable messages found.",
         code: "EMPTY_MESSAGES",
       },
       400
     );
   }
 
-  const useSearch =
-    body.webSearch === true;
+  const latestUserMessage =
+    [...messages]
+      .reverse()
+      .find((m) => m.role === "user")
+      ?.content || "";
 
+  const marks = detectMarks(latestUserMessage);
 
-  // ==========================================================
-  // SYSTEM PROMPT
-  // ==========================================================
+  const useSearch = body.webSearch === true;
 
-  const systemPrompt = `
-तुम "सारथी AI" हो — सरल, सुरक्षित, दोस्ताना और
-तथ्य-जाँच करने वाला हिंदी AI सहायक।
+  // --------------------------------------------------
+  // System prompt
+  // --------------------------------------------------
 
-मुख्य नियम:
+  const systemPrompt = buildSystemPrompt(marks, useSearch);
 
-1. प्रश्न का सीधा और स्पष्ट उत्तर दो।
-2. सरल और स्वाभाविक हिंदी का उपयोग करो।
-3. यूज़र जिस भाषा में बात करे उसी भाषा में जवाब दो।
-4. परीक्षा वाले प्रश्न में exam-ready उत्तर दो।
-5. दिए गए marks के अनुसार लंबाई और कठिनाई रखो।
-6. बिना जरूरत advanced terminology मत दो।
-7. प्रश्न से बाहर की जानकारी मत जोड़ो।
-8. विरोधाभासी बातें मत लिखो।
-9. गणित की calculation दोबारा जाँचो।
-10. विज्ञान के facts जाँचो।
-11. इतिहास में तारीख, व्यक्ति, घटना और कारण-परिणाम जाँचो।
-12. Chemistry में formula और equation जाँचो।
-13. Physics में formula, unit और calculation जाँचो।
-14. Grammar और spelling सुधारो।
+  // --------------------------------------------------
+  // Token budget
+  // --------------------------------------------------
 
-============================================================
-MARKS CONTROL
-============================================================
+  const maxTokens = getMaxCompletionTokens(
+    marks,
+    latestUserMessage
+  );
 
-1 अंक:
-- एक सीधा उत्तर।
-
-2 अंक:
-- लगभग 2–4 छोटे वाक्य या बिंदु।
-
-5 अंक:
-- सरल परिभाषा या भूमिका।
-- लगभग 4–6 मुख्य बिंदु।
-- छोटा महत्व या निष्कर्ष।
-- उत्तर मध्यम लंबाई का हो।
-- अनावश्यक advanced detail नहीं।
-
-10 अंक:
-- भूमिका।
-- headings।
-- पर्याप्त व्याख्या।
-- मुख्य बिंदु।
-- उदाहरण जहाँ जरूरी हो।
-- निष्कर्ष।
-
-12 अंक:
-- विस्तृत exam-ready उत्तर।
-- भूमिका।
-- headings।
-- विस्तृत व्याख्या।
-- उदाहरण।
-- निष्कर्ष।
-
-============================================================
-QUIZ / PRACTICE MODE
-============================================================
-
-अगर यूज़र कहे:
-
-"मुझसे सवाल पूछो"
-"मुझे quiz कराओ"
-"मेरा test लो"
-"practice कराओ"
-"एक सवाल पूछो"
-
-तो:
-
-1. एक समय में केवल एक सवाल पूछो।
-2. तुरंत उसका उत्तर मत बताओ।
-3. यूज़र के उत्तर का इंतजार करो।
-4. यूज़र उत्तर दे तो उसे जाँचो।
-5. सही हो तो बताओ कि सही है।
-6. गलत हो तो सही उत्तर और छोटा explanation दो।
-7. फिर अगला सवाल पूछ सकते हो।
-
-============================================================
-5 MARKS STRICT RULE
-============================================================
-
-यदि प्रश्न में 5 अंक हैं तो उत्तर सरल और
-परीक्षा में लिखने योग्य होना चाहिए।
-
-============================================================
-PHOTOSYNTHESIS
-============================================================
-
-यदि सामान्य प्रश्न हो:
-
-"प्रकाश संश्लेषण क्या है?"
-
-तो:
-
-- सरल परिभाषा दो।
-- 4–6 मुख्य बिंदु दो।
-- क्लोरोफिल का उल्लेख कर सकते हो।
-- जल का उल्लेख करो।
-- कार्बन डाइऑक्साइड का उल्लेख करो।
-- भोजन बनने की बात बताओ।
-- ऑक्सीजन निकलने की बात बताओ।
-- छोटा महत्व या निष्कर्ष दो।
-
-सामान्य 5 अंक के उत्तर में ये terms मत दो:
-
-ATP
-NADPH
-Calvin cycle
-Photosystem I
-Photosystem II
-Photosystem
-electron transport chain
-carbon fixation
-proton gradient
-इलेक्ट्रॉन
-हाइड्रोजन आयन
-जल का विभाजन
-प्रकाश अभिक्रिया
-अंधकार अभिक्रिया
-जैविक पदार्थ
-ऊर्जा भंडारण
-कार्बन-फिक्सेशन
-
-जब तक प्रश्न विशेष रूप से इन विषयों के बारे में
-नहीं पूछता।
-
-यह गलत मत लिखना:
-
-"पौधे रात में ऑक्सीजन छोड़ते हैं।"
-
-पौधे दिन और रात दोनों समय श्वसन करते हैं।
-
-============================================================
-INTERNET SEARCH
-============================================================
-
-यदि Internet Search मांगा गया है:
-
-- current information खोजो।
-- उपलब्ध sources/citations बनाए रखो।
-- current information को बिना verification के
-  निश्चित तथ्य की तरह मत लिखो।
-
-============================================================
-FINAL CHECK
-============================================================
-
-उत्तर देने से पहले खुद से जाँचो:
-
-FACT
-MARKS
-LANGUAGE
-RELEVANCE
-CONSISTENCY
-
-सिर्फ अंतिम उत्तर दो।
-`;
-
-
-  // ==========================================================
-  // MAIN GROQ PAYLOAD
-  // ==========================================================
+  // --------------------------------------------------
+  // Main Groq payload
+  // --------------------------------------------------
 
   const payload = {
     model: "openai/gpt-oss-120b",
@@ -327,7 +192,7 @@ CONSISTENCY
       ...messages,
     ],
 
-    max_completion_tokens: 2048,
+    max_completion_tokens: maxTokens,
 
     temperature: 0.2,
 
@@ -336,10 +201,9 @@ CONSISTENCY
     stream: false,
   };
 
-
-  // ==========================================================
-  // INTERNET SEARCH
-  // ==========================================================
+  // --------------------------------------------------
+  // Internet Search
+  // --------------------------------------------------
 
   if (useSearch) {
     payload.tools = [
@@ -351,453 +215,318 @@ CONSISTENCY
     payload.tool_choice = "required";
   }
 
-
-  // ==========================================================
-  // MAIN GROQ REQUEST
-  // ==========================================================
+  const requestId = crypto.randomUUID();
 
   let result = await callGroq(
-    apiKey,
+    env.GROQ_API_KEY,
     payload,
-    useSearch ? 60000 : 45000
+    useSearch ? 50000 : 35000
   );
 
+  // --------------------------------------------------
+  // Search fallback
+  // --------------------------------------------------
 
-  // ==========================================================
-  // RETRY
-  // ==========================================================
-
+  // If search failed, try once without search.
+  // This prevents wasting repeated tokens on 429/TDP.
   if (
     !result.ok &&
+    useSearch &&
+    result.status !== 429 &&
     result.retryable
   ) {
-    await sleep(900);
-
-    result = await callGroq(
-      apiKey,
-      payload,
-      useSearch ? 60000 : 45000
-    );
-  }
-
-
-  // ==========================================================
-  // SEARCH FALLBACK
-  // ==========================================================
-
-  if (
-    !result.ok &&
-    useSearch
-  ) {
     const fallbackPayload = {
-      model: "openai/gpt-oss-120b",
-
-      messages: [
-        {
-          role: "system",
-          content:
-            systemPrompt +
-            `
-
-Internet search अभी उपलब्ध नहीं है।
-Current जानकारी को independently verified न मानें।
-`,
-        },
-        ...messages,
-      ],
-
-      max_completion_tokens: 2048,
-
-      temperature: 0.2,
-
-      reasoning_effort: "low",
-
-      stream: false,
+      ...payload,
+      tools: undefined,
+      tool_choice: undefined,
+      max_completion_tokens: Math.min(
+        maxTokens,
+        1024
+      ),
     };
 
+    delete fallbackPayload.tools;
+    delete fallbackPayload.tool_choice;
+
     result = await callGroq(
-      apiKey,
+      env.GROQ_API_KEY,
       fallbackPayload,
-      45000
+      35000
     );
-
-    if (result.ok) {
-      result.reply += `
-
-⚠️ Internet search इस समय उपलब्ध नहीं हो सका,
-इसलिए current जानकारी की स्वतंत्र पुष्टि नहीं हुई है।`;
-    }
   }
 
-
-  // ==========================================================
-  // MAIN ERROR
-  // ==========================================================
+  // --------------------------------------------------
+  // Error
+  // --------------------------------------------------
 
   if (!result.ok) {
     return json(
       {
-        error: "Groq request failed.",
-
-        code:
-          result.code ||
-          "GROQ_ERROR",
-
-        status:
-          result.status ||
-          502,
-
-        requestId:
-          result.requestId ||
-          null,
-
-        detail:
-          result.error ||
-          null,
+        error: getFriendlyGroqError(result),
+        code: result.code || "GROQ_ERROR",
+        status: result.status || 500,
+        requestId,
       },
-      result.status || 502
+      result.status >= 400 && result.status < 600
+        ? result.status
+        : 502
     );
   }
 
+  // --------------------------------------------------
+  // Extract answer
+  // --------------------------------------------------
 
-  // ==========================================================
-  // LIGHTWEIGHT SELF CHECK
-  // ==========================================================
+  let reply = extractGroqReply(result.data);
 
-  const checked =
-    finalSelfCheck(
-      messages,
-      result.reply
+  if (!reply) {
+    return json(
+      {
+        error: "Groq returned an empty response.",
+        code: "EMPTY_GROQ_RESPONSE",
+        requestId,
+      },
+      502
     );
+  }
 
+  // --------------------------------------------------
+  // SELF-CHECK + SELF-CORRECTION
+  // --------------------------------------------------
 
-  // ==========================================================
-  // FINAL RESPONSE
-  // ==========================================================
+  reply = finalSelfCheck(
+    latestUserMessage,
+    reply,
+    marks
+  );
 
   return json({
-    reply:
-      checked.answer,
-
-    selfChecked: true,
-
-    selfCorrected:
-      checked.changed,
-
-    factChecked:
-      checked.changed,
-
-    finalReviewed:
-      true,
+    reply,
+    model: result.data?.model || "openai/gpt-oss-120b",
+    webSearch: useSearch,
+    selfCheck: true,
+    requestId,
   });
 }
 
 
-// ============================================================
-// PHOTO / VISION
-// ============================================================
+// ======================================================
+// SYSTEM PROMPT
+// ======================================================
 
-async function handleVision(
-  request,
-  env
-) {
-  const apiKey =
-    env.GROQ_API_KEY;
+function buildSystemPrompt(marks, useSearch) {
+  let markInstruction = "";
 
-  if (!apiKey) {
-    return json(
-      {
-        error:
-          "GROQ_API_KEY is not configured.",
-        code:
-          "MISSING_API_KEY",
-      },
-      500
-    );
+  if (marks === 1) {
+    markInstruction =
+      "1 अंक: केवल सीधा, बहुत छोटा उत्तर दो।";
+  } else if (marks === 2) {
+    markInstruction =
+      "2 अंक: 2-4 छोटे वाक्य या मुख्य बिंदु दो।";
+  } else if (marks === 5) {
+    markInstruction =
+      "5 अंक: सरल भाषा में लगभग 6 मुख्य बिंदु, छोटा निष्कर्ष। अनावश्यक advanced details मत दो।";
+  } else if (marks === 10) {
+    markInstruction =
+      "10 अंक: परिचय, headings, मुख्य बिंदु और निष्कर्ष के साथ परीक्षा-योग्य उत्तर दो।";
+  } else if (marks === 12) {
+    markInstruction =
+      "12 अंक: विस्तृत लेकिन आसान परीक्षा-योग्य उत्तर दो। परिचय, headings, मुख्य बिंदु और निष्कर्ष रखो।";
+  } else {
+    markInstruction =
+      "प्रश्न के अनुसार उत्तर की लंबाई रखो। अनावश्यक लंबा उत्तर मत दो।";
   }
 
-  let body;
+  const searchInstruction = useSearch
+    ? `
+Internet Search ON है।
+जरूरत पड़ने पर उपलब्ध web search का उपयोग करो।
+Current information जैसे आज का भाव, मौसम, समाचार, तारीख, कीमत आदि में ताजा जानकारी को प्राथमिकता दो।
+उत्तर में स्रोत/citation उपलब्ध हो तो शामिल करो।
+`
+    : `
+Internet Search OFF है।
+बिना web search के सामान्य ज्ञान के आधार पर उत्तर दो।
+`;
 
-  try {
-    body =
-      await request.json();
-  } catch {
-    return json(
-      {
-        error:
-          "Invalid JSON request.",
-        code:
-          "INVALID_JSON",
-      },
-      400
-    );
-  }
+  return `
+तुम "सारथी AI" हो।
 
-  const imageData =
-    typeof body?.imageData === "string"
-      ? body.imageData
-      : "";
+भाषा:
+- उपयोगकर्ता हिंदी में पूछे तो आसान हिंदी में उत्तर दो।
+- कठिन अंग्रेजी शब्दों और अनावश्यक technical terms से बचो।
+- परीक्षा के उत्तर में साफ headings और numbering इस्तेमाल करो।
+- प्रश्न का सीधा उत्तर पहले दो।
 
-  const question =
-    typeof body?.question === "string" &&
-    body.question.trim()
-      ? body.question
-          .trim()
-          .slice(0, 5000)
-      : "इस फोटो में क्या है? इसे सरल हिंदी में समझाओ।";
+${markInstruction}
 
+Self-check:
+उत्तर देने से पहले internally जांचो:
+1. तथ्य सही हैं?
+2. प्रश्न का वही उत्तर दिया है?
+3. भाषा प्रश्न के स्तर के अनुसार आसान है?
+4. marks के अनुसार उत्तर की लंबाई सही है?
+5. कोई अनावश्यक advanced detail तो नहीं?
+गलती हो तो final answer देने से पहले खुद सुधारो।
 
-  if (
-    !imageData.startsWith(
-      "data:image/"
-    )
-  ) {
-    return json(
-      {
-        error:
-          "A valid image is required.",
-        code:
-          "INVALID_IMAGE",
-      },
-      400
-    );
-  }
+विशेष नियम:
+अगर प्रश्न "प्रकाश संश्लेषण क्या है?" और 5 अंक का है, तो उत्तर school-level सरल होना चाहिए।
+Photosystem, ATP, NADPH, Calvin cycle, electron transport जैसी advanced बातें बिना मांगे मत लिखो।
 
+${searchInstruction}
 
-  // लगभग 20 MB सुरक्षा सीमा
-  if (
-    imageData.length >
-    20 * 1024 * 1024
-  ) {
-    return json(
-      {
-        error:
-          "फोटो बहुत बड़ी है। छोटी फोटो अपलोड करें।",
-        code:
-          "IMAGE_TOO_LARGE",
-      },
-      413
-    );
-  }
-
-
-  // ==========================================================
-  // VISION MODEL
-  // ==========================================================
-
-  const payload = {
-    model:
-      "qwen/qwen3.6-27b",
-
-    messages: [
-      {
-        role: "system",
-        content: `
-तुम "सारथी AI" के vision assistant हो।
-
-फोटो को ध्यान से देखकर सरल हिंदी में समझाओ।
-
-अगर फोटो में:
-- सवाल है तो सवाल पढ़ो और उत्तर दो।
-- किताब का पेज है तो मुख्य बात समझाओ।
-- diagram है तो उसके parts समझाओ।
-- chart/table है तो दिखाई देने वाली जानकारी समझाओ।
-- handwritten text है तो जितना साफ दिखाई दे उतना पढ़ो।
-
-अगर कोई चीज साफ दिखाई नहीं देती तो अनुमान मत लगाओ।
-
-अगर फोटो में परीक्षा का प्रश्न है तो
-उत्तर marks के अनुसार exam-ready रखो।
-`,
-      },
-
-      {
-        role: "user",
-
-        content: [
-          {
-            type: "text",
-            text: question,
-          },
-
-          {
-            type: "image_url",
-
-            image_url: {
-              url: imageData,
-            },
-          },
-        ],
-      },
-    ],
-
-    max_completion_tokens:
-      2048,
-
-    temperature:
-      0.2,
-
-    stream:
-      false,
-  };
-
-
-  const result =
-    await callGroq(
-      apiKey,
-      payload,
-      60000
-    );
-
-
-  if (!result.ok) {
-    return json(
-      {
-        error:
-          "Photo analysis failed.",
-
-        code:
-          result.code ||
-          "VISION_ERROR",
-
-        status:
-          result.status ||
-          502,
-
-        requestId:
-          result.requestId ||
-          null,
-
-        detail:
-          result.error ||
-          null,
-      },
-      result.status || 502
-    );
-  }
-
-
-  return json({
-    reply:
-      normalizeAnswer(
-        result.reply
-      ),
-
-    model:
-      "qwen/qwen3.6-27b",
-  });
+Quiz mode में:
+- प्रश्न के अनुसार साफ विकल्प और सही उत्तर दो।
+- उपयोगकर्ता अगर केवल उत्तर मांगे तो अनावश्यक explanation मत दो।
+`.trim();
 }
 
 
-// ============================================================
-// LIGHTWEIGHT SELF CHECK
-// ============================================================
+// ======================================================
+// TOKEN CONTROL
+// ======================================================
+
+function getMaxCompletionTokens(marks, question) {
+  if (marks === 1) return 256;
+  if (marks === 2) return 384;
+  if (marks === 5) return 768;
+  if (marks === 10) return 1280;
+  if (marks === 12) return 1536;
+
+  // Very short questions
+  if (question.length < 100) {
+    return 768;
+  }
+
+  return 1024;
+}
+
+
+// ======================================================
+// MARK DETECTION
+// ======================================================
+
+function detectMarks(text) {
+  if (!text) return null;
+
+  const normalized = String(text)
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+
+  if (
+    /12\s*(अंक|marks?|मार्क)/i.test(normalized)
+  ) {
+    return 12;
+  }
+
+  if (
+    /10\s*(अंक|marks?|मार्क)/i.test(normalized)
+  ) {
+    return 10;
+  }
+
+  if (
+    /5\s*(अंक|marks?|मार्क)/i.test(normalized)
+  ) {
+    return 5;
+  }
+
+  if (
+    /2\s*(अंक|marks?|मार्क)/i.test(normalized)
+  ) {
+    return 2;
+  }
+
+  if (
+    /1\s*(अंक|marks?|मार्क)/i.test(normalized)
+  ) {
+    return 1;
+  }
+
+  return null;
+}
+
+
+// ======================================================
+// FINAL SELF CHECK
+// ======================================================
 
 function finalSelfCheck(
-  messages,
-  originalAnswer
+  question,
+  answer,
+  marks
 ) {
-  let answer =
-    deterministicFactCheck(
-      messages,
-      originalAnswer
-    );
+  let result = String(answer || "").trim();
 
-  const firstChanged =
-    answer !== originalAnswer;
+  // -----------------------------------------------
+  // Deterministic corrections
+  // -----------------------------------------------
 
+  result = deterministicFactCheck(result);
 
-  const question =
-    messages
-      .filter(
-        (m) =>
-          m.role === "user"
-      )
-      .map(
-        (m) =>
-          m.content
-      )
-      .join("\n");
-
-
-  const marks =
-    detectMarks(
-      question
-    );
-
-
-  // ==========================================================
-  // 5 MARKS PHOTOSYNTHESIS
-  // ==========================================================
+  // -----------------------------------------------
+  // Special 5-mark photosynthesis protection
+  // -----------------------------------------------
 
   if (
     marks === 5 &&
-    isSimplePhotosynthesisQuestion(
-      question
-    )
+    isSimplePhotosynthesisQuestion(question)
   ) {
-    return {
-      answer:
-        buildSimplePhotosynthesisAnswer(),
-
-      changed: true,
-    };
+    return buildSimplePhotosynthesisAnswer();
   }
 
+  // -----------------------------------------------
+  // Remove accidental meta-talk
+  // -----------------------------------------------
 
-  return {
-    answer:
-      normalizeAnswer(
-        answer
-      ),
+  result = result
+    .replace(/^Here is the answer[:：]?\s*/i, "")
+    .replace(/^उत्तर[:：]\s*/i, "")
+    .trim();
 
-    changed:
-      firstChanged,
-  };
+  // -----------------------------------------------
+  // Basic cleanup
+  // -----------------------------------------------
+
+  result = result
+    .replace(/\n{4,}/g, "\n\n")
+    .trim();
+
+  return result;
 }
 
 
-// ============================================================
-// SIMPLE PHOTOSYNTHESIS QUESTION
-// ============================================================
+// ======================================================
+// PHOTOSYNTHESIS DETECTOR
+// ======================================================
 
-function isSimplePhotosynthesisQuestion(
-  question
-) {
-  const text =
-    String(question || "")
-      .toLowerCase();
+function isSimplePhotosynthesisQuestion(text) {
+  const t = String(text || "").toLowerCase();
 
-  const photo =
-    text.includes(
-      "प्रकाश संश्लेषण"
-    ) ||
-    text.includes(
-      "photosynthesis"
-    );
+  const hasPhotosynthesis =
+    t.includes("प्रकाश संश्लेषण") ||
+    t.includes("photosynthesis");
 
-  if (!photo) {
-    return false;
-  }
+  const hasSimpleQuestion =
+    t.includes("क्या है") ||
+    t.includes("परिभाषा") ||
+    t.includes("define") ||
+    t.includes("what is");
 
-  return (
-    /क्या है|की परिभाषा|समझाइए|बताइए/.test(
-      text
-    )
-  );
+  return hasPhotosynthesis && hasSimpleQuestion;
 }
 
 
-// ============================================================
-// GUARANTEED SIMPLE 5-MARK ANSWER
-// ============================================================
+// ======================================================
+// SIMPLE PHOTOSYNTHESIS ANSWER
+// ======================================================
 
 function buildSimplePhotosynthesisAnswer() {
-  return `**प्रकाश संश्लेषण**
+  return `प्रकाश संश्लेषण
 
 प्रकाश संश्लेषण वह प्रक्रिया है जिसमें हरे पौधे सूर्य के प्रकाश की ऊर्जा की सहायता से जल और कार्बन डाइऑक्साइड से अपना भोजन बनाते हैं और ऑक्सीजन वातावरण में छोड़ते हैं।
 
-**मुख्य बिंदु**
+मुख्य बिंदु
 
 1. यह प्रक्रिया हरे पौधों में होती है।
 2. पत्तियाँ वायु से कार्बन डाइऑक्साइड लेती हैं।
@@ -806,514 +535,458 @@ function buildSimplePhotosynthesisAnswer() {
 5. पौधे प्रकाश की सहायता से अपना भोजन बनाते हैं।
 6. इस प्रक्रिया में ऑक्सीजन वातावरण में निकलती है।
 
-**महत्व**
+महत्व
 
 प्रकाश संश्लेषण पौधों के लिए भोजन बनाने की मुख्य प्रक्रिया है और इससे वातावरण में ऑक्सीजन मिलती है।
 
-**निष्कर्ष**
+निष्कर्ष
 
 इस प्रकार प्रकाश संश्लेषण पौधों और पृथ्वी पर जीवन के लिए बहुत महत्वपूर्ण है।`;
 }
 
 
-// ============================================================
-// MARK DETECTOR
-// ============================================================
+// ======================================================
+// FACT CHECK
+// ======================================================
 
-function detectMarks(
-  question
-) {
-  const text =
-    String(question || "")
-      .toLowerCase();
+function deterministicFactCheck(text) {
+  let result = String(text || "");
 
-
-  if (
-    /12\s*अंक|12\s*marks?|12\s*mark/.test(
-      text
-    )
-  ) {
-    return 12;
-  }
-
-
-  if (
-    /10\s*अंक|10\s*marks?|10\s*mark/.test(
-      text
-    )
-  ) {
-    return 10;
-  }
-
-
-  if (
-    /5\s*अंक|5\s*marks?|5\s*mark/.test(
-      text
-    )
-  ) {
-    return 5;
-  }
-
-
-  if (
-    /2\s*अंक|2\s*marks?|2\s*mark/.test(
-      text
-    )
-  ) {
-    return 2;
-  }
-
-
-  if (
-    /1\s*अंक|1\s*marks?|1\s*mark/.test(
-      text
-    )
-  ) {
-    return 1;
-  }
-
-
-  return null;
-}
-
-
-// ============================================================
-// DETERMINISTIC FACT CHECK
-// ============================================================
-
-function deterministicFactCheck(
-  messages,
-  answer
-) {
-  let text =
-    String(answer || "");
-
-
-  const question =
-    messages
-      .filter(
-        (m) =>
-          m.role === "user"
-      )
-      .map(
-        (m) =>
-          m.content
-      )
-      .join("\n")
-      .toLowerCase();
-
-
-  // ==========================================================
-  // PHOTOSYNTHESIS FACT CHECK
-  // ==========================================================
-
-  if (
-    question.includes(
-      "प्रकाश संश्लेषण"
-    ) ||
-    question.includes(
-      "photosynthesis"
-    )
-  ) {
-
-
-    const badPatterns = [
-
-      /रात में[^।\n]{0,80}ऑक्सीजन छोड़ता है/g,
-
-      /रात में[^।\n]{0,80}ऑक्सीजन छोड़ती है/g,
-
-      /रात में[^।\n]{0,80}ऑक्सीजन छोड़ते हैं/g,
-
-      /रात को[^।\n]{0,80}ऑक्सीजन छोड़ता है/g,
-
-      /रात को[^।\n]{0,80}ऑक्सीजन छोड़ती है/g,
-
-      /रात को[^।\n]{0,80}ऑक्सीजन छोड़ते हैं/g,
-
-      /रात्रि में[^।\n]{0,80}ऑक्सीजन छोड़ता है/g,
-
-      /रात्रि में[^।\n]{0,80}ऑक्सीजन छोड़ती है/g,
-
-      /रात्रि में[^।\n]{0,80}ऑक्सीजन छोड़ते हैं/g,
-    ];
-
-
-    for (
-      const pattern of badPatterns
-    ) {
-      text =
-        text.replace(
-          pattern,
-          (match) => {
-
-            if (
-              /नहीं/.test(
-                match
-              ) ||
-              /नही/.test(
-                match
-              )
-            ) {
-              return match;
-            }
-
-            return "प्रकाश संश्लेषण के दौरान पौधे ऑक्सीजन वातावरण में छोड़ते हैं";
-          }
-        );
-    }
-
-
-    // भाषा सुधार
-
-    text =
-      text.replace(
-        /सूर्य के प्रकाश ऊर्जा/g,
-        "सूर्य के प्रकाश की ऊर्जा"
-      );
-
-
-    text =
-      text.replace(
-        /जड़ों द्वारा जमीनी से/g,
-        "जड़ों द्वारा जमीन से"
-      );
-
-
-    text =
-      text.replace(
-        /जमीनी से/g,
-        "जमीन से"
-      );
-
-
-    text =
-      text.replace(
-        /पौधे केवल रात में श्वसन करते हैं/g,
-        "पौधे दिन और रात दोनों समय श्वसन करते हैं"
-      );
-
-
-    text =
-      text.replace(
-        /पौधे सिर्फ रात में श्वसन करते हैं/g,
-        "पौधे दिन और रात दोनों समय श्वसन करते हैं"
-      );
-  }
-
-
-  return normalizeAnswer(
-    text
+  // Common incorrect claim
+  result = result.replace(
+    /रात में पौधे ऑक्सीजन छोड़ते हैं/gi,
+    "पौधे सामान्यतः प्रकाश संश्लेषण के दौरान ऑक्सीजन छोड़ते हैं"
   );
+
+  result = result.replace(
+    /रात में ऑक्सीजन छोड़ता है/gi,
+    "प्रकाश संश्लेषण के दौरान ऑक्सीजन छोड़ता है"
+  );
+
+  result = result.replace(
+    /प्रकाश संश्लेषण रात में होता है/gi,
+    "प्रकाश संश्लेषण के लिए प्रकाश आवश्यक होता है"
+  );
+
+  return result.trim();
 }
 
 
-// ============================================================
-// NORMALIZE
-// ============================================================
-
-function normalizeAnswer(
-  text
-) {
-  return String(
-    text || ""
-  )
-    .replace(
-      /\r\n/g,
-      "\n"
-    )
-    .replace(
-      /[ \t]+/g,
-      " "
-    )
-    .replace(
-      /\n{3,}/g,
-      "\n\n"
-    )
-    .trim();
-}
-
-
-// ============================================================
-// GROQ API
-// ============================================================
+// ======================================================
+// GROQ CALL
+// ======================================================
 
 async function callGroq(
   apiKey,
   payload,
-  timeoutMs
+  timeoutMs = 35000
 ) {
-  const controller =
-    new AbortController();
+  const controller = new AbortController();
 
-
-  const timeout =
-    setTimeout(
-      () =>
-        controller.abort(),
-      timeoutMs
-    );
-
+  const timeout = setTimeout(
+    () => controller.abort(),
+    timeoutMs
+  );
 
   try {
+    const response = await fetch(
+      "https://api.groq.com/openai/v1/chat/completions",
+      {
+        method: "POST",
 
-    const response =
-      await fetch(
-        "https://api.groq.com/openai/v1/chat/completions",
-        {
-          method:
-            "POST",
+        headers: {
+          "Authorization": `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
 
-          headers: {
-            "Authorization":
-              `Bearer ${apiKey}`,
+        body: JSON.stringify(payload),
 
-            "Content-Type":
-              "application/json",
-          },
+        signal: controller.signal,
+      }
+    );
 
-          body:
-            JSON.stringify(
-              payload
-            ),
+    const text = await response.text();
 
-          signal:
-            controller.signal,
-        }
-      );
-
-
-    const requestId =
-      response.headers.get(
-        "x-request-id"
-      ) ||
-      response.headers.get(
-        "x-groq-request-id"
-      ) ||
-      null;
-
-
-    const raw =
-      await response.text();
-
-
-    let data =
-      null;
-
+    let data = null;
 
     try {
-      data =
-        JSON.parse(
-          raw
-        );
+      data = JSON.parse(text);
     } catch {
-      data =
-        null;
+      data = {
+        raw: text,
+      };
     }
 
+    if (!response.ok) {
+      const errorText =
+        data?.error?.message ||
+        data?.message ||
+        text ||
+        "Groq request failed.";
 
-    if (
-      !response.ok
-    ) {
       return {
-
-        ok:
-          false,
-
-        retryable:
-          response.status === 408 ||
-          response.status === 409 ||
-          response.status === 429 ||
-          response.status >= 500,
-
-        status:
+        ok: false,
+        status: response.status,
+        code: detectGroqErrorCode(
           response.status,
-
-        code:
-          `GROQ_HTTP_${response.status}`,
-
-        requestId,
-
-        error:
-          data?.error?.message ||
-          raw.slice(
-            0,
-            1000
-          ),
+          errorText
+        ),
+        retryable: isRetryableStatus(
+          response.status
+        ),
+        message: errorText,
+        data,
       };
     }
-
-
-    if (!data) {
-      return {
-
-        ok:
-          false,
-
-        retryable:
-          true,
-
-        status:
-          502,
-
-        code:
-          "INVALID_GROQ_JSON",
-
-        requestId,
-
-        error:
-          raw.slice(
-            0,
-            1000
-          ),
-      };
-    }
-
-
-    const content =
-      data
-        ?.choices?.[0]
-        ?.message
-        ?.content;
-
-
-    if (
-      typeof content !==
-      "string"
-    ) {
-      return {
-
-        ok:
-          false,
-
-        retryable:
-          false,
-
-        status:
-          502,
-
-        code:
-          "INVALID_GROQ_RESPONSE",
-
-        requestId,
-
-        error:
-          "Groq returned no usable message content.",
-      };
-    }
-
 
     return {
-
-      ok:
-        true,
-
-      reply:
-        content.trim(),
-
-      requestId,
-
-      status:
-        response.status,
+      ok: true,
+      status: response.status,
+      data,
     };
-
-  } catch (
-    error
-  ) {
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      return {
+        ok: false,
+        status: 504,
+        code: "TIMEOUT",
+        retryable: true,
+        message: "Groq request timed out.",
+      };
+    }
 
     return {
-
-      ok:
-        false,
-
-      retryable:
-        true,
-
-      status:
-        504,
-
-      code:
-        error?.name ===
-        "AbortError"
-          ? "GROQ_TIMEOUT"
-          : "GROQ_NETWORK_ERROR",
-
-      requestId:
-        null,
-
-      error:
-        error?.message ||
-        "Network error",
+      ok: false,
+      status: 502,
+      code: "NETWORK_ERROR",
+      retryable: true,
+      message:
+        error?.message || "Network error.",
     };
-
   } finally {
-
-    clearTimeout(
-      timeout
-    );
+    clearTimeout(timeout);
   }
 }
 
 
-// ============================================================
-// SLEEP
-// ============================================================
+// ======================================================
+// ERROR HELPERS
+// ======================================================
 
-function sleep(
-  ms
-) {
-  return new Promise(
-    (resolve) =>
-      setTimeout(
-        resolve,
-        ms
-      )
+function isRetryableStatus(status) {
+  // IMPORTANT:
+  // Do NOT retry 429.
+  // Repeating a TPD/rate-limit request wastes tokens
+  // and usually cannot succeed immediately.
+
+  if (status === 429) {
+    return false;
+  }
+
+  return (
+    status === 408 ||
+    status === 409 ||
+    status === 500 ||
+    status === 502 ||
+    status === 503 ||
+    status === 504
   );
 }
 
 
-// ============================================================
+function detectGroqErrorCode(
+  status,
+  message
+) {
+  const text = String(message || "")
+    .toLowerCase();
+
+  if (
+    status === 429 ||
+    text.includes("rate limit") ||
+    text.includes("tokens per day") ||
+    text.includes("tpd")
+  ) {
+    return "RATE_LIMIT";
+  }
+
+  if (
+    status === 401 ||
+    text.includes("invalid api key") ||
+    text.includes("authentication")
+  ) {
+    return "AUTH_ERROR";
+  }
+
+  if (status === 403) {
+    return "FORBIDDEN";
+  }
+
+  if (
+    status === 400 &&
+    text.includes("model")
+  ) {
+    return "MODEL_ERROR";
+  }
+
+  return "GROQ_ERROR";
+}
+
+
+function getFriendlyGroqError(result) {
+  if (result.code === "RATE_LIMIT") {
+    return "Groq की token/rate limit अभी पूरी हो गई है। कुछ समय बाद फिर कोशिश करें।";
+  }
+
+  if (result.code === "AUTH_ERROR") {
+    return "Groq API authentication में समस्या है। Cloudflare में GROQ_API_KEY secret जांचें।";
+  }
+
+  if (result.code === "MODEL_ERROR") {
+    return "Groq model से संबंधित समस्या आई है।";
+  }
+
+  if (result.code === "TIMEOUT") {
+    return "Groq से जवाब आने में बहुत समय लग गया। फिर कोशिश करें।";
+  }
+
+  if (result.code === "NETWORK_ERROR") {
+    return "Internet या Groq connection में समस्या आई है।";
+  }
+
+  return "अभी जवाब नहीं मिल पाया। कृपया फिर से कोशिश करें।";
+}
+
+
+// ======================================================
+// RESPONSE EXTRACTION
+// ======================================================
+
+function extractGroqReply(data) {
+  try {
+    const choice = data?.choices?.[0];
+
+    if (!choice) {
+      return "";
+    }
+
+    const content =
+      choice?.message?.content;
+
+    if (typeof content === "string") {
+      return content.trim();
+    }
+
+    if (Array.isArray(content)) {
+      return content
+        .map((item) => {
+          if (typeof item === "string") {
+            return item;
+          }
+
+          if (
+            item &&
+            typeof item.text === "string"
+          ) {
+            return item.text;
+          }
+
+          return "";
+        })
+        .join("")
+        .trim();
+    }
+
+    return "";
+  } catch {
+    return "";
+  }
+}
+
+
+// ======================================================
+// VISION
+// ======================================================
+
+async function handleVision(request, env) {
+  if (!env.GROQ_API_KEY) {
+    return json(
+      {
+        error: "GROQ_API_KEY is not configured.",
+        code: "MISSING_API_KEY",
+      },
+      500
+    );
+  }
+
+  let body;
+
+  try {
+    body = await request.json();
+  } catch {
+    return json(
+      {
+        error: "Invalid JSON request.",
+        code: "INVALID_JSON",
+      },
+      400
+    );
+  }
+
+  const imageData = body?.imageData;
+
+  if (
+    typeof imageData !== "string" ||
+    !imageData.startsWith("data:image/")
+  ) {
+    return json(
+      {
+        error: "Valid imageData is required.",
+        code: "INVALID_IMAGE",
+      },
+      400
+    );
+  }
+
+  // Prevent extremely large requests.
+  if (imageData.length > 20_000_000) {
+    return json(
+      {
+        error: "Image is too large.",
+        code: "IMAGE_TOO_LARGE",
+      },
+      413
+    );
+  }
+
+  const userQuestion =
+    typeof body?.question === "string"
+      ? body.question.slice(0, 2000)
+      : "इस फोटो को देखकर बताओ कि इसमें क्या है।";
+
+  const visionPayload = {
+    model: "qwen/qwen3.6-27b",
+
+    messages: [
+      {
+        role: "system",
+        content: `
+तुम सारथी AI के vision assistant हो।
+
+फोटो को ध्यान से देखो और आसान हिंदी में उत्तर दो।
+जो साफ दिखाई दे केवल उसी के आधार पर जवाब दो।
+अगर फोटो में लिखा हुआ प्रश्न है तो उसे हल करो।
+अगर फोटो धुंधली है या जानकारी साफ नहीं दिखती तो साफ बताओ।
+अनावश्यक लंबा उत्तर मत दो।
+        `.trim(),
+      },
+
+      {
+        role: "user",
+
+        content: [
+          {
+            type: "text",
+            text: userQuestion,
+          },
+
+          {
+            type: "image_url",
+            image_url: {
+              url: imageData,
+            },
+          },
+        ],
+      },
+    ],
+
+    max_completion_tokens: 1024,
+
+    temperature: 0.2,
+
+    stream: false,
+  };
+
+  const requestId = crypto.randomUUID();
+
+  const result = await callGroq(
+    env.GROQ_API_KEY,
+    visionPayload,
+    50000
+  );
+
+  if (!result.ok) {
+    return json(
+      {
+        error: getFriendlyGroqError(result),
+        code: result.code || "VISION_ERROR",
+        status: result.status || 500,
+        requestId,
+      },
+      result.status >= 400 && result.status < 600
+        ? result.status
+        : 502
+    );
+  }
+
+  let reply = extractGroqReply(
+    result.data
+  );
+
+  if (!reply) {
+    return json(
+      {
+        error: "Vision returned an empty response.",
+        code: "EMPTY_VISION_RESPONSE",
+        requestId,
+      },
+      502
+    );
+  }
+
+  reply = deterministicFactCheck(reply);
+
+  return json({
+    reply,
+    model:
+      result.data?.model ||
+      "qwen/qwen3.6-27b",
+    selfCheck: true,
+    requestId,
+  });
+}
+
+
+// ======================================================
 // CORS
-// ============================================================
+// ======================================================
 
 function corsHeaders() {
   return {
-
-    "Access-Control-Allow-Origin":
-      "*",
-
+    "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods":
-      "POST, OPTIONS",
-
+      "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers":
-      "Content-Type",
-
-    "Access-Control-Max-Age":
-      "86400",
+      "Content-Type, Authorization",
   };
 }
 
 
-// ============================================================
+// ======================================================
 // JSON RESPONSE
-// ============================================================
+// ======================================================
 
-function json(
-  data,
-  status = 200
-) {
+function json(data, status = 200) {
   return new Response(
-    JSON.stringify(
-      data
-    ),
+    JSON.stringify(data),
     {
       status,
 
       headers: {
-        ...corsHeaders(),
-
         "Content-Type":
           "application/json; charset=utf-8",
+
+        ...corsHeaders(),
       },
     }
   );
