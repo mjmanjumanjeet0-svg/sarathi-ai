@@ -45,7 +45,7 @@ export default {
             {
               role: "system",
               content: useSearch
-                ? "You are Sarathi AI, a helpful Hindi-speaking assistant. Use browser search to find current information. Give the user a clear answer based on the information you find. Do not invent current facts."
+                ? "You are Sarathi AI, a helpful Hindi-speaking assistant. When browser search is available, use it to find current information. Answer in clear Hindi. Do not claim you lack real-time access if browser search has been used. Do not invent facts."
                 : "You are Sarathi AI, a helpful Hindi-speaking assistant. Answer clearly and naturally in Hindi or Hindi-English mix.",
             },
             ...messages,
@@ -59,6 +59,7 @@ export default {
               type: "browser_search",
             },
           ];
+
           payload.tool_choice = "required";
         }
 
@@ -99,7 +100,9 @@ export default {
           );
         }
 
-        return json({ reply });
+        return json({
+          reply,
+        });
       } catch (error) {
         return json(
           {
