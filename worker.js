@@ -5,7 +5,6 @@ export default {
     // =========================
     // CORS
     // =========================
-
     if (request.method === "OPTIONS") {
       return new Response(null, {
         status: 204,
@@ -16,7 +15,6 @@ export default {
     // =========================
     // CHAT
     // =========================
-
     if (url.pathname === "/api/chat") {
       if (request.method !== "POST") {
         return json(
@@ -34,7 +32,6 @@ export default {
     // =========================
     // VISION
     // =========================
-
     if (url.pathname === "/api/vision") {
       if (request.method !== "POST") {
         return json(
@@ -50,9 +47,8 @@ export default {
     }
 
     // =========================
-    // CLOUDFLARE ASSETS
+    // ASSETS
     // =========================
-
     if (env.ASSETS) {
       return env.ASSETS.fetch(request);
     }
@@ -61,6 +57,7 @@ export default {
       status: 200,
       headers: {
         "Content-Type": "text/plain; charset=utf-8",
+        ...corsHeaders(),
       },
     });
   },
@@ -77,7 +74,7 @@ async function handleChat(request, env) {
       return json(
         {
           error:
-            "GROQ_API_KEY Cloudflare Secret में configured नहीं है।",
+            "GROQ_API_KEY Cloudflare Secret configured नहीं है।",
           code: "MISSING_API_KEY",
         },
         500
@@ -98,28 +95,51 @@ async function handleChat(request, env) {
       );
     }
 
-    if (!body || !Array.isArray(body.messages)) {
-      return json(
-        {
-          error: "Messages उपलब्ध नहीं हैं।",
-          code: "INVALID_MESSAGES",
-        },
-        400
-      );
+    // ========================================================
+    // FRONTEND COMPATIBILITY
+    //
+    // तुम्हारा index.html भेजता है:
+    // message + history + webSearch
+    //
+    // नया format:
+    // messages + webSearch
+    // ========================================================
+
+    let messages = [];
+
+    if (Array.isArray(body?.messages)) {
+      messages = body.messages;
+    } else if (Array.isArray(body?.history)) {
+      messages = body.history;
     }
 
-    if (body.messages.length === 0) {
-      return json(
-        {
-          error: "कृपया कोई प्रश्न लिखें।",
-          code: "EMPTY_MESSAGES",
-        },
-        400
-      );
+    // अगर सिर्फ message आया है तो उसे भी जोड़ो
+    if (
+      body?.message &&
+      String(body.message).trim()
+    ) {
+      const messageText =
+        String(body.message).trim();
+
+      const alreadyLast =
+        messages.length > 0 &&
+        String(
+          messages[messages.length - 1]?.content || ""
+        ).trim() === messageText;
+
+      if (!alreadyLast) {
+        messages.push({
+          role: "user",
+          content: messageText,
+        });
+      }
     }
 
-    // केवल जरूरी conversation रखो
-    const messages = body.messages
+    // ========================================================
+    // CLEAN MESSAGES
+    // ========================================================
+
+    messages = messages
       .slice(-20)
       .map((message) => {
         const role =
@@ -127,11 +147,12 @@ async function handleChat(request, env) {
             ? "assistant"
             : "user";
 
-        const content = String(
-          message?.content ?? ""
-        )
-          .trim()
-          .slice(0, 8000);
+        const content =
+          String(
+            message?.content ?? ""
+          )
+            .trim()
+            .slice(0, 8000);
 
         return {
           role,
@@ -146,25 +167,30 @@ async function handleChat(request, env) {
     if (messages.length === 0) {
       return json(
         {
-          error: "प्रश्न खाली है।",
-          code: "EMPTY_QUESTION",
+          error: "Messages उपलब्ध नहीं हैं।",
+          code: "INVALID_MESSAGES",
         },
         400
       );
     }
 
     const useSearch =
-      body.webSearch === true;
+      body?.webSearch === true;
+
+    // ========================================================
+    // LATEST USER QUESTION
+    // ========================================================
 
     const latestUserMessage =
       [...messages]
         .reverse()
         .find(
-          (m) => m.role === "user"
+          (message) =>
+            message.role === "user"
         )?.content || "";
 
     // ========================================================
-    // CURRENT INDIA DATE
+    // INDIA DATE
     // ========================================================
 
     const todayIndia =
@@ -173,7 +199,7 @@ async function handleChat(request, env) {
     const todayIndiaReadable =
       getIndiaReadableDate();
 
-    const currentSensitive =
+    const currentQuestion =
       isCurrentInformationQuestion(
         latestUserMessage
       );
@@ -185,139 +211,124 @@ async function handleChat(request, env) {
     const systemPrompt = `
 तुम "सारथी AI" हो।
 
-तुम्हारा उद्देश्य:
-सही, स्पष्ट, प्राकृतिक, भरोसेमंद और उपयोगी उत्तर देना।
+तुम्हारा काम सही, सरल, भरोसेमंद और उपयोगी
+हिंदी में उत्तर देना है।
 
 ==================================================
 आज की तारीख
 ==================================================
 
-भारत में आज की वास्तविक तारीख:
+भारत में आज की तारीख है:
 
 ${todayIndiaReadable}
 
-ISO तारीख:
+ISO date:
+
 ${todayIndia}
 
-यह तारीख Worker द्वारा Asia/Kolkata timezone से निकाली गई है।
+Time zone:
 
-बहुत महत्वपूर्ण:
-यदि user "आज", "अभी", "ताजा", "ताज़ा",
-"current", "latest", "today", "now", "live"
-जैसे शब्द इस्तेमाल करता है तो पुरानी जानकारी को
-आज की जानकारी बताना सख्त मना है।
-
-यदि Search Result की तारीख ${todayIndia}
-से पुरानी है:
-
-- उसे "आज का" मत बताओ।
-- उसे current result मत बताओ।
-- यदि ताजा source उपलब्ध हो तो उसे प्राथमिकता दो।
-- यदि केवल पुराना source मिला है तो साफ बताओ कि
-  source पुराना है।
-- कोई अनुमान लगाकर current price/date मत बनाओ।
+Asia/Kolkata
 
 ==================================================
-सामान्य नियम
+CURRENT INFORMATION RULE
 ==================================================
 
-1. मुख्य उत्तर हिंदी में दो।
-2. भाषा आसान और प्राकृतिक रखो।
-3. जरूरी अंग्रेजी शब्द हो तो अर्थ समझाओ।
-4. तथ्य मत गढ़ो।
-5. नकली source/citation/date/number मत बनाओ।
-6. प्रश्न से बाहर मत जाओ।
-7. एक बात बार-बार मत दोहराओ।
-8. यदि जानकारी निश्चित नहीं है तो उसे निश्चित तथ्य मत बताओ।
-9. current जानकारी में date को ध्यान से जाँचो।
-10. Search result पुराना हो तो उसे आज का मत बताओ।
+यदि user पूछता है:
+
+आज
+अभी
+ताजा
+ताज़ा
+वर्तमान
+latest
+current
+today
+now
+live
+
+तो पुरानी जानकारी को आज की जानकारी मत बताओ।
+
+यदि Search Result की तारीख आज की तारीख से पुरानी है,
+तो उसे "आज का" result मत बताओ।
+
+कभी भी पुराने result की तारीख देखकर
+उसे आज का result बनाकर मत लिखो।
+
+यदि verified current information नहीं मिलती,
+तो साफ बताओ कि उपलब्ध source पुराना है।
+
+किसी current price, rate, weather, news या result
+का अनुमान लगाकर संख्या मत बनाओ।
 
 ==================================================
 INTERNET SEARCH
 ==================================================
 
-यदि इंटरनेट खोज चालू है:
+यदि Internet Search ON है:
 
-- current/latest/today/now/live प्रश्नों के लिए
-  browser search का उपयोग करो।
-- आज की तारीख ${todayIndiaReadable} है।
-- ताजा और आज की तारीख वाले स्रोतों को प्राथमिकता दो।
-- पुराने स्रोत को आज की जानकारी मत बताओ।
-- Search result में date हो तो date पढ़ो।
-- अगर source की date आज की तारीख से मेल नहीं खाती,
-  तो उसे current source मत बताओ।
-- नकली source मत बनाओ।
-- search से मिला पुराना data देखकर आज का अनुमान मत लगाओ।
+1. Browser Search का उपयोग करो।
+2. आज की तारीख ${todayIndiaReadable} है।
+3. Search result की तारीख ध्यान से देखो।
+4. आज के result को पुराने result से प्राथमिकता दो।
+5. पुराने result को आज का मत बताओ।
+6. नकली source मत बनाओ।
+7. नकली citation मत बनाओ।
+8. current information verified न हो तो साफ बताओ।
 
-विशेष उदाहरण:
+विशेष रूप से gold price के लिए:
 
 यदि user पूछता है:
-"आज भारत में सोने का भाव क्या है?"
 
-तो पहले आज की तारीख पहचानो:
+"आज भारत में सोने के भाव क्या हैं?"
+
+तो आज की तारीख:
+
 ${todayIndiaReadable}
 
-फिर आज के gold price को खोजो।
+को ध्यान में रखकर search करो।
 
-यदि Search Result कहता है:
-"5 May 2026"
-
-और आज:
-${todayIndiaReadable}
-
-है, तो May वाला result आज का भाव नहीं है।
-
-उसे आज का भाव लिखना गलत है।
-
-यदि आज का verified result नहीं मिलता,
-तो साफ बताओ कि मिला हुआ source पुराना है।
-गलत current price मत बनाओ।
+यदि search result में उदाहरण के लिए
+5 मई 2026 लिखा है जबकि आज
+${todayIndiaReadable} है,
+तो उसे आज का gold price मत बताओ।
 
 ==================================================
-STUDY CENTER: MARKS CONTROL
+सामान्य नियम
 ==================================================
 
-यदि 2 अंक:
-
-- छोटी परिभाषा
-- 1–2 मुख्य बातें
-- अनावश्यक विस्तार नहीं
-
-यदि 5 अंक:
-
-- 2–3 पंक्ति भूमिका
-- 4–6 मुख्य बिंदु
-- जरूरत हो तो उदाहरण
-- छोटा निष्कर्ष
-
-यदि 10 अंक:
-
-- भूमिका
-- headings
-- 5–7 मुख्य बिंदु
-- आवश्यक उदाहरण
-- निष्कर्ष
-
-यदि 12 अंक:
-
-- भूमिका
-- स्पष्ट headings
-- 6–8 मुख्य बिंदु
-- पर्याप्त व्याख्या
-- उदाहरण
-- निष्कर्ष
-
-यदि marks नहीं दिए गए:
-प्रश्न के अनुसार सामान्य संतुलित उत्तर दो।
+1. उत्तर मुख्यतः हिंदी में दो।
+2. आसान भाषा का उपयोग करो।
+3. तथ्य मत गढ़ो।
+4. प्रश्न से बाहर मत जाओ।
+5. अनावश्यक लंबा उत्तर मत दो।
+6. यदि जानकारी निश्चित नहीं है तो उसे निश्चित तथ्य मत बताओ।
+7. User के सवाल का सीधा उत्तर दो।
 
 ==================================================
-STRICT COMPLEXITY RULE
+MARKS RULE
 ==================================================
 
-सामान्य 5 अंक के प्रश्न को unnecessarily advanced मत बनाओ।
+2 अंक:
+छोटी परिभाषा + मुख्य बात।
 
-प्रकाश संश्लेषण के सामान्य प्रश्न में
-इन terms को अपने आप मत जोड़ो:
+5 अंक:
+भूमिका + 4–6 मुख्य बातें + छोटा निष्कर्ष।
+
+10 अंक:
+भूमिका + headings + 5–7 मुख्य बातें + निष्कर्ष।
+
+12 अंक:
+भूमिका + headings + 6–8 मुख्य बातें + निष्कर्ष।
+
+==================================================
+BIOLOGY
+==================================================
+
+प्रकाश संश्लेषण के सामान्य 5 अंक के उत्तर में
+अनावश्यक advanced terms मत डालो।
+
+बिना जरूरत इन terms का उपयोग मत करो:
 
 Photosystem I
 Photosystem II
@@ -331,76 +342,21 @@ electron/proton transfer
 water splitting
 reaction center
 
-जब तक user इन्हें विशेष रूप से न पूछे।
-
-==================================================
-BIOLOGY
-==================================================
-
-प्रकाश संश्लेषण:
-
-प्रकाश संश्लेषण वह प्रक्रिया है जिसमें हरे पौधे
-सूर्य के प्रकाश और क्लोरोफिल की सहायता से
-कार्बन डाइऑक्साइड तथा जल से भोजन बनाते हैं
-और ऑक्सीजन छोड़ते हैं।
-
-मुख्य बातें:
-
-- प्रकाश ऊर्जा देता है।
-- क्लोरोफिल प्रकाश को अवशोषित करता है।
-- कार्बन डाइऑक्साइड वायुमंडल से मिलती है।
-- जल जड़ों द्वारा प्राप्त होता है।
-- भोजन/ग्लूकोज बनता है।
-- ऑक्सीजन बाहर निकलती है।
+सामान्य उत्तर सरल school/college स्तर का रखो।
 
 ==================================================
 HISTORY
 ==================================================
 
-प्रथम एस्टेट = पादरी वर्ग।
+उत्तर प्रश्न के अनुसार दो।
 
-द्वितीय एस्टेट = कुलीन वर्ग।
-
-तृतीय एस्टेट = सामान्य जनता का बड़ा वर्ग,
-जिसमें बुर्जुआ, किसान और शहरी श्रमिक शामिल थे।
-
-फ्रांसीसी क्रांति के प्रमुख कारण:
-
-1. सामाजिक असमानता
-2. करों का असमान बोझ
-3. वित्तीय संकट और राज्य ऋण
-4. खाद्य संकट
-5. निरंकुश राजतंत्र और राजनीतिक प्रतिनिधित्व की समस्या
-6. प्रबोधन के विचार
-
-यदि केवल कारण पूछे गए हैं तो
-घटनाओं और परिणामों को कारण बनाकर मत लिखो।
-
-==================================================
-CHEMISTRY
-==================================================
-
-परमाणु, अणु, आयन, तत्व और यौगिक को आपस में मत मिलाओ।
-
-NaCl को सामान्यतः आयनिक यौगिक की
-formula unit बताओ, molecule नहीं।
+यदि कारण पूछे गए हैं तो केवल कारणों पर ध्यान दो।
 
 ==================================================
 PHYSICS
 ==================================================
 
-न्यूटन का प्रथम नियम:
-
-यदि किसी वस्तु पर कुल बाहरी बल शून्य है,
-तो विराम की वस्तु विराम में रहती है और
-गतिशील वस्तु समान वेग से सीधी रेखा में
-चलती रहती है, जब तक कोई बाहरी असंतुलित
-बल उसकी अवस्था न बदले।
-
-जड़त्व =
-अवस्था में परिवर्तन का विरोध करने की प्रवृत्ति।
-
-Numerical:
+Numerical में:
 
 दिया गया
 → सूत्र
@@ -412,13 +368,9 @@ Numerical:
 MATHEMATICS
 ==================================================
 
-Calculation ध्यान से करो।
-
-सभी जरूरी steps दिखाओ।
-
+Calculation के steps दिखाओ।
 अंतिम उत्तर स्पष्ट लिखो।
-
-जहाँ संभव हो calculation की जाँच करो।
+जहाँ जरूरी हो calculation की जाँच करो।
 
 ==================================================
 FINAL CHECK
@@ -427,21 +379,21 @@ FINAL CHECK
 उत्तर भेजने से पहले जाँचो:
 
 1. क्या प्रश्न सही समझा?
-2. क्या विषय सही है?
+2. क्या सही subject है?
 3. क्या marks के अनुसार उत्तर है?
-4. क्या उत्तर जरूरत से ज्यादा technical है?
-5. क्या factual error है?
-6. क्या कोई मनगढ़ंत date है?
-7. क्या current information की तारीख सही है?
-8. क्या पुराना search result आज का बताया जा रहा है?
-9. क्या source की तारीख और आज की तारीख अलग है?
+4. क्या भाषा आसान है?
+5. क्या कोई factual error है?
+6. क्या current date सही है?
+7. क्या पुराना search result आज का तो नहीं बताया?
+8. क्या कोई संख्या बिना verification के तो नहीं बनाई?
+9. क्या source की date सही है?
 10. क्या उत्तर सीधे उपयोग किया जा सकता है?
 
-यदि गलती मिले तो भेजने से पहले सुधारो।
+यदि गलती मिले तो उत्तर भेजने से पहले सुधारो।
 `;
 
     // ========================================================
-    // PAYLOAD
+    // GROQ PAYLOAD
     // ========================================================
 
     const payload = {
@@ -456,7 +408,7 @@ FINAL CHECK
       ],
 
       max_completion_tokens:
-        currentSensitive
+        currentQuestion
           ? 2500
           : 4096,
 
@@ -468,7 +420,7 @@ FINAL CHECK
     };
 
     // ========================================================
-    // SEARCH TOOL
+    // BROWSER SEARCH
     // ========================================================
 
     if (useSearch) {
@@ -478,12 +430,11 @@ FINAL CHECK
         },
       ];
 
-      payload.tool_choice =
-        "required";
+      payload.tool_choice = "required";
     }
 
     // ========================================================
-    // FIRST GROQ REQUEST
+    // CALL GROQ
     // ========================================================
 
     let result =
@@ -493,10 +444,7 @@ FINAL CHECK
         55000
       );
 
-    // ========================================================
-    // RETRY
-    // ========================================================
-
+    // Retry
     if (
       !result.ok &&
       result.retryable
@@ -512,104 +460,20 @@ FINAL CHECK
     }
 
     // ========================================================
-    // SEARCH FAILED
-    // ========================================================
-
-    if (
-      !result.ok &&
-      useSearch
-    ) {
-      const fallbackPayload = {
-        model:
-          "openai/gpt-oss-120b",
-
-        messages: [
-          {
-            role: "system",
-            content:
-              systemPrompt +
-              `
-
-महत्वपूर्ण:
-इस request में internet search सफल नहीं हुई।
-
-इसलिए current/latest/today जानकारी को
-verified current fact की तरह मत बताओ।
-
-यदि user current price/date पूछ रहा है,
-तो बिना verification कोई संख्या मत बनाओ।
-`,
-          },
-
-          ...messages,
-        ],
-
-        max_completion_tokens:
-          currentSensitive
-            ? 2000
-            : 3500,
-
-        temperature: 0.2,
-
-        reasoning_effort: "low",
-
-        stream: false,
-      };
-
-      let fallback =
-        await callGroq(
-          fallbackPayload,
-          env.GROQ_API_KEY,
-          55000
-        );
-
-      if (
-        !fallback.ok &&
-        fallback.retryable
-      ) {
-        await sleep(1200);
-
-        fallback =
-          await callGroq(
-            fallbackPayload,
-            env.GROQ_API_KEY,
-            55000
-          );
-      }
-
-      if (
-        fallback.ok &&
-        fallback.reply
-      ) {
-        const checked =
-          await selfCheckAndCorrect(
-            messages,
-            fallback.reply,
-            env.GROQ_API_KEY,
-            todayIndiaReadable
-          );
-
-        return json({
-          reply: checked.reply,
-          answer: checked.reply,
-          searchUnavailable: true,
-          selfChecked:
-            checked.selfChecked,
-          selfCorrected:
-            checked.selfCorrected,
-        });
-      }
-    }
-
-    // ========================================================
     // ERROR
     // ========================================================
 
     if (!result.ok) {
       return json(
         {
-          error: result.error,
-          code: result.code,
+          error:
+            result.error ||
+            "अभी जवाब नहीं मिल पाया।",
+
+          code:
+            result.code ||
+            "GROQ_ERROR",
+
           requestId:
             result.requestId ||
             null,
@@ -618,20 +482,14 @@ verified current fact की तरह मत बताओ।
       );
     }
 
-    // ========================================================
-    // EMPTY ANSWER
-    // ========================================================
-
     if (!result.reply) {
       return json(
         {
           error:
-            "Groq ने खाली उत्तर लौटाया। कृपया फिर कोशिश करें।",
+            "Groq ने खाली जवाब दिया।",
+
           code:
             "EMPTY_GROQ_RESPONSE",
-          requestId:
-            result.requestId ||
-            null,
         },
         502
       );
@@ -649,11 +507,20 @@ verified current fact की तरह मत बताओ।
         todayIndiaReadable
       );
 
+    // ========================================================
+    // RESPONSE
+    // ========================================================
+
     return json({
-      reply: checked.reply,
+      // तुम्हारे वर्तमान index.html के लिए
       answer: checked.reply,
+
+      // नए frontend के लिए भी
+      reply: checked.reply,
+
       selfChecked:
         checked.selfChecked,
+
       selfCorrected:
         checked.selfCorrected,
     });
@@ -688,7 +555,7 @@ async function handleVision(
       return json(
         {
           error:
-            "GROQ_API_KEY Cloudflare Secret में configured नहीं है।",
+            "GROQ_API_KEY configured नहीं है।",
           code:
             "MISSING_API_KEY",
         },
@@ -699,8 +566,7 @@ async function handleVision(
     let body;
 
     try {
-      body =
-        await request.json();
+      body = await request.json();
     } catch {
       return json(
         {
@@ -713,15 +579,17 @@ async function handleVision(
       );
     }
 
+    // तुम्हारा index.html "image" भेजता है
+    // लेकिन imageData भी स्वीकार करेंगे
     const imageData =
-      body?.imageData ||
       body?.image ||
+      body?.imageData ||
       "";
 
     const question =
       String(
         body?.question ||
-        "इस तस्वीर को समझाकर बताओ।"
+        "इस फोटो को ध्यान से देखकर समझाओ।"
       )
         .trim()
         .slice(0, 4000);
@@ -739,9 +607,9 @@ async function handleVision(
     }
 
     const visionPrompt = `
-तुम "सारथी AI" के image assistant हो।
+तुम सारथी AI के image assistant हो।
 
-User का सवाल:
+User का प्रश्न:
 
 ${question}
 
@@ -749,14 +617,13 @@ ${question}
 
 नियम:
 
-1. जो तस्वीर में स्पष्ट है वही बताओ।
-2. तस्वीर में दिखाई न देने वाली चीज को निश्चित मत बताओ।
-3. यदि image में text है तो उसे पढ़ने की कोशिश करो।
-4. यदि यह पढ़ाई का प्रश्न है तो आसान हिंदी में समझाओ।
-5. यदि user ने किसी प्रश्न का उत्तर पूछा है तो सीधे उत्तर दो।
-6. यदि image अस्पष्ट है तो साफ बताओ कि image स्पष्ट नहीं है।
-7. medical/legal/current factual claims में अनुमान को fact मत बनाओ।
-8. मुख्य उत्तर हिंदी में दो।
+1. तस्वीर में जो स्पष्ट है वही बताओ।
+2. जो दिखाई नहीं दे रहा उसे निश्चित मत बताओ।
+3. तस्वीर में text हो तो उसे पढ़ने की कोशिश करो।
+4. पढ़ाई का प्रश्न हो तो आसान हिंदी में उत्तर दो।
+5. diagram/chart/question हो तो समझाओ।
+6. image अस्पष्ट हो तो साफ बताओ।
+7. मुख्य उत्तर हिंदी में दो।
 `;
 
     const payload = {
@@ -824,8 +691,10 @@ ${question}
         {
           error:
             result.error,
+
           code:
             result.code,
+
           requestId:
             result.requestId ||
             null,
@@ -834,23 +703,11 @@ ${question}
       );
     }
 
-    if (!result.reply) {
-      return json(
-        {
-          error:
-            "Image AI ने खाली उत्तर दिया।",
-          code:
-            "EMPTY_VISION_RESPONSE",
-        },
-        502
-      );
-    }
-
     return json({
-      reply:
+      answer:
         result.reply,
 
-      answer:
+      reply:
         result.reply,
     });
 
@@ -885,80 +742,26 @@ async function selfCheckAndCorrect(
     const checkerPrompt = `
 तुम "Sarathi AI Quality Checker" हो।
 
-User का प्रश्न और AI का उत्तर जाँचो।
-
 आज भारत की तारीख:
 ${todayIndiaReadable}
 
-बहुत महत्वपूर्ण:
+User के प्रश्न और AI answer को जाँचो।
 
-यदि उत्तर में "आज", "today", "current",
-"latest", "अभी", "ताजा", "ताज़ा" कहा गया है,
-तो date consistency जाँचो।
+विशेष रूप से current information की date जाँचो।
 
-यदि उत्तर में कोई पुरानी date है
-और उसे आज की जानकारी की तरह प्रस्तुत किया गया है,
-तो उसे correction की जरूरत है।
+यदि AI ने पुरानी जानकारी को "आज", "today",
+"current", "latest" आदि बताया है,
+तो correction करो।
 
-पुरानी date को current date मत बनाओ।
+लेकिन बिना verified information के
+नई संख्या या date मत बनाओ।
 
-यदि current जानकारी verified नहीं है,
-तो गलत संख्या या date मत बनाओ।
+सामान्य 5 अंक के उत्तर को unnecessarily
+advanced मत बनाओ।
 
-==================================================
-STUDY CHECK
-==================================================
+Correction जरूरी हो तो पूरा corrected answer दो।
 
-2 marks:
-छोटा और सीधा।
-
-5 marks:
-भूमिका + 4–6 मुख्य बातें + निष्कर्ष।
-
-10 marks:
-भूमिका + headings + 5–7 points + conclusion।
-
-12 marks:
-भूमिका + headings + 6–8 points + conclusion।
-
-==================================================
-COMPLEXITY
-==================================================
-
-सामान्य प्रश्न को unnecessarily advanced मत बनाओ।
-
-प्रकाश संश्लेषण के सामान्य उत्तर में
-बिना जरूरत:
-
-Photosystem I
-Photosystem II
-ATP
-NADPH
-Calvin cycle
-electron transport chain
-thylakoid
-stroma
-electron/proton transfer
-water splitting
-reaction center
-
-मत जोड़ो।
-
-==================================================
-CORRECTION
-==================================================
-
-यदि उत्तर सही है:
-needs_correction = false
-
-यदि गलती है:
-needs_correction = true
-
-और corrected_answer में पूरा सही उत्तर दो।
-
-केवल "सही है" मत लिखो।
-
-Facts मत गढ़ो।
+Correction जरूरी न हो तो original answer रखो।
 `;
 
     const conversationText =
@@ -995,16 +798,13 @@ ${answer}
       ],
 
       max_completion_tokens:
-        2500,
+        1800,
 
-      temperature:
-        0,
+      temperature: 0,
 
-      reasoning_effort:
-        "low",
+      reasoning_effort: "low",
 
-      stream:
-        false,
+      stream: false,
 
       response_format: {
         type:
@@ -1014,8 +814,7 @@ ${answer}
           name:
             "sarathi_quality_check",
 
-          strict:
-            true,
+          strict: true,
 
           schema: {
             type:
@@ -1092,9 +891,7 @@ ${answer}
 
     try {
       report =
-        JSON.parse(
-          check.raw
-        );
+        JSON.parse(check.raw);
     } catch {
       return {
         reply: answer,
@@ -1104,18 +901,7 @@ ${answer}
     }
 
     if (
-      typeof report.needs_correction !==
-      "boolean"
-    ) {
-      return {
-        reply: answer,
-        selfChecked: false,
-        selfCorrected: false,
-      };
-    }
-
-    if (
-      !report.needs_correction
+      report.needs_correction !== true
     ) {
       return {
         reply: answer,
@@ -1125,10 +911,10 @@ ${answer}
     }
 
     const corrected =
-      typeof report.corrected_answer ===
-      "string"
-        ? report.corrected_answer.trim()
-        : "";
+      String(
+        report.corrected_answer ||
+        ""
+      ).trim();
 
     if (!corrected) {
       return {
@@ -1138,16 +924,12 @@ ${answer}
       };
     }
 
-    // बहुत बड़ा अनावश्यक correction रोकना
-    const maximumAllowed =
+    if (
+      corrected.length >
       Math.max(
         answer.length * 2.5,
         20000
-      );
-
-    if (
-      corrected.length >
-      maximumAllowed
+      )
     ) {
       return {
         reply: answer,
@@ -1157,14 +939,9 @@ ${answer}
     }
 
     return {
-      reply:
-        corrected,
-
-      selfChecked:
-        true,
-
-      selfCorrected:
-        true,
+      reply: corrected,
+      selfChecked: true,
+      selfCorrected: true,
     };
 
   } catch {
@@ -1190,9 +967,10 @@ async function callGroq(
     new AbortController();
 
   const timeout =
-    setTimeout(() => {
-      controller.abort();
-    }, timeoutMs);
+    setTimeout(
+      () => controller.abort(),
+      timeoutMs
+    );
 
   try {
     const response =
@@ -1214,9 +992,7 @@ async function callGroq(
           },
 
           body:
-            JSON.stringify(
-              payload
-            ),
+            JSON.stringify(payload),
 
           signal:
             controller.signal,
@@ -1260,15 +1036,15 @@ async function callGroq(
         raw ||
         `Groq API error (${response.status})`;
 
-      const retryable =
-        response.status === 408 ||
-        response.status === 409 ||
-        response.status === 429 ||
-        response.status >= 500;
-
       return {
         ok: false,
-        retryable,
+
+        retryable:
+          response.status === 408 ||
+          response.status === 409 ||
+          response.status === 429 ||
+          response.status >= 500,
+
         status:
           response.status,
 
@@ -1280,15 +1056,11 @@ async function callGroq(
           message,
 
         requestId,
-
-        raw: null,
       };
     }
 
     const choice =
-      Array.isArray(
-        data?.choices
-      )
+      Array.isArray(data?.choices)
         ? data.choices[0]
         : null;
 
@@ -1298,33 +1070,6 @@ async function callGroq(
         ? choice.message.content.trim()
         : "";
 
-    // Self-check JSON
-    if (
-      payload.response_format
-    ) {
-      if (!content) {
-        return {
-          ok: false,
-          retryable: true,
-          status: 502,
-          code:
-            "EMPTY_CHECK_RESPONSE",
-          error:
-            "Self-check ने खाली response दिया।",
-          requestId,
-          raw: null,
-        };
-      }
-
-      return {
-        ok: true,
-        reply: "",
-        raw:
-          content,
-        requestId,
-      };
-    }
-
     if (!content) {
       return {
         ok: false,
@@ -1333,36 +1078,36 @@ async function callGroq(
         code:
           "EMPTY_RESPONSE",
         error:
-          "Groq response आया लेकिन text answer नहीं था।",
+          "Groq ने खाली response दिया।",
         requestId,
-        raw: null,
       };
     }
 
     return {
       ok: true,
+
       reply:
         content,
-      raw: null,
+
+      raw:
+        payload.response_format
+          ? content
+          : null,
+
       requestId,
     };
 
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : String(error);
-
     const isTimeout =
       error?.name ===
       "AbortError";
 
     return {
       ok: false,
+
       retryable: true,
 
-      status:
-        504,
+      status: 504,
 
       code:
         isTimeout
@@ -1372,12 +1117,13 @@ async function callGroq(
       error:
         isTimeout
           ? "Groq से जवाब आने में बहुत समय लगा।"
-          : `Groq connection error: ${message}`,
+          : (
+              error instanceof Error
+                ? error.message
+                : String(error)
+            ),
 
       requestId:
-        null,
-
-      raw:
         null,
     };
 
@@ -1436,7 +1182,7 @@ function getIndiaReadableDate() {
 
 
 // ============================================================
-// CURRENT INFORMATION DETECTOR
+// CURRENT QUESTION DETECTOR
 // ============================================================
 
 function isCurrentInformationQuestion(
@@ -1446,38 +1192,36 @@ function isCurrentInformationQuestion(
     String(text || "")
       .toLowerCase();
 
-  const currentWords =
-    [
-      "आज",
-      "आज का",
-      "आज की",
-      "आज के",
-      "अभी",
-      "वर्तमान",
-      "ताजा",
-      "ताज़ा",
-      "latest",
-      "current",
-      "today",
-      "now",
-      "live",
-    ];
+  const currentWords = [
+    "आज",
+    "आज का",
+    "आज की",
+    "आज के",
+    "अभी",
+    "वर्तमान",
+    "ताजा",
+    "ताज़ा",
+    "latest",
+    "current",
+    "today",
+    "now",
+    "live",
+  ];
 
-  const currentDomainWords =
-    [
-      "सोना",
-      "gold",
-      "भाव",
-      "कीमत",
-      "price",
-      "rate",
-      "मौसम",
-      "weather",
-      "समाचार",
-      "news",
-      "result",
-      "रेट",
-    ];
+  const domainWords = [
+    "सोना",
+    "gold",
+    "भाव",
+    "कीमत",
+    "price",
+    "rate",
+    "रेट",
+    "मौसम",
+    "weather",
+    "समाचार",
+    "news",
+    "result",
+  ];
 
   const hasCurrent =
     currentWords.some(
@@ -1486,7 +1230,7 @@ function isCurrentInformationQuestion(
     );
 
   const hasDomain =
-    currentDomainWords.some(
+    domainWords.some(
       (word) =>
         q.includes(word)
     );
@@ -1511,12 +1255,11 @@ function isCurrentInformationQuestion(
 
 function sleep(ms) {
   return new Promise(
-    (resolve) => {
+    (resolve) =>
       setTimeout(
         resolve,
         ms
-      );
-    }
+      )
   );
 }
 
@@ -1540,7 +1283,7 @@ function corsHeaders() {
 
 
 // ============================================================
-// JSON RESPONSE
+// JSON
 // ============================================================
 
 function json(
