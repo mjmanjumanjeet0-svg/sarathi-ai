@@ -2,11 +2,7 @@
 <html lang="hi">
 <head>
   <meta charset="UTF-8" />
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
   <title>सारथी AI - Study Center</title>
 
@@ -23,7 +19,6 @@
         BlinkMacSystemFont,
         "Segoe UI",
         sans-serif;
-
       background: #f4f7fb;
       color: #172033;
     }
@@ -102,6 +97,7 @@
       margin-top: 7px;
       font-size: 13px;
       color: #667085;
+      line-height: 1.5;
     }
 
     .buttons {
@@ -125,6 +121,11 @@
       transform: scale(0.98);
     }
 
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
     .primary {
       background: #4f46e5;
       color: white;
@@ -141,14 +142,10 @@
     }
 
     .clear {
+      width: 100%;
       background: #f2f4f7;
       color: #344054;
       margin-top: 10px;
-    }
-
-    button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
     }
 
     .status {
@@ -158,6 +155,7 @@
       margin-top: 14px;
       line-height: 1.5;
       font-size: 14px;
+      white-space: pre-wrap;
     }
 
     .status.show {
@@ -193,19 +191,6 @@
       margin-bottom: 14px;
     }
 
-    .answer {
-      line-height: 1.8;
-      font-size: 16px;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
-    }
-
-    .answer h1,
-    .answer h2,
-    .answer h3 {
-      line-height: 1.4;
-    }
-
     .meta {
       display: flex;
       flex-wrap: wrap;
@@ -219,6 +204,13 @@
       padding: 6px 10px;
       font-size: 13px;
       color: #475467;
+    }
+
+    .answer {
+      line-height: 1.8;
+      font-size: 16px;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
     }
 
     .footer {
@@ -252,9 +244,7 @@
 
   <div class="container">
 
-    <!-- =========================
-         HEADER
-    ========================== -->
+    <!-- HEADER -->
 
     <div class="header">
       <h1>📚 सारथी AI — Study Center</h1>
@@ -266,9 +256,7 @@
     </div>
 
 
-    <!-- =========================
-         QUESTION CARD
-    ========================== -->
+    <!-- QUESTION CARD -->
 
     <div class="card">
 
@@ -281,54 +269,28 @@
 
             <optgroup label="कला / Arts">
               <option value="इतिहास">इतिहास</option>
-              <option value="राजनीति विज्ञान">
-                राजनीति विज्ञान
-              </option>
+              <option value="राजनीति विज्ञान">राजनीति विज्ञान</option>
               <option value="भूगोल">भूगोल</option>
-              <option value="समाजशास्त्र">
-                समाजशास्त्र
-              </option>
-              <option value="मनोविज्ञान">
-                मनोविज्ञान
-              </option>
-              <option value="दर्शनशास्त्र">
-                दर्शनशास्त्र
-              </option>
-              <option value="गृह विज्ञान">
-                गृह विज्ञान
-              </option>
-              <option value="अर्थशास्त्र">
-                अर्थशास्त्र
-              </option>
+              <option value="समाजशास्त्र">समाजशास्त्र</option>
+              <option value="मनोविज्ञान">मनोविज्ञान</option>
+              <option value="दर्शनशास्त्र">दर्शनशास्त्र</option>
+              <option value="गृह विज्ञान">गृह विज्ञान</option>
+              <option value="अर्थशास्त्र">अर्थशास्त्र</option>
               <option value="हिंदी">हिंदी</option>
               <option value="अंग्रेजी">अंग्रेजी</option>
               <option value="संस्कृत">संस्कृत</option>
             </optgroup>
 
-
             <optgroup label="विज्ञान / Science">
-              <option value="भौतिक विज्ञान">
-                भौतिक विज्ञान
-              </option>
-              <option value="रसायन विज्ञान">
-                रसायन विज्ञान
-              </option>
-              <option value="जीव विज्ञान">
-                जीव विज्ञान
-              </option>
+              <option value="भौतिक विज्ञान">भौतिक विज्ञान</option>
+              <option value="रसायन विज्ञान">रसायन विज्ञान</option>
+              <option value="जीव विज्ञान">जीव विज्ञान</option>
               <option value="गणित">गणित</option>
-              <option value="कंप्यूटर विज्ञान">
-                कंप्यूटर विज्ञान
-              </option>
-              <option value="पर्यावरण विज्ञान">
-                पर्यावरण विज्ञान
-              </option>
+              <option value="कंप्यूटर विज्ञान">कंप्यूटर विज्ञान</option>
+              <option value="पर्यावरण विज्ञान">पर्यावरण विज्ञान</option>
             </optgroup>
 
-
-            <option value="अन्य विषय">
-              अन्य विषय
-            </option>
+            <option value="अन्य विषय">अन्य विषय</option>
 
           </select>
         </div>
@@ -338,25 +300,11 @@
           <label for="marks">📝 अंक</label>
 
           <select id="marks">
-            <option value="auto">
-              अपने आप तय करें
-            </option>
-
-            <option value="2">
-              2 अंक
-            </option>
-
-            <option value="5">
-              5 अंक
-            </option>
-
-            <option value="10">
-              10 अंक
-            </option>
-
-            <option value="12">
-              12 अंक
-            </option>
+            <option value="auto">अपने आप तय करें</option>
+            <option value="2">2 अंक</option>
+            <option value="5">5 अंक</option>
+            <option value="10">10 अंक</option>
+            <option value="12">12 अंक</option>
           </select>
         </div>
 
@@ -374,18 +322,16 @@
 
 या
 
-प्रकाश संश्लेषण क्या है? 5 अंक"
+प्रकाश संश्लेषण क्या है?"
       ></textarea>
 
       <div class="hint">
-        💡 Enter से नई लाइन लिखें। प्रश्न भेजने के लिए
-        नीचे दिए गए बटन का उपयोग करें।
+        💡 प्रश्न लिखकर "सारथी से उत्तर पूछें" दबाएँ।
+        Ctrl + Enter भी इस्तेमाल कर सकते हैं।
       </div>
 
 
-      <!-- =========================
-           BUTTONS
-      ========================== -->
+      <!-- BUTTONS -->
 
       <div class="buttons">
 
@@ -397,7 +343,6 @@
           🤖 सारथी से उत्तर पूछें
         </button>
 
-
         <button
           id="normalBtn"
           class="secondary"
@@ -405,7 +350,6 @@
         >
           💡 सामान्य उत्तर
         </button>
-
 
         <button
           id="searchBtn"
@@ -427,9 +371,7 @@
       </button>
 
 
-      <!-- =========================
-           STATUS
-      ========================== -->
+      <!-- STATUS -->
 
       <div
         id="status"
@@ -439,9 +381,7 @@
     </div>
 
 
-    <!-- =========================
-         ANSWER
-    ========================== -->
+    <!-- ANSWER -->
 
     <div
       id="answerCard"
@@ -525,17 +465,14 @@
 
 
     // ==================================================
-    // API URL
+    // API
     // ==================================================
-
-    // Study page और Worker एक ही Cloudflare site
-    // पर हैं, इसलिए relative URL इस्तेमाल करें।
 
     const API_URL = "/api/chat";
 
 
     // ==================================================
-    // MARKS INSTRUCTION
+    // MARKS INSTRUCTIONS
     // ==================================================
 
     function getMarksInstruction(marks) {
@@ -546,7 +483,7 @@
 
 उत्तर बहुत छोटा और सीधा रखो।
 मुख्य परिभाषा या 2 महत्वपूर्ण बातें दो।
-अनावश्यक भूमिका, लंबी व्याख्या और निष्कर्ष मत जोड़ो।
+अनावश्यक भूमिका और लंबा निष्कर्ष मत जोड़ो।
 `;
       }
 
@@ -558,16 +495,16 @@
 उत्तर मध्यम लंबाई का रखो।
 
 ढाँचा:
-- छोटी परिभाषा या भूमिका
+- छोटी भूमिका या परिभाषा
 - लगभग 4–6 मुख्य बिंदु
 - आवश्यक छोटा उदाहरण
-- केवल जरूरत हो तो छोटा निष्कर्ष
+- छोटा निष्कर्ष
 
-बहुत गहराई में मत जाओ।
-Photosystem, Calvin cycle, ATP/NADPH जैसे advanced details
-तभी दो जब प्रश्न विशेष रूप से उन्हें पूछता हो।
-सिर्फ उत्तर लंबा करने के लिए अतिरिक्त वैज्ञानिक या ऐतिहासिक
-जानकारी मत जोड़ो।
+सिर्फ उत्तर लंबा करने के लिए अतिरिक्त जानकारी मत जोड़ो।
+
+जीव विज्ञान में Photosystem, Calvin cycle, ATP, NADPH,
+electron transport chain, thylakoid, stroma आदि advanced
+details तभी दो जब प्रश्न विशेष रूप से इन्हें पूछता हो।
 `;
       }
 
@@ -581,10 +518,9 @@ Photosystem, Calvin cycle, ATP/NADPH जैसे advanced details
 - स्पष्ट headings
 - मुख्य बिंदुओं की पर्याप्त व्याख्या
 - आवश्यक उदाहरण
-- छोटा निष्कर्ष
+- निष्कर्ष
 
-उत्तर विस्तृत हो लेकिन दोहराव और अनावश्यक advanced details
-से बचो।
+उत्तर विस्तृत हो लेकिन दोहराव और अनावश्यक कठिन जानकारी से बचो।
 `;
       }
 
@@ -594,14 +530,14 @@ Photosystem, Calvin cycle, ATP/NADPH जैसे advanced details
 उत्तर 12 अंकों के लिए है।
 
 ढाँचा:
-- अच्छी लेकिन संक्षिप्त भूमिका
-- 5–7 स्पष्ट headings/मुख्य बिंदु, जहाँ प्रश्न के अनुसार उचित हों
+- संक्षिप्त भूमिका
+- 5–7 स्पष्ट headings या मुख्य बिंदु
 - प्रत्येक बिंदु की पर्याप्त परीक्षा-योग्य व्याख्या
 - आवश्यक उदाहरण
 - स्पष्ट निष्कर्ष
 
-उत्तर इतना विस्तृत हो कि 12 अंकों के प्रश्न के लिए उपयोगी हो,
-लेकिन बिना आधार के संख्या, आँकड़े, नाम या अतिरिक्त जानकारी मत जोड़ो।
+उत्तर विस्तृत हो, लेकिन बिना आधार के आँकड़े,
+नाम या तथ्य मत जोड़ो।
 `;
       }
 
@@ -609,16 +545,15 @@ Photosystem, Calvin cycle, ATP/NADPH जैसे advanced details
       return `
 अंकों की संख्या निर्धारित नहीं है।
 
-प्रश्न के अनुसार उपयुक्त लंबाई चुनो।
-यदि प्रश्न छोटा है तो छोटा उत्तर दो।
-यदि प्रश्न विस्तृत है तो आवश्यक headings और व्याख्या दो।
+प्रश्न के अनुसार उचित लंबाई चुनो।
+छोटे प्रश्न का छोटा उत्तर और विस्तृत प्रश्न का विस्तृत उत्तर दो।
 अनावश्यक विस्तार मत करो।
 `;
     }
 
 
     // ==================================================
-    // SUBJECT INSTRUCTION
+    // SUBJECT INSTRUCTIONS
     // ==================================================
 
     function getSubjectInstruction(subject) {
@@ -628,59 +563,44 @@ Photosystem, Calvin cycle, ATP/NADPH जैसे advanced details
         return `
 विषय: इतिहास।
 
-इतिहास के उत्तर में:
-- तारीख, व्यक्ति और घटना ध्यान से जाँचकर लिखो।
+- तारीख, व्यक्ति और घटना ध्यान से लिखो।
 - कारण, घटना और परिणाम अलग रखो।
-- बिना आवश्यकता प्रतिशत या संख्या मत दो।
-- मनगढ़ंत नाम या उद्धरण मत बनाओ।
-- किसी व्यक्ति को बिना आधार अक्षम, भ्रष्ट आदि मत कहो।
-- अगर कोई तथ्य निश्चित नहीं है तो उसे मत गढ़ो।
-- उत्तर पाठ्यपुस्तक-अनुकूल और परीक्षा-योग्य हिंदी में दो।
+- मनगढ़ंत नाम, तारीख या उद्धरण मत बनाओ।
+- संदिग्ध आँकड़े मत जोड़ो।
+- उत्तर पाठ्यपुस्तक-अनुकूल और परीक्षा-योग्य रखो।
 
-फ्रांसीसी क्रांति के प्रश्न में:
-प्रथम एस्टेट = पादरी।
-द्वितीय एस्टेट = कुलीन।
-तृतीय एस्टेट = सामान्य जनता का बड़ा वर्ग, जिसमें बुर्जुआ,
-किसान और शहरी श्रमिक शामिल थे।
-
-फ्रांसीसी क्रांति के कारण पूछे जाने पर सामान्यतः:
+फ्रांसीसी क्रांति के कारण पूछे जाने पर सामान्य मुख्य बिंदु:
 1. सामाजिक असमानता
 2. करों का असमान बोझ
 3. वित्तीय संकट और राज्य ऋण
 4. खाद्य संकट
 5. निरंकुश राजतंत्र और राजनीतिक प्रतिनिधित्व
 6. प्रबोधन के विचार
-
-बिना आधार प्रतिशत, "दो-तीन गुना" जैसे आँकड़े,
-गलत करों के नाम या मनगढ़ंत व्यक्तियों के नाम मत जोड़ो।
 `;
       }
 
 
-      if (
-        subject === "रसायन विज्ञान"
-      ) {
+      if (subject === "रसायन विज्ञान") {
 
         return `
 विषय: रसायन विज्ञान।
 
-परिभाषाएँ और रासायनिक तथ्य पाठ्यपुस्तक के अनुसार दो।
-परमाणु, अणु, आयन, तत्व और यौगिक को आपस में मत मिलाओ।
-रासायनिक समीकरण सही लिखो।
-जहाँ आवश्यक हो सूत्र और उदाहरण दो।
+- परिभाषाएँ पाठ्यपुस्तक के अनुसार दो।
+- तत्व, यौगिक, परमाणु, अणु और आयन को आपस में मत मिलाओ।
+- रासायनिक समीकरण सही लिखो।
+- जहाँ आवश्यक हो सूत्र और उदाहरण दो।
 `;
       }
 
 
-      if (
-        subject === "भौतिक विज्ञान"
-      ) {
+      if (subject === "भौतिक विज्ञान") {
 
         return `
 विषय: भौतिक विज्ञान।
 
 सूत्र और SI इकाइयाँ सही रखो।
-संख्यात्मक प्रश्न में:
+
+Numerical में:
 दिया गया → सूत्र → मान रखना → गणना → अंतिम उत्तर।
 
 गणना दोबारा जाँचो।
@@ -693,25 +613,22 @@ Photosystem, Calvin cycle, ATP/NADPH जैसे advanced details
         return `
 विषय: गणित।
 
-प्रश्न को ध्यान से पढ़ो।
-सभी महत्वपूर्ण steps दिखाओ।
-समीकरण के दोनों पक्षों पर समान क्रिया करो।
-गणना जाँचो।
-अंतिम उत्तर स्पष्ट लिखो।
+- प्रश्न को ध्यान से पढ़ो।
+- आवश्यक सभी steps दिखाओ।
+- गणना जाँचो।
+- अंतिम उत्तर स्पष्ट लिखो।
 `;
       }
 
 
-      if (
-        subject === "जीव विज्ञान"
-      ) {
+      if (subject === "जीव विज्ञान") {
 
         return `
 विषय: जीव विज्ञान।
 
-परिभाषाएँ वैज्ञानिक और पाठ्यपुस्तक-अनुकूल रखो।
-जरूरत के अनुसार प्रक्रिया, कारण, कार्य और उदाहरण समझाओ।
-अनावश्यक advanced biological details मत जोड़ो।
+- वैज्ञानिक और पाठ्यपुस्तक-अनुकूल परिभाषाएँ दो।
+- जरूरत के अनुसार कार्य, प्रक्रिया, कारण और उदाहरण समझाओ।
+- प्रश्न के स्तर से ऊपर की advanced जानकारी मत जोड़ो।
 `;
       }
 
@@ -719,14 +636,14 @@ Photosystem, Calvin cycle, ATP/NADPH जैसे advanced details
       return `
 विषय: ${subject}।
 
-इस विषय के प्रश्न का उत्तर पाठ्यपुस्तक-अनुकूल,
-सरल और परीक्षा-योग्य भाषा में दो।
+इस विषय के प्रश्न का उत्तर सरल,
+पाठ्यपुस्तक-अनुकूल और परीक्षा-योग्य भाषा में दो।
 `;
     }
 
 
     // ==================================================
-    // MAIN PROMPT
+    // BUILD PROMPT
     // ==================================================
 
     function buildPrompt() {
@@ -741,60 +658,51 @@ Photosystem, Calvin cycle, ATP/NADPH जैसे advanced details
         questionEl.value.trim();
 
 
-      const marksInstruction =
-        getMarksInstruction(marks);
-
-      const subjectInstruction =
-        getSubjectInstruction(subject);
-
-
       return `
 तुम "सारथी AI Study Center" हो।
 
 उपयोगकर्ता के प्रश्न का उत्तर केवल प्रश्न के अनुसार दो।
 
-${subjectInstruction}
+${getSubjectInstruction(subject)}
 
-${marksInstruction}
+${getMarksInstruction(marks)}
 
-महत्वपूर्ण सामान्य नियम:
+सामान्य नियम:
 
 1. मुख्य भाषा सरल हिंदी रखो।
-2. परीक्षा में सीधे लिखा जा सके ऐसा उत्तर दो।
+2. उत्तर परीक्षा में सीधे लिखा जा सके।
 3. तथ्य मत गढ़ो।
 4. अनिश्चित तथ्य को निश्चित तथ्य मत बनाओ।
 5. अनावश्यक अंग्रेजी मत लिखो।
 6. प्रश्न में जो नहीं पूछा गया है उसे विस्तार से मत जोड़ो।
-7. एक ही बात दोहराओ मत।
-8. गलत या संदिग्ध आँकड़े मत बनाओ।
-9. नकली उद्धरण मत बनाओ।
-10. उत्तर को साफ headings और numbered points में रखो।
-11. अगर प्रश्न "अंतर" पूछता है तो तुलना/तालिका उपयोग कर सकते हो।
-12. अगर प्रश्न "परिभाषा" पूछता है तो पहले स्पष्ट परिभाषा दो।
-13. अगर प्रश्न "कारण" पूछता है तो मुख्य रूप से कारण दो।
-14. अगर प्रश्न "परिणाम" पूछता है तो मुख्य रूप से परिणाम दो।
-15. अगर प्रश्न गणित/विज्ञान का numerical है तो calculation steps दिखाओ।
-16. प्रश्न के स्तर से बहुत ऊपर की जानकारी मत जोड़ो।
+7. एक ही बात बार-बार मत दोहराओ।
+8. नकली उद्धरण मत बनाओ।
+9. उत्तर साफ headings और numbered points में रखो।
+10. "परिभाषा" पूछे जाने पर पहले स्पष्ट परिभाषा दो।
+11. "कारण" पूछे जाने पर मुख्य कारण दो।
+12. "परिणाम" पूछे जाने पर मुख्य परिणाम दो।
+13. "अंतर" पूछे जाने पर तुलना स्पष्ट रखो।
+14. Numerical में calculation steps दिखाओ।
+15. प्रश्न के स्तर से बहुत ऊपर की जानकारी मत जोड़ो।
+16. उत्तर की लंबाई चुने गए अंकों के अनुसार रखो।
 
-उपयोगकर्ता का विषय:
+विषय:
 ${subject}
 
-अंकों का स्तर:
+अंक:
 ${marks === "auto" ? "स्वतः उचित स्तर" : marks + " अंक"}
 
-उपयोगकर्ता का प्रश्न:
+प्रश्न:
 ${question}
 `;
     }
 
 
     // ==================================================
-    // SEND REQUEST
+    // ASK AI
     // ==================================================
 
-    async function askAI(
-      useSearch = false
-    ) {
+    async function askAI(useSearch = false) {
 
       const question =
         questionEl.value.trim();
@@ -826,10 +734,6 @@ ${question}
       );
 
 
-      const prompt =
-        buildPrompt();
-
-
       try {
 
         const response =
@@ -839,15 +743,14 @@ ${question}
               method: "POST",
 
               headers: {
-                "Content-Type":
-                  "application/json"
+                "Content-Type": "application/json"
               },
 
               body: JSON.stringify({
                 messages: [
                   {
                     role: "user",
-                    content: prompt
+                    content: buildPrompt()
                   }
                 ],
 
@@ -861,7 +764,7 @@ ${question}
           await response.text();
 
 
-        let data;
+        let data = {};
 
 
         try {
@@ -886,12 +789,10 @@ ${question}
             data?.message ||
             `Server error (${response.status})`;
 
-
           const code =
             data?.code
               ? ` [${data.code}]`
               : "";
-
 
           throw new Error(
             message + code
@@ -913,20 +814,24 @@ ${question}
         }
 
 
-        showAnswer(
-          reply,
-          data?.searchUnavailable === true
-        );
+        showAnswer(reply);
 
 
-        showStatus(
-          data?.searchUnavailable === true
-            ? "⚠️ इंटरनेट खोज अभी उपलब्ध नहीं थी, इसलिए सामान्य उत्तर दिया गया है।"
-            : "✅ उत्तर तैयार है।",
-          data?.searchUnavailable === true
-            ? "loading"
-            : "success"
-        );
+        if (data?.searchUnavailable === true) {
+
+          showStatus(
+            "⚠️ इंटरनेट खोज उपलब्ध नहीं थी। सामान्य उत्तर दिया गया है।",
+            "loading"
+          );
+
+        } else {
+
+          showStatus(
+            "✅ उत्तर तैयार है।",
+            "success"
+          );
+
+        }
 
 
       } catch (error) {
@@ -950,7 +855,6 @@ ${question}
       } finally {
 
         setLoading(false);
-
       }
     }
 
@@ -959,10 +863,7 @@ ${question}
     // SHOW ANSWER
     // ==================================================
 
-    function showAnswer(
-      reply,
-      searchUnavailable
-    ) {
+    function showAnswer(reply) {
 
       answerEl.textContent =
         reply;
@@ -992,7 +893,6 @@ ${question}
         behavior: "smooth",
         block: "start"
       });
-
     }
 
 
@@ -1007,7 +907,6 @@ ${question}
       );
 
       answerEl.textContent = "";
-
     }
 
 
@@ -1024,9 +923,7 @@ ${question}
         message;
 
       statusEl.className =
-        "status show " +
-        type;
-
+        "status show " + type;
     }
 
 
@@ -1034,9 +931,7 @@ ${question}
     // LOADING
     // ==================================================
 
-    function setLoading(
-      loading
-    ) {
+    function setLoading(loading) {
 
       askBtn.disabled =
         loading;
@@ -1047,23 +942,16 @@ ${question}
       searchBtn.disabled =
         loading;
 
-      if (loading) {
 
-        askBtn.textContent =
-          "⏳ उत्तर तैयार हो रहा है...";
-
-      } else {
-
-        askBtn.textContent =
-          "🤖 सारथी से उत्तर पूछें";
-
-      }
-
+      askBtn.textContent =
+        loading
+          ? "⏳ उत्तर तैयार हो रहा है..."
+          : "🤖 सारथी से उत्तर पूछें";
     }
 
 
     // ==================================================
-    // BUTTONS
+    // BUTTON EVENTS
     // ==================================================
 
     askBtn.addEventListener(
@@ -1109,7 +997,6 @@ ${question}
           "";
 
         questionEl.focus();
-
       }
     );
 
@@ -1130,9 +1017,7 @@ ${question}
           event.preventDefault();
 
           askAI(false);
-
         }
-
       }
     );
 
