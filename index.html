@@ -115,6 +115,11 @@
       font-size: 14px;
     }
 
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
     #searchButton {
       background: #222;
       color: white;
@@ -267,6 +272,7 @@
        ========================= */
 
     @media (max-width: 600px) {
+
       header h1 {
         font-size: 23px;
       }
@@ -310,22 +316,22 @@
 
 <div class="app">
 
-  <!-- =========================
-       HEADER
-       ========================= -->
+  <!-- HEADER -->
 
   <header>
-    <h1>सारथी AI</h1>
+
+    <h1>
+      सारथी AI
+    </h1>
 
     <p>
       आपका निजी हिंदी AI सहायक
     </p>
+
   </header>
 
 
-  <!-- =========================
-       CHAT
-       ========================= -->
+  <!-- CHAT -->
 
   <main id="chat">
 
@@ -333,6 +339,7 @@
       class="welcome"
       id="welcome"
     >
+
       <h2>
         नमस्ते, मैं सारथी हूँ। 👋
       </h2>
@@ -340,21 +347,18 @@
       <p>
         आज किसमें मदद करूँ?
       </p>
+
     </div>
 
   </main>
 
 
-  <!-- =========================
-       STATUS
-       ========================= -->
+  <!-- STATUS -->
 
   <div id="status"></div>
 
 
-  <!-- =========================
-       ACTION BUTTONS
-       ========================= -->
+  <!-- ACTION BUTTONS -->
 
   <div class="actions">
 
@@ -407,9 +411,7 @@
   </div>
 
 
-  <!-- =========================
-       PHOTO EDIT PANEL
-       ========================= -->
+  <!-- PHOTO EDIT PANEL -->
 
   <div id="photoPanel">
 
@@ -460,9 +462,7 @@
   </div>
 
 
-  <!-- =========================
-       INPUT
-       ========================= -->
+  <!-- INPUT -->
 
   <div class="input-area">
 
@@ -485,7 +485,7 @@
 </div>
 
 
-<!-- PHOTO CANVAS -->
+<!-- HIDDEN CANVAS -->
 
 <canvas
   id="canvas"
@@ -559,6 +559,10 @@
 
   let recognition = null;
 
+  let isListening = false;
+
+  let isSpeaking = false;
+
   let currentPhoto = "";
 
   let rotation = 0;
@@ -567,15 +571,16 @@
 
   let brightness = 100;
 
-  let isSpeaking = false;
-
 
   // ==========================================================
   // STATUS
   // ==========================================================
 
   function setStatus(text) {
-    status.textContent = text || "";
+
+    status.textContent =
+      text || "";
+
   }
 
 
@@ -623,6 +628,7 @@
         "अपलोड की गई फोटो";
 
       div.appendChild(image);
+
     }
 
 
@@ -630,6 +636,7 @@
 
     chat.scrollTop =
       chat.scrollHeight;
+
   }
 
 
@@ -655,6 +662,7 @@
       );
 
       return;
+
     }
 
 
@@ -700,11 +708,14 @@
 
             body: JSON.stringify({
 
-              message: text,
+              message:
+                text,
 
-              history: messages,
+              history:
+                messages,
 
-              webSearch: Boolean(useSearch)
+              webSearch:
+                Boolean(useSearch)
 
             })
           }
@@ -724,6 +735,7 @@
         throw new Error(
           "Server response पढ़ा नहीं जा सका।"
         );
+
       }
 
 
@@ -735,6 +747,7 @@
           data?.detail ||
           "जवाब नहीं मिल पाया।"
         );
+
       }
 
 
@@ -772,6 +785,7 @@
       } else {
 
         setStatus("");
+
       }
 
 
@@ -797,6 +811,7 @@
         )
       );
 
+
     } finally {
 
       sendButton.disabled = false;
@@ -804,7 +819,9 @@
       searchButton.disabled = false;
 
       input.focus();
+
     }
+
   }
 
 
@@ -859,6 +876,7 @@
         setStatus(
           "Internet Search बंद है"
         );
+
       }
 
     }
@@ -882,6 +900,7 @@
         sendMessage(
           searchMode
         );
+
       }
 
     }
@@ -898,6 +917,7 @@
 
       sendMessage(
         false,
+
         "मुझसे पढ़ाई का एक सवाल पूछो। एक समय में केवल एक सवाल पूछना और मेरे उत्तर का इंतजार करना।"
       );
 
@@ -908,10 +928,6 @@
   // ==========================================================
   // CLEAN TEXT FOR SPEECH
   // ==========================================================
-  // AI के Markdown चिन्ह हटाए जाते हैं।
-  // स्क्रीन पर दिखने वाला जवाब नहीं बदलेगा।
-  // केवल आवाज में साफ टेक्स्ट पढ़ा जाएगा।
-  // ==========================================================
 
   function cleanTextForSpeech(text) {
 
@@ -920,75 +936,132 @@
     }
 
 
-    return String(text)
+    let clean =
+      String(text);
 
-      // Code blocks हटाएँ
-      .replace(
+
+    // Code blocks
+    clean =
+      clean.replace(
         /```[\s\S]*?```/g,
         " "
-      )
+      );
 
-      // Inline code
-      .replace(
-        /`([^`]+)`/g,
+
+    // Inline code
+    clean =
+      clean.replace(
+        /`([^`]*)`/g,
         "$1"
-      )
+      );
 
-      // Images
-      .replace(
+
+    // Images
+    clean =
+      clean.replace(
         /!\[([^\]]*)\]\([^)]+\)/g,
         "$1"
-      )
+      );
 
-      // Markdown links
-      .replace(
+
+    // Links
+    clean =
+      clean.replace(
         /\[([^\]]+)\]\([^)]+\)/g,
         "$1"
-      )
+      );
 
-      // Heading symbols
-      .replace(
-        /#{1,6}\s*/g,
+
+    // Headings
+    clean =
+      clean.replace(
+        /^\s*#{1,6}\s*/gm,
         ""
-      )
+      );
 
-      // Markdown bullet at line start
-      .replace(
-        /^\s*[-*+]\s+/gm,
+
+    // Bullet points
+    clean =
+      clean.replace(
+        /^\s*[-*+•▪◦]\s+/gm,
         ""
-      )
+      );
 
-      // Numbered list
-      .replace(
-        /^\s*\d+\.\s+/gm,
+
+    // Numbered lists
+    clean =
+      clean.replace(
+        /^\s*\d+[\.\)]\s+/gm,
         ""
-      )
+      );
 
-      // Bold / italic / strike symbols
-      .replace(
+
+    // Bold / italic / strike
+    clean =
+      clean.replace(
         /[*_~]+/g,
         ""
-      )
+      );
 
-      // Quote symbol
-      .replace(
-        />\s?/g,
+
+    // Quote
+    clean =
+      clean.replace(
+        /^\s*>\s?/gm,
         ""
-      )
+      );
 
-      // HTML tags
-      .replace(
-        /<\/?[^>]+>/g,
+
+    // HTML tags
+    clean =
+      clean.replace(
+        /<[^>]*>/g,
         " "
-      )
+      );
 
-      // Extra spaces
-      .replace(
+
+    // URLs
+    clean =
+      clean.replace(
+        /https?:\/\/\S+/gi,
+        " "
+      );
+
+
+    // Email
+    clean =
+      clean.replace(
+        /[\w.+-]+@[\w-]+\.[\w.-]+/gi,
+        " "
+      );
+
+
+    // Markdown separators
+    clean =
+      clean.replace(
+        /^\s*[-*_]{3,}\s*$/gm,
+        " "
+      );
+
+
+    // Extra punctuation
+    clean =
+      clean.replace(
+        /([.!?।])\1{2,}/g,
+        "$1"
+      );
+
+
+    // Extra spaces
+    clean =
+      clean.replace(
         /\s+/g,
         " "
-      )
+      );
 
-      .trim();
+
+    return clean.trim();
+
   }
 
 
@@ -1003,50 +1076,30 @@
     ) {
 
       setStatus(
-        "इस browser में पढ़कर सुनाने की सुविधा नहीं है"
+        "इस browser में पढ़कर सुनाने की सुविधा उपलब्ध नहीं है।"
       );
 
       return;
+
     }
 
 
     if (
       !text ||
-      !text.trim()
+      !String(text).trim()
     ) {
 
       setStatus(
-        "पहले AI का जवाब आने दें"
+        "पहले AI का जवाब आने दें।"
       );
 
       return;
+
     }
 
 
-    // अगर पहले से बोल रहा है तो रोक दें
-    if (isSpeaking) {
+    speechSynthesis.cancel();
 
-      speechSynthesis.cancel();
-
-      isSpeaking = false;
-
-      speakButton.classList.remove(
-        "active"
-      );
-
-      speakButton.textContent =
-        "🔊 सुनें";
-
-      setStatus("");
-
-      return;
-    }
-
-
-    // ========================================================
-    // IMPORTANT:
-    // आवाज में केवल साफ किया हुआ text जाएगा
-    // ========================================================
 
     const cleanText =
       cleanTextForSpeech(text);
@@ -1055,14 +1108,12 @@
     if (!cleanText) {
 
       setStatus(
-        "इस जवाब में सुनाने योग्य टेक्स्ट नहीं है"
+        "इस जवाब में पढ़ने योग्य टेक्स्ट नहीं है।"
       );
 
       return;
+
     }
-
-
-    speechSynthesis.cancel();
 
 
     const utterance =
@@ -1075,38 +1126,46 @@
       "hi-IN";
 
     utterance.rate =
-      0.95;
+      0.90;
 
     utterance.pitch =
       1;
 
+    utterance.volume =
+      1;
 
-    // उपलब्ध हो तो Hindi voice चुनें
+
+    // Hindi voice खोजें
     try {
 
       const voices =
         speechSynthesis.getVoices();
 
+
       const hindiVoice =
         voices.find(
-          (voice) =>
+          voice =>
             voice.lang &&
             voice.lang
               .toLowerCase()
               .startsWith("hi")
         );
 
+
       if (hindiVoice) {
+
         utterance.voice =
           hindiVoice;
+
       }
 
     } catch (error) {
 
       console.log(
-        "Hindi voice selection unavailable:",
+        "Hindi voice selection error:",
         error
       );
+
     }
 
 
@@ -1115,12 +1174,12 @@
 
         isSpeaking = true;
 
+        speakButton.textContent =
+          "⏹️ रोकें";
+
         speakButton.classList.add(
           "active"
         );
-
-        speakButton.textContent =
-          "⏹️ रोकें";
 
         setStatus(
           "🔊 पढ़कर सुना रहा हूँ..."
@@ -1134,14 +1193,15 @@
 
         isSpeaking = false;
 
+        speakButton.textContent =
+          "🔊 सुनें";
+
         speakButton.classList.remove(
           "active"
         );
 
-        speakButton.textContent =
-          "🔊 सुनें";
-
         setStatus("");
+
       };
 
 
@@ -1150,15 +1210,15 @@
 
         isSpeaking = false;
 
+        speakButton.textContent =
+          "🔊 सुनें";
+
         speakButton.classList.remove(
           "active"
         );
 
-        speakButton.textContent =
-          "🔊 सुनें";
-
         setStatus(
-          "आवाज़ चलाने में समस्या हुई"
+          "आवाज़ चलाने में समस्या हुई।"
         );
 
       };
@@ -1167,6 +1227,7 @@
     speechSynthesis.speak(
       utterance
     );
+
   }
 
 
@@ -1178,6 +1239,26 @@
     "click",
     () => {
 
+      if (isSpeaking) {
+
+        speechSynthesis.cancel();
+
+        isSpeaking = false;
+
+        speakButton.textContent =
+          "🔊 सुनें";
+
+        speakButton.classList.remove(
+          "active"
+        );
+
+        setStatus("");
+
+        return;
+
+      }
+
+
       speakText(
         lastAnswer
       );
@@ -1187,35 +1268,74 @@
 
 
   // ==========================================================
-  // VOICE INPUT
+  // ANDROID VOICE INPUT
   // ==========================================================
 
-  const SpeechRecognition =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition;
+  function getSpeechRecognition() {
+
+    return (
+      window.SpeechRecognition ||
+      window.webkitSpeechRecognition ||
+      null
+    );
+
+  }
 
 
-  if (SpeechRecognition) {
+  // ==========================================================
+  // START VOICE INPUT
+  // ==========================================================
+
+  function startVoiceInput() {
+
+    const SpeechRecognitionAPI =
+      getSpeechRecognition();
+
+
+    if (!SpeechRecognitionAPI) {
+
+      setStatus(
+        "🎤 Voice input उपलब्ध नहीं है। Android Chrome में HTTPS वेबसाइट खोलें।"
+      );
+
+      return;
+
+    }
+
+
+    if (isListening) {
+      return;
+    }
+
 
     recognition =
-      new SpeechRecognition();
+      new SpeechRecognitionAPI();
 
 
     recognition.lang =
       "hi-IN";
 
-    recognition.interimResults =
-      false;
-
-    recognition.maxAlternatives =
-      1;
 
     recognition.continuous =
       false;
 
 
+    recognition.interimResults =
+      false;
+
+
+    recognition.maxAlternatives =
+      1;
+
+
+    // ========================================================
+    // VOICE START
+    // ========================================================
+
     recognition.onstart =
       () => {
+
+        isListening = true;
 
         micButton.classList.add(
           "active"
@@ -1225,70 +1345,206 @@
           "🎤 सुन रहा हूँ...";
 
         setStatus(
-          "बोलिए..."
+          "🎤 बोलिए..."
         );
+
       };
 
 
-    recognition.onend =
-      () => {
-
-        micButton.classList.remove(
-          "active"
-        );
-
-        micButton.textContent =
-          "🎤 बोलें";
-
-        setStatus("");
-      };
-
-
-    recognition.onerror =
-      () => {
-
-        micButton.classList.remove(
-          "active"
-        );
-
-        micButton.textContent =
-          "🎤 बोलें";
-
-        setStatus(
-          "आवाज़ समझ नहीं आई"
-        );
-      };
-
+    // ========================================================
+    // VOICE RESULT
+    // ========================================================
 
     recognition.onresult =
       (event) => {
 
-        const text =
-          event
-            .results[0][0]
-            .transcript
-            .trim();
+        try {
+
+          const result =
+            event.results?.[0]?.[0];
 
 
-        if (text) {
+          const spokenText =
+            result?.transcript?.trim() ||
+            "";
 
+
+          console.log(
+            "आपने कहा:",
+            spokenText
+          );
+
+
+          if (!spokenText) {
+
+            setStatus(
+              "कुछ सुनाई नहीं दिया। फिर से बोलें।"
+            );
+
+            return;
+
+          }
+
+
+          // बोले हुए सवाल को input में दिखाएँ
           input.value =
-            text;
+            spokenText;
+
+
+          // ==================================================
+          // IMPORTANT:
+          // सवाल अपने-आप AI को भेजें
+          // ==================================================
 
           sendMessage(
             searchMode,
-            text
+            spokenText
           );
+
+
+        } catch (error) {
+
+          console.error(
+            "Voice result error:",
+            error
+          );
+
+
+          setStatus(
+            "आवाज़ समझने में समस्या हुई।"
+          );
+
         }
+
       };
 
-  } else {
 
-    micButton.disabled =
-      true;
+    // ========================================================
+    // VOICE ERROR
+    // ========================================================
 
-    micButton.textContent =
-      "🎤 उपलब्ध नहीं";
+    recognition.onerror =
+      (event) => {
+
+        console.error(
+          "Voice error:",
+          event.error
+        );
+
+
+        isListening = false;
+
+
+        micButton.classList.remove(
+          "active"
+        );
+
+
+        micButton.textContent =
+          "🎤 बोलें";
+
+
+        if (
+          event.error ===
+          "not-allowed"
+        ) {
+
+          setStatus(
+            "🎤 Microphone permission Allow करें।"
+          );
+
+        } else if (
+          event.error ===
+          "service-not-allowed"
+        ) {
+
+          setStatus(
+            "🎤 Voice service की अनुमति नहीं है। Chrome में खोलें।"
+          );
+
+        } else if (
+          event.error ===
+          "no-speech"
+        ) {
+
+          setStatus(
+            "🎤 कुछ सुनाई नहीं दिया। फिर से बोलें।"
+          );
+
+        } else if (
+          event.error ===
+          "network"
+        ) {
+
+          setStatus(
+            "🌐 Voice के लिए Internet connection चाहिए।"
+          );
+
+        } else {
+
+          setStatus(
+            "🎤 आवाज़ समझने में समस्या हुई।"
+          );
+
+        }
+
+      };
+
+
+    // ========================================================
+    // VOICE END
+    // ========================================================
+
+    recognition.onend =
+      () => {
+
+        isListening = false;
+
+
+        micButton.classList.remove(
+          "active"
+        );
+
+
+        micButton.textContent =
+          "🎤 बोलें";
+
+      };
+
+
+    // ========================================================
+    // START
+    // ========================================================
+
+    try {
+
+      recognition.start();
+
+    } catch (error) {
+
+      console.error(
+        "Voice start error:",
+        error
+      );
+
+
+      isListening = false;
+
+
+      micButton.classList.remove(
+        "active"
+      );
+
+
+      micButton.textContent =
+        "🎤 बोलें";
+
+
+      setStatus(
+        "🎤 माइक शुरू नहीं हो सका। फिर से दबाएँ।"
+      );
+
+    }
 
   }
 
@@ -1301,24 +1557,23 @@
     "click",
     () => {
 
-      if (!recognition) {
+      if (
+        isListening &&
+        recognition
+      ) {
 
-        setStatus(
-          "इस browser में voice input उपलब्ध नहीं है"
-        );
+        try {
+
+          recognition.stop();
+
+        } catch {}
 
         return;
+
       }
 
 
-      try {
-
-        recognition.start();
-
-      } catch {
-
-        // Already running
-      }
+      startVoiceInput();
 
     }
   );
@@ -1406,6 +1661,7 @@
                     0.78
                   )
                 );
+
               };
 
 
@@ -1415,6 +1671,7 @@
 
             img.src =
               reader.result;
+
           };
 
 
@@ -1425,8 +1682,10 @@
         reader.readAsDataURL(
           file
         );
+
       }
     );
+
   }
 
 
@@ -1457,6 +1716,7 @@
         );
 
         return;
+
       }
 
 
@@ -1498,6 +1758,7 @@
 
         await analyzePhoto(
           currentPhoto,
+
           "इस फोटो को ध्यान से देखो। फोटो में क्या है? अगर इसमें कोई सवाल, किताब, नोट्स, diagram, chart या लिखाई है तो उसे पढ़कर सरल हिंदी में समझाओ।"
         );
 
@@ -1509,6 +1770,7 @@
           error
         );
 
+
         setStatus(
           "फोटो तैयार नहीं हो सकी"
         );
@@ -1517,6 +1779,7 @@
 
         photoInput.value =
           "";
+
       }
 
     }
@@ -1539,6 +1802,7 @@
       );
 
       return;
+
     }
 
 
@@ -1575,6 +1839,7 @@
 
       let data;
 
+
       try {
 
         data =
@@ -1585,6 +1850,7 @@
         throw new Error(
           "फोटो server response पढ़ा नहीं जा सका।"
         );
+
       }
 
 
@@ -1596,6 +1862,7 @@
           data?.detail ||
           "फोटो समझने में समस्या हुई।"
         );
+
       }
 
 
@@ -1640,7 +1907,9 @@
           "Unknown error"
         )
       );
+
     }
+
   }
 
 
@@ -1739,11 +2008,13 @@
 
         photoPreview.src =
           currentPhoto;
+
       };
 
 
     img.src =
       currentPhoto;
+
   }
 
 
@@ -1770,6 +2041,7 @@
         setStatus(
           "फोटो घुमा दी गई"
         );
+
       }
     );
 
@@ -1794,6 +2066,7 @@
         setStatus(
           "Grayscale बदल दिया गया"
         );
+
       }
     );
 
@@ -1823,6 +2096,7 @@
         } else {
 
           brightness = 100;
+
         }
 
 
@@ -1832,6 +2106,7 @@
         setStatus(
           "Brightness बदल दी गई"
         );
+
       }
     );
 
@@ -1853,6 +2128,7 @@
           );
 
           return;
+
         }
 
 
@@ -1882,6 +2158,7 @@
         setStatus(
           "✓ फोटो save हो गई"
         );
+
       }
     );
 
@@ -1899,8 +2176,11 @@
       () => {
 
         analyzePhoto(
+
           currentPhoto,
+
           "यह edited फोटो ध्यान से समझाओ। इसमें क्या दिखाई दे रहा है? अगर कोई प्रश्न, लिखाई, diagram या chart है तो उसे पढ़कर सरल हिंदी में समझाओ।"
+
         );
 
       }
