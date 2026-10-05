@@ -387,23 +387,23 @@ CONSISTENCY
   // ==========================================================
 
   if (!result.ok) {
-  return json(
-    {
-      error: "Groq request failed.",
-      code: result.code || "GROQ_ERROR",
-      status: result.status || 502,
-      requestId: result.requestId || null,
-      detail: result.error || null,
-    },
-    result.status || 502
-  );
-}
+    return json(
+      {
+        error: "Groq request failed.",
+        code: result.code || "GROQ_ERROR",
+        status: result.status || 502,
+        requestId: result.requestId || null,
+        detail: result.error || null,
+      },
+      result.status || 502
+    );
+  }
 
   // ==========================================================
   // FINAL SELF CHECK
   //
   // IMPORTANT:
-  // यह function कभी main answer को fail नहीं करेगा।
+  // Self-Check कभी main answer को fail नहीं करेगा।
   // ==========================================================
 
   let checked;
@@ -487,7 +487,7 @@ async function finalSelfCheck(
 
   // ----------------------------------------------------------
   // STEP 3
-  // Detect overly advanced 5-mark science answer
+  // Detect overly advanced 5-mark photosynthesis answer
   // ----------------------------------------------------------
 
   if (
@@ -530,8 +530,7 @@ async function finalSelfCheck(
 
   // ----------------------------------------------------------
   // If checker fails:
-  // RETURN WORKING ANSWER
-  // Never fail the whole request.
+  // return working answer.
   // ----------------------------------------------------------
 
   if (!report.ok) {
@@ -544,11 +543,13 @@ async function finalSelfCheck(
       ),
 
       selfChecked: false,
+
       selfCorrected:
         firstChanged ||
         answer !== originalAnswer,
 
       factChecked: firstChanged,
+
       finalReviewed: false,
     };
   }
@@ -734,6 +735,10 @@ function hasAdvancedPhotosynthesisTerms(answer) {
     "प्रोटॉन ग्रेडिएंट",
     "कार्बन स्थिरीकरण",
     "कैल्विन चक्र",
+    "इलेक्ट्रॉन",
+    "हाइड्रोजन आयन",
+    "प्रकाश अभिक्रिया",
+    "अंधकार अभिक्रिया",
   ];
 
   return terms.some((term) =>
@@ -763,15 +768,18 @@ ${answer}
 यह सामान्य 5 अंक का प्रश्न है।
 
 काम:
-- उत्तर को सरल हिंदी में दोबारा लिखो।
+
+- उत्तर को बहुत सरल हिंदी में दोबारा लिखो।
 - परिभाषा रखो।
 - लगभग 4–6 मुख्य बिंदु रखो।
-- जरूरत हो तो छोटा उदाहरण दो।
 - छोटा निष्कर्ष दो।
+- स्कूल/कॉलेज परीक्षा में लिखने योग्य भाषा रखो।
+- अनावश्यक वैज्ञानिक विवरण हटाओ।
 - ATP, NADPH, Calvin cycle, Photosystem जैसी advanced terminology हटाओ।
-- कोई गलत वैज्ञानिक तथ्य मत रखो।
+- इलेक्ट्रॉन और हाइड्रोजन आयन जैसी अत्यधिक तकनीकी जानकारी भी हटाओ।
 - "रात में पौधे ऑक्सीजन छोड़ते हैं" मत लिखो।
-- उत्तर exam-ready और मध्यम लंबाई का हो।
+- यह लिख सकते हो कि पौधे दिन और रात दोनों समय श्वसन करते हैं।
+- कोई गलत वैज्ञानिक तथ्य मत रखो।
 - केवल पूरा अंतिम उत्तर दो।
 `;
 
@@ -839,7 +847,16 @@ needs_correction = true
 और corrected_answer में पूरा सुधरा हुआ उत्तर दो।
 
 यदि marks = 5 और सामान्य प्रकाश संश्लेषण का प्रश्न है:
-ATP, NADPH, Calvin cycle, Photosystem जैसी advanced जानकारी सामान्यतः नहीं होनी चाहिए।
+
+- उत्तर सरल होना चाहिए।
+- ATP नहीं।
+- NADPH नहीं।
+- Calvin cycle नहीं।
+- Photosystem नहीं।
+- Electron transport chain नहीं।
+- Carbon fixation नहीं।
+- Proton gradient नहीं।
+- अनावश्यक electron/hydrogen-ion detail नहीं।
 
 केवल यह JSON दो:
 
@@ -929,7 +946,9 @@ ATP, NADPH, Calvin cycle, Photosystem जैसी advanced जानकार�
 // ============================================================
 
 function parseCheckerJSON(text) {
-  if (!text) return null;
+  if (!text) {
+    return null;
+  }
 
   let clean =
     String(text).trim();
@@ -944,7 +963,7 @@ function parseCheckerJSON(text) {
   try {
     return JSON.parse(clean);
   } catch {
-    // Try extracting the first JSON object
+    // Try extracting first JSON object
     const start =
       clean.indexOf("{");
 
@@ -957,7 +976,10 @@ function parseCheckerJSON(text) {
     ) {
       try {
         return JSON.parse(
-          clean.slice(start, end + 1)
+          clean.slice(
+            start,
+            end + 1
+          )
         );
       } catch {
         return null;
@@ -1199,6 +1221,10 @@ async function callGroq(
       };
     }
 
+    // --------------------------------------------------------
+    // INVALID JSON
+    // --------------------------------------------------------
+
     if (!data) {
       return {
         ok: false,
@@ -1206,8 +1232,13 @@ async function callGroq(
         status: 502,
         code: "INVALID_GROQ_JSON",
         requestId,
+        error: raw.slice(0, 1000),
       };
     }
+
+    // --------------------------------------------------------
+    // EXTRACT CONTENT
+    // --------------------------------------------------------
 
     const content =
       data?.choices?.[0]?.message?.content;
@@ -1222,14 +1253,19 @@ async function callGroq(
         code:
           "INVALID_GROQ_RESPONSE",
         requestId,
+        error:
+          "Groq returned no usable message content.",
       };
     }
 
     return {
       ok: true,
+
       reply:
         content.trim(),
+
       requestId,
+
       status:
         response.status,
     };
@@ -1265,7 +1301,10 @@ async function callGroq(
 function sleep(ms) {
   return new Promise(
     (resolve) =>
-      setTimeout(resolve, ms)
+      setTimeout(
+        resolve,
+        ms
+      )
   );
 }
 
