@@ -387,18 +387,17 @@ CONSISTENCY
   // ==========================================================
 
   if (!result.ok) {
-    return json(
-      {
-        error:
-          "अभी जवाब नहीं मिल पाया। कृपया फिर से कोशिश करें।",
-        code:
-          result.code || "GROQ_ERROR",
-        requestId:
-          result.requestId || null,
-      },
-      result.status || 502
-    );
-  }
+  return json(
+    {
+      error: "Groq request failed.",
+      code: result.code || "GROQ_ERROR",
+      status: result.status || 502,
+      requestId: result.requestId || null,
+      detail: result.error || null,
+    },
+    result.status || 502
+  );
+}
 
   // ==========================================================
   // FINAL SELF CHECK
