@@ -5,6 +5,7 @@ export default {
     // =========================================================
     // CORS
     // =========================================================
+
     const corsHeaders = {
       "Access-Control-Allow-Origin": "*",
       "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
@@ -21,6 +22,7 @@ export default {
     // =========================================================
     // HELPERS
     // =========================================================
+
     function json(data, status = 200) {
       return new Response(JSON.stringify(data), {
         status,
@@ -31,27 +33,48 @@ export default {
       });
     }
 
-    function cleanText(value, max = 4500) {
-      if (typeof value !== "string") return "";
-      return value.trim().slice(0, max);
-    }
-
     function getRequestId() {
       return crypto.randomUUID();
     }
 
+    function cleanText(value, max = 4500) {
+      if (typeof value !== "string") {
+        return "";
+      }
+
+      return value.trim().slice(0, max);
+    }
+
+    function sleep(ms) {
+      return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
     // =========================================================
-    // ANSWER LENGTH
+    // MARK BASED TOKEN LIMIT
     // =========================================================
+
     function getAnswerLimit(marks) {
       const m = Number(marks);
 
-      if (!Number.isFinite(m)) return 768;
+      if (!Number.isFinite(m)) {
+        return 768;
+      }
 
-      if (m <= 1) return 256;
-      if (m <= 2) return 384;
-      if (m <= 5) return 768;
-      if (m <= 10) return 1280;
+      if (m <= 1) {
+        return 256;
+      }
+
+      if (m <= 2) {
+        return 384;
+      }
+
+      if (m <= 5) {
+        return 768;
+      }
+
+      if (m <= 10) {
+        return 1280;
+      }
 
       return 1536;
     }
@@ -59,107 +82,76 @@ export default {
     // =========================================================
     // EXTRACT MARKS
     // =========================================================
+
     function extractMarks(text) {
-      const match = text.match(
+      const match = String(text || "").match(
         /(?:^|\s)(\d{1,2})\s*(?:अंक|marks?|मार्क्स?)\b/i
       );
 
-      if (!match) return null;
+      if (!match) {
+        return null;
+      }
 
       const marks = Number(match[1]);
 
-      return Number.isFinite(marks) ? marks : null;
+      if (!Number.isFinite(marks)) {
+        return null;
+      }
+
+      return marks;
     }
 
     // =========================================================
-    // AUTO SEARCH DETECTION
+    // GET QUESTION FROM DIFFERENT FRONTEND FORMATS
     // =========================================================
-    function needsLiveSearch(question) {
-      const q = question.toLowerCase();
 
-      const liveSearchWords = [
-        "आज",
-        "अभी",
-        "वर्तमान",
-        "लेटेस्ट",
-        "नवीनतम",
-        "ताज़ा",
-        "ताजा",
-        "आज का",
-        "आज की",
-        "आज के",
-        "अभी का",
-        "अभी की",
-        "वर्तमान का",
-        "वर्तमान की",
-        "वर्तमान के",
+    function getQuestionFromBody(body) {
+      // Format 1
+      if (typeof body?.message === "string") {
+        const text = body.message.trim();
 
-        "भाव",
-        "कीमत",
-        "कीमते",
-        "कीमतें",
-        "रेट",
-        "दाम",
-        "मूल्य",
+        if (text) {
+          return cleanText(text);
+        }
+      }
 
-        "सोने का भाव",
-        "सोने की कीमत",
-        "सोने का रेट",
-        "सोने के दाम",
+      // Format 2
+      if (typeof body?.question === "string") {
+        const text = body.question.trim();
 
-        "चांदी का भाव",
-        "चाँदी का भाव",
-        "चांदी की कीमत",
-        "चाँदी की कीमत",
+        if (text) {
+          return cleanText(text);
+        }
+      }
 
-        "पेट्रोल का भाव",
-        "डीजल का भाव",
+      // Format 3
+      // Current index.html sends:
+      // messages: [...]
+      if (Array.isArray(body?.messages)) {
+        for (let i = body.messages.length - 1; i >= 0; i--) {
+          const item = body.messages[i];
 
-        "मौसम",
-        "तापमान",
+          if (
+            item &&
+            item.role === "user" &&
+            typeof item.content === "string"
+          ) {
+            const text = item.content.trim();
 
-        "समाचार",
-        "न्यूज़",
-        "न्यूज",
-        "खबर",
-        "खबरें",
-        "ताजा खबर",
-        "ताज़ा खबर",
+            if (text) {
+              return cleanText(text);
+            }
+          }
+        }
+      }
 
-        "आज का मैच",
-        "आज का स्कोर",
-        "लाइव स्कोर",
-
-        "ट्रेन की स्थिति",
-        "ट्रेन अभी",
-        "ट्रेन का समय",
-        "ट्रेन लेट",
-        "कितनी लेट",
-
-        "वर्तमान सरकार",
-        "वर्तमान मुख्यमंत्री",
-        "वर्तमान प्रधानमंत्री",
-
-        "current",
-        "today",
-        "latest",
-        "now",
-        "live",
-        "price",
-        "rate",
-        "weather",
-        "news",
-        "score"
-      ];
-
-      return liveSearchWords.some((word) =>
-        q.includes(word)
-      );
+      return "";
     }
 
     // =========================================================
     // SIMPLE PHOTOSYNTHESIS ANSWER
     // =========================================================
+
     function simplePhotosynthesisAnswer() {
       return `प्रकाश संश्लेषण
 
@@ -186,18 +178,23 @@ export default {
     // =========================================================
     // SELF CHECK
     // =========================================================
+
     function finalSelfCheck(answer, question, marks) {
-      let result = answer || "";
+      let result =
+        typeof answer === "string"
+          ? answer.trim()
+          : "";
 
-      const q = question.toLowerCase();
+      const q = String(question || "").toLowerCase();
 
       // -------------------------------------------------------
-      // Photosynthesis 5 marks
+      // 5 MARK PHOTOSYNTHESIS
       // -------------------------------------------------------
+
       if (
         q.includes("प्रकाश संश्लेषण") &&
         (
-          marks === 5 ||
+          Number(marks) === 5 ||
           /5\s*(?:अंक|marks?)/i.test(question)
         )
       ) {
@@ -205,9 +202,10 @@ export default {
       }
 
       // -------------------------------------------------------
-      // Remove unnecessary advanced terms from short answers
+      // REMOVE ADVANCED TERMS FROM SHORT ANSWERS
       // -------------------------------------------------------
-      if (marks && marks <= 5) {
+
+      if (marks && Number(marks) <= 5) {
         const advancedTerms = [
           "photosystem i",
           "photosystem ii",
@@ -216,7 +214,6 @@ export default {
           "calvin cycle",
           "कैल्विन चक्र",
           "nadph",
-          "NADPH",
           "ATP",
           "electron transport chain",
           "इलेक्ट्रॉन परिवहन श्रृंखला",
@@ -243,8 +240,9 @@ export default {
     }
 
     // =========================================================
-    // GROQ API
+    // GROQ API CALL
     // =========================================================
+
     async function callGroq({
       messages,
       model = "openai/gpt-oss-20b",
@@ -260,15 +258,16 @@ export default {
       const body = {
         model,
         messages,
-        temperature: useSearch ? 0.2 : 0.2,
+        temperature: 0.2,
         max_completion_tokens: maxCompletionTokens,
         stream: false,
         reasoning_effort: "low",
       };
 
       // =======================================================
-      // BROWSER SEARCH
+      // INTERNET SEARCH
       // =======================================================
+
       if (useSearch) {
         body.tools = [
           {
@@ -276,7 +275,6 @@ export default {
           },
         ];
 
-        // Search को अनिवार्य करो
         body.tool_choice = "required";
       }
 
@@ -297,7 +295,7 @@ export default {
 
       const raw = await response.text();
 
-      let payload;
+      let payload = null;
 
       try {
         payload = JSON.parse(raw);
@@ -321,7 +319,6 @@ export default {
 
       if (
         !payload ||
-        !payload.choices ||
         !Array.isArray(payload.choices) ||
         !payload.choices[0]
       ) {
@@ -348,6 +345,7 @@ export default {
     // =========================================================
     // SYSTEM PROMPT
     // =========================================================
+
     function buildSystemPrompt({
       marks,
       useSearch,
@@ -358,7 +356,7 @@ export default {
       let prompt = `
 तुम "सारथी AI" हो।
 
-तुम्हें उपयोगकर्ता को सरल, साफ और सही हिंदी में उत्तर देना है।
+उपयोगकर्ता को सरल, साफ और सही हिंदी में उत्तर दो।
 
 मुख्य नियम:
 
@@ -370,60 +368,93 @@ export default {
 6. छोटे प्रश्न का बहुत लंबा उत्तर मत दो।
 7. तथ्य निश्चित नहीं है तो उसे बनाकर मत लिखो।
 8. उपयोगकर्ता को सीधे उत्तर दो।
-9. बिना जरूरत के यह मत कहना कि "मैं AI हूँ"।
-10. उत्तर को साफ headings और points में देना ठीक है।
+9. बिना जरूरत यह मत कहना कि "मैं AI हूँ"।
+10. जरूरत के अनुसार headings और points इस्तेमाल कर सकते हो।
 `;
 
-      // -------------------------------------------------------
-      // MARKS
-      // -------------------------------------------------------
       if (marks) {
         prompt += `
 
 इस प्रश्न के ${marks} अंक हैं।
 
-उत्तर लगभग ${answerLimit} completion tokens के भीतर रखो।
+उत्तर लगभग ${answerLimit} completion tokens के भीतर रखो.
 
 ${
-  marks <= 5
+  Number(marks) <= 5
     ? "यह छोटा परीक्षा-उत्तर है। बहुत advanced technical details से बचो।"
     : "अंक के अनुसार पर्याप्त विस्तार दो।"
 }
 `;
       }
 
-      // -------------------------------------------------------
-      // INTERNET SEARCH
-      // -------------------------------------------------------
+      // =======================================================
+      // SEARCH INSTRUCTIONS
+      // =======================================================
+
       if (useSearch) {
         prompt += `
 
-IMPORTANT INTERNET SEARCH RULES:
+IMPORTANT — INTERNET SEARCH:
 
-इस प्रश्न के लिए इंटरनेट से वर्तमान जानकारी खोजना जरूरी है।
+इस प्रश्न के लिए इंटरनेट से वर्तमान जानकारी खोजनी है।
 
-तुम्हें browser_search tool का उपयोग करना ही है।
+browser_search tool का उपयोग करना जरूरी है।
 
-Search किए बिना यह मत कहना:
+विशेष रूप से अगर प्रश्न में ये शब्द हों:
+
+आज
+अभी
+वर्तमान
+ताजा
+latest
+current
+भाव
+कीमत
+रेट
+मौसम
+समाचार
+news
+ट्रेन
+live
+result
+सरकारी योजना
+सरकारी नियम
+खेल परिणाम
+
+तो इंटरनेट से जानकारी खोजे बिना उत्तर मत देना।
+
+बहुत महत्वपूर्ण:
+
+यदि इंटरनेट से जानकारी मिल जाए तो कभी यह मत कहना:
 
 "मेरे पास रीयल-टाइम जानकारी नहीं है।"
 
-"मैं वर्तमान जानकारी नहीं देख सकता।"
+इसके बजाय खोजी गई जानकारी के आधार पर उत्तर दो।
 
-"मेरे पास इंटरनेट की सुविधा नहीं है।"
+सोने के भाव जैसे प्रश्न में:
 
-पहले Internet Search से जानकारी प्राप्त करो।
+1. सबसे पहले तारीख देखो।
+2. 24 कैरेट की कीमत पहचानो।
+3. 10 ग्राम की कीमत हो तो स्पष्ट लिखो।
+4. 22 कैरेट और 18 कैरेट उपलब्ध हों तो अलग-अलग लिख सकते हो।
+5. अगर दो विश्वसनीय स्रोतों में कीमत अलग हो तो दोनों को स्पष्ट रूप से बताओ।
+6. बिना आधार के कीमत मत बनाओ।
+7. स्रोत का नाम बताओ।
+8. यदि search result में source URL उपलब्ध हो तो उसे भी बताओ।
+9. पुरानी कीमत को आज की कीमत बताकर मत लिखो।
 
-फिर Search से मिली जानकारी के आधार पर उत्तर दो।
+उदाहरण:
 
-यदि प्रश्न आज की कीमत, आज का भाव, वर्तमान रेट,
-मौसम, समाचार, ट्रेन की वर्तमान स्थिति,
-वर्तमान सरकारी जानकारी, लाइव स्कोर या अन्य
-real-time जानकारी से संबंधित है तो पुरानी जानकारी
-के आधार पर उत्तर मत बनाओ।
+आज 5 अक्टूबर 2026 के अनुसार:
+24 कैरेट — ₹_____ प्रति 10 ग्राम
+22 कैरेट — ₹_____ प्रति 10 ग्राम
 
-जहाँ Search से स्रोत उपलब्ध हों,
-उनके आधार पर जानकारी दो।
+स्रोत: ______
+
+अगर कीमत स्रोत के अनुसार बदलती है तो लिखो:
+"स्रोत के अनुसार कीमत में थोड़ा अंतर हो सकता है।"
+
+इंटरनेट खोज उपलब्ध होने पर real-time जानकारी से संबंधित प्रश्न में "मुझे वर्तमान जानकारी नहीं है" वाला सामान्य जवाब नहीं देना है।
 `;
       }
 
@@ -433,6 +464,7 @@ real-time जानकारी से संबंधित है तो प�
     // =========================================================
     // /api/chat
     // =========================================================
+
     if (
       request.method === "POST" &&
       url.pathname === "/api/chat"
@@ -444,60 +476,96 @@ real-time जानकारी से संबंधित है तो प�
         const body =
           await request.json();
 
-        const question = cleanText(
-          body?.message ||
-          body?.question ||
-          "",
-          4500
-        );
+        // =====================================================
+        // FIX:
+        // Current index.html sends "messages",
+        // not "message".
+        // =====================================================
+
+        const question =
+          getQuestionFromBody(body);
+
+        // =====================================================
+        // SEARCH FLAG
+        // =====================================================
+
+        const webSearch =
+          Boolean(
+            body?.webSearch ??
+            body?.useSearch ??
+            false
+          );
+
+        // =====================================================
+        // HISTORY
+        // =====================================================
+
+        let history = [];
+
+        if (Array.isArray(body?.history)) {
+          history = body.history;
+        } else if (
+          Array.isArray(body?.messages)
+        ) {
+          history = body.messages;
+        }
+
+        // =====================================================
+        // EMPTY QUESTION CHECK
+        // =====================================================
 
         if (!question) {
           return json(
             {
-              error:
-                "प्रश्न खाली है।",
+              answer:
+                "प्रश्न खाली है। कृपया अपना सवाल लिखें।",
+
+              reply:
+                "प्रश्न खाली है। कृपया अपना सवाल लिखें।",
+
+              selfChecked: false,
+
+              selfCorrected: false,
+
+              webSearch,
+
+              errorCode:
+                "EMPTY_QUESTION",
+
               requestId,
             },
+
             400
           );
         }
 
         // =====================================================
-        // USER SEARCH BUTTON
+        // MARKS
         // =====================================================
-        const userSearchFlag =
-          body?.webSearch === true ||
-          body?.useSearch === true;
+
+        let marks = null;
+
+        if (body?.marks != null) {
+          const parsed =
+            Number(body.marks);
+
+          if (Number.isFinite(parsed)) {
+            marks = parsed;
+          }
+        }
+
+        if (marks == null) {
+          marks =
+            extractMarks(question);
+        }
 
         // =====================================================
-        // AUTOMATIC SEARCH
+        // SAFE HISTORY
         // =====================================================
-        const automaticSearch =
-          needsLiveSearch(question);
 
-        // =====================================================
-        // FINAL SEARCH DECISION
-        // =====================================================
-        const webSearch =
-          userSearchFlag ||
-          automaticSearch;
-
-        const history =
-          Array.isArray(body?.history)
-            ? body.history
-            : [];
-
-        const marks =
-          body?.marks != null
-            ? Number(body.marks)
-            : extractMarks(question);
-
-        // =====================================================
-        // SMALL HISTORY
-        // =====================================================
         const safeHistory =
           history
-            .slice(-12)
+            .slice(-10)
             .map((item) => {
               const role =
                 item?.role === "assistant"
@@ -507,19 +575,23 @@ real-time जानकारी से संबंधित है तो प�
               return {
                 role,
 
-                content: cleanText(
-                  item?.content || "",
-                  4500
-                ),
+                content:
+                  cleanText(
+                    item?.content ||
+                    "",
+                    3500
+                  ),
               };
             })
             .filter(
-              (item) => item.content
+              (item) =>
+                item.content
             );
 
         // =====================================================
-        // MESSAGES
+        // PREVENT DUPLICATE LAST QUESTION
         // =====================================================
+
         const messages = [
           {
             role: "system",
@@ -527,24 +599,54 @@ real-time जानकारी से संबंधित है तो प�
             content:
               buildSystemPrompt({
                 marks,
-                useSearch: webSearch,
+                useSearch:
+                  webSearch,
               }),
           },
+        ];
 
-          ...safeHistory,
+        // Add previous conversation.
+        for (
+          const item of safeHistory
+        ) {
+          messages.push(item);
+        }
 
-          {
+        // Current question is already present
+        // in messages from the frontend.
+        //
+        // If the last user message is not the same,
+        // add it manually.
+
+        const lastMessage =
+          messages[
+            messages.length - 1
+          ];
+
+        if (
+          !lastMessage ||
+          lastMessage.role !==
+            "user" ||
+          lastMessage.content.trim() !==
+            question.trim()
+        ) {
+          messages.push({
             role: "user",
             content: question,
-          },
-        ];
+          });
+        }
+
+        // =====================================================
+        // TOKEN LIMIT
+        // =====================================================
 
         const maxTokens =
           getAnswerLimit(marks);
 
         // =====================================================
-        // INTERNET SEARCH REQUEST
+        // INTERNET SEARCH
         // =====================================================
+
         if (webSearch) {
           try {
             const result =
@@ -573,19 +675,26 @@ real-time जानकारी से संबंधित है तो प�
                 marks
               );
 
+            // =================================================
+            // RETURN BOTH "answer" AND "reply"
+            // =================================================
+
             return json({
               answer,
 
+              reply: answer,
+
               selfChecked: true,
+
+              selfCorrected: true,
 
               webSearch: true,
 
-              autoSearch:
-                automaticSearch,
-
               requestId,
             });
-          } catch (searchError) {
+          } catch (
+            searchError
+          ) {
             console.error(
               "Browser search error:",
               searchError?.message
@@ -595,16 +704,22 @@ real-time जानकारी से संबंधित है तो प�
               searchError?.status ||
               500;
 
-            // -------------------------------------------------
+            // =================================================
             // RATE LIMIT
-            // -------------------------------------------------
+            // =================================================
+
             if (status === 429) {
               return json(
                 {
                   answer:
-                    "अभी Internet Search की सीमा पूरी हो गई है। थोड़ी देर बाद फिर कोशिश करें।",
+                    "अभी Internet Search की token/rate limit पूरी हो गई है। थोड़ी देर बाद फिर कोशिश करें।",
+
+                  reply:
+                    "अभी Internet Search की token/rate limit पूरी हो गई है। थोड़ी देर बाद फिर कोशिश करें।",
 
                   selfChecked: false,
+
+                  selfCorrected: false,
 
                   webSearch: true,
 
@@ -618,15 +733,21 @@ real-time जानकारी से संबंधित है तो प�
               );
             }
 
-            // -------------------------------------------------
+            // =================================================
             // SEARCH FAILED
-            // -------------------------------------------------
+            // =================================================
+
             return json(
               {
                 answer:
                   "Internet Search अभी उपलब्ध नहीं हो पाया। थोड़ी देर बाद फिर कोशिश करें।",
 
+                reply:
+                  "Internet Search अभी उपलब्ध नहीं हो पाया। थोड़ी देर बाद फिर कोशिश करें।",
+
                 selfChecked: false,
+
+                selfCorrected: false,
 
                 webSearch: true,
 
@@ -644,6 +765,7 @@ real-time जानकारी से संबंधित है तो प�
         // =====================================================
         // NORMAL AI CHAT
         // =====================================================
+
         const result =
           await callGroq({
             messages,
@@ -670,14 +792,17 @@ real-time जानकारी से संबंधित है तो प�
         return json({
           answer,
 
+          reply: answer,
+
           selfChecked: true,
+
+          selfCorrected: true,
 
           webSearch: false,
 
-          autoSearch: false,
-
           requestId,
         });
+
       } catch (error) {
         console.error(
           "Chat error:",
@@ -688,11 +813,23 @@ real-time जानकारी से संबंधित है तो प�
           error?.status ||
           500;
 
+        // =====================================================
+        // RATE LIMIT
+        // =====================================================
+
         if (status === 429) {
+          const message =
+            "अभी AI की token/rate limit पूरी हो गई है। थोड़ी देर बाद फिर कोशिश करें।";
+
           return json(
             {
-              answer:
-                "अभी AI की token/rate limit पूरी हो गई है। थोड़ी देर बाद फिर कोशिश करें।",
+              answer: message,
+
+              reply: message,
+
+              selfChecked: false,
+
+              selfCorrected: false,
 
               errorCode:
                 "RATE_LIMIT",
@@ -704,10 +841,22 @@ real-time जानकारी से संबंधित है तो प�
           );
         }
 
+        // =====================================================
+        // NORMAL ERROR
+        // =====================================================
+
+        const message =
+          "अभी जवाब नहीं मिल पाया। कृपया फिर से कोशिश करें।";
+
         return json(
           {
-            answer:
-              "अभी जवाब नहीं मिल पाया। कृपया फिर से कोशिश करें।",
+            answer: message,
+
+            reply: message,
+
+            selfChecked: false,
+
+            selfCorrected: false,
 
             errorCode:
               "CHAT_FAILED",
@@ -723,6 +872,7 @@ real-time जानकारी से संबंधित है तो प�
     // =========================================================
     // /api/vision
     // =========================================================
+
     if (
       request.method === "POST" &&
       url.pathname === "/api/vision"
@@ -734,24 +884,36 @@ real-time जानकारी से संबंधित है तो प�
         const body =
           await request.json();
 
+        // =====================================================
+        // SUPPORT BOTH imageData AND image
+        // =====================================================
+
         const image =
-          typeof body?.image === "string"
-            ? body.image
-            : "";
+          typeof body?.imageData === "string"
+            ? body.imageData
+            : typeof body?.image === "string"
+              ? body.image
+              : "";
 
         const question =
           cleanText(
             body?.question ||
             body?.message ||
-            "इस फोटो को समझाकर बताओ।",
+            "इस फोटो को ध्यान से देखकर सरल हिंदी में समझाओ।",
             2500
           );
 
         if (!image) {
           return json(
             {
-              error:
+              answer:
                 "फोटो नहीं मिली।",
+
+              reply:
+                "फोटो नहीं मिली।",
+
+              errorCode:
+                "NO_IMAGE",
 
               requestId,
             },
@@ -760,14 +922,24 @@ real-time जानकारी से संबंधित है तो प�
           );
         }
 
+        // =====================================================
+        // IMAGE SIZE
+        // =====================================================
+
         if (
           image.length >
           20000000
         ) {
           return json(
             {
-              error:
+              answer:
                 "फोटो बहुत बड़ी है। कृपया छोटी फोटो भेजें।",
+
+              reply:
+                "फोटो बहुत बड़ी है। कृपया छोटी फोटो भेजें।",
+
+              errorCode:
+                "IMAGE_TOO_LARGE",
 
               requestId,
             },
@@ -779,7 +951,10 @@ real-time जानकारी से संबंधित है तो प�
         if (!env.GROQ_API_KEY) {
           return json(
             {
-              error:
+              answer:
+                "GROQ_API_KEY configured नहीं है।",
+
+              reply:
                 "GROQ_API_KEY configured नहीं है।",
 
               requestId,
@@ -788,6 +963,10 @@ real-time जानकारी से संबंधित है तो प�
             500
           );
         }
+
+        // =====================================================
+        // VISION PROMPT
+        // =====================================================
 
         const visionMessages = [
           {
@@ -801,11 +980,15 @@ real-time जानकारी से संबंधित है तो प�
 
 अगर फोटो में प्रश्न है तो उसे समझकर उत्तर दो।
 
-अगर फोटो में कोई दस्तावेज है तो दिखाई दे रही
+अगर फोटो में किताब, नोट्स, दस्तावेज,
+diagram, chart या लिखाई है तो दिखाई दे रही
 जानकारी के आधार पर बताओ।
 
 जो जानकारी फोटो में साफ दिखाई नहीं देती,
 उसे अनुमान से मत बनाओ।
+
+अगर फोटो में प्रश्न है तो पहले प्रश्न को समझो,
+फिर उसका सही उत्तर दो।
 `,
           },
 
@@ -847,10 +1030,16 @@ real-time जानकारी से संबंधित है तो प�
           answer:
             result.content,
 
+          reply:
+            result.content,
+
           selfChecked: true,
+
+          selfCorrected: true,
 
           requestId,
         });
+
       } catch (error) {
         console.error(
           "Vision error:",
@@ -862,10 +1051,14 @@ real-time जानकारी से संबंधित है तो प�
           500;
 
         if (status === 429) {
+          const message =
+            "अभी फोटो AI की token/rate limit पूरी हो गई है। थोड़ी देर बाद फिर कोशिश करें।";
+
           return json(
             {
-              answer:
-                "अभी फोटो AI की token/rate limit पूरी हो गई है। थोड़ी देर बाद फिर कोशिश करें।",
+              answer: message,
+
+              reply: message,
 
               errorCode:
                 "RATE_LIMIT",
@@ -877,10 +1070,14 @@ real-time जानकारी से संबंधित है तो प�
           );
         }
 
+        const message =
+          "फोटो को समझने में अभी समस्या आ गई। कृपया फिर से कोशिश करें।";
+
         return json(
           {
-            answer:
-              "फोटो को समझने में अभी समस्या आ गई। कृपया फिर से कोशिश करें।",
+            answer: message,
+
+            reply: message,
 
             errorCode:
               "VISION_FAILED",
@@ -894,8 +1091,9 @@ real-time जानकारी से संबंधित है तो प�
     }
 
     // =========================================================
-    // HOME
+    // WEBSITE
     // =========================================================
+
     if (
       request.method === "GET" &&
       url.pathname === "/"
@@ -924,23 +1122,27 @@ real-time जानकारी से संबंधित है तो प�
     // =========================================================
     // CLOUDFLARE ASSETS
     // =========================================================
+
     if (env.ASSETS) {
       try {
         return env.ASSETS.fetch(
           request
         );
       } catch {
-        // Continue to 404
+        // Continue to 404.
       }
     }
 
     // =========================================================
     // 404
     // =========================================================
+
     return json(
       {
-        error: "Not Found",
+        error:
+          "Not Found",
       },
+
       404
     );
   },
