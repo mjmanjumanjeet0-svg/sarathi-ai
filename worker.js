@@ -1,555 +1,372 @@
-// ============================================================
-// SARATHI AI — Cloudflare Worker
-// Chat + Internet Search + Voice + Photo + Self Check
-// ============================================================
-
 const CHAT_MODEL = "openai/gpt-oss-20b";
 const VISION_MODEL = "qwen/qwen3.8-27b";
 const TRANSCRIBE_MODEL = "whisper-large-v3-turbo";
+
+const SYSTEM_PROMPT = `
+तुम "सारथी AI" हो — एक भरोसेमंद हिंदी AI सहायक।
+
+मुख्य उत्तर आसान, स्वाभाविक हिंदी में दो।
+प्रश्न में जो पूछा है उसी पर केंद्रित रहो।
+तथ्य मत गढ़ो।
+आज/अभी/latest/current जानकारी के लिए Internet Search उपलब्ध हो तो उसका उपयोग करो।
+पढ़ाई के उत्तर में परीक्षा के अनुसार लंबाई रखो।
+2 अंक में छोटा उत्तर।
+5 अंक में भूमिका + मुख्य बिंदु + निष्कर्ष।
+10/12 अंक में भूमिका + headings + पर्याप्त बिंदु + उदाहरण + निष्कर्ष।
+गणित में steps और अंतिम उत्तर स्पष्ट दो।
+फोटो में जो दिखाई देता है उसी के आधार पर उत्तर दो।
+`;
 
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // ----------------------------------------------------------
-    // CORS
-    // ----------------------------------------------------------
     if (request.method === "OPTIONS") {
       return new Response(null, {
-        headers: corsHeaders(),
+        status: 204,
+        headers: corsHeaders()
       });
     }
 
-    try {
-      // --------------------------------------------------------
-      // Health Check
-      // --------------------------------------------------------
-      if (url.pathname === "/" && request.method === "GET") {
+    if (url.pathname === "/api/chat") {
+      if (request.method !== "POST") {
         return json(
-          {
-            ok: true,
-            service: "Sarathi AI",
-            status: "running",
-          },
-          200
+          { error: "Only POST is allowed." },
+          405
         );
       }
 
-      // --------------------------------------------------------
-      // CHAT
-      // --------------------------------------------------------
-      if (url.pathname === "/api/chat" && request.method === "POST") {
-        return await handleChat(request, env);
+      return handleChat(request, env);
+    }
+
+    if (url.pathname === "/api/transcribe") {
+      if (request.method !== "POST") {
+        return json(
+          { error: "Only POST is allowed." },
+          405
+        );
       }
 
-      // --------------------------------------------------------
-      // VOICE TRANSCRIPTION
-      // --------------------------------------------------------
-      if (
-        url.pathname === "/api/transcribe" &&
-        request.method === "POST"
-      ) {
-        return await handleTranscribe(request, env);
+      return handleTranscribe(request, env);
+    }
+
+    if (url.pathname === "/api/vision") {
+      if (request.method !== "POST") {
+        return json(
+          { error: "Only POST is allowed." },
+          405
+        );
       }
 
-      // --------------------------------------------------------
-      // PHOTO / VISION
-      // --------------------------------------------------------
-      if (url.pathname === "/api/vision" && request.method === "POST") {
-        return await handleVision(request, env);
-      }
+      return handleVision(request, env);
+    }
 
-      return json(
+    if (url.pathname === "/") {
+      return new Response(
+        "Sarathi AI Worker is running.",
         {
-          error: "API endpoint not found.",
-        },
-        404
-      );
-    } catch (error) {
-      console.error("Worker error:", error);
-
-      return json(
-        {
-          error:
-            error instanceof Error
-              ? error.message
-              : "Unknown server error.",
-        },
-        500
+          headers: {
+            ...corsHeaders(),
+            "Content-Type":
+              "text/plain; charset=utf-8"
+          }
+        }
       );
     }
-  },
+
+    if (env.ASSETS) {
+      return env.ASSETS.fetch(request);
+    }
+
+    return new Response(
+      "Sarathi AI is running.",
+      {
+        headers: {
+          ...corsHeaders(),
+          "Content-Type":
+            "text/plain; charset=utf-8"
+        }
+      }
+    );
+  }
 };
 
 
 // ============================================================
-// CHAT HANDLER
+// CHAT
 // ============================================================
 
 async function handleChat(request, env) {
   if (!env.GROQ_API_KEY) {
     return json(
       {
-        error: "GROQ_API_KEY is not configured.",
+        error:
+          "GROQ_API_KEY Cloudflare Secret में configured नहीं है।",
+        code: "MISSING_API_KEY"
       },
       500
     );
   }
-
-  const body = await request.json();
-
-  const message =
-    typeof body.message === "string"
-      ? body.message.trim()
-      : "";
-
-  const history = Array.isArray(body.history)
-    ? body.history
-    : [];
-
-  const webSearch = Boolean(body.webSearch);
-
-  if (!message) {
-    return json(
-      {
-        error: "Message is required.",
-      },
-      400
-    );
-  }
-
-  const messages = [
-    {
-      role: "system",
-      content: `
-तुम "सारथी AI" हो।
-
-तुम्हारा काम उपयोगकर्ता को सरल, सही और उपयोगी उत्तर देना है।
-
-नियम:
-1. उपयोगकर्ता हिंदी में पूछे तो हिंदी में उत्तर दो।
-2. उत्तर आसान भाषा में दो।
-3. जरूरत हो तो उदाहरण दो।
-4. तथ्य को लेकर निश्चित न हो तो साफ बताओ।
-5. इंटरनेट सर्च उपलब्ध हो तो ताजा जानकारी के लिए उसका उपयोग करो।
-6. गलत जानकारी बनाने की कोशिश मत करो।
-7. पढ़ाई के सवालों में परीक्षा के हिसाब से स्पष्ट उत्तर दो।
-8. कोड मांगने पर पूरा copy-paste योग्य code दो।
-9. उपयोगकर्ता को API key, password या secret chat में भेजने को मत कहो।
-10. उत्तर अनावश्यक रूप से बहुत लंबा मत करो।
-      `.trim(),
-    },
-  ];
-
-  // ----------------------------------------------------------
-  // पुराने messages सुरक्षित रूप से जोड़ें
-  // ----------------------------------------------------------
-
-  for (const item of history.slice(-20)) {
-    if (!item || typeof item !== "object") continue;
-
-    const role =
-      item.role === "assistant"
-        ? "assistant"
-        : item.role === "user"
-          ? "user"
-          : null;
-
-    const content =
-      typeof item.content === "string"
-        ? item.content
-        : typeof item.text === "string"
-          ? item.text
-          : "";
-
-    if (role && content.trim()) {
-      messages.push({
-        role,
-        content: content.trim(),
-      });
-    }
-  }
-
-  // ----------------------------------------------------------
-  // नया user message
-  // ----------------------------------------------------------
-
-  messages.push({
-    role: "user",
-    content: message,
-  });
-
-  // ----------------------------------------------------------
-  // Groq request
-  // ----------------------------------------------------------
-
-  const payload = {
-    model: CHAT_MODEL,
-    messages,
-    temperature: 0.2,
-    max_tokens: 2000,
-  };
-
-  // ----------------------------------------------------------
-  // Internet Search
-  // ----------------------------------------------------------
-
-  if (webSearch) {
-    payload.tools = [
-      {
-        type: "browser_search",
-      },
-    ];
-
-    payload.tool_choice = "required";
-  }
-
-  const result = await callGroq(env.GROQ_API_KEY, payload);
-
-  const answer = extractAnswer(result);
-
-  if (!answer) {
-    console.error("Groq response:", result);
-
-    return json(
-      {
-        error: "Groq returned an empty response.",
-      },
-      502
-    );
-  }
-
-  // ----------------------------------------------------------
-  // Self Check
-  // ----------------------------------------------------------
-
-  let selfChecked = false;
-  let finalAnswer = answer;
 
   try {
-    const checked = await selfCheckAndCorrect(
-      env.GROQ_API_KEY,
-      message,
-      answer
-    );
-
-    if (
-      checked &&
-      typeof checked.answer === "string" &&
-      checked.answer.trim()
-    ) {
-      finalAnswer = checked.answer.trim();
-      selfChecked = true;
-    }
-  } catch (error) {
-    console.error("Self-check failed:", error);
-  }
-
-  return json(
-    {
-      answer: finalAnswer,
-      selfChecked,
-    },
-    200
-  );
-}
-
-
-// ============================================================
-// VOICE TRANSCRIPTION
-// ============================================================
-
-async function handleTranscribe(request, env) {
-  if (!env.GROQ_API_KEY) {
-    return json(
-      {
-        error: "GROQ_API_KEY is not configured.",
-      },
-      500
-    );
-  }
-
-  let audioBlob;
-  let mimeType = "audio/webm";
-
-  const contentType =
-    request.headers.get("content-type") || "";
-
-  // ----------------------------------------------------------
-  // JSON BASE64
-  // ----------------------------------------------------------
-
-  if (contentType.includes("application/json")) {
     const body = await request.json();
 
-    const audioBase64 =
-      typeof body.audio === "string"
-        ? body.audio
-        : "";
+    const history = Array.isArray(body?.history)
+      ? body.history
+      : [];
 
-    mimeType =
-      typeof body.mimeType === "string"
-        ? body.mimeType
-        : "audio/webm";
+    const message =
+      String(body?.message ?? "").trim();
 
-    if (!audioBase64) {
+    const useSearch =
+      body?.webSearch === true;
+
+    if (!message && history.length === 0) {
       return json(
         {
-          error: "Audio data is missing.",
+          error:
+            "कृपया पहले अपना सवाल लिखें।",
+          code: "EMPTY_QUESTION"
         },
         400
       );
     }
 
-    const cleanBase64 = audioBase64.includes(",")
-      ? audioBase64.split(",").pop()
-      : audioBase64;
+    // --------------------------------------------------------
+    // History
+    // --------------------------------------------------------
 
-    const binary = Uint8Array.from(
-      atob(cleanBase64),
-      (char) => char.charCodeAt(0)
-    );
+    let messages = history
+      .slice(-20)
+      .map((item) => {
+        const role =
+          item?.role === "assistant"
+            ? "assistant"
+            : "user";
 
-    audioBlob = new Blob([binary], {
-      type: mimeType,
-    });
-  }
-
-  // ----------------------------------------------------------
-  // MULTIPART FORM DATA
-  // ----------------------------------------------------------
-
-  else if (
-    contentType.includes("multipart/form-data")
-  ) {
-    const formData = await request.formData();
-
-    const file =
-      formData.get("file") ||
-      formData.get("audio");
-
-    if (!(file instanceof File)) {
-      return json(
-        {
-          error: "Audio file is missing.",
-        },
-        400
+        return {
+          role,
+          content: String(
+            item?.content ?? ""
+          )
+            .trim()
+            .slice(0, 8000)
+        };
+      })
+      .filter(
+        (item) => item.content.length > 0
       );
-    }
 
-    audioBlob = file;
+    // --------------------------------------------------------
+    // नया सवाल हमेशा अंत में जोड़ें
+    // --------------------------------------------------------
 
-    mimeType =
-      file.type || "audio/webm";
-  }
+    if (message) {
+      const last = messages[messages.length - 1];
 
-  else {
-    return json(
-      {
-        error: "Unsupported audio request format.",
-      },
-      400
-    );
-  }
-
-  // ----------------------------------------------------------
-  // Groq Whisper
-  // ----------------------------------------------------------
-
-  const form = new FormData();
-
-  const extension =
-    mimeType.includes("mp4")
-      ? "mp4"
-      : mimeType.includes("mpeg")
-        ? "mp3"
-        : "webm";
-
-  form.append(
-    "file",
-    new File(
-      [audioBlob],
-      `voice.${extension}`,
-      {
-        type: mimeType,
+      // अगर frontend ने सवाल history में नहीं भेजा
+      if (
+        !last ||
+        last.role !== "user" ||
+        last.content !== message
+      ) {
+        messages.push({
+          role: "user",
+          content: message
+        });
       }
-    )
-  );
-
-  form.append(
-    "model",
-    TRANSCRIBE_MODEL
-  );
-
-  form.append(
-    "language",
-    "hi"
-  );
-
-  const response = await fetch(
-    "https://api.groq.com/openai/v1/audio/transcriptions",
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${env.GROQ_API_KEY}`,
-      },
-      body: form,
     }
-  );
 
-  const text = await response.text();
+    if (messages.length === 0) {
+      return json(
+        {
+          error:
+            "कृपया अपना सवाल लिखें।",
+          code: "EMPTY_QUESTION"
+        },
+        400
+      );
+    }
 
-  if (!response.ok) {
+    // --------------------------------------------------------
+    // Main Groq payload
+    // --------------------------------------------------------
+
+    const payload = {
+      model: CHAT_MODEL,
+
+      messages: [
+        {
+          role: "system",
+          content: SYSTEM_PROMPT
+        },
+        ...messages
+      ],
+
+      max_completion_tokens: 4096,
+      temperature: 0.2,
+      reasoning_effort: "low",
+      stream: false
+    };
+
+    // --------------------------------------------------------
+    // INTERNET SEARCH
+    // --------------------------------------------------------
+
+    if (useSearch) {
+      payload.tools = [
+        {
+          type: "browser_search"
+        }
+      ];
+
+      // IMPORTANT:
+      // required की जगह auto
+      // इससे सामान्य सवाल पर tool error नहीं होगा।
+      payload.tool_choice = "auto";
+    }
+
+    // --------------------------------------------------------
+    // Main AI call
+    // --------------------------------------------------------
+
+    let result = await callGroq(
+      payload,
+      env.GROQ_API_KEY,
+      60000
+    );
+
+    // Retry
+    if (
+      !result.ok &&
+      result.retryable
+    ) {
+      await sleep(1200);
+
+      result = await callGroq(
+        payload,
+        env.GROQ_API_KEY,
+        60000
+      );
+    }
+
+    // --------------------------------------------------------
+    // अगर Search वाला request fail हो जाए
+    // तो बिना Search के जवाब देने की कोशिश
+    // --------------------------------------------------------
+
+    if (!result.ok && useSearch) {
+      const fallbackPayload = {
+        model: CHAT_MODEL,
+
+        messages: [
+          {
+            role: "system",
+            content:
+              SYSTEM_PROMPT +
+              `
+Internet Search इस समय उपलब्ध नहीं हो पाई।
+Current/latest जानकारी को verified fact की तरह मत बताओ।
+`
+          },
+          ...messages
+        ],
+
+        max_completion_tokens: 4096,
+        temperature: 0.2,
+        reasoning_effort: "low",
+        stream: false
+      };
+
+      result = await callGroq(
+        fallbackPayload,
+        env.GROQ_API_KEY,
+        60000
+      );
+    }
+
+    if (!result.ok) {
+      return json(
+        {
+          error: result.error,
+          code: result.code,
+          requestId:
+            result.requestId || null
+        },
+        result.status || 502
+      );
+    }
+
+    if (!result.reply) {
+      return json(
+        {
+          error:
+            "AI ने खाली उत्तर दिया। फिर से कोशिश करें।",
+          code: "EMPTY_RESPONSE"
+        },
+        502
+      );
+    }
+
+    // --------------------------------------------------------
+    // SELF CHECK
+    // --------------------------------------------------------
+
+    let finalAnswer = result.reply;
+
+    let selfChecked = false;
+    let selfCorrected = false;
+
+    try {
+      const checked =
+        await selfCheckAndCorrect(
+          messages,
+          result.reply,
+          env.GROQ_API_KEY
+        );
+
+      if (checked?.reply) {
+        finalAnswer = checked.reply;
+        selfChecked =
+          checked.selfChecked;
+        selfCorrected =
+          checked.selfCorrected;
+      }
+    } catch (error) {
+      // Self-check fail होने पर भी
+      // मुख्य AI का जवाब नहीं रुकेगा।
+      console.error(
+        "Self-check failed:",
+        error
+      );
+
+      finalAnswer = result.reply;
+    }
+
+    return json({
+      answer: finalAnswer,
+      selfChecked,
+      selfCorrected,
+      searchUsed: useSearch
+    });
+
+  } catch (error) {
     console.error(
-      "Groq transcription error:",
-      text
+      "Chat error:",
+      error
     );
 
     return json(
       {
         error:
-          "Voice transcription failed.",
-        details: text,
-      },
-      response.status
-    );
-  }
-
-  let data;
-
-  try {
-    data = JSON.parse(text);
-  } catch {
-    return json(
-      {
-        error:
-          "Invalid transcription response.",
-      },
-      502
-    );
-  }
-
-  return json(
-    {
-      text:
-        typeof data.text === "string"
-          ? data.text.trim()
-          : "",
-    },
-    200
-  );
-}
-
-
-// ============================================================
-// PHOTO / VISION
-// ============================================================
-
-async function handleVision(request, env) {
-  if (!env.GROQ_API_KEY) {
-    return json(
-      {
-        error: "GROQ_API_KEY is not configured.",
+          error instanceof Error
+            ? error.message
+            : String(error),
+        code: "WORKER_ERROR"
       },
       500
     );
   }
-
-  const body = await request.json();
-
-  const image =
-    typeof body.image === "string"
-      ? body.image
-      : typeof body.imageData === "string"
-        ? body.imageData
-        : typeof body.imageBase64 === "string"
-          ? body.imageBase64
-          : "";
-
-  const question =
-    typeof body.question === "string" &&
-    body.question.trim()
-      ? body.question.trim()
-      : "इस फोटो को समझाओ।";
-
-  if (!image) {
-    return json(
-      {
-        error: "Image is missing.",
-      },
-      400
-    );
-  }
-
-  // ----------------------------------------------------------
-  // Image URL / Data URL
-  // ----------------------------------------------------------
-
-  let imageUrl = image;
-
-  if (!image.startsWith("data:")) {
-    imageUrl =
-      `data:image/jpeg;base64,${image}`;
-  }
-
-  const messages = [
-    {
-      role: "system",
-      content:
-        "तुम सारथी AI के vision assistant हो। फोटो को ध्यान से देखकर हिंदी में सरल और सही उत्तर दो। जो फोटो में दिखाई नहीं देता उसके बारे में अनुमान मत लगाओ।",
-    },
-    {
-      role: "user",
-      content: [
-        {
-          type: "text",
-          text: question,
-        },
-        {
-          type: "image_url",
-          image_url: {
-            url: imageUrl,
-          },
-        },
-      ],
-    },
-  ];
-
-  const payload = {
-    model: VISION_MODEL,
-    messages,
-    temperature: 0.2,
-    max_tokens: 1500,
-  };
-
-  const result = await callGroq(
-    env.GROQ_API_KEY,
-    payload
-  );
-
-  const answer = extractAnswer(result);
-
-  if (!answer) {
-    console.error(
-      "Vision response:",
-      result
-    );
-
-    return json(
-      {
-        error:
-          "Photo analysis returned an empty response.",
-      },
-      502
-    );
-  }
-
-  return json(
-    {
-      answer,
-    },
-    200
-  );
 }
 
 
@@ -558,208 +375,836 @@ async function handleVision(request, env) {
 // ============================================================
 
 async function selfCheckAndCorrect(
-  apiKey,
-  question,
-  answer
+  messages,
+  answer,
+  apiKey
 ) {
-  const payload = {
-    model: CHAT_MODEL,
-
-    messages: [
-      {
-        role: "system",
-        content: `
-तुम उत्तर की quality check करने वाले assistant हो।
-
-तुम्हें:
-1. दिए गए उत्तर में बड़ी factual गलती देखनी है।
-2. प्रश्न से असंबंधित बात हटानी है।
-3. अगर उत्तर सही है तो उसे लगभग वैसा ही रखो।
-4. अगर उत्तर गलत या भ्रामक है तो उसे सुधारो।
-5. बिना कारण उत्तर को लंबा मत करो।
-
-सिर्फ JSON दो:
-{
-  "answer": "सुधारा हुआ अंतिम उत्तर"
-}
-        `.trim(),
-      },
-      {
-        role: "user",
-        content:
-          `प्रश्न:\n${question}\n\nउत्तर:\n${answer}`,
-      },
-    ],
-
-    temperature: 0.1,
-    max_tokens: 2000,
-
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: "answer_check",
-        strict: true,
-        schema: {
-          type: "object",
-          properties: {
-            answer: {
-              type: "string",
-            },
-          },
-          required: ["answer"],
-          additionalProperties: false,
-        },
-      },
-    },
-  };
-
-  const result =
-    await callGroq(apiKey, payload);
-
-  const content =
-    result?.choices?.[0]?.message?.content;
-
-  if (
-    typeof content !== "string" ||
-    !content.trim()
-  ) {
-    return null;
-  }
-
   try {
-    return JSON.parse(content);
-  } catch {
+    const questionText =
+      messages
+        .slice(-6)
+        .map(
+          (item) =>
+            `${item.role}: ${item.content}`
+        )
+        .join("\n\n");
+
+    const payload = {
+      model: CHAT_MODEL,
+
+      messages: [
+        {
+          role: "system",
+          content: `
+तुम "सारथी AI Quality Checker" हो।
+
+User के सवाल और AI के उत्तर को जाँचो।
+
+जाँच:
+1. क्या उत्तर सवाल के अनुसार है?
+2. क्या कोई बड़ी factual गलती है?
+3. क्या अनावश्यक बात है?
+4. क्या उत्तर बहुत छोटा या बहुत लंबा है?
+5. क्या कोई मनगढ़ंत जानकारी है?
+
+अगर उत्तर सही है तो उसे लगभग वैसा ही रखो।
+अगर गलती है तो पूरा सुधरा हुआ उत्तर दो।
+
+सिर्फ यह JSON format दो:
+
+{
+  "needs_correction": false,
+  "corrected_answer": "उत्तर"
+}
+`
+        },
+
+        {
+          role: "user",
+          content:
+            `USER:\n${questionText}\n\nAI ANSWER:\n${answer}`
+        }
+      ],
+
+      max_completion_tokens: 4096,
+      temperature: 0,
+      reasoning_effort: "low",
+      stream: false,
+
+      // JSON schema की जगह plain JSON instruction
+      // ताकि model compatibility बेहतर रहे।
+      response_format: {
+        type: "json_object"
+      }
+    };
+
+    let result = await callGroq(
+      payload,
+      apiKey,
+      30000
+    );
+
+    if (
+      !result.ok &&
+      result.retryable
+    ) {
+      await sleep(800);
+
+      result = await callGroq(
+        payload,
+        apiKey,
+        30000
+      );
+    }
+
+    if (
+      !result.ok ||
+      !result.raw
+    ) {
+      return {
+        reply: answer,
+        selfChecked: false,
+        selfCorrected: false
+      };
+    }
+
+    let report;
+
+    try {
+      report = JSON.parse(
+        result.raw
+      );
+    } catch {
+      return {
+        reply: answer,
+        selfChecked: false,
+        selfCorrected: false
+      };
+    }
+
+    const corrected =
+      String(
+        report?.corrected_answer ?? ""
+      ).trim();
+
+    if (!corrected) {
+      return {
+        reply: answer,
+        selfChecked: true,
+        selfCorrected: false
+      };
+    }
+
+    if (
+      report?.needs_correction !== true
+    ) {
+      return {
+        reply: answer,
+        selfChecked: true,
+        selfCorrected: false
+      };
+    }
+
+    // बहुत बड़ा अचानक बदला हुआ उत्तर
+    // स्वीकार नहीं करेंगे।
+    if (
+      corrected.length >
+      Math.max(
+        answer.length * 3,
+        20000
+      )
+    ) {
+      return {
+        reply: answer,
+        selfChecked: true,
+        selfCorrected: false
+      };
+    }
+
     return {
-      answer: content.trim(),
+      reply: corrected,
+      selfChecked: true,
+      selfCorrected: true
+    };
+
+  } catch (error) {
+    console.error(
+      "Self-check error:",
+      error
+    );
+
+    return {
+      reply: answer,
+      selfChecked: false,
+      selfCorrected: false
     };
   }
 }
 
 
 // ============================================================
-// GROQ API
+// PHOTO / VISION
 // ============================================================
 
-async function callGroq(apiKey, payload) {
-  const response = await fetch(
-    "https://api.groq.com/openai/v1/chat/completions",
-    {
-      method: "POST",
-
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+async function handleVision(
+  request,
+  env
+) {
+  if (!env.GROQ_API_KEY) {
+    return json(
+      {
+        error:
+          "GROQ_API_KEY configured नहीं है।",
+        code: "MISSING_API_KEY"
       },
-
-      body: JSON.stringify(payload),
-    }
-  );
-
-  const text = await response.text();
-
-  if (!response.ok) {
-    console.error(
-      "Groq API error:",
-      response.status,
-      text
+      500
     );
-
-    let message =
-      `Groq API error: ${response.status}`;
-
-    try {
-      const errorData =
-        JSON.parse(text);
-
-      if (
-        errorData?.error?.message
-      ) {
-        message =
-          errorData.error.message;
-      }
-    } catch {
-      // Ignore JSON parse error
-    }
-
-    throw new Error(message);
   }
 
   try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error(
-      "Groq returned invalid JSON."
+    const body =
+      await request.json();
+
+    const image =
+      String(
+        body?.image ??
+        body?.imageData ??
+        body?.imageBase64 ??
+        ""
+      ).trim();
+
+    const question =
+      String(
+        body?.question ??
+        body?.prompt ??
+        "इस फोटो को ध्यान से देखकर सरल हिंदी में समझाओ।"
+      ).trim();
+
+    if (!image) {
+      return json(
+        {
+          error:
+            "फोटो उपलब्ध नहीं है।",
+          code: "MISSING_IMAGE"
+        },
+        400
+      );
+    }
+
+    if (
+      !image.startsWith(
+        "data:image/"
+      )
+    ) {
+      return json(
+        {
+          error:
+            "फोटो का format सही नहीं है।",
+          code:
+            "INVALID_IMAGE_FORMAT"
+        },
+        400
+      );
+    }
+
+    const payload = {
+      model: VISION_MODEL,
+
+      messages: [
+        {
+          role: "system",
+          content: `
+तुम सारथी AI हो।
+
+फोटो को ध्यान से देखकर सरल और सही हिंदी में उत्तर दो।
+
+अगर फोटो में:
+- प्रश्न है तो प्रश्न हल करो।
+- किताब/नोट्स हैं तो समझाओ।
+- diagram है तो समझाओ।
+- chart है तो उसका अर्थ बताओ।
+- कोई वस्तु है तो दिखाई देने वाली जानकारी बताओ।
+
+जो फोटो में दिखाई नहीं देता उसके बारे में अनुमान मत लगाओ।
+`
+        },
+
+        {
+          role: "user",
+
+          content: [
+            {
+              type: "text",
+              text: question
+            },
+
+            {
+              type: "image_url",
+              image_url: {
+                url: image
+              }
+            }
+          ]
+        }
+      ],
+
+      max_completion_tokens: 4096,
+      temperature: 0.4,
+      reasoning_effort: "low",
+      stream: false
+    };
+
+    const result =
+      await callGroq(
+        payload,
+        env.GROQ_API_KEY,
+        60000
+      );
+
+    if (!result.ok) {
+      return json(
+        {
+          error: result.error,
+          code: result.code,
+          requestId:
+            result.requestId || null
+        },
+        result.status || 502
+      );
+    }
+
+    return json({
+      answer:
+        result.reply ||
+        "फोटो से कोई उत्तर नहीं मिला।"
+    });
+
+  } catch (error) {
+    return json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : String(error),
+        code: "VISION_ERROR"
+      },
+      500
     );
   }
 }
 
 
 // ============================================================
-// EXTRACT ANSWER
+// VOICE TRANSCRIPTION
 // ============================================================
 
-function extractAnswer(result) {
-  const message =
-    result?.choices?.[0]?.message;
-
-  if (!message) {
-    return "";
+async function handleTranscribe(
+  request,
+  env
+) {
+  if (!env.GROQ_API_KEY) {
+    return json(
+      {
+        error:
+          "GROQ_API_KEY configured नहीं है।",
+        code: "MISSING_API_KEY"
+      },
+      500
+    );
   }
 
-  if (
-    typeof message.content === "string"
-  ) {
-    return message.content.trim();
-  }
+  try {
+    let audioFile = null;
 
-  // कुछ tool responses में content array हो सकता है
-  if (Array.isArray(message.content)) {
-    const parts = [];
+    const contentType =
+      request.headers.get(
+        "content-type"
+      ) || "";
 
-    for (const part of message.content) {
-      if (
-        typeof part?.text === "string"
-      ) {
-        parts.push(part.text);
+    // --------------------------------------------------------
+    // Multipart
+    // --------------------------------------------------------
+
+    if (
+      contentType.includes(
+        "multipart/form-data"
+      )
+    ) {
+      const form =
+        await request.formData();
+
+      const file =
+        form.get("file") ||
+        form.get("audio");
+
+      if (file instanceof File) {
+        audioFile = file;
       }
     }
 
-    return parts.join("\n").trim();
-  }
+    // --------------------------------------------------------
+    // JSON Base64
+    // --------------------------------------------------------
 
-  return "";
+    else {
+      const body =
+        await request.json();
+
+      const base64 =
+        String(
+          body?.audio ?? ""
+        ).trim();
+
+      const mimeType =
+        String(
+          body?.mimeType ??
+          "audio/webm"
+        ).trim();
+
+      if (!base64) {
+        return json(
+          {
+            error:
+              "Audio उपलब्ध नहीं है।",
+            code:
+              "MISSING_AUDIO"
+          },
+          400
+        );
+      }
+
+      const cleanBase64 =
+        base64.includes(",")
+          ? base64
+              .split(",")
+              .pop()
+          : base64;
+
+      let binary;
+
+      try {
+        binary =
+          atob(cleanBase64);
+      } catch {
+        return json(
+          {
+            error:
+              "Audio Base64 सही नहीं है।",
+            code:
+              "INVALID_BASE64"
+          },
+          400
+        );
+      }
+
+      const bytes =
+        new Uint8Array(
+          binary.length
+        );
+
+      for (
+        let i = 0;
+        i < binary.length;
+        i++
+      ) {
+        bytes[i] =
+          binary.charCodeAt(i);
+      }
+
+      const safeMime =
+        mimeType.split(";")[0] ||
+        "audio/webm";
+
+      let extension = "webm";
+
+      if (
+        safeMime.includes("mp4")
+      ) {
+        extension = "mp4";
+      } else if (
+        safeMime.includes("ogg")
+      ) {
+        extension = "ogg";
+      } else if (
+        safeMime.includes("wav")
+      ) {
+        extension = "wav";
+      } else if (
+        safeMime.includes("mpeg") ||
+        safeMime.includes("mp3")
+      ) {
+        extension = "mp3";
+      }
+
+      audioFile =
+        new File(
+          [bytes],
+          `sarathi-voice.${extension}`,
+          {
+            type: safeMime
+          }
+        );
+    }
+
+    if (!audioFile) {
+      return json(
+        {
+          error:
+            "Audio file नहीं मिला।",
+          code:
+            "MISSING_AUDIO"
+        },
+        400
+      );
+    }
+
+    const form =
+      new FormData();
+
+    form.append(
+      "file",
+      audioFile,
+      audioFile.name ||
+        "sarathi-voice.webm"
+    );
+
+    form.append(
+      "model",
+      TRANSCRIBE_MODEL
+    );
+
+    form.append(
+      "language",
+      "hi"
+    );
+
+    form.append(
+      "response_format",
+      "json"
+    );
+
+    form.append(
+      "temperature",
+      "0"
+    );
+
+    form.append(
+      "prompt",
+      "हिंदी में साफ शब्दों में बोले गए प्रश्न को लिखो।"
+    );
+
+    const response =
+      await fetch(
+        "https://api.groq.com/openai/v1/audio/transcriptions",
+        {
+          method: "POST",
+
+          headers: {
+            Authorization:
+              `Bearer ${env.GROQ_API_KEY}`
+          },
+
+          body: form
+        }
+      );
+
+    const raw =
+      await response.text();
+
+    let data;
+
+    try {
+      data = raw
+        ? JSON.parse(raw)
+        : {};
+    } catch {
+      data = {};
+    }
+
+    if (!response.ok) {
+      return json(
+        {
+          error:
+            data?.error?.message ||
+            raw ||
+            `Groq transcription error (${response.status})`,
+          code:
+            "TRANSCRIPTION_API_ERROR"
+        },
+        response.status
+      );
+    }
+
+    return json({
+      text:
+        String(
+          data?.text ?? ""
+        ).trim()
+    });
+
+  } catch (error) {
+    return json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : String(error),
+        code:
+          "TRANSCRIPTION_ERROR"
+      },
+      500
+    );
+  }
 }
 
 
 // ============================================================
-// JSON RESPONSE
+// GROQ API CALL
 // ============================================================
 
-function json(data, status = 200) {
+async function callGroq(
+  payload,
+  apiKey,
+  timeoutMs
+) {
+  const controller =
+    new AbortController();
+
+  const timeout =
+    setTimeout(
+      () =>
+        controller.abort(),
+      timeoutMs
+    );
+
+  try {
+    const response =
+      await fetch(
+        "https://api.groq.com/openai/v1/chat/completions",
+        {
+          method: "POST",
+
+          headers: {
+            Authorization:
+              `Bearer ${apiKey}`,
+
+            "Content-Type":
+              "application/json",
+
+            Accept:
+              "application/json"
+          },
+
+          body: JSON.stringify(
+            payload
+          ),
+
+          signal:
+            controller.signal
+        }
+      );
+
+    const raw =
+      await response.text();
+
+    let data;
+
+    try {
+      data = raw
+        ? JSON.parse(raw)
+        : {};
+    } catch {
+      data = {};
+    }
+
+    const requestId =
+      response.headers.get(
+        "x-request-id"
+      ) ||
+      response.headers.get(
+        "x-groq-request-id"
+      ) ||
+      data?.id ||
+      null;
+
+    // --------------------------------------------------------
+    // API Error
+    // --------------------------------------------------------
+
+    if (!response.ok) {
+      const message =
+        data?.error?.message ||
+        data?.message ||
+        raw ||
+        `Groq API error (${response.status})`;
+
+      return {
+        ok: false,
+
+        retryable:
+          response.status === 408 ||
+          response.status === 409 ||
+          response.status === 429 ||
+          response.status >= 500,
+
+        status:
+          response.status,
+
+        code:
+          data?.error?.code ||
+          `HTTP_${response.status}`,
+
+        error:
+          message,
+
+        requestId,
+
+        raw: null
+      };
+    }
+
+    const choice =
+      Array.isArray(
+        data?.choices
+      )
+        ? data.choices[0]
+        : null;
+
+    const content =
+      typeof choice?.message?.content ===
+      "string"
+        ? choice.message.content.trim()
+        : "";
+
+    // --------------------------------------------------------
+    // Structured JSON response
+    // --------------------------------------------------------
+
+    if (
+      payload.response_format
+    ) {
+      if (!content) {
+        return {
+          ok: false,
+          retryable: true,
+          status: 502,
+          code:
+            "EMPTY_STRUCTURED_RESPONSE",
+          error:
+            "Structured response खाली है।",
+          requestId,
+          raw: null
+        };
+      }
+
+      return {
+        ok: true,
+        reply: "",
+        raw: content,
+        requestId
+      };
+    }
+
+    // --------------------------------------------------------
+    // Empty response
+    // --------------------------------------------------------
+
+    if (!content) {
+      return {
+        ok: false,
+        retryable: true,
+        status: 502,
+        code:
+          "EMPTY_RESPONSE",
+        error:
+          "Groq ने खाली उत्तर दिया।",
+        requestId,
+        raw: null
+      };
+    }
+
+    return {
+      ok: true,
+      reply: content,
+      raw: null,
+      requestId
+    };
+
+  } catch (error) {
+
+    return {
+      ok: false,
+
+      retryable: true,
+
+      status: 504,
+
+      code:
+        error?.name === "AbortError"
+          ? "GROQ_TIMEOUT"
+          : "GROQ_NETWORK_ERROR",
+
+      error:
+        error?.name === "AbortError"
+          ? "Groq से जवाब आने में बहुत समय लगा।"
+          : `Groq connection error: ${
+              error instanceof Error
+                ? error.message
+                : String(error)
+            }`,
+
+      requestId: null,
+
+      raw: null
+    };
+
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+
+// ============================================================
+// HELPERS
+// ============================================================
+
+function sleep(ms) {
+  return new Promise(
+    (resolve) =>
+      setTimeout(resolve, ms)
+  );
+}
+
+
+function corsHeaders() {
+  return {
+    "Access-Control-Allow-Origin":
+      "*",
+
+    "Access-Control-Allow-Methods":
+      "GET, POST, OPTIONS",
+
+    "Access-Control-Allow-Headers":
+      "Content-Type, Authorization"
+  };
+}
+
+
+function json(
+  data,
+  status = 200
+) {
   return new Response(
     JSON.stringify(data),
     {
       status,
+
       headers: {
         ...corsHeaders(),
+
         "Content-Type":
-          "application/json; charset=utf-8",
-      },
+          "application/json; charset=utf-8"
+      }
     }
   );
-}
-
-
-// ============================================================
-// CORS HEADERS
-// ============================================================
-
-function corsHeaders() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods":
-      "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers":
-      "Content-Type, Authorization",
-  };
 }
