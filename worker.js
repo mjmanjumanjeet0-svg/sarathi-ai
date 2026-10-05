@@ -2,7 +2,6 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // CORS
     if (request.method === "OPTIONS") {
       return new Response(null, {
         headers: {
@@ -13,7 +12,6 @@ export default {
       });
     }
 
-    // AI Chat API
     if (url.pathname === "/api/chat" && request.method === "POST") {
       try {
         const body = await request.json();
@@ -39,18 +37,30 @@ export default {
             content: String(message.content || "").slice(0, 8000),
           }));
 
+        const useSearch = body.webSearch === true;
+
         const payload = {
           model: "openai/gpt-oss-120b",
           messages: [
             {
               role: "system",
-              content:
-                "You are Sarathi AI, a helpful Hindi-speaking assistant. Answer clearly and naturally in Hindi or Hindi-English mix.",
+              content: useSearch
+                ? "You are Sarathi AI, a helpful Hindi-speaking assistant. Use browser search to find current information. Give the user a clear answer based on the information you find. Do not invent current facts."
+                : "You are Sarathi AI, a helpful Hindi-speaking assistant. Answer clearly and naturally in Hindi or Hindi-English mix.",
             },
             ...messages,
           ],
           max_tokens: 4096,
         };
+
+        if (useSearch) {
+          payload.tools = [
+            {
+              type: "browser_search",
+            },
+          ];
+          payload.tool_choice = "required";
+        }
 
         const response = await fetch(
           "https://api.groq.com/openai/v1/chat/completions",
@@ -82,7 +92,9 @@ export default {
 
         if (!reply) {
           return json(
-            { error: "Groq returned no answer." },
+            {
+              error: "Groq returned no answer.",
+            },
             502
           );
         }
@@ -90,13 +102,14 @@ export default {
         return json({ reply });
       } catch (error) {
         return json(
-          { error: "Server error. Please try again." },
+          {
+            error: "Server error. Please try again.",
+          },
           500
         );
       }
     }
 
-    // Website
     if (env.ASSETS) {
       return env.ASSETS.fetch(request);
     }
