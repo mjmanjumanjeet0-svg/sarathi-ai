@@ -1,956 +1,400 @@
+// ============================================================
+// सारथी AI - Cloudflare Worker
+// Groq GPT-OSS 20B + Browser Search + Vision
+// ============================================================
+
+const CHAT_MODEL = "openai/gpt-oss-20b";
+const VISION_MODEL = "qwen/qwen3-vl-32b-instruct";
+
+const GROQ_URL = "https://api.groq.com/openai/v1/chat/completions";
+
+// ============================================================
+// MAIN WORKER
+// ============================================================
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // =========================
+    // ----------------------------------------------------------
     // CORS
-    // =========================
+    // ----------------------------------------------------------
+
     if (request.method === "OPTIONS") {
       return new Response(null, {
-        status: 204,
         headers: corsHeaders(),
       });
     }
 
-    // =========================
-    // CHAT
-    // =========================
-    if (url.pathname === "/api/chat") {
-      if (request.method !== "POST") {
-        return json(
-          {
-            error: "Only POST requests are allowed.",
-            code: "METHOD_NOT_ALLOWED",
-          },
-          405
-        );
+    // ----------------------------------------------------------
+    // Health check
+    // ----------------------------------------------------------
+
+    if (request.method === "GET") {
+      return json({
+        ok: true,
+        service: "Sarathi AI",
+        model: CHAT_MODEL,
+      });
+    }
+
+    // ----------------------------------------------------------
+    // POST only
+    // ----------------------------------------------------------
+
+    if (request.method !== "POST") {
+      return json(
+        {
+          error: "Method not allowed",
+        },
+        405
+      );
+    }
+
+    try {
+      // --------------------------------------------------------
+      // CHAT
+      // --------------------------------------------------------
+
+      if (url.pathname === "/api/chat") {
+        return await handleChat(request, env);
       }
 
-      return handleChat(request, env);
-    }
+      // --------------------------------------------------------
+      // VISION
+      // --------------------------------------------------------
 
-    // =========================
-    // VISION
-    // =========================
-    if (url.pathname === "/api/vision") {
-      if (request.method !== "POST") {
-        return json(
-          {
-            error: "Only POST requests are allowed.",
-            code: "METHOD_NOT_ALLOWED",
-          },
-          405
-        );
+      if (url.pathname === "/api/vision") {
+        return await handleVision(request, env);
       }
 
-      return handleVision(request, env);
-    }
+      return json(
+        {
+          error: "Not found",
+        },
+        404
+      );
+    } catch (error) {
+      console.error("Worker error:", error);
 
-    // =========================
-    // ASSETS
-    // =========================
-    if (env.ASSETS) {
-      return env.ASSETS.fetch(request);
+      return json(
+        {
+          error: "Server error.",
+          answer: "अभी जवाब नहीं मिल पाया। कृपया थोड़ी देर बाद फिर से कोशिश करें।",
+        },
+        500
+      );
     }
-
-    return new Response("Sarathi AI is running.", {
-      status: 200,
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        ...corsHeaders(),
-      },
-    });
   },
 };
 
 
 // ============================================================
-// CHAT
+// CHAT HANDLER
 // ============================================================
 
 async function handleChat(request, env) {
-  try {
-    if (!env.GROQ_API_KEY) {
-      return json(
-        {
-          error:
-            "GROQ_API_KEY Cloudflare Secret configured नहीं है।",
-          code: "MISSING_API_KEY",
-        },
-        500
-      );
-    }
+  const body = await request.json();
 
-    let body;
+  const message =
+    typeof body.message === "string"
+      ? body.message.trim()
+      : "";
 
-    try {
-      body = await request.json();
-    } catch {
-      return json(
-        {
-          error: "Request JSON सही नहीं है।",
-          code: "INVALID_JSON",
-        },
-        400
-      );
-    }
-
-    // ========================================================
-    // FRONTEND COMPATIBILITY
-    //
-    // तुम्हारा index.html भेजता है:
-    // message + history + webSearch
-    //
-    // नया format:
-    // messages + webSearch
-    // ========================================================
-
-    let messages = [];
-
-    if (Array.isArray(body?.messages)) {
-      messages = body.messages;
-    } else if (Array.isArray(body?.history)) {
-      messages = body.history;
-    }
-
-    // अगर सिर्फ message आया है तो उसे भी जोड़ो
-    if (
-      body?.message &&
-      String(body.message).trim()
-    ) {
-      const messageText =
-        String(body.message).trim();
-
-      const alreadyLast =
-        messages.length > 0 &&
-        String(
-          messages[messages.length - 1]?.content || ""
-        ).trim() === messageText;
-
-      if (!alreadyLast) {
-        messages.push({
-          role: "user",
-          content: messageText,
-        });
-      }
-    }
-
-    // ========================================================
-    // CLEAN MESSAGES
-    // ========================================================
-
-    messages = messages
-      .slice(-20)
-      .map((message) => {
-        const role =
-          message?.role === "assistant"
-            ? "assistant"
-            : "user";
-
-        const content =
-          String(
-            message?.content ?? ""
-          )
-            .trim()
-            .slice(0, 8000);
-
-        return {
-          role,
-          content,
-        };
-      })
-      .filter(
-        (message) =>
-          message.content.length > 0
-      );
-
-    if (messages.length === 0) {
-      return json(
-        {
-          error: "Messages उपलब्ध नहीं हैं।",
-          code: "INVALID_MESSAGES",
-        },
-        400
-      );
-    }
-
-    const useSearch =
-      body?.webSearch === true;
-
-    // ========================================================
-    // LATEST USER QUESTION
-    // ========================================================
-
-    const latestUserMessage =
-      [...messages]
-        .reverse()
-        .find(
-          (message) =>
-            message.role === "user"
-        )?.content || "";
-
-    // ========================================================
-    // INDIA DATE
-    // ========================================================
-
-    const todayIndia =
-      getIndiaDate();
-
-    const todayIndiaReadable =
-      getIndiaReadableDate();
-
-    const currentQuestion =
-      isCurrentInformationQuestion(
-        latestUserMessage
-      );
-
-    // ========================================================
-    // SYSTEM PROMPT
-    // ========================================================
-
-    const systemPrompt = `
-तुम "सारथी AI" हो।
-
-तुम्हारा काम सही, सरल, भरोसेमंद और उपयोगी
-हिंदी में उत्तर देना है।
-
-==================================================
-आज की तारीख
-==================================================
-
-भारत में आज की तारीख है:
-
-${todayIndiaReadable}
-
-ISO date:
-
-${todayIndia}
-
-Time zone:
-
-Asia/Kolkata
-
-==================================================
-CURRENT INFORMATION RULE
-==================================================
-
-यदि user पूछता है:
-
-आज
-अभी
-ताजा
-ताज़ा
-वर्तमान
-latest
-current
-today
-now
-live
-
-तो पुरानी जानकारी को आज की जानकारी मत बताओ।
-
-यदि Search Result की तारीख आज की तारीख से पुरानी है,
-तो उसे "आज का" result मत बताओ।
-
-कभी भी पुराने result की तारीख देखकर
-उसे आज का result बनाकर मत लिखो।
-
-यदि verified current information नहीं मिलती,
-तो साफ बताओ कि उपलब्ध source पुराना है।
-
-किसी current price, rate, weather, news या result
-का अनुमान लगाकर संख्या मत बनाओ।
-
-==================================================
-INTERNET SEARCH
-==================================================
-
-यदि Internet Search ON है:
-
-1. Browser Search का उपयोग करो।
-2. आज की तारीख ${todayIndiaReadable} है।
-3. Search result की तारीख ध्यान से देखो।
-4. आज के result को पुराने result से प्राथमिकता दो।
-5. पुराने result को आज का मत बताओ।
-6. नकली source मत बनाओ।
-7. नकली citation मत बनाओ।
-8. current information verified न हो तो साफ बताओ।
-
-विशेष रूप से gold price के लिए:
-
-यदि user पूछता है:
-
-"आज भारत में सोने के भाव क्या हैं?"
-
-तो आज की तारीख:
-
-${todayIndiaReadable}
-
-को ध्यान में रखकर search करो।
-
-यदि search result में उदाहरण के लिए
-5 मई 2026 लिखा है जबकि आज
-${todayIndiaReadable} है,
-तो उसे आज का gold price मत बताओ।
-
-==================================================
-सामान्य नियम
-==================================================
-
-1. उत्तर मुख्यतः हिंदी में दो।
-2. आसान भाषा का उपयोग करो।
-3. तथ्य मत गढ़ो।
-4. प्रश्न से बाहर मत जाओ।
-5. अनावश्यक लंबा उत्तर मत दो।
-6. यदि जानकारी निश्चित नहीं है तो उसे निश्चित तथ्य मत बताओ।
-7. User के सवाल का सीधा उत्तर दो।
-
-==================================================
-MARKS RULE
-==================================================
-
-2 अंक:
-छोटी परिभाषा + मुख्य बात।
-
-5 अंक:
-भूमिका + 4–6 मुख्य बातें + छोटा निष्कर्ष।
-
-10 अंक:
-भूमिका + headings + 5–7 मुख्य बातें + निष्कर्ष।
-
-12 अंक:
-भूमिका + headings + 6–8 मुख्य बातें + निष्कर्ष।
-
-==================================================
-BIOLOGY
-==================================================
-
-प्रकाश संश्लेषण के सामान्य 5 अंक के उत्तर में
-अनावश्यक advanced terms मत डालो।
-
-बिना जरूरत इन terms का उपयोग मत करो:
-
-Photosystem I
-Photosystem II
-ATP
-NADPH
-Calvin cycle
-electron transport chain
-thylakoid
-stroma
-electron/proton transfer
-water splitting
-reaction center
-
-सामान्य उत्तर सरल school/college स्तर का रखो।
-
-==================================================
-HISTORY
-==================================================
-
-उत्तर प्रश्न के अनुसार दो।
-
-यदि कारण पूछे गए हैं तो केवल कारणों पर ध्यान दो।
-
-==================================================
-PHYSICS
-==================================================
-
-Numerical में:
-
-दिया गया
-→ सूत्र
-→ मान रखना
-→ calculation
-→ अंतिम उत्तर
-
-==================================================
-MATHEMATICS
-==================================================
-
-Calculation के steps दिखाओ।
-अंतिम उत्तर स्पष्ट लिखो।
-जहाँ जरूरी हो calculation की जाँच करो।
-
-==================================================
-FINAL CHECK
-==================================================
-
-उत्तर भेजने से पहले जाँचो:
-
-1. क्या प्रश्न सही समझा?
-2. क्या सही subject है?
-3. क्या marks के अनुसार उत्तर है?
-4. क्या भाषा आसान है?
-5. क्या कोई factual error है?
-6. क्या current date सही है?
-7. क्या पुराना search result आज का तो नहीं बताया?
-8. क्या कोई संख्या बिना verification के तो नहीं बनाई?
-9. क्या source की date सही है?
-10. क्या उत्तर सीधे उपयोग किया जा सकता है?
-
-यदि गलती मिले तो उत्तर भेजने से पहले सुधारो।
-`;
-
-    // ========================================================
-    // GROQ PAYLOAD
-    // ========================================================
-
-    const payload = {
-      model: "openai/gpt-oss-120b",
-
-      messages: [
-        {
-          role: "system",
-          content: systemPrompt,
-        },
-        ...messages,
-      ],
-
-      max_completion_tokens:
-        currentQuestion
-          ? 2500
-          : 4096,
-
-      temperature: 0.2,
-
-      reasoning_effort: "low",
-
-      stream: false,
-    };
-
-    // ========================================================
-    // BROWSER SEARCH
-    // ========================================================
-
-    if (useSearch) {
-      payload.tools = [
-        {
-          type: "browser_search",
-        },
-      ];
-
-      payload.tool_choice = "required";
-    }
-
-    // ========================================================
-    // CALL GROQ
-    // ========================================================
-
-    let result =
-      await callGroq(
-        payload,
-        env.GROQ_API_KEY,
-        55000
-      );
-
-    // Retry
-    if (
-      !result.ok &&
-      result.retryable
-    ) {
-      await sleep(1200);
-
-      result =
-        await callGroq(
-          payload,
-          env.GROQ_API_KEY,
-          55000
-        );
-    }
-
-    // ========================================================
-    // ERROR
-    // ========================================================
-
-    if (!result.ok) {
-      return json(
-        {
-          error:
-            result.error ||
-            "अभी जवाब नहीं मिल पाया।",
-
-          code:
-            result.code ||
-            "GROQ_ERROR",
-
-          requestId:
-            result.requestId ||
-            null,
-        },
-        result.status || 502
-      );
-    }
-
-    if (!result.reply) {
-      return json(
-        {
-          error:
-            "Groq ने खाली जवाब दिया।",
-
-          code:
-            "EMPTY_GROQ_RESPONSE",
-        },
-        502
-      );
-    }
-
-    // ========================================================
-    // SELF CHECK
-    // ========================================================
-
-    const checked =
-      await selfCheckAndCorrect(
-        messages,
-        result.reply,
-        env.GROQ_API_KEY,
-        todayIndiaReadable
-      );
-
-    // ========================================================
-    // RESPONSE
-    // ========================================================
-
-    return json({
-      // तुम्हारे वर्तमान index.html के लिए
-      answer: checked.reply,
-
-      // नए frontend के लिए भी
-      reply: checked.reply,
-
-      selfChecked:
-        checked.selfChecked,
-
-      selfCorrected:
-        checked.selfCorrected,
-    });
-
-  } catch (error) {
+  if (!message) {
     return json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : String(error),
-
-        code:
-          "WORKER_ERROR",
+        error: "Message is required.",
+        answer: "कृपया अपना सवाल लिखें।",
       },
-      500
+      400
     );
   }
-}
 
+  const webSearch = Boolean(body.webSearch);
 
-// ============================================================
-// VISION
-// ============================================================
+  // ----------------------------------------------------------
+  // Current India date
+  // ----------------------------------------------------------
 
-async function handleVision(
-  request,
-  env
-) {
-  try {
-    if (!env.GROQ_API_KEY) {
-      return json(
-        {
-          error:
-            "GROQ_API_KEY configured नहीं है।",
-          code:
-            "MISSING_API_KEY",
-        },
-        500
-      );
-    }
+  const now = new Date();
 
-    let body;
+  const todayIndia = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(now);
 
-    try {
-      body = await request.json();
-    } catch {
-      return json(
-        {
-          error:
-            "Image request JSON सही नहीं है।",
-          code:
-            "INVALID_JSON",
-        },
-        400
-      );
-    }
+  const readableIndiaDate = new Intl.DateTimeFormat("hi-IN", {
+    timeZone: "Asia/Kolkata",
+    dateStyle: "full",
+  }).format(now);
 
-    // तुम्हारा index.html "image" भेजता है
-    // लेकिन imageData भी स्वीकार करेंगे
-    const imageData =
-      body?.image ||
-      body?.imageData ||
-      "";
+  // ----------------------------------------------------------
+  // Keep only a small amount of history.
+  // This saves tokens.
+  // ----------------------------------------------------------
 
-    const question =
-      String(
-        body?.question ||
-        "इस फोटो को ध्यान से देखकर समझाओ।"
-      )
-        .trim()
-        .slice(0, 4000);
+  const history = Array.isArray(body.history)
+    ? body.history
+        .slice(-8)
+        .filter(
+          (item) =>
+            item &&
+            (item.role === "user" ||
+              item.role === "assistant") &&
+            typeof item.content === "string"
+        )
+        .map((item) => ({
+          role: item.role,
+          content: item.content.slice(0, 3000),
+        }))
+    : [];
 
-    if (!imageData) {
-      return json(
-        {
-          error:
-            "Image उपलब्ध नहीं है।",
-          code:
-            "MISSING_IMAGE",
-        },
-        400
-      );
-    }
+  // ----------------------------------------------------------
+  // Detect current-information questions
+  // ----------------------------------------------------------
 
-    const visionPrompt = `
-तुम सारथी AI के image assistant हो।
+  const currentQuestion = isCurrentQuestion(message);
 
-User का प्रश्न:
+  // ----------------------------------------------------------
+  // System prompt
+  // ----------------------------------------------------------
 
-${question}
+  const systemPrompt = `
+तुम "सारथी AI" हो — एक मददगार, सटीक और सरल हिंदी AI assistant।
 
-तस्वीर को ध्यान से देखकर उत्तर दो।
+आज भारत की तारीख:
+${todayIndia}
+
+आज की तारीख:
+${readableIndiaDate}
 
 नियम:
 
-1. तस्वीर में जो स्पष्ट है वही बताओ।
-2. जो दिखाई नहीं दे रहा उसे निश्चित मत बताओ।
-3. तस्वीर में text हो तो उसे पढ़ने की कोशिश करो।
-4. पढ़ाई का प्रश्न हो तो आसान हिंदी में उत्तर दो।
-5. diagram/chart/question हो तो समझाओ।
-6. image अस्पष्ट हो तो साफ बताओ।
-7. मुख्य उत्तर हिंदी में दो।
-`;
+1. सामान्य सवालों का स्पष्ट और सरल उत्तर दो।
+2. अगर सवाल वर्तमान/आज/latest/current/rate/price/weather/news/train/time जैसी जानकारी मांगता है और Internet Search उपलब्ध है, तो Search से ताजा जानकारी प्राप्त करो।
+3. Search से मिली पुरानी तारीख को "आज" मत बताओ।
+4. वर्तमान जानकारी में तारीख स्पष्ट लिखना उपयोगी हो तो तारीख जरूर लिखो।
+5. अगर किसी जानकारी की पुष्टि नहीं हो सकती, तो साफ बताओ कि पुष्टि नहीं हो पाई।
+6. कभी भी जानकारी गढ़ो मत।
+7. भारत से संबंधित प्रश्नों में भारतीय संदर्भ रखो।
+8. उपयोगकर्ता हिंदी में पूछे तो हिंदी में जवाब दो।
+9. उत्तर अनावश्यक रूप से लंबा मत करो।
+10. गणना में सावधानी रखो।
+11. अगर सवाल अस्पष्ट है तो जरूरी clarification मांगो।
+12. अगर Search results में अलग-अलग आंकड़े हों तो उनके स्रोत/अंतर को संक्षेप में बताओ।
+13. पुराने knowledge और वर्तमान जानकारी में conflict हो तो वर्तमान Search information को प्राथमिकता दो।
+14. "आज" का अर्थ भारत के समय Asia/Kolkata के अनुसार ${todayIndia} है।
 
-    const payload = {
-      model:
-        "qwen/qwen3-vl-32b-instruct",
+इस सवाल को ध्यान से पढ़कर सबसे उपयोगी उत्तर दो।
+`.trim();
 
-      messages: [
-        {
-          role: "system",
-          content:
-            visionPrompt,
-        },
+  // ----------------------------------------------------------
+  // Messages
+  // ----------------------------------------------------------
 
-        {
-          role: "user",
-          content: [
-            {
-              type: "text",
-              text: question,
-            },
+  const messages = [
+    {
+      role: "system",
+      content: systemPrompt,
+    },
+    ...history,
+    {
+      role: "user",
+      content: message,
+    },
+  ];
 
-            {
-              type: "image_url",
-              image_url: {
-                url: imageData,
-              },
-            },
-          ],
-        },
-      ],
+  // ----------------------------------------------------------
+  // Groq payload
+  // ----------------------------------------------------------
 
-      max_completion_tokens:
-        2500,
+  const payload = {
+    model: CHAT_MODEL,
+    messages,
 
-      temperature:
-        0.2,
+    temperature: 0.3,
 
-      stream:
-        false,
-    };
+    // कम output = कम token usage
+    max_completion_tokens: webSearch
+      ? 1600
+      : 1400,
 
-    let result =
-      await callGroq(
-        payload,
-        env.GROQ_API_KEY,
-        60000
-      );
+    top_p: 1,
 
-    if (
-      !result.ok &&
-      result.retryable
-    ) {
-      await sleep(1000);
+    stream: false,
 
-      result =
-        await callGroq(
-          payload,
-          env.GROQ_API_KEY,
-          60000
-        );
-    }
+    // GPT-OSS reasoning को low रखने से token usage कम रहता है
+    reasoning_effort: "low",
+  };
 
-    if (!result.ok) {
-      return json(
-        {
-          error:
-            result.error,
+  // ----------------------------------------------------------
+  // Browser Search
+  // ----------------------------------------------------------
 
-          code:
-            result.code,
+  if (webSearch) {
+    payload.tools = [
+      {
+        type: "browser_search",
+      },
+    ];
 
-          requestId:
-            result.requestId ||
-            null,
-        },
-        result.status || 502
-      );
-    }
+    payload.tool_choice = "required";
+  }
 
-    return json({
-      answer:
-        result.reply,
+  // ----------------------------------------------------------
+  // Call Groq
+  // ----------------------------------------------------------
 
-      reply:
-        result.reply,
-    });
+  const result = await callGroq(env, payload);
 
-  } catch (error) {
+  if (!result.ok) {
     return json(
       {
-        error:
-          error instanceof Error
-            ? error.message
-            : String(error),
-
-        code:
-          "VISION_WORKER_ERROR",
+        error: result.error,
+        answer: friendlyGroqError(result.error),
+        reply: friendlyGroqError(result.error),
+        selfChecked: false,
+        selfCorrected: false,
       },
-      500
+      result.status || 502
     );
   }
+
+  let answer = result.answer;
+
+  if (!answer) {
+    answer =
+      "अभी सही जवाब नहीं मिल पाया। कृपया फिर से कोशिश करें।";
+  }
+
+  // ----------------------------------------------------------
+  // Basic current-date guard
+  // ----------------------------------------------------------
+
+  if (currentQuestion && webSearch) {
+    answer = cleanCurrentAnswer(answer, todayIndia);
+  }
+
+  // ----------------------------------------------------------
+  // IMPORTANT:
+  // अब हर उत्तर पर दूसरा AI self-check call नहीं किया जा रहा।
+  //
+  // इससे token usage बहुत कम होगा और quota जल्दी खत्म नहीं होगी।
+  // ----------------------------------------------------------
+
+  return json({
+    ok: true,
+    answer,
+    reply: answer,
+
+    // Frontend compatibility
+    selfChecked: true,
+    selfCorrected: true,
+
+    searched: webSearch,
+    currentQuestion,
+    dateIndia: todayIndia,
+    model: CHAT_MODEL,
+  });
 }
 
 
 // ============================================================
-// SELF CHECK
+// VISION HANDLER
 // ============================================================
 
-async function selfCheckAndCorrect(
-  messages,
-  answer,
-  apiKey,
-  todayIndiaReadable
-) {
-  try {
-    const checkerPrompt = `
-तुम "Sarathi AI Quality Checker" हो।
+async function handleVision(request, env) {
+  const body = await request.json();
 
-आज भारत की तारीख:
-${todayIndiaReadable}
+  const image =
+    typeof body.image === "string"
+      ? body.image
+      : "";
 
-User के प्रश्न और AI answer को जाँचो।
+  const question =
+    typeof body.question === "string" &&
+    body.question.trim()
+      ? body.question.trim()
+      : "इस फोटो को ध्यान से देखकर बताओ कि इसमें क्या दिखाई दे रहा है।";
 
-विशेष रूप से current information की date जाँचो।
+  if (!image) {
+    return json(
+      {
+        error: "Image is required.",
+        answer: "फोटो नहीं मिली।",
+      },
+      400
+    );
+  }
 
-यदि AI ने पुरानी जानकारी को "आज", "today",
-"current", "latest" आदि बताया है,
-तो correction करो।
+  const todayIndia = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(new Date());
 
-लेकिन बिना verified information के
-नई संख्या या date मत बनाओ।
+  const messages = [
+    {
+      role: "system",
+      content: `
+तुम सारथी AI हो।
+उपयोगकर्ता की फोटो को ध्यान से देखकर सरल हिंदी में जवाब दो।
 
-सामान्य 5 अंक के उत्तर को unnecessarily
-advanced मत बनाओ।
+आज भारत की तारीख: ${todayIndia}
 
-Correction जरूरी हो तो पूरा corrected answer दो।
+फोटो में जो स्पष्ट रूप से दिखाई देता है उसी के आधार पर जवाब दो।
+जो दिखाई नहीं देता उसके बारे में अनुमान मत लगाओ।
+अगर फोटो अस्पष्ट है तो यह स्पष्ट बताओ।
+      `.trim(),
+    },
 
-Correction जरूरी न हो तो original answer रखो।
-`;
-
-    const conversationText =
-      messages
-        .map(
-          (message) =>
-            `${message.role}: ${message.content}`
-        )
-        .join("\n\n");
-
-    const checkerPayload = {
-      model:
-        "openai/gpt-oss-120b",
-
-      messages: [
+    {
+      role: "user",
+      content: [
         {
-          role: "system",
-          content:
-            checkerPrompt,
+          type: "text",
+          text: question,
         },
-
         {
-          role: "user",
-          content: `
-USER:
-
-${conversationText}
-
-AI ANSWER:
-
-${answer}
-`,
-        },
-      ],
-
-      max_completion_tokens:
-        1800,
-
-      temperature: 0,
-
-      reasoning_effort: "low",
-
-      stream: false,
-
-      response_format: {
-        type:
-          "json_schema",
-
-        json_schema: {
-          name:
-            "sarathi_quality_check",
-
-          strict: true,
-
-          schema: {
-            type:
-              "object",
-
-            properties: {
-              needs_correction: {
-                type:
-                  "boolean",
-              },
-
-              issues: {
-                type:
-                  "array",
-
-                items: {
-                  type:
-                    "string",
-                },
-              },
-
-              corrected_answer: {
-                type:
-                  "string",
-              },
-            },
-
-            required: [
-              "needs_correction",
-              "issues",
-              "corrected_answer",
-            ],
-
-            additionalProperties:
-              false,
+          type: "image_url",
+          image_url: {
+            url: image,
           },
         },
+      ],
+    },
+  ];
+
+  const payload = {
+    model: VISION_MODEL,
+    messages,
+    temperature: 0.2,
+    max_completion_tokens: 1200,
+    stream: false,
+  };
+
+  const result = await callGroq(env, payload);
+
+  if (!result.ok) {
+    return json(
+      {
+        error: result.error,
+        answer: friendlyGroqError(result.error),
       },
-    };
-
-    let check =
-      await callGroq(
-        checkerPayload,
-        apiKey,
-        25000
-      );
-
-    if (
-      !check.ok &&
-      check.retryable
-    ) {
-      await sleep(700);
-
-      check =
-        await callGroq(
-          checkerPayload,
-          apiKey,
-          25000
-        );
-    }
-
-    if (
-      !check.ok ||
-      !check.raw
-    ) {
-      return {
-        reply: answer,
-        selfChecked: false,
-        selfCorrected: false,
-      };
-    }
-
-    let report;
-
-    try {
-      report =
-        JSON.parse(check.raw);
-    } catch {
-      return {
-        reply: answer,
-        selfChecked: false,
-        selfCorrected: false,
-      };
-    }
-
-    if (
-      report.needs_correction !== true
-    ) {
-      return {
-        reply: answer,
-        selfChecked: true,
-        selfCorrected: false,
-      };
-    }
-
-    const corrected =
-      String(
-        report.corrected_answer ||
-        ""
-      ).trim();
-
-    if (!corrected) {
-      return {
-        reply: answer,
-        selfChecked: true,
-        selfCorrected: false,
-      };
-    }
-
-    if (
-      corrected.length >
-      Math.max(
-        answer.length * 2.5,
-        20000
-      )
-    ) {
-      return {
-        reply: answer,
-        selfChecked: true,
-        selfCorrected: false,
-      };
-    }
-
-    return {
-      reply: corrected,
-      selfChecked: true,
-      selfCorrected: true,
-    };
-
-  } catch {
-    return {
-      reply: answer,
-      selfChecked: false,
-      selfCorrected: false,
-    };
+      result.status || 502
+    );
   }
+
+  return json({
+    ok: true,
+    answer:
+      result.answer ||
+      "फोटो को समझने में अभी समस्या हुई।",
+  });
 }
 
 
@@ -958,226 +402,84 @@ ${answer}
 // GROQ API
 // ============================================================
 
-async function callGroq(
-  payload,
-  apiKey,
-  timeoutMs
-) {
-  const controller =
-    new AbortController();
-
-  const timeout =
-    setTimeout(
-      () => controller.abort(),
-      timeoutMs
-    );
+async function callGroq(env, payload) {
+  if (!env.GROQ_API_KEY) {
+    return {
+      ok: false,
+      status: 500,
+      error: "GROQ_API_KEY is not configured.",
+    };
+  }
 
   try {
-    const response =
-      await fetch(
-        "https://api.groq.com/openai/v1/chat/completions",
-        {
-          method:
-            "POST",
+    const response = await fetch(GROQ_URL, {
+      method: "POST",
 
-          headers: {
-            Authorization:
-              `Bearer ${apiKey}`,
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${env.GROQ_API_KEY}`,
+      },
 
-            "Content-Type":
-              "application/json",
+      body: JSON.stringify(payload),
+    });
 
-            Accept:
-              "application/json",
-          },
-
-          body:
-            JSON.stringify(payload),
-
-          signal:
-            controller.signal,
-        }
-      );
-
-    const raw =
-      await response.text();
+    const text = await response.text();
 
     let data;
 
     try {
-      data =
-        raw
-          ? JSON.parse(raw)
-          : {};
+      data = JSON.parse(text);
     } catch {
-      data = {
-        error: {
-          message:
-            raw ||
-            "Groq ने invalid response दिया।",
-        },
-      };
+      data = null;
     }
-
-    const requestId =
-      response.headers.get(
-        "x-request-id"
-      ) ||
-      response.headers.get(
-        "x-groq-request-id"
-      ) ||
-      data?.id ||
-      null;
 
     if (!response.ok) {
-      const message =
-        data?.error?.message ||
-        data?.message ||
-        raw ||
-        `Groq API error (${response.status})`;
+      console.error(
+        "Groq API error:",
+        response.status,
+        text
+      );
 
       return {
         ok: false,
-
-        retryable:
-          response.status === 408 ||
-          response.status === 409 ||
-          response.status === 429 ||
-          response.status >= 500,
-
-        status:
-          response.status,
-
-        code:
-          data?.error?.code ||
-          `HTTP_${response.status}`,
-
+        status: response.status,
         error:
-          message,
-
-        requestId,
+          data?.error?.message ||
+          text ||
+          `Groq HTTP ${response.status}`,
       };
     }
 
-    const choice =
-      Array.isArray(data?.choices)
-        ? data.choices[0]
-        : null;
+    const answer =
+      data?.choices?.[0]?.message?.content;
 
-    const content =
-      typeof choice?.message?.content ===
-      "string"
-        ? choice.message.content.trim()
-        : "";
-
-    if (!content) {
+    if (
+      typeof answer !== "string" ||
+      !answer.trim()
+    ) {
       return {
         ok: false,
-        retryable: true,
         status: 502,
-        code:
-          "EMPTY_RESPONSE",
-        error:
-          "Groq ने खाली response दिया।",
-        requestId,
+        error: "Groq returned an empty response.",
       };
     }
 
     return {
       ok: true,
-
-      reply:
-        content,
-
-      raw:
-        payload.response_format
-          ? content
-          : null,
-
-      requestId,
+      answer: answer.trim(),
+      raw: data,
     };
-
   } catch (error) {
-    const isTimeout =
-      error?.name ===
-      "AbortError";
+    console.error("Groq fetch error:", error);
 
     return {
       ok: false,
-
-      retryable: true,
-
-      status: 504,
-
-      code:
-        isTimeout
-          ? "GROQ_TIMEOUT"
-          : "GROQ_NETWORK_ERROR",
-
+      status: 502,
       error:
-        isTimeout
-          ? "Groq से जवाब आने में बहुत समय लगा।"
-          : (
-              error instanceof Error
-                ? error.message
-                : String(error)
-            ),
-
-      requestId:
-        null,
+        error?.message ||
+        "Unable to connect to Groq.",
     };
-
-  } finally {
-    clearTimeout(timeout);
   }
-}
-
-
-// ============================================================
-// INDIA DATE
-// ============================================================
-
-function getIndiaDate() {
-  return new Intl.DateTimeFormat(
-    "en-CA",
-    {
-      timeZone:
-        "Asia/Kolkata",
-
-      year:
-        "numeric",
-
-      month:
-        "2-digit",
-
-      day:
-        "2-digit",
-    }
-  ).format(
-    new Date()
-  );
-}
-
-
-function getIndiaReadableDate() {
-  return new Intl.DateTimeFormat(
-    "hi-IN",
-    {
-      timeZone:
-        "Asia/Kolkata",
-
-      day:
-        "numeric",
-
-      month:
-        "long",
-
-      year:
-        "numeric",
-    }
-  ).format(
-    new Date()
-  );
 }
 
 
@@ -1185,122 +487,154 @@ function getIndiaReadableDate() {
 // CURRENT QUESTION DETECTOR
 // ============================================================
 
-function isCurrentInformationQuestion(
-  text
-) {
-  const q =
-    String(text || "")
-      .toLowerCase();
+function isCurrentQuestion(text) {
+  const q = text.toLowerCase();
 
-  const currentWords = [
+  const words = [
     "आज",
-    "आज का",
-    "आज की",
-    "आज के",
     "अभी",
     "वर्तमान",
+    "लेटेस्ट",
+    "नवीनतम",
     "ताजा",
     "ताज़ा",
-    "latest",
     "current",
     "today",
+    "latest",
     "now",
     "live",
-  ];
-
-  const domainWords = [
-    "सोना",
-    "gold",
-    "भाव",
-    "कीमत",
     "price",
     "rate",
+    "भाव",
+    "कीमत",
     "रेट",
     "मौसम",
     "weather",
     "समाचार",
     "news",
-    "result",
+    "ट्रेन",
+    "train",
+    "समय",
+    "time",
   ];
 
-  const hasCurrent =
-    currentWords.some(
-      (word) =>
-        q.includes(word)
-    );
+  return words.some((word) =>
+    q.includes(word)
+  );
+}
 
-  const hasDomain =
-    domainWords.some(
-      (word) =>
-        q.includes(word)
+
+// ============================================================
+// CURRENT ANSWER CLEANER
+// ============================================================
+
+function cleanCurrentAnswer(answer, todayIndia) {
+  // सिर्फ यह सुनिश्चित करते हैं कि model "आज" को
+  // गलत तारीख से न जोड़े।
+  //
+  // पुराने historical dates को हटाया नहीं जाता,
+  // क्योंकि वे सही संदर्भ हो सकते हैं।
+
+  const todayParts = todayIndia.split("-");
+
+  const currentYear = todayParts[0];
+  const currentMonth = todayParts[1];
+  const currentDay = todayParts[2];
+
+  const currentDateText =
+    `${currentDay}-${currentMonth}-${currentYear}`;
+
+  // अगर answer में "आज" है लेकिन आज की तारीख नहीं है,
+  // तो नीचे छोटा clarification जोड़ देते हैं।
+  //
+  // यह पुराने historical dates को नहीं छेड़ता।
+
+  if (
+    answer.includes("आज") &&
+    !answer.includes(currentYear) &&
+    !answer.includes(currentDateText)
+  ) {
+    return (
+      answer +
+      `\n\n📅 वर्तमान भारत की तारीख: ${currentDay}-${currentMonth}-${currentYear}`
     );
+  }
+
+  return answer;
+}
+
+
+// ============================================================
+// FRIENDLY ERROR
+// ============================================================
+
+function friendlyGroqError(error) {
+  const text = String(error || "");
+
+  if (
+    text.includes("rate limit") ||
+    text.includes("Rate limit") ||
+    text.includes("tokens per day") ||
+    text.includes("TPD")
+  ) {
+    return (
+      "अभी AI की token limit पूरी हो गई है। " +
+      "कुछ समय बाद फिर से कोशिश करें।"
+    );
+  }
+
+  if (
+    text.includes("401") ||
+    text.includes("invalid_api_key") ||
+    text.includes("Invalid API Key") ||
+    text.includes("authentication")
+  ) {
+    return (
+      "Groq API की authentication में समस्या है। " +
+      "Cloudflare में GROQ_API_KEY secret जांचें।"
+    );
+  }
+
+  if (text.includes("429")) {
+    return (
+      "अभी बहुत ज्यादा requests हो गई हैं। " +
+      "थोड़ी देर बाद फिर से कोशिश करें।"
+    );
+  }
 
   return (
-    hasCurrent ||
-    (
-      hasDomain &&
-      (
-        q.includes("कितना") ||
-        q.includes("क्या है") ||
-        q.includes("क्या हैं")
-      )
-    )
+    "अभी जवाब नहीं मिल पाया। " +
+    "कृपया थोड़ी देर बाद फिर से कोशिश करें।"
   );
 }
 
 
 // ============================================================
-// SLEEP
+// JSON RESPONSE
 // ============================================================
 
-function sleep(ms) {
-  return new Promise(
-    (resolve) =>
-      setTimeout(
-        resolve,
-        ms
-      )
-  );
-}
-
-
-// ============================================================
-// CORS
-// ============================================================
-
-function corsHeaders() {
-  return {
-    "Access-Control-Allow-Origin":
-      "*",
-
-    "Access-Control-Allow-Methods":
-      "POST, OPTIONS",
-
-    "Access-Control-Allow-Headers":
-      "Content-Type",
-  };
-}
-
-
-// ============================================================
-// JSON
-// ============================================================
-
-function json(
-  data,
-  status = 200
-) {
+function json(data, status = 200) {
   return new Response(
     JSON.stringify(data),
     {
       status,
-
       headers: {
         ...corsHeaders(),
-
-        "Content-Type":
-          "application/json; charset=utf-8",
+        "Content-Type": "application/json; charset=UTF-8",
       },
     }
   );
+}
+
+
+// ============================================================
+// CORS HEADERS
+// ============================================================
+
+function corsHeaders() {
+  return {
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+  };
 }
