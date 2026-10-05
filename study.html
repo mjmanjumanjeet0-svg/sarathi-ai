@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>सारथी AI - Study Center</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f7fb;
+      color: #222;
+    }
+
+    .app {
+      max-width: 750px;
+      margin: auto;
+      min-height: 100vh;
+    }
+
+    header {
+      background: white;
+      padding: 20px;
+      text-align: center;
+      border-bottom: 1px solid #ddd;
+    }
+
+    header h1 {
+      font-size: 26px;
+    }
+
+    header p {
+      margin-top: 7px;
+      color: #666;
+    }
+
+    .container {
+      padding: 18px;
+    }
+
+    .back {
+      display: inline-block;
+      margin-bottom: 18px;
+      text-decoration: none;
+      color: #1769e0;
+    }
+
+    .box {
+      background: white;
+      padding: 18px;
+      border-radius: 15px;
+      border: 1px solid #ddd;
+      margin-bottom: 15px;
+    }
+
+    label {
+      display: block;
+      font-weight: bold;
+      margin-bottom: 8px;
+    }
+
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid #ccc;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 16px;
+      outline: none;
+    }
+
+    select {
+      background: white;
+    }
+
+    textarea {
+      min-height: 120px;
+      resize: vertical;
+      font-family: Arial, sans-serif;
+    }
+
+    .options {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+
+    #askButton {
+      background: #1769e0;
+      color: white;
+      width: 100%;
+      margin-top: 12px;
+    }
+
+    #searchButton {
+      background: #222;
+      color: white;
+      flex: 1;
+    }
+
+    #normalButton {
+      background: #e8edf5;
+      color: #222;
+      flex: 1;
+    }
+
+    button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    #status {
+      text-align: center;
+      color: #666;
+      margin: 12px 0;
+    }
+
+    #answer {
+      display: none;
+      background: white;
+      border: 1px solid #ddd;
+      border-radius: 15px;
+      padding: 18px;
+      margin-top: 15px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .category {
+      margin-top: 15px;
+      font-weight: bold;
+    }
+
+    .subject-list {
+      color: #666;
+      font-size: 14px;
+      line-height: 1.7;
+      margin-top: 5px;
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <header>
+    <h1>📚 सारथी Study Center</h1>
+    <p>Arts + Science + सभी विषयों की AI पढ़ाई</p>
+  </header>
+
+  <div class="container">
+
+    <a class="back" href="/">← AI Chat पर वापस जाएँ</a>
+
+    <div class="box">
+
+      <label for="subject">📖 अपना विषय चुनें</label>
+
+      <select id="subject">
+
+        <optgroup label="🎓 Arts">
+          <option>History</option>
+          <option>Political Science</option>
+          <option>Geography</option>
+          <option>Sociology</option>
+          <option>Psychology</option>
+          <option>Philosophy</option>
+          <option>Home Science</option>
+          <option>Economics</option>
+          <option>Hindi</option>
+          <option>English</option>
+          <option>Sanskrit</option>
+        </optgroup>
+
+        <optgroup label="🔬 Science">
+          <option>Physics</option>
+          <option>Chemistry</option>
+          <option>Biology</option>
+          <option>Mathematics</option>
+          <option>Computer Science</option>
+          <option>Environmental Science</option>
+        </optgroup>
+
+        <optgroup label="📚 अन्य">
+          <option>Other Subject</option>
+        </optgroup>
+
+      </select>
+
+      <div class="category">🎓 Arts के विषय</div>
+      <div class="subject-list">
+        History, Political Science, Geography, Sociology,
+        Psychology, Philosophy, Home Science, Economics,
+        Hindi, English, Sanskrit
+      </div>
+
+      <div class="category">🔬 Science के विषय</div>
+      <div class="subject-list">
+        Physics, Chemistry, Biology, Mathematics,
+        Computer Science, Environmental Science
+      </div>
+
+    </div>
+
+    <div class="box">
+
+      <label for="question">✍️ अपना सवाल लिखें</label>
+
+      <textarea
+        id="question"
+        placeholder="जैसे: प्रकाश संश्लेषण क्या है? या फ्रांसीसी क्रांति के कारण बताइए।"
+      ></textarea>
+
+      <button id="askButton">🤖 सारथी से उत्तर पूछें</button>
+
+      <div class="options">
+
+        <button id="normalButton">
+          💡 सामान्य उत्तर
+        </button>
+
+        <button id="searchButton">
+          🌐 इंटरनेट से खोजें
+        </button>
+
+      </div>
+
+    </div>
+
+    <div id="status"></div>
+
+    <div id="answer"></div>
+
+  </div>
+
+</div>
+
+<script>
+
+  const subject = document.getElementById("subject");
+  const question = document.getElementById("question");
+
+  const askButton = document.getElementById("askButton");
+  const normalButton = document.getElementById("normalButton");
+  const searchButton = document.getElementById("searchButton");
+
+  const status = document.getElementById("status");
+  const answer = document.getElementById("answer");
+
+  async function askAI(useSearch) {
+
+    const text = question.value.trim();
+
+    if (!text) {
+      alert("पहले अपना सवाल लिखें।");
+      question.focus();
+      return;
+    }
+
+    const selectedSubject = subject.value;
+
+    const studyPrompt = `
+तुम सारथी AI के Study Center में पढ़ाई के सहायक हो।
+
+विषय: ${selectedSubject}
+
+छात्र का प्रश्न:
+${text}
+
+निर्देश:
+- उत्तर आसान और साफ हिंदी में दो।
+- अगर प्रश्न अंग्रेजी में है तो भी जरूरत के अनुसार हिंदी में समझाओ।
+- परीक्षा के प्रश्न में उत्तर को परीक्षा-लिखने योग्य तरीके से दो।
+- जरूरत हो तो परिचय, मुख्य बिंदु और निष्कर्ष दो।
+- गणित या विज्ञान के सवाल में चरण-दर-चरण समझाओ।
+- तथ्य न गढ़ो।
+- अगर प्रश्न अस्पष्ट हो तो उपलब्ध जानकारी के आधार पर सबसे उपयोगी उत्तर दो।
+`;
+
+    setLoading(true);
+
+    try {
+
+      const response = await fetch("/api/chat", {
+        method: "POST",
+
+        headers: {
+          "Content-Type": "application/json"
+        },
+
+        body: JSON.stringify({
+          messages: [
+            {
+              role: "user",
+              content: studyPrompt
+            }
+          ],
+          webSearch: useSearch
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "उत्तर नहीं मिला।");
+      }
+
+      answer.textContent =
+        "📖 " + selectedSubject + "\n\n" +
+        (data.reply || "कोई उत्तर नहीं मिला।");
+
+      answer.style.display = "block";
+
+      status.textContent = "";
+
+      answer.scrollIntoView({
+        behavior: "smooth"
+      });
+
+    } catch (error) {
+
+      answer.textContent =
+        "अभी उत्तर नहीं मिल पाया। कृपया फिर से कोशिश करें।";
+
+      answer.style.display = "block";
+
+      status.textContent = "";
+
+    } finally {
+
+      setLoading(false);
+
+    }
+  }
+
+  function setLoading(loading) {
+
+    askButton.disabled = loading;
+    normalButton.disabled = loading;
+    searchButton.disabled = loading;
+
+    if (loading) {
+      status.textContent = "⏳ सारथी उत्तर तैयार कर रहा है...";
+    } else {
+      status.textContent = "";
+    }
+  }
+
+  askButton.addEventListener("click", () => {
+    askAI(false);
+  });
+
+  normalButton.addEventListener("click", () => {
+    askAI(false);
+  });
+
+  searchButton.addEventListener("click", () => {
+    askAI(true);
+  });
+
+  question.addEventListener("keydown", (event) => {
+
+    if (
+      event.key === "Enter" &&
+      !event.shiftKey
+    ) {
+      event.preventDefault();
+      askAI(false);
+    }
+
+  });
+
+</script>
+
+</body>
+</html>
