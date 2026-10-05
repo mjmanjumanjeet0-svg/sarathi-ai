@@ -130,6 +130,12 @@
       min-width: 70px;
     }
 
+    #sendButton:disabled,
+    #searchButton:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
     #micButton {
       background: #eee;
       color: #222;
@@ -193,6 +199,7 @@
       color: #777;
       padding: 5px;
       background: white;
+      min-height: 26px;
     }
 
     /* =========================
@@ -341,12 +348,10 @@
 
 
   <!-- =========================
-       ACTIONS
+       ACTION BUTTONS
        ========================= -->
 
   <div class="actions">
-
-    <!-- INTERNET SEARCH -->
 
     <button
       id="searchButton"
@@ -356,8 +361,6 @@
     </button>
 
 
-    <!-- VOICE -->
-
     <button
       id="micButton"
       type="button"
@@ -365,8 +368,6 @@
       🎤 बोलें
     </button>
 
-
-    <!-- SPEAK -->
 
     <button
       id="speakButton"
@@ -376,8 +377,6 @@
     </button>
 
 
-    <!-- QUIZ -->
-
     <button
       id="quizButton"
       type="button"
@@ -385,8 +384,6 @@
       ❓ सवाल पूछो
     </button>
 
-
-    <!-- PHOTO -->
 
     <label
       id="photoLabel"
@@ -409,9 +406,7 @@
        PHOTO EDIT PANEL
        ========================= -->
 
-  <div
-    id="photoPanel"
-  >
+  <div id="photoPanel">
 
     <img
       id="photoPreview"
@@ -485,7 +480,7 @@
 </div>
 
 
-<!-- Hidden canvas for photo editing -->
+<!-- PHOTO CANVAS -->
 
 <canvas
   id="canvas"
@@ -496,73 +491,55 @@
 <script>
 
   // ==========================================================
+  // WORKER URL
+  // ==========================================================
+
+  const API_BASE =
+    "https://sarathi-ai.mjmanjumanjeet0.workers.dev";
+
+
+  // ==========================================================
   // ELEMENTS
   // ==========================================================
 
   const chat =
-    document.getElementById(
-      "chat"
-    );
+    document.getElementById("chat");
 
   const input =
-    document.getElementById(
-      "messageInput"
-    );
+    document.getElementById("messageInput");
 
   const sendButton =
-    document.getElementById(
-      "sendButton"
-    );
+    document.getElementById("sendButton");
 
   const searchButton =
-    document.getElementById(
-      "searchButton"
-    );
+    document.getElementById("searchButton");
 
   const micButton =
-    document.getElementById(
-      "micButton"
-    );
+    document.getElementById("micButton");
 
   const speakButton =
-    document.getElementById(
-      "speakButton"
-    );
+    document.getElementById("speakButton");
 
   const quizButton =
-    document.getElementById(
-      "quizButton"
-    );
+    document.getElementById("quizButton");
 
   const photoInput =
-    document.getElementById(
-      "photoInput"
-    );
+    document.getElementById("photoInput");
 
   const photoPanel =
-    document.getElementById(
-      "photoPanel"
-    );
+    document.getElementById("photoPanel");
 
   const photoPreview =
-    document.getElementById(
-      "photoPreview"
-    );
+    document.getElementById("photoPreview");
 
   const status =
-    document.getElementById(
-      "status"
-    );
+    document.getElementById("status");
 
   const welcome =
-    document.getElementById(
-      "welcome"
-    );
+    document.getElementById("welcome");
 
   const canvas =
-    document.getElementById(
-      "canvas"
-    );
+    document.getElementById("canvas");
 
 
   // ==========================================================
@@ -591,13 +568,12 @@
   // ==========================================================
 
   function setStatus(text) {
-    status.textContent =
-      text || "";
+    status.textContent = text || "";
   }
 
 
   // ==========================================================
-  // ADD CHAT MESSAGE
+  // ADD MESSAGE
   // ==========================================================
 
   function addMessage(
@@ -611,9 +587,7 @@
     }
 
     const div =
-      document.createElement(
-        "div"
-      );
+      document.createElement("div");
 
     div.className =
       "message " +
@@ -624,15 +598,13 @@
       );
 
     div.textContent =
-      content;
+      content || "";
 
 
     if (imageUrl) {
 
       const image =
-        document.createElement(
-          "img"
-        );
+        document.createElement("img");
 
       image.className =
         "photo-message";
@@ -643,15 +615,11 @@
       image.alt =
         "अपलोड की गई फोटो";
 
-      div.appendChild(
-        image
-      );
+      div.appendChild(image);
     }
 
 
-    chat.appendChild(
-      div
-    );
+    chat.appendChild(div);
 
     chat.scrollTop =
       chat.scrollHeight;
@@ -667,18 +635,30 @@
     customText = null
   ) {
 
+    // --------------------------------------------------------
+    // सबसे पहले सवाल सुरक्षित करो
+    // --------------------------------------------------------
+
     const text =
       customText !== null
-        ? String(
-            customText
-          ).trim()
+        ? String(customText).trim()
         : input.value.trim();
 
 
+    // खाली सवाल Worker को कभी नहीं भेजना
     if (!text) {
+
+      setStatus(
+        "कृपया पहले अपना सवाल लिखें।"
+      );
+
       return;
     }
 
+
+    // --------------------------------------------------------
+    // USER MESSAGE
+    // --------------------------------------------------------
 
     addMessage(
       "user",
@@ -692,48 +672,62 @@
     });
 
 
+    // --------------------------------------------------------
+    // अब input खाली करो
+    // सवाल पहले ही text variable में सुरक्षित है
+    // --------------------------------------------------------
+
     input.value = "";
 
 
     setStatus(
-      "सारथी जवाब तैयार कर रहा है..."
+      useSearch
+        ? "🌐 Internet Search से जानकारी खोजी जा रही है..."
+        : "सारथी जवाब तैयार कर रहा है..."
     );
 
 
-    sendButton.disabled =
-      true;
+    sendButton.disabled = true;
 
-    searchButton.disabled =
-      true;
+    searchButton.disabled = true;
 
 
     try {
 
+      // ------------------------------------------------------
+      // IMPORTANT:
+      // Worker को message + history भेजना है
+      // ------------------------------------------------------
+
       const response =
         await fetch(
-          "/api/chat",
+          API_BASE + "/api/chat",
           {
-            method:
-              "POST",
+            method: "POST",
 
             headers: {
               "Content-Type":
                 "application/json"
             },
 
-            body:
-              JSON.stringify({
-                messages:
-                  messages,
+            body: JSON.stringify({
 
-                webSearch:
-                  useSearch
-              })
+              // वर्तमान सवाल
+              message: text,
+
+              // पिछली बातचीत
+              history: messages,
+
+              // Search ON/OFF
+              webSearch: Boolean(useSearch)
+
+            })
           }
         );
 
 
-      let data;
+      let data = null;
+
 
       try {
 
@@ -748,18 +742,27 @@
       }
 
 
+      // ------------------------------------------------------
+      // SERVER ERROR
+      // ------------------------------------------------------
+
       if (!response.ok) {
 
         throw new Error(
-          data.detail ||
-          data.error ||
+          data?.answer ||
+          data?.error ||
+          data?.detail ||
           "जवाब नहीं मिल पाया।"
         );
       }
 
 
+      // ------------------------------------------------------
+      // Worker का सही field: answer
+      // ------------------------------------------------------
+
       const reply =
-        data.reply ||
+        data?.answer ||
         "कोई जवाब नहीं मिला।";
 
 
@@ -774,33 +777,39 @@
 
 
       messages.push({
-        role:
-          "assistant",
-
-        content:
-          reply
+        role: "assistant",
+        content: reply
       });
 
 
+      // ------------------------------------------------------
+      // SELF CHECK
+      // Worker selfChecked भेजता है
+      // ------------------------------------------------------
+
       if (
-        data.selfCorrected === true
+        data?.selfChecked === true
       ) {
 
         setStatus(
-          "✓ Self-check करके जवाब सुधारा गया"
+          useSearch
+            ? "✓ Search करके और Self-check करके जवाब दिया गया"
+            : "✓ Self-check करके जवाब सुधारा गया"
         );
 
       } else {
 
-        setStatus(
-          ""
-        );
+        setStatus("");
       }
 
 
-    } catch (
-      error
-    ) {
+    } catch (error) {
+
+      console.error(
+        "Chat error:",
+        error
+      );
+
 
       addMessage(
         "assistant",
@@ -811,18 +820,16 @@
       setStatus(
         "त्रुटि: " +
         (
-          error.message ||
+          error?.message ||
           "Unknown error"
         )
       );
 
     } finally {
 
-      sendButton.disabled =
-        false;
+      sendButton.disabled = false;
 
-      searchButton.disabled =
-        false;
+      searchButton.disabled = false;
 
       input.focus();
     }
@@ -836,7 +843,12 @@
   sendButton.addEventListener(
     "click",
     () => {
-      sendMessage(false);
+
+      // Search ON है तो true जाएगा
+      sendMessage(
+        searchMode
+      );
+
     }
   );
 
@@ -859,15 +871,13 @@
       );
 
 
-      if (
-        searchMode
-      ) {
+      if (searchMode) {
 
         searchButton.textContent =
           "🌐 सर्च ON";
 
         setStatus(
-          "Internet Search चालू है"
+          "✓ Internet Search चालू है"
         );
 
       } else {
@@ -885,7 +895,7 @@
 
 
   // ==========================================================
-  // ENTER
+  // ENTER KEY
   // ==========================================================
 
   input.addEventListener(
@@ -893,8 +903,7 @@
     (event) => {
 
       if (
-        event.key ===
-        "Enter"
+        event.key === "Enter"
       ) {
 
         event.preventDefault();
@@ -909,7 +918,7 @@
 
 
   // ==========================================================
-  // QUIZ / QUESTION MODE
+  // QUIZ
   // ==========================================================
 
   quizButton.addEventListener(
@@ -918,7 +927,6 @@
 
       sendMessage(
         false,
-
         "मुझसे पढ़ाई का एक सवाल पूछो। एक समय में केवल एक सवाल पूछना और मेरे उत्तर का इंतजार करना।"
       );
 
@@ -930,15 +938,10 @@
   // TEXT TO SPEECH
   // ==========================================================
 
-  function speakText(
-    text
-  ) {
+  function speakText(text) {
 
     if (
-      !(
-        "speechSynthesis"
-        in window
-      )
+      !("speechSynthesis" in window)
     ) {
 
       setStatus(
@@ -974,10 +977,8 @@
     utterance.lang =
       "hi-IN";
 
-
     utterance.rate =
       0.95;
-
 
     utterance.pitch =
       1;
@@ -996,10 +997,7 @@
     utterance.onend =
       () => {
 
-        setStatus(
-          ""
-        );
-
+        setStatus("");
       };
 
 
@@ -1044,9 +1042,7 @@
     window.webkitSpeechRecognition;
 
 
-  if (
-    SpeechRecognition
-  ) {
+  if (SpeechRecognition) {
 
     recognition =
       new SpeechRecognition();
@@ -1055,14 +1051,11 @@
     recognition.lang =
       "hi-IN";
 
-
     recognition.interimResults =
       false;
 
-
     recognition.maxAlternatives =
       1;
-
 
     recognition.continuous =
       false;
@@ -1094,9 +1087,7 @@
         micButton.textContent =
           "🎤 बोलें";
 
-        setStatus(
-          ""
-        );
+        setStatus("");
       };
 
 
@@ -1126,9 +1117,7 @@
             .trim();
 
 
-        if (
-          text
-        ) {
+        if (text) {
 
           input.value =
             text;
@@ -1159,9 +1148,7 @@
     "click",
     () => {
 
-      if (
-        !recognition
-      ) {
+      if (!recognition) {
 
         setStatus(
           "इस browser में voice input उपलब्ध नहीं है"
@@ -1177,8 +1164,9 @@
 
       } catch {
 
-        // Already running.
+        // Already running
       }
+
     }
   );
 
@@ -1187,9 +1175,7 @@
   // COMPRESS PHOTO
   // ==========================================================
 
-  function compressImage(
-    file
-  ) {
+  function compressImage(file) {
 
     return new Promise(
       (
@@ -1310,9 +1296,7 @@
 
 
       if (
-        !file.type.startsWith(
-          "image/"
-        )
+        !file.type.startsWith("image/")
       ) {
 
         setStatus(
@@ -1336,14 +1320,11 @@
           );
 
 
-        rotation =
-          0;
+        rotation = 0;
 
-        grayscale =
-          false;
+        grayscale = false;
 
-        brightness =
-          100;
+        brightness = 100;
 
 
         photoPreview.src =
@@ -1368,9 +1349,12 @@
         );
 
 
-      } catch (
-        error
-      ) {
+      } catch (error) {
+
+        console.error(
+          "Photo error:",
+          error
+        );
 
         setStatus(
           "फोटो तैयार नहीं हो सकी"
@@ -1381,6 +1365,7 @@
         photoInput.value =
           "";
       }
+
     }
   );
 
@@ -1394,9 +1379,7 @@
     question
   ) {
 
-    if (
-      !imageData
-    ) {
+    if (!imageData) {
 
       setStatus(
         "पहले फोटो चुनें"
@@ -1415,46 +1398,58 @@
 
       const response =
         await fetch(
-          "/api/vision",
+          API_BASE + "/api/vision",
           {
-            method:
-              "POST",
+            method: "POST",
 
             headers: {
               "Content-Type":
                 "application/json"
             },
 
-            body:
-              JSON.stringify({
-                imageData:
-                  imageData,
+            // Worker को image चाहिए
+            body: JSON.stringify({
 
-                question:
-                  question
-              })
+              image:
+                imageData,
+
+              question:
+                question
+
+            })
           }
         );
 
 
-      const data =
-        await response.json();
+      let data;
 
+      try {
 
-      if (
-        !response.ok
-      ) {
+        data =
+          await response.json();
+
+      } catch {
 
         throw new Error(
-          data.detail ||
-          data.error ||
+          "फोटो server response पढ़ा नहीं जा सका।"
+        );
+      }
+
+
+      if (!response.ok) {
+
+        throw new Error(
+          data?.answer ||
+          data?.error ||
+          data?.detail ||
           "फोटो समझने में समस्या हुई।"
         );
       }
 
 
+      // Worker का सही field = answer
       const reply =
-        data.reply ||
+        data?.answer ||
         "फोटो से कोई जवाब नहीं मिला।";
 
 
@@ -1473,9 +1468,13 @@
       );
 
 
-    } catch (
-      error
-    ) {
+    } catch (error) {
+
+      console.error(
+        "Vision error:",
+        error
+      );
+
 
       addMessage(
         "assistant",
@@ -1484,7 +1483,11 @@
 
 
       setStatus(
-        "फोटो त्रुटि"
+        "फोटो त्रुटि: " +
+        (
+          error?.message ||
+          "Unknown error"
+        )
       );
     }
   }
@@ -1496,9 +1499,7 @@
 
   function redrawPhoto() {
 
-    if (
-      !currentPhoto
-    ) {
+    if (!currentPhoto) {
       return;
     }
 
@@ -1511,9 +1512,7 @@
       () => {
 
         const swap =
-          rotation %
-          180 !==
-          0;
+          rotation % 180 !== 0;
 
 
         canvas.width =
@@ -1602,9 +1601,7 @@
   // ==========================================================
 
   document
-    .getElementById(
-      "rotateButton"
-    )
+    .getElementById("rotateButton")
     .addEventListener(
       "click",
       () => {
@@ -1613,8 +1610,7 @@
           (
             rotation +
             90
-          ) %
-          360;
+          ) % 360;
 
 
         redrawPhoto();
@@ -1632,9 +1628,7 @@
   // ==========================================================
 
   document
-    .getElementById(
-      "grayButton"
-    )
+    .getElementById("grayButton")
     .addEventListener(
       "click",
       () => {
@@ -1658,33 +1652,26 @@
   // ==========================================================
 
   document
-    .getElementById(
-      "brightnessButton"
-    )
+    .getElementById("brightnessButton")
     .addEventListener(
       "click",
       () => {
 
         if (
-          brightness ===
-          100
+          brightness === 100
         ) {
 
-          brightness =
-            125;
+          brightness = 125;
 
         } else if (
-          brightness ===
-          125
+          brightness === 125
         ) {
 
-          brightness =
-            80;
+          brightness = 80;
 
         } else {
 
-          brightness =
-            100;
+          brightness = 100;
         }
 
 
@@ -1703,16 +1690,12 @@
   // ==========================================================
 
   document
-    .getElementById(
-      "savePhotoButton"
-    )
+    .getElementById("savePhotoButton")
     .addEventListener(
       "click",
       () => {
 
-        if (
-          !currentPhoto
-        ) {
+        if (!currentPhoto) {
 
           setStatus(
             "पहले फोटो चुनें"
@@ -1723,9 +1706,7 @@
 
 
         const link =
-          document.createElement(
-            "a"
-          );
+          document.createElement("a");
 
 
         link.href =
@@ -1768,9 +1749,9 @@
 
         analyzePhoto(
           currentPhoto,
-
           "यह edited फोटो ध्यान से समझाओ। इसमें क्या दिखाई दे रहा है? अगर कोई प्रश्न, लिखाई, diagram या chart है तो उसे पढ़कर सरल हिंदी में समझाओ।"
         );
+
       }
     );
 
@@ -1779,9 +1760,7 @@
   // INITIAL STATUS
   // ==========================================================
 
-  setStatus(
-    ""
-  );
+  setStatus("");
 
 </script>
 
