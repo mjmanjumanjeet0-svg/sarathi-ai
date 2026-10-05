@@ -80,7 +80,7 @@
     }
 
     textarea {
-      min-height: 120px;
+      min-height: 130px;
       resize: vertical;
       font-family: Arial, sans-serif;
     }
@@ -137,7 +137,7 @@
       border-radius: 15px;
       padding: 18px;
       margin-top: 15px;
-      line-height: 1.6;
+      line-height: 1.7;
       white-space: pre-wrap;
       overflow-wrap: anywhere;
     }
@@ -152,6 +152,14 @@
       font-size: 14px;
       line-height: 1.7;
       margin-top: 5px;
+    }
+
+    .marks {
+      margin-top: 15px;
+    }
+
+    .marks select {
+      margin-top: 7px;
     }
   </style>
 </head>
@@ -205,6 +213,7 @@
       </select>
 
       <div class="category">🎓 Arts के विषय</div>
+
       <div class="subject-list">
         History, Political Science, Geography, Sociology,
         Psychology, Philosophy, Home Science, Economics,
@@ -212,9 +221,24 @@
       </div>
 
       <div class="category">🔬 Science के विषय</div>
+
       <div class="subject-list">
         Physics, Chemistry, Biology, Mathematics,
         Computer Science, Environmental Science
+      </div>
+
+      <div class="marks">
+
+        <label for="marks">📝 उत्तर कितने अंकों का चाहिए?</label>
+
+        <select id="marks">
+          <option value="auto">अपने आप तय करें</option>
+          <option value="2">2 अंक</option>
+          <option value="5">5 अंक</option>
+          <option value="10">10 अंक</option>
+          <option value="12">12 अंक</option>
+        </select>
+
       </div>
 
     </div>
@@ -225,10 +249,12 @@
 
       <textarea
         id="question"
-        placeholder="जैसे: प्रकाश संश्लेषण क्या है? या फ्रांसीसी क्रांति के कारण बताइए।"
+        placeholder="जैसे: प्रकाश संश्लेषण क्या है?"
       ></textarea>
 
-      <button id="askButton">🤖 सारथी से उत्तर पूछें</button>
+      <button id="askButton">
+        🤖 सारथी से उत्तर पूछें
+      </button>
 
       <div class="options">
 
@@ -256,6 +282,7 @@
 
   const subject = document.getElementById("subject");
   const question = document.getElementById("question");
+  const marks = document.getElementById("marks");
 
   const askButton = document.getElementById("askButton");
   const normalButton = document.getElementById("normalButton");
@@ -263,6 +290,7 @@
 
   const status = document.getElementById("status");
   const answer = document.getElementById("answer");
+
 
   async function askAI(useSearch) {
 
@@ -275,30 +303,114 @@
     }
 
     const selectedSubject = subject.value;
+    const selectedMarks = marks.value;
+
+    let marksInstruction = "";
+
+    if (selectedMarks === "2") {
+      marksInstruction =
+        "उत्तर 2 अंकों के परीक्षा प्रश्न के अनुसार छोटा और सीधा रखो।";
+    }
+
+    else if (selectedMarks === "5") {
+      marksInstruction =
+        "उत्तर 5 अंकों के परीक्षा प्रश्न के अनुसार मध्यम विस्तार में दो।";
+    }
+
+    else if (selectedMarks === "10") {
+      marksInstruction =
+        "उत्तर 10 अंकों के परीक्षा प्रश्न के अनुसार विस्तार से दो। परिचय, मुख्य बिंदु, उदाहरण और निष्कर्ष शामिल करो।";
+    }
+
+    else if (selectedMarks === "12") {
+      marksInstruction =
+        "उत्तर 12 अंकों के परीक्षा प्रश्न के अनुसार विस्तार से दो। परिचय, स्पष्ट शीर्षक, मुख्य बिंदु, आवश्यक उदाहरण और निष्कर्ष शामिल करो।";
+    }
+
+    else {
+      marksInstruction =
+        "प्रश्न के प्रकार और कठिनाई के अनुसार उत्तर की उचित लंबाई तय करो।";
+    }
+
 
     const studyPrompt = `
-तुम सारथी AI के Study Center में पढ़ाई के सहायक हो।
+तुम "सारथी AI Study Center" के विशेषज्ञ शिक्षक हो।
 
 विषय: ${selectedSubject}
 
-छात्र का प्रश्न:
+प्रश्न:
 ${text}
 
-निर्देश:
-- उत्तर आसान और साफ हिंदी में दो।
-- अगर प्रश्न अंग्रेजी में है तो भी जरूरत के अनुसार हिंदी में समझाओ।
-- परीक्षा के प्रश्न में उत्तर को परीक्षा-लिखने योग्य तरीके से दो।
-- जरूरत हो तो परिचय, मुख्य बिंदु और निष्कर्ष दो।
-- गणित या विज्ञान के सवाल में चरण-दर-चरण समझाओ।
-- तथ्य न गढ़ो।
-- अगर प्रश्न अस्पष्ट हो तो उपलब्ध जानकारी के आधार पर सबसे उपयोगी उत्तर दो।
+उत्तर की लंबाई:
+${marksInstruction}
+
+महत्वपूर्ण निर्देश:
+
+1. प्रश्न को ध्यान से समझकर सीधे उसका सही उत्तर दो।
+
+2. उत्तर आसान, साफ और विद्यार्थी के स्तर की हिंदी में दो।
+
+3. परीक्षा के लिए उपयोगी और लिखने योग्य भाषा का प्रयोग करो।
+
+4. 10 या 12 अंकों के प्रश्न में:
+   - परिचय
+   - मुख्य बिंदु/शीर्षक
+   - आवश्यक उदाहरण
+   - निष्कर्ष
+   शामिल करो।
+
+5. 2 अंकों के प्रश्न में बहुत लंबा उत्तर मत दो।
+
+6. 5 अंकों के प्रश्न में मध्यम विस्तार रखो।
+
+7. Mathematics के प्रश्न में पूरा समाधान चरण-दर-चरण दिखाओ।
+
+8. Physics, Chemistry और Biology में वैज्ञानिक रूप से सही जानकारी दो।
+
+9. History, Political Science, Geography, Sociology, Psychology,
+   Philosophy, Home Science, Economics और अन्य Arts विषयों में
+   परीक्षा-लिखने योग्य उत्तर दो।
+
+10. परिभाषा वाले प्रश्न में पहले स्पष्ट परिभाषा दो।
+
+11. तुलना वाले प्रश्न में आवश्यकता होने पर तालिका बनाओ।
+
+12. जहाँ आवश्यक हो वहाँ उदाहरण दो।
+
+13. कठिन अंग्रेजी शब्दों का अनावश्यक प्रयोग मत करो।
+    जरूरी अंग्रेजी शब्द हो तो उसका हिंदी अर्थ भी समझाओ।
+
+14. तथ्य, तारीख, सूत्र, नाम और आँकड़े खुद से मत गढ़ो।
+
+15. यदि किसी तथ्य की निश्चित जानकारी नहीं है तो उसे निश्चित तथ्य की तरह मत लिखो।
+
+16. सामान्य उत्तर में अनावश्यक वेबसाइट citations,
+    [1], [2], 【1†...】 जैसी citation formatting मत दिखाओ।
+
+17. Internet Search चालू होने पर वर्तमान या बदलने वाली जानकारी के लिए
+    Internet Search का उपयोग करो।
+
+18. Search से मिली जानकारी को समझकर सरल भाषा में प्रस्तुत करो।
+
+19. उत्तर को बेवजह बहुत लंबा मत करो।
+
+20. विद्यार्थी के प्रश्न का सीधा उत्तर पहले दो।
+
+21. उत्तर को साफ headings और numbered points में दो जहाँ यह उपयोगी हो।
+
+22. यदि प्रश्न में कोई गलती या गलत धारणा हो तो उसे विनम्रता से सही करो।
+
+उत्तर केवल विद्यार्थी के लिए उपयोगी, साफ और व्यवस्थित रूप में दो।
 `;
 
+
     setLoading(true);
+
 
     try {
 
       const response = await fetch("/api/chat", {
+
         method: "POST",
 
         headers: {
@@ -306,35 +418,55 @@ ${text}
         },
 
         body: JSON.stringify({
+
           messages: [
             {
               role: "user",
               content: studyPrompt
             }
           ],
+
           webSearch: useSearch
+
         })
+
       });
+
 
       const data = await response.json();
 
+
       if (!response.ok) {
-        throw new Error(data.error || "उत्तर नहीं मिला।");
+
+        throw new Error(
+          data.error || "उत्तर नहीं मिला।"
+        );
+
       }
 
+
       answer.textContent =
-        "📖 " + selectedSubject + "\n\n" +
+        "📖 " + selectedSubject +
+        (selectedMarks !== "auto"
+          ? " • " + selectedMarks + " अंक"
+          : "") +
+        "\n\n" +
         (data.reply || "कोई उत्तर नहीं मिला।");
+
 
       answer.style.display = "block";
 
       status.textContent = "";
 
+
       answer.scrollIntoView({
         behavior: "smooth"
       });
 
-    } catch (error) {
+
+    }
+
+    catch (error) {
 
       answer.textContent =
         "अभी उत्तर नहीं मिल पाया। कृपया फिर से कोशिश करें।";
@@ -343,12 +475,16 @@ ${text}
 
       status.textContent = "";
 
-    } finally {
+    }
+
+    finally {
 
       setLoading(false);
 
     }
+
   }
+
 
   function setLoading(loading) {
 
@@ -357,23 +493,31 @@ ${text}
     searchButton.disabled = loading;
 
     if (loading) {
-      status.textContent = "⏳ सारथी उत्तर तैयार कर रहा है...";
-    } else {
+      status.textContent =
+        "⏳ सारथी उत्तर तैयार कर रहा है...";
+    }
+
+    else {
       status.textContent = "";
     }
+
   }
+
 
   askButton.addEventListener("click", () => {
     askAI(false);
   });
 
+
   normalButton.addEventListener("click", () => {
     askAI(false);
   });
 
+
   searchButton.addEventListener("click", () => {
     askAI(true);
   });
+
 
   question.addEventListener("keydown", (event) => {
 
@@ -381,8 +525,11 @@ ${text}
       event.key === "Enter" &&
       !event.shiftKey
     ) {
+
       event.preventDefault();
+
       askAI(false);
+
     }
 
   });
