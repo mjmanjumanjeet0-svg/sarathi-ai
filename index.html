@@ -557,9 +557,14 @@
 
   let searchMode = false;
 
-  let recognition = null;
+  // नया Voice Input
+  let mediaRecorder = null;
 
-  let isListening = false;
+  let audioChunks = [];
+
+  let isRecording = false;
+
+  let microphoneStream = null;
 
   let isSpeaking = false;
 
@@ -940,7 +945,6 @@
       String(text);
 
 
-    // Code blocks
     clean =
       clean.replace(
         /```[\s\S]*?```/g,
@@ -948,7 +952,6 @@
       );
 
 
-    // Inline code
     clean =
       clean.replace(
         /`([^`]*)`/g,
@@ -956,7 +959,6 @@
       );
 
 
-    // Images
     clean =
       clean.replace(
         /!\[([^\]]*)\]\([^)]+\)/g,
@@ -964,7 +966,6 @@
       );
 
 
-    // Links
     clean =
       clean.replace(
         /\[([^\]]+)\]\([^)]+\)/g,
@@ -972,7 +973,6 @@
       );
 
 
-    // Headings
     clean =
       clean.replace(
         /^\s*#{1,6}\s*/gm,
@@ -980,7 +980,6 @@
       );
 
 
-    // Bullet points
     clean =
       clean.replace(
         /^\s*[-*+•▪◦]\s+/gm,
@@ -988,7 +987,6 @@
       );
 
 
-    // Numbered lists
     clean =
       clean.replace(
         /^\s*\d+[\.\)]\s+/gm,
@@ -996,7 +994,6 @@
       );
 
 
-    // Bold / italic / strike
     clean =
       clean.replace(
         /[*_~]+/g,
@@ -1004,7 +1001,6 @@
       );
 
 
-    // Quote
     clean =
       clean.replace(
         /^\s*>\s?/gm,
@@ -1012,7 +1008,6 @@
       );
 
 
-    // HTML tags
     clean =
       clean.replace(
         /<[^>]*>/g,
@@ -1020,7 +1015,6 @@
       );
 
 
-    // URLs
     clean =
       clean.replace(
         /https?:\/\/\S+/gi,
@@ -1028,7 +1022,6 @@
       );
 
 
-    // Email
     clean =
       clean.replace(
         /[\w.+-]+@[\w-]+\.[\w.-]+/gi,
@@ -1036,7 +1029,6 @@
       );
 
 
-    // Markdown separators
     clean =
       clean.replace(
         /^\s*[-*_]{3,}\s*$/gm,
@@ -1044,7 +1036,6 @@
       );
 
 
-    // Extra punctuation
     clean =
       clean.replace(
         /([.!?।])\1{2,}/g,
@@ -1052,7 +1043,6 @@
       );
 
 
-    // Extra spaces
     clean =
       clean.replace(
         /\s+/g,
@@ -1135,7 +1125,6 @@
       1;
 
 
-    // Hindi voice खोजें
     try {
 
       const voices =
@@ -1268,34 +1257,28 @@
 
 
   // ==========================================================
-  // ANDROID VOICE INPUT
+  // NEW VOICE INPUT
+  // MediaRecorder + Cloudflare Worker + Groq Whisper
   // ==========================================================
 
-  function getSpeechRecognition() {
+  async function startVoiceInput() {
 
-    return (
-      window.SpeechRecognition ||
-      window.webkitSpeechRecognition ||
-      null
-    );
+    if (isRecording) {
 
-  }
+      stopVoiceInput();
 
+      return;
 
-  // ==========================================================
-  // START VOICE INPUT
-  // ==========================================================
-
-  function startVoiceInput() {
-
-    const SpeechRecognitionAPI =
-      getSpeechRecognition();
+    }
 
 
-    if (!SpeechRecognitionAPI) {
+    if (
+      !navigator.mediaDevices ||
+      !navigator.mediaDevices.getUserMedia
+    ) {
 
       setStatus(
-        "🎤 Voice input उपलब्ध नहीं है। Android Chrome में HTTPS वेबसाइट खोलें।"
+        "🎤 इस browser में microphone उपलब्ध नहीं है।"
       );
 
       return;
@@ -1303,82 +1286,142 @@
     }
 
 
-    if (isListening) {
-      return;
-    }
+    try {
+
+      // Microphone permission
+      microphoneStream =
+        await navigator.mediaDevices.getUserMedia({
+          audio: true
+        });
 
 
-    recognition =
-      new SpeechRecognitionAPI();
+      audioChunks = [];
 
 
-    recognition.lang =
-      "hi-IN";
+      // Browser के हिसाब से audio format
+      let mimeType =
+        "audio/webm";
 
 
-    recognition.continuous =
-      false;
+      if (
+        MediaRecorder.isTypeSupported(
+          "audio/webm;codecs=opus"
+        )
+      ) {
+
+        mimeType =
+          "audio/webm;codecs=opus";
+
+      } else if (
+        MediaRecorder.isTypeSupported(
+          "audio/webm"
+        )
+      ) {
+
+        mimeType =
+          "audio/webm";
+
+      } else if (
+        MediaRecorder.isTypeSupported(
+          "audio/mp4"
+        )
+      ) {
+
+        mimeType =
+          "audio/mp4";
+
+      }
 
 
-    recognition.interimResults =
-      false;
-
-
-    recognition.maxAlternatives =
-      1;
-
-
-    // ========================================================
-    // VOICE START
-    // ========================================================
-
-    recognition.onstart =
-      () => {
-
-        isListening = true;
-
-        micButton.classList.add(
-          "active"
+      mediaRecorder =
+        new MediaRecorder(
+          microphoneStream,
+          {
+            mimeType: mimeType
+          }
         );
 
-        micButton.textContent =
-          "🎤 सुन रहा हूँ...";
 
-        setStatus(
-          "🎤 बोलिए..."
-        );
+      // Audio chunks
+      mediaRecorder.ondataavailable =
+        (event) => {
 
-      };
+          if (
+            event.data &&
+            event.data.size > 0
+          ) {
 
+            audioChunks.push(
+              event.data
+            );
 
-    // ========================================================
-    // VOICE RESULT
-    // ========================================================
+          }
 
-    recognition.onresult =
-      (event) => {
-
-        try {
-
-          const result =
-            event.results?.[0]?.[0];
+        };
 
 
-          const spokenText =
-            result?.transcript?.trim() ||
-            "";
+      // Recording शुरू
+      mediaRecorder.onstart =
+        () => {
+
+          isRecording = true;
 
 
-          console.log(
-            "आपने कहा:",
-            spokenText
+          micButton.textContent =
+            "⏹️ रोकें";
+
+
+          micButton.classList.add(
+            "active"
           );
 
 
-          if (!spokenText) {
+          setStatus(
+            "🎤 बोलिए... बोलना खत्म होने पर 'रोकें' दबाएँ।"
+          );
+
+        };
+
+
+      // Recording बंद
+      mediaRecorder.onstop =
+        async () => {
+
+          isRecording = false;
+
+
+          micButton.textContent =
+            "🎤 बोलें";
+
+
+          micButton.classList.remove(
+            "active"
+          );
+
+
+          // Microphone बंद
+          if (microphoneStream) {
+
+            microphoneStream
+              .getTracks()
+              .forEach(
+                track =>
+                  track.stop()
+              );
+
+
+            microphoneStream =
+              null;
+
+          }
+
+
+          if (
+            audioChunks.length === 0
+          ) {
 
             setStatus(
-              "कुछ सुनाई नहीं दिया। फिर से बोलें।"
+              "🎤 कोई आवाज़ रिकॉर्ड नहीं हुई।"
             );
 
             return;
@@ -1386,149 +1429,69 @@
           }
 
 
-          // बोले हुए सवाल को input में दिखाएँ
-          input.value =
-            spokenText;
+          // Blob बनाना
+          const audioBlob =
+            new Blob(
+              audioChunks,
+              {
+                type: mimeType
+              }
+            );
 
 
-          // ==================================================
-          // IMPORTANT:
-          // सवाल अपने-आप AI को भेजें
-          // ==================================================
-
-          sendMessage(
-            searchMode,
-            spokenText
+          await transcribeVoice(
+            audioBlob,
+            mimeType
           );
 
+        };
 
-        } catch (error) {
+
+      // Error
+      mediaRecorder.onerror =
+        (event) => {
 
           console.error(
-            "Voice result error:",
-            error
+            "MediaRecorder error:",
+            event
+          );
+
+
+          isRecording = false;
+
+
+          micButton.textContent =
+            "🎤 बोलें";
+
+
+          micButton.classList.remove(
+            "active"
           );
 
 
           setStatus(
-            "आवाज़ समझने में समस्या हुई।"
+            "🎤 आवाज़ रिकॉर्ड करने में समस्या हुई।"
           );
 
-        }
-
-      };
+        };
 
 
-    // ========================================================
-    // VOICE ERROR
-    // ========================================================
-
-    recognition.onerror =
-      (event) => {
-
-        console.error(
-          "Voice error:",
-          event.error
-        );
-
-
-        isListening = false;
-
-
-        micButton.classList.remove(
-          "active"
-        );
-
-
-        micButton.textContent =
-          "🎤 बोलें";
-
-
-        if (
-          event.error ===
-          "not-allowed"
-        ) {
-
-          setStatus(
-            "🎤 Microphone permission Allow करें।"
-          );
-
-        } else if (
-          event.error ===
-          "service-not-allowed"
-        ) {
-
-          setStatus(
-            "🎤 Voice service की अनुमति नहीं है। Chrome में खोलें।"
-          );
-
-        } else if (
-          event.error ===
-          "no-speech"
-        ) {
-
-          setStatus(
-            "🎤 कुछ सुनाई नहीं दिया। फिर से बोलें।"
-          );
-
-        } else if (
-          event.error ===
-          "network"
-        ) {
-
-          setStatus(
-            "🌐 Voice के लिए Internet connection चाहिए।"
-          );
-
-        } else {
-
-          setStatus(
-            "🎤 आवाज़ समझने में समस्या हुई।"
-          );
-
-        }
-
-      };
-
-
-    // ========================================================
-    // VOICE END
-    // ========================================================
-
-    recognition.onend =
-      () => {
-
-        isListening = false;
-
-
-        micButton.classList.remove(
-          "active"
-        );
-
-
-        micButton.textContent =
-          "🎤 बोलें";
-
-      };
-
-
-    // ========================================================
-    // START
-    // ========================================================
-
-    try {
-
-      recognition.start();
+      // Recording शुरू
+      mediaRecorder.start();
 
     } catch (error) {
 
       console.error(
-        "Voice start error:",
+        "Microphone error:",
         error
       );
 
 
-      isListening = false;
+      isRecording = false;
+
+
+      micButton.textContent =
+        "🎤 बोलें";
 
 
       micButton.classList.remove(
@@ -1536,12 +1499,261 @@
       );
 
 
-      micButton.textContent =
-        "🎤 बोलें";
+      if (
+        error.name ===
+        "NotAllowedError"
+      ) {
+
+        setStatus(
+          "🎤 Microphone की अनुमति दें।"
+        );
+
+      } else if (
+        error.name ===
+        "NotFoundError"
+      ) {
+
+        setStatus(
+          "🎤 Microphone नहीं मिला।"
+        );
+
+      } else {
+
+        setStatus(
+          "🎤 Microphone शुरू नहीं हो सका।"
+        );
+
+      }
+
+    }
+
+  }
+
+
+  // ==========================================================
+  // STOP VOICE INPUT
+  // ==========================================================
+
+  function stopVoiceInput() {
+
+    if (
+      mediaRecorder &&
+      mediaRecorder.state !==
+      "inactive"
+    ) {
+
+      mediaRecorder.stop();
+
+    }
+
+  }
+
+
+  // ==========================================================
+  // AUDIO EXTENSION
+  // ==========================================================
+
+  function getAudioFilename(
+    mimeType
+  ) {
+
+    if (
+      mimeType.includes(
+        "mp4"
+      )
+    ) {
+
+      return "voice.mp4";
+
+    }
+
+
+    if (
+      mimeType.includes(
+        "ogg"
+      )
+    ) {
+
+      return "voice.ogg";
+
+    }
+
+
+    return "voice.webm";
+
+  }
+
+
+  // ==========================================================
+  // VOICE → TEXT
+  // ==========================================================
+
+  async function transcribeVoice(
+    audioBlob,
+    mimeType
+  ) {
+
+    try {
+
+      setStatus(
+        "⏳ आपकी आवाज़ समझ रहा हूँ..."
+      );
+
+
+      const arrayBuffer =
+        await audioBlob.arrayBuffer();
+
+
+      const bytes =
+        new Uint8Array(
+          arrayBuffer
+        );
+
+
+      let binary = "";
+
+
+      const chunkSize =
+        0x8000;
+
+
+      for (
+        let i = 0;
+        i < bytes.length;
+        i += chunkSize
+      ) {
+
+        const chunk =
+          bytes.subarray(
+            i,
+            Math.min(
+              i + chunkSize,
+              bytes.length
+            )
+          );
+
+
+        binary +=
+          String.fromCharCode(
+            ...chunk
+          );
+
+      }
+
+
+      const base64 =
+        btoa(binary);
+
+
+      const response =
+        await fetch(
+          API_BASE +
+          "/api/transcribe",
+          {
+            method: "POST",
+
+            headers: {
+              "Content-Type":
+                "application/json"
+            },
+
+            body:
+              JSON.stringify({
+
+                audio:
+                  base64,
+
+                mimeType:
+                  mimeType
+
+              })
+
+          }
+        );
+
+
+      let data;
+
+
+      try {
+
+        data =
+          await response.json();
+
+      } catch {
+
+        throw new Error(
+          "Voice server response पढ़ा नहीं जा सका।"
+        );
+
+      }
+
+
+      if (!response.ok) {
+
+        throw new Error(
+          data?.error ||
+          data?.detail ||
+          "Voice transcription failed"
+        );
+
+      }
+
+
+      const spokenText =
+        String(
+          data?.text ||
+          ""
+        ).trim();
+
+
+      if (!spokenText) {
+
+        setStatus(
+          "🎤 आवाज़ समझ नहीं आई। फिर से बोलें।"
+        );
+
+        return;
+
+      }
+
+
+      console.log(
+        "आपने कहा:",
+        spokenText
+      );
+
+
+      // बोले हुए सवाल को input में दिखाएँ
+      input.value =
+        spokenText;
+
+
+      // ======================================================
+      // IMPORTANT:
+      // आवाज़ से मिला सवाल अपने-आप AI को भेजें
+      // ======================================================
+
+      sendMessage(
+        searchMode,
+        spokenText
+      );
+
+
+    } catch (error) {
+
+      console.error(
+        "Voice transcription error:",
+        error
+      );
 
 
       setStatus(
-        "🎤 माइक शुरू नहीं हो सका। फिर से दबाएँ।"
+        "❌ आवाज़ को समझने में समस्या हुई: " +
+        (
+          error?.message ||
+          "Unknown error"
+        )
       );
 
     }
@@ -1557,23 +1769,15 @@
     "click",
     () => {
 
-      if (
-        isListening &&
-        recognition
-      ) {
+      if (isRecording) {
 
-        try {
+        stopVoiceInput();
 
-          recognition.stop();
+      } else {
 
-        } catch {}
-
-        return;
+        startVoiceInput();
 
       }
-
-
-      startVoiceInput();
 
     }
   );
