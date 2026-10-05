@@ -557,7 +557,6 @@
 
   let searchMode = false;
 
-  // नया Voice Input
   let mediaRecorder = null;
 
   let audioChunks = [];
@@ -775,6 +774,28 @@
         role: "assistant",
         content: reply
       });
+
+
+      // ======================================================
+      // IMPORTANT VOICE FEATURE
+      // AI का जवाब अपने-आप बोलकर सुनाना
+      // ======================================================
+
+      if (
+        reply &&
+        String(reply).trim()
+      ) {
+
+        setTimeout(
+          () => {
+
+            speakText(reply);
+
+          },
+          200
+        );
+
+      }
 
 
       if (
@@ -1171,7 +1192,7 @@
         );
 
         setStatus(
-          "🔊 पढ़कर सुना रहा हूँ..."
+          "🔊 सारथी जवाब सुना रहा है..."
         );
 
       };
@@ -1195,7 +1216,13 @@
 
 
     utterance.onerror =
-      () => {
+      (event) => {
+
+        console.error(
+          "Speech error:",
+          event
+        );
+
 
         isSpeaking = false;
 
@@ -1207,10 +1234,25 @@
         );
 
         setStatus(
-          "आवाज़ चलाने में समस्या हुई।"
+          "आवाज़ चलाने में समस्या हुई। 🔊 बटन दबाकर फिर कोशिश करें।"
         );
 
       };
+
+
+    // Mobile browser में speech queue को resume करना
+    try {
+
+      speechSynthesis.resume();
+
+    } catch (error) {
+
+      console.log(
+        "Speech resume error:",
+        error
+      );
+
+    }
 
 
     speechSynthesis.speak(
@@ -1257,7 +1299,7 @@
 
 
   // ==========================================================
-  // NEW VOICE INPUT
+  // VOICE INPUT
   // MediaRecorder + Cloudflare Worker + Groq Whisper
   // ==========================================================
 
@@ -1288,7 +1330,6 @@
 
     try {
 
-      // Microphone permission
       microphoneStream =
         await navigator.mediaDevices.getUserMedia({
           audio: true
@@ -1298,7 +1339,6 @@
       audioChunks = [];
 
 
-      // Browser के हिसाब से audio format
       let mimeType =
         "audio/webm";
 
@@ -1342,7 +1382,6 @@
         );
 
 
-      // Audio chunks
       mediaRecorder.ondataavailable =
         (event) => {
 
@@ -1360,7 +1399,6 @@
         };
 
 
-      // Recording शुरू
       mediaRecorder.onstart =
         () => {
 
@@ -1383,7 +1421,6 @@
         };
 
 
-      // Recording बंद
       mediaRecorder.onstop =
         async () => {
 
@@ -1399,7 +1436,6 @@
           );
 
 
-          // Microphone बंद
           if (microphoneStream) {
 
             microphoneStream
@@ -1429,7 +1465,6 @@
           }
 
 
-          // Blob बनाना
           const audioBlob =
             new Blob(
               audioChunks,
@@ -1447,7 +1482,6 @@
         };
 
 
-      // Error
       mediaRecorder.onerror =
         (event) => {
 
@@ -1476,7 +1510,6 @@
         };
 
 
-      // Recording शुरू
       mediaRecorder.start();
 
     } catch (error) {
@@ -1724,17 +1757,15 @@
       );
 
 
-      // बोले हुए सवाल को input में दिखाएँ
       input.value =
         spokenText;
 
 
       // ======================================================
-      // IMPORTANT:
-      // आवाज़ से मिला सवाल अपने-आप AI को भेजें
+      // VOICE QUESTION → AUTOMATIC AI ANSWER
       // ======================================================
 
-      sendMessage(
+      await sendMessage(
         searchMode,
         spokenText
       );
@@ -2083,6 +2114,27 @@
         "assistant",
         reply
       );
+
+
+      // ======================================================
+      // PHOTO ANSWER भी अपने-आप बोलकर सुनाना
+      // ======================================================
+
+      if (
+        reply &&
+        String(reply).trim()
+      ) {
+
+        setTimeout(
+          () => {
+
+            speakText(reply);
+
+          },
+          200
+        );
+
+      }
 
 
       setStatus(
