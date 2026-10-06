@@ -183,17 +183,15 @@ async function handleChat(request, env) {
     // ========================================================
 
     if (useSearch) {
-      payload.tools = [
-        {
-          type: "browser_search"
-        }
-      ];
-
-      // Search ON = browser search अनिवार्य
-      payload.tool_choice = "required";
-
-      payload.citation_options = "enabled";
+  payload.tools = [
+    {
+      type: "browser_search"
     }
+  ];
+
+  // Search ON = Internet Search अनिवार्य
+  payload.tool_choice = "required";
+}
 
 
     let result = await callGroq(
