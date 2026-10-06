@@ -80,6 +80,25 @@
       border: 1px solid #ddd;
     }
 
+    .assistant-text {
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+    }
+
+    .speak-answer-btn {
+      margin-top: 9px;
+      background: #eee;
+      color: #222;
+      padding: 8px 12px;
+      border-radius: 9px;
+      font-size: 13px;
+    }
+
+    .speak-answer-btn.active {
+      background: #dcecff;
+      color: #1769e0;
+    }
+
     .welcome {
       text-align: center;
       margin: 40px 10px;
@@ -575,6 +594,8 @@
 
   let brightness = 100;
 
+  let currentAnswerButton = null;
+
 
   // ==========================================================
   // STATUS
@@ -584,6 +605,72 @@
 
     status.textContent =
       text || "";
+
+  }
+
+
+  // ==========================================================
+  // CLEAN AI TEXT FOR SCREEN
+  // ==========================================================
+
+  function cleanAIText(text) {
+
+    if (!text) {
+      return "";
+    }
+
+    let clean =
+      String(text);
+
+    clean =
+      clean.replace(
+        /```[\s\S]*?```/g,
+        ""
+      );
+
+    clean =
+      clean.replace(
+        /`([^`]*)`/g,
+        "$1"
+      );
+
+    clean =
+      clean.replace(
+        /\*\*/g,
+        ""
+      );
+
+    clean =
+      clean.replace(
+        /__/g,
+        ""
+      );
+
+    clean =
+      clean.replace(
+        /~~/g,
+        ""
+      );
+
+    clean =
+      clean.replace(
+        /^\s*#{1,6}\s*/gm,
+        ""
+      );
+
+    clean =
+      clean.replace(
+        /<[^>]*>/g,
+        ""
+      );
+
+    clean =
+      clean.replace(
+        /\n{3,}/g,
+        "\n\n"
+      );
+
+    return clean.trim();
 
   }
 
@@ -613,8 +700,64 @@
           : "assistant"
       );
 
-    div.textContent =
-      content || "";
+
+    if (role === "assistant") {
+
+      const answerText =
+        cleanAIText(content);
+
+      const textDiv =
+        document.createElement("div");
+
+      textDiv.className =
+        "assistant-text";
+
+      textDiv.textContent =
+        answerText;
+
+      div.appendChild(
+        textDiv
+      );
+
+
+      if (answerText) {
+
+        const button =
+          document.createElement("button");
+
+        button.type =
+          "button";
+
+        button.className =
+          "speak-answer-btn";
+
+        button.textContent =
+          "🔊 पढ़ें";
+
+        button.addEventListener(
+          "click",
+          () => {
+
+            toggleAnswerSpeech(
+              button,
+              answerText
+            );
+
+          }
+        );
+
+        div.appendChild(
+          button
+        );
+
+      }
+
+    } else {
+
+      div.textContent =
+        content || "";
+
+    }
 
 
     if (imageUrl) {
@@ -631,7 +774,9 @@
       image.alt =
         "अपलोड की गई फोटो";
 
-      div.appendChild(image);
+      div.appendChild(
+        image
+      );
 
     }
 
@@ -640,6 +785,258 @@
 
     chat.scrollTop =
       chat.scrollHeight;
+
+  }
+
+
+  // ==========================================================
+  // STOP CURRENT SPEECH
+  // ==========================================================
+
+  function stopCurrentSpeech() {
+
+    if (
+      "speechSynthesis" in window
+    ) {
+
+      speechSynthesis.cancel();
+
+    }
+
+    isSpeaking = false;
+
+
+    if (currentAnswerButton) {
+
+      currentAnswerButton.textContent =
+        "🔊 पढ़ें";
+
+      currentAnswerButton.classList.remove(
+        "active"
+      );
+
+      currentAnswerButton =
+        null;
+
+    }
+
+
+    speakButton.textContent =
+      "🔊 सुनें";
+
+    speakButton.classList.remove(
+      "active"
+    );
+
+  }
+
+
+  // ==========================================================
+  // SPEAK SELECTED ANSWER
+  // ==========================================================
+
+  function toggleAnswerSpeech(
+    button,
+    text
+  ) {
+
+    if (
+      !("speechSynthesis" in window)
+    ) {
+
+      setStatus(
+        "इस browser में आवाज़ की सुविधा उपलब्ध नहीं है।"
+      );
+
+      return;
+
+    }
+
+
+    if (
+      currentAnswerButton === button &&
+      isSpeaking
+    ) {
+
+      stopCurrentSpeech();
+
+      setStatus("");
+
+      return;
+
+    }
+
+
+    stopCurrentSpeech();
+
+
+    const cleanText =
+      cleanTextForSpeech(text);
+
+
+    if (!cleanText) {
+
+      setStatus(
+        "इस जवाब में पढ़ने योग्य टेक्स्ट नहीं है।"
+      );
+
+      return;
+
+    }
+
+
+    const utterance =
+      new SpeechSynthesisUtterance(
+        cleanText
+      );
+
+
+    utterance.lang =
+      "hi-IN";
+
+    utterance.rate =
+      0.90;
+
+    utterance.pitch =
+      1;
+
+    utterance.volume =
+      1;
+
+
+    try {
+
+      const voices =
+        speechSynthesis.getVoices();
+
+
+      const hindiVoice =
+        voices.find(
+          voice =>
+            voice.lang &&
+            voice.lang
+              .toLowerCase()
+              .startsWith("hi")
+        );
+
+
+      if (hindiVoice) {
+
+        utterance.voice =
+          hindiVoice;
+
+      }
+
+    } catch (error) {
+
+      console.log(
+        "Hindi voice selection error:",
+        error
+      );
+
+    }
+
+
+    currentAnswerButton =
+      button;
+
+
+    utterance.onstart =
+      () => {
+
+        isSpeaking = true;
+
+        button.textContent =
+          "⏹️ रोकें";
+
+        button.classList.add(
+          "active"
+        );
+
+        setStatus(
+          "🔊 सारथी जवाब पढ़ रहा है..."
+        );
+
+      };
+
+
+    utterance.onend =
+      () => {
+
+        if (
+          currentAnswerButton === button
+        ) {
+
+          button.textContent =
+            "🔊 पढ़ें";
+
+          button.classList.remove(
+            "active"
+          );
+
+          currentAnswerButton =
+            null;
+
+        }
+
+        isSpeaking = false;
+
+        setStatus("");
+
+      };
+
+
+    utterance.onerror =
+      (event) => {
+
+        console.error(
+          "Speech error:",
+          event
+        );
+
+
+        if (
+          currentAnswerButton === button
+        ) {
+
+          button.textContent =
+            "🔊 पढ़ें";
+
+          button.classList.remove(
+            "active"
+          );
+
+          currentAnswerButton =
+            null;
+
+        }
+
+        isSpeaking = false;
+
+        setStatus(
+          "आवाज़ चलाने में समस्या हुई। फिर से 🔊 पढ़ें दबाएँ।"
+        );
+
+      };
+
+
+    try {
+
+      speechSynthesis.resume();
+
+    } catch (error) {
+
+      console.log(
+        "Speech resume error:",
+        error
+      );
+
+    }
+
+
+    speechSynthesis.speak(
+      utterance
+    );
 
   }
 
@@ -777,25 +1174,10 @@
 
 
       // ======================================================
-      // IMPORTANT VOICE FEATURE
-      // AI का जवाब अपने-आप बोलकर सुनाना
+      // IMPORTANT:
+      // AI जवाब अब अपने-आप नहीं बोलेगा।
+      // केवल 🔊 पढ़ें दबाने पर आवाज चलेगी।
       // ======================================================
-
-      if (
-        reply &&
-        String(reply).trim()
-      ) {
-
-        setTimeout(
-          () => {
-
-            speakText(reply);
-
-          },
-          200
-        );
-
-      }
 
 
       if (
@@ -1077,7 +1459,46 @@
 
 
   // ==========================================================
-  // TEXT TO SPEECH
+  // TOP "🔊 सुनें" BUTTON
+  // आखिरी AI जवाब पढ़ेगा
+  // ==========================================================
+
+  speakButton.addEventListener(
+    "click",
+    () => {
+
+      if (isSpeaking) {
+
+        stopCurrentSpeech();
+
+        setStatus("");
+
+        return;
+
+      }
+
+
+      if (!lastAnswer) {
+
+        setStatus(
+          "पहले AI का जवाब आने दें।"
+        );
+
+        return;
+
+      }
+
+
+      speakText(
+        lastAnswer
+      );
+
+    }
+  );
+
+
+  // ==========================================================
+  // TOP SPEAK FUNCTION
   // ==========================================================
 
   function speakText(text) {
@@ -1095,21 +1516,7 @@
     }
 
 
-    if (
-      !text ||
-      !String(text).trim()
-    ) {
-
-      setStatus(
-        "पहले AI का जवाब आने दें।"
-      );
-
-      return;
-
-    }
-
-
-    speechSynthesis.cancel();
+    stopCurrentSpeech();
 
 
     const cleanText =
@@ -1223,7 +1630,6 @@
           event
         );
 
-
         isSpeaking = false;
 
         speakButton.textContent =
@@ -1234,13 +1640,12 @@
         );
 
         setStatus(
-          "आवाज़ चलाने में समस्या हुई। 🔊 बटन दबाकर फिर कोशिश करें।"
+          "आवाज़ चलाने में समस्या हुई। फिर से 🔊 सुनें दबाएँ।"
         );
 
       };
 
 
-    // Mobile browser में speech queue को resume करना
     try {
 
       speechSynthesis.resume();
@@ -1263,44 +1668,7 @@
 
 
   // ==========================================================
-  // SPEAK BUTTON
-  // ==========================================================
-
-  speakButton.addEventListener(
-    "click",
-    () => {
-
-      if (isSpeaking) {
-
-        speechSynthesis.cancel();
-
-        isSpeaking = false;
-
-        speakButton.textContent =
-          "🔊 सुनें";
-
-        speakButton.classList.remove(
-          "active"
-        );
-
-        setStatus("");
-
-        return;
-
-      }
-
-
-      speakText(
-        lastAnswer
-      );
-
-    }
-  );
-
-
-  // ==========================================================
   // VOICE INPUT
-  // MediaRecorder + Cloudflare Worker + Groq Whisper
   // ==========================================================
 
   async function startVoiceInput() {
@@ -1583,7 +1951,7 @@
 
 
   // ==========================================================
-  // AUDIO EXTENSION
+  // VOICE FILE NAME
   // ==========================================================
 
   function getAudioFilename(
@@ -1761,9 +2129,8 @@
         spokenText;
 
 
-      // ======================================================
-      // VOICE QUESTION → AUTOMATIC AI ANSWER
-      // ======================================================
+      // आवाज़ से सवाल → अपने-आप AI जवाब
+      // लेकिन AI जवाब अपने-आप नहीं बोलेगा।
 
       await sendMessage(
         searchMode,
@@ -2116,25 +2483,8 @@
       );
 
 
-      // ======================================================
-      // PHOTO ANSWER भी अपने-आप बोलकर सुनाना
-      // ======================================================
-
-      if (
-        reply &&
-        String(reply).trim()
-      ) {
-
-        setTimeout(
-          () => {
-
-            speakText(reply);
-
-          },
-          200
-        );
-
-      }
+      // फोटो का जवाब भी अपने-आप नहीं बोलेगा।
+      // 🔊 पढ़ें बटन दबाने पर ही आवाज चलेगी।
 
 
       setStatus(
