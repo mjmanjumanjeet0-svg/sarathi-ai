@@ -18,9 +18,19 @@ async function handleChat(request, env) {
       : [];
 
     const message = String(body?.message ?? "").trim();
-    const useSearch = body?.webSearch === true;
+const useSearch = body?.webSearch === true;
 
-    // ========================================================
+if (!message) {
+  return json(
+    {
+      error: "कृपया पहले अपना सवाल लिखें।",
+      code: "EMPTY_QUESTION",
+    },
+    400
+  );
+}
+
+// ========================================================
 // LOCAL DATE ANSWER — 0 GROQ TOKENS
 // ========================================================
 
