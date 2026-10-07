@@ -310,19 +310,37 @@ async function handleChat(request, env) {
     // SELF CHECK
     // ========================================================
 
-    const checked = await selfCheckAndCorrect(
-      messages,
-      result.reply,
-      env.GROQ_API_KEY,
-      useSearch
-    );
+    // ========================================================
+// SELF CHECK
+// ========================================================
 
-    return json({
-      answer: checked.reply,
-      selfChecked: checked.selfChecked,
-      selfCorrected: checked.selfCorrected,
-      searchUsed: useSearch,
-    });
+// Search से मिला उत्तर सीधे उपयोग करें।
+// इससे self-check सही current/search उत्तर को
+// "real-time data उपलब्ध नहीं है" जैसे जवाब में नहीं बदलेगा।
+
+if (useSearch) {
+  return json({
+    answer: result.reply,
+    selfChecked: false,
+    selfCorrected: false,
+    searchUsed: true,
+  });
+}
+
+// सामान्य चैट में self-check जारी रहेगा।
+const checked = await selfCheckAndCorrect(
+  messages,
+  result.reply,
+  env.GROQ_API_KEY,
+  false
+);
+
+return json({
+  answer: checked.reply,
+  selfChecked: checked.selfChecked,
+  selfCorrected: checked.selfCorrected,
+  searchUsed: false,
+});
 
   } catch (error) {
     return json(
