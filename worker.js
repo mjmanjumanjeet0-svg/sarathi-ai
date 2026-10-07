@@ -254,41 +254,40 @@ async function handleChat(request, env) {
 // ========================================================
 // BROWSER SEARCH
 // ========================================================
+    
+    if (useSearch) {
+  const todayIndia = new Intl.DateTimeFormat("en-IN", {
+    timeZone: "Asia/Kolkata",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date());
 
-if (useSearch) {
+  const searchUserMessage = `
+${message}
+
+महत्वपूर्ण Search निर्देश:
+आज भारत में तारीख ${todayIndia} है।
+ऊपर दिए सवाल के लिए Browser Search का उपयोग करो।
+अगर सवाल मौसम, कीमत, समाचार, ट्रेन या किसी वर्तमान जानकारी का है,
+तो ${todayIndia} के लिए नवीनतम उपलब्ध जानकारी खोजो।
+बहुत पुराने परिणाम को आज की जानकारी मत मानो।
+Search result की तारीख देखकर ही उत्तर दो।
+`;
+
+  payload.messages[payload.messages.length - 1] = {
+    role: "user",
+    content: searchUserMessage,
+  };
+
   payload.tools = [
     {
       type: "browser_search",
     },
   ];
 
-  // Search ON होने पर Browser Search अनिवार्य
   payload.tool_choice = "required";
-
-  // Current information के लिए तारीख का सख्त निर्देश
-  const currentDateInstruction = `
-बहुत महत्वपूर्ण:
-आज भारत में तारीख ${new Intl.DateTimeFormat("en-CA", {
-    timeZone: "Asia/Kolkata",
-  }).format(new Date())} है।
-
-यदि User "आज", "अभी", "latest", "current" या "ताजा" जानकारी पूछ रहा है,
-तो Browser Search से मिले स्रोत की वास्तविक तारीख जरूर जाँचो।
-
-आज के मौसम के प्रश्न में:
-- आज की तारीख वाले मौसम डेटा को प्राथमिकता दो।
-- नवीनतम उपलब्ध forecast को प्राथमिकता दो।
-- बहुत पुराने मौसम पेज को आज का मौसम मत बताओ।
-- Search result की तारीख पुरानी हो तो उसकी वास्तविक तारीख बताओ।
-- भविष्य की तारीख वाले स्रोत को आज का प्रमाण मत मानो।
-- यदि आज के मौसम का विश्वसनीय डेटा नहीं मिलता,
-  तो साफ बताओ कि आज का ताजा डेटा नहीं मिला।
-- कभी भी पुराने डेटा को वर्तमान मौसम बनाकर मत बताओ।
-`;
-
-  payload.messages[0].content += currentDateInstruction;
 }
-
   
     // ========================================================
     // FIRST REQUEST
