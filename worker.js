@@ -335,6 +335,30 @@ const checked = await selfCheckAndCorrect(
   false
 );
 
+// ========================================================
+// SELF CHECK
+// ========================================================
+
+// Search से मिला उत्तर सीधे उपयोग करें।
+// Self-check को Search वाले जवाब को बदलने की अनुमति नहीं है।
+
+if (useSearch) {
+  return json({
+    answer: result.reply,
+    selfChecked: false,
+    selfCorrected: false,
+    searchUsed: true,
+  });
+}
+
+// सामान्य चैट में Self-check जारी रहेगा।
+const checked = await selfCheckAndCorrect(
+  messages,
+  result.reply,
+  env.GROQ_API_KEY,
+  false
+);
+
 return json({
   answer: checked.reply,
   selfChecked: checked.selfChecked,
