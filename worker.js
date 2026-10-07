@@ -20,15 +20,32 @@ async function handleChat(request, env) {
     const message = String(body?.message ?? "").trim();
     const useSearch = body?.webSearch === true;
 
-    if (!message) {
-      return json(
-        {
-          error: "कृपया पहले अपना सवाल लिखें।",
-          code: "EMPTY_QUESTION",
-        },
-        400
-      );
-    }
+    // ========================================================
+// LOCAL DATE ANSWER — 0 GROQ TOKENS
+// ========================================================
+
+const asksDateOnly =
+  /^(आज|आज की तारीख|आज का दिन|today|today's date|current date)\s*[?؟.!]*$/i.test(
+    message
+  );
+
+if (asksDateOnly && !useSearch) {
+  const localDate = new Intl.DateTimeFormat("hi-IN", {
+    timeZone: "Asia/Kolkata",
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  }).format(new Date());
+
+  return json({
+    answer: `आज की तारीख है ${localDate}।`,
+    selfChecked: false,
+    selfCorrected: false,
+    searchUsed: false,
+    localAnswer: true,
+  });
+}
 
     // ========================================================
     // INDIA DATE + TIME
