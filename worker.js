@@ -252,7 +252,7 @@ async function handleChat(request, env) {
       ];
 
       // Search ON होने पर Browser Search अनिवार्य
-      payload.tool_choice = "required";
+      payload.tool_choice = "auto";
     }
 
     // ========================================================
