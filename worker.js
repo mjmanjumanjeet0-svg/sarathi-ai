@@ -244,16 +244,21 @@ async function handleChat(request, env) {
     // BROWSER SEARCH
     // ========================================================
 
-    if (useSearch) {
-      payload.tools = [
-        {
-          type: "browser_search",
-        },
-      ];
 
-      // Search ON होने पर Browser Search अनिवार्य
-      payload.tool_choice = "auto";
-    }
+    // ========================================================
+// BROWSER SEARCH
+// ========================================================
+
+if (useSearch) {
+  payload.tools = [
+    {
+      type: "browser_search",
+    },
+  ];
+
+  // Search ON होने पर Browser Search अनिवार्य
+  payload.tool_choice = "required";
+}
 
     // ========================================================
     // FIRST REQUEST
