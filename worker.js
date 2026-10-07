@@ -18,7 +18,6 @@ async function handleChat(request, env) {
       : [];
 
     const message = String(body?.message ?? "").trim();
-
     const useSearch = body?.webSearch === true;
 
     if (!message) {
@@ -32,28 +31,29 @@ async function handleChat(request, env) {
     }
 
     // ========================================================
-    // INDIA CURRENT DATE + TIME
+    // INDIA DATE + TIME
     // ========================================================
+
+    const now = new Date();
 
     const indiaNow = new Intl.DateTimeFormat("hi-IN", {
       timeZone: "Asia/Kolkata",
       dateStyle: "full",
       timeStyle: "short",
-    }).format(new Date());
+    }).format(now);
 
     const todayISO = new Intl.DateTimeFormat("en-CA", {
       timeZone: "Asia/Kolkata",
-    }).format(new Date());
+    }).format(now);
 
     // ========================================================
-    // SHORT HISTORY
+    // TOKEN SAVING HISTORY
     // ========================================================
-    // पहले 8 messages भेजे जा रहे थे।
-    // अब केवल आखिरी 4 messages भेजेंगे।
-    // इससे Groq token usage कम होगा।
+    // पहले 8 messages → अब केवल आखिरी 3
+    // हर message केवल 1200 characters
 
     const shortHistory = history
-      .slice(-4)
+      .slice(-3)
       .map((m) => ({
         role:
           m?.role === "assistant"
@@ -62,13 +62,12 @@ async function handleChat(request, env) {
 
         content: String(m?.content ?? "")
           .trim()
-          .slice(0, 1600),
+          .slice(0, 1200),
       }))
       .filter((m) => m.content);
 
-    // ========================================================
-    // CURRENT USER MESSAGE
-    // ========================================================
+    // Current question history में पहले से नहीं है
+    // तो उसे जोड़ दें।
 
     if (
       !(
@@ -81,58 +80,62 @@ async function handleChat(request, env) {
     ) {
       shortHistory.push({
         role: "user",
-        content: message.slice(0, 4000),
+        content: message.slice(0, 3500),
       });
     }
 
     // ========================================================
-    // SYSTEM MESSAGE
+    // SYSTEM PROMPT
     // ========================================================
 
     const systemContent =
       SYSTEM_PROMPT +
       `
 
-भारत में अभी का समय:
+भारत में अभी:
 ${indiaNow}
 
 आज की मशीन तारीख:
 ${todayISO}
 
-बहुत महत्वपूर्ण:
+CURRENT INFORMATION RULE:
 
 यदि User "आज", "अभी", "ताजा", "ताज़ा",
 "latest", "current", "live", "today" या "now"
-पूछता है, तो Search result की वास्तविक तारीख
-जांचो।
+पूछता है, तो Search result की वास्तविक तारीख जांचो।
 
 पुराने Search result को आज का data मत बताओ।
 
-यदि Search result की तारीख उपलब्ध नहीं है और
-जानकारी current है, तो बिना प्रमाण वर्तमान
-आंकड़ा मत गढ़ो।
+भविष्य की तारीख वाले result को वर्तमान data
+का प्रमाण मत मानो।
 
-मौसम अलर्ट के लिए महत्वपूर्ण नियम:
+यदि current जानकारी की तारीख उपलब्ध नहीं है,
+तो कोई आंकड़ा मन से मत बनाओ।
 
-किसी जिले के लिए Yellow Alert, Orange Alert
-या Red Alert तभी बताओ जब Search source में
-उसी जिले का नाम स्पष्ट रूप से उसी alert के साथ
-दिया गया हो।
+WEATHER ALERT RULE:
 
-किसी दूसरे जिले के alert को User द्वारा पूछे गए
-जिले पर लागू मत करो।
+Yellow Alert, Orange Alert या Red Alert
+तभी बताओ जब Search source में उसी जिले का
+नाम स्पष्ट रूप से उसी alert के साथ दिया गया हो।
 
-यदि source में केवल बारिश, मेघगर्जन या वज्रपात
-की संभावना है लेकिन alert स्पष्ट नहीं है,
-तो Yellow/Orange/Red Alert मत लिखो।
+दूसरे जिले का alert User के जिले पर लागू मत करो।
 
-मौसम की जानकारी में:
-स्थान, तारीख, बारिश की संभावना और alert को
-अलग-अलग सत्यापित करो।
+केवल बारिश, मेघगर्जन या वज्रपात की संभावना को
+Yellow/Orange/Red Alert मत कहो।
+
+मौसम में स्थान, तारीख, बारिश की संभावना और
+alert को अलग-अलग जांचो।
+
+PRICE RULE:
+
+कीमत पूछे जाने पर price type स्पष्ट करो,
+जैसे MCX, spot, retail, 22K या 24K।
+
+SOURCE DATE और DATA DATE को अलग समझो।
 `;
 
     // ========================================================
-    // NORMAL CHAT PAYLOAD
+    // PAYLOAD
     // ========================================================
 
     const payload = {
@@ -146,8 +149,8 @@ ${todayISO}
         ...shortHistory,
       ],
 
-      // पहले 2048 था
-      max_completion_tokens: 1024,
+      // 1024 → 900
+      max_completion_tokens: 900,
 
       temperature: 0.2,
 
@@ -164,47 +167,57 @@ ${todayISO}
       const searchUserMessage = `
 ${message}
 
-==============================
-IMPORTANT SEARCH INSTRUCTIONS
-==============================
+आज भारत की तारीख: ${todayISO}
+वर्तमान समय: ${indiaNow}
 
-भारत में आज की तारीख: ${todayISO}
-भारत में वर्तमान समय: ${indiaNow}
+Browser Search का उपयोग करना अनिवार्य है।
 
-इस सवाल के लिए Browser Search का उपयोग करो।
+यदि सवाल current जानकारी से संबंधित है:
 
-यदि सवाल मौसम, बारिश, तापमान, सोने का भाव,
-कीमत, ट्रेन, समाचार, शेयर, खेल या किसी अन्य
-बदलने वाली/current जानकारी से संबंधित है:
+1. नवीनतम उपलब्ध source खोजो।
+2. source की वास्तविक तारीख जांचो।
+3. data की तारीख भी जांचो।
+4. पुराने data को आज का data मत बताओ।
+5. भविष्य के data को आज का data मत बताओ।
+6. आज का विश्वसनीय data न मिले तो साफ बताओ।
+7. कोई संख्या मन से मत बनाओ।
 
-1. नवीनतम उपलब्ध Search result खोजो।
-2. Search result की वास्तविक तारीख जांचो।
-3. पुराने result को आज का result मत मानो।
-4. भविष्य की तारीख वाले result को वर्तमान जानकारी
-   का प्रमाण मत मानो।
-5. Source की तारीख और data की तारीख अलग हो सकती हैं।
-6. यदि आज का विश्वसनीय data नहीं मिला तो साफ बताओ
-   कि आज का पक्का data नहीं मिला।
-7. कोई संख्या या तथ्य मन से मत बनाओ।
+यदि User ने शहर/जिला बताया है,
+तो उसी स्थान की जानकारी खोजो।
 
-यदि User ने शहर/स्थान बताया है तो उसी स्थान की
-जानकारी खोजो।
+User की exact location का अनुमान मत लगाओ।
 
-यदि User ने मौसम पूछा है और शहर/स्थान नहीं बताया है,
-तो स्थान पूछो। User की exact location का अनुमान मत लगाओ।
+मौसम में:
+स्थान + तारीख + बारिश + alert अलग-अलग जांचो।
 
-उत्तर सरल हिंदी में दो।
-जहाँ संभव हो source और उसकी तारीख बताओ।
+Alert तभी लिखो जब उसी जिले का नाम
+source में alert के साथ हो।
+
+कीमत में:
+MCX/spot/retail और 22K/24K जैसे
+price type को स्पष्ट करो।
+
+उत्तर छोटा और सरल हिंदी में दो।
 `;
 
       // ======================================================
-      // SEARCH में पुरानी history नहीं भेजेंगे
+      // SEARCH TOKEN SAVING
       // ======================================================
+      // Search में पुरानी history बिल्कुल नहीं भेजेंगे।
+      // इससे काफी input tokens बचेंगे।
 
       payload.messages = [
         {
           role: "system",
-          content: systemContent,
+          content:
+            SYSTEM_PROMPT +
+            `
+
+आज की तारीख: ${todayISO}
+
+Search में हमेशा source की तारीख जांचो।
+पुराने data को आज का data मत बताओ।
+`,
         },
         {
           role: "user",
@@ -220,12 +233,12 @@ IMPORTANT SEARCH INSTRUCTIONS
 
       payload.tool_choice = "required";
 
-      // Search answer को थोड़ा छोटा रखेंगे
-      payload.max_completion_tokens = 1200;
+      // Search answer छोटा
+      payload.max_completion_tokens = 1000;
     }
 
     // ========================================================
-    // FIRST GROQ REQUEST
+    // GROQ REQUEST
     // ========================================================
 
     let result = await callGroq(
@@ -235,10 +248,8 @@ IMPORTANT SEARCH INSTRUCTIONS
     );
 
     // ========================================================
-    // TPD LIMIT CHECK
+    // DAILY TPD CHECK
     // ========================================================
-    // यदि daily token limit पूरी हो गई है,
-    // तो दोबारा वही request भेजने का फायदा नहीं है।
 
     const resultErrorText = String(
       result?.error ?? ""
@@ -249,18 +260,17 @@ IMPORTANT SEARCH INSTRUCTIONS
         resultErrorText
       );
 
+    // Daily limit पर RETRY बिल्कुल नहीं।
     if (isDailyTPDLimit) {
       return json(
         {
           answer:
             "आज Groq की दैनिक token सीमा पूरी हो गई है। " +
-            "इसलिए अभी नई AI request नहीं भेजी गई। " +
-            "कुछ समय बाद फिर कोशिश करें।",
+            "अभी नई AI request भेजने से फायदा नहीं होगा। " +
+            "Token limit reset होने के बाद फिर कोशिश करें।",
 
           selfChecked: false,
-
           selfCorrected: false,
-
           searchUsed: useSearch,
 
           code: "GROQ_TPD_LIMIT",
@@ -270,16 +280,16 @@ IMPORTANT SEARCH INSTRUCTIONS
     }
 
     // ========================================================
-    // TEMPORARY RATE LIMIT RETRY
+    // TEMPORARY RATE LIMIT
     // ========================================================
-    // केवल सामान्य temporary retryable error पर retry।
-    // Daily TPD पर ऊपर ही return हो चुका है।
 
     if (!result.ok && result.retryable) {
       const waitMs =
         result.retryAfterMs || 9000;
 
-      await sleep(waitMs);
+      await sleep(
+        Math.min(waitMs, 12000)
+      );
 
       result = await callGroq(
         payload,
@@ -287,7 +297,8 @@ IMPORTANT SEARCH INSTRUCTIONS
         60000
       );
 
-      // Retry के बाद फिर TPD check
+      // Retry के बाद भी TPD check
+
       const retryErrorText = String(
         result?.error ?? ""
       );
@@ -305,9 +316,7 @@ IMPORTANT SEARCH INSTRUCTIONS
               "कुछ समय बाद फिर कोशिश करें।",
 
             selfChecked: false,
-
             selfCorrected: false,
-
             searchUsed: useSearch,
 
             code: "GROQ_TPD_LIMIT",
@@ -342,6 +351,7 @@ IMPORTANT SEARCH INSTRUCTIONS
         {
           error:
             "AI ने खाली उत्तर दिया। फिर से कोशिश करें।",
+
           code: "EMPTY_RESPONSE",
         },
         502
@@ -364,12 +374,6 @@ IMPORTANT SEARCH INSTRUCTIONS
       if (asksCurrentInfo) {
         const answerText =
           String(result.reply).trim();
-
-        // ----------------------------------------------------
-        // DATE REGEX
-        // Hindi + English months
-        // Normal space + NBSP + narrow NBSP
-        // ----------------------------------------------------
 
         const dateRegex =
           /(\d{1,2})[\s\u00A0\u202F-]*(जनवरी|फरवरी|मार्च|अप्रैल|मई|जून|जुलाई|अगस्त|सितंबर|अक्टूबर|नवंबर|दिसंबर|January|February|March|April|May|June|July|August|September|October|November|December)[\s\u00A0\u202F,-]*(\d{4})/gi;
@@ -410,12 +414,11 @@ IMPORTANT SEARCH INSTRUCTIONS
         let invalidFutureDate = null;
 
         for (const match of matches) {
-          const day = String(match[1]).padStart(
-            2,
-            "0"
-          );
+          const day =
+            String(match[1]).padStart(2, "0");
 
-          const month = monthMap[match[2]];
+          const month =
+            monthMap[match[2]];
 
           const year = match[3];
 
@@ -424,60 +427,54 @@ IMPORTANT SEARCH INSTRUCTIONS
           const foundDate =
             `${year}-${month}-${day}`;
 
-          // Future date
           if (foundDate > todayISO) {
             invalidFutureDate = match[0];
             break;
           }
 
-          // Old date
           if (foundDate < todayISO) {
             invalidOldDate = match[0];
             break;
           }
         }
 
-        // ----------------------------------------------------
-        // FUTURE DATE BLOCK
-        // ----------------------------------------------------
+        // ====================================================
+        // FUTURE DATE
+        // ====================================================
 
         if (invalidFutureDate) {
           return json({
             answer:
-              `Search में भविष्य की तारीख (${invalidFutureDate}) का डेटा मिला। ` +
+              `Search में भविष्य की तारीख (${invalidFutureDate}) का data मिला। ` +
               `इसे आज की जानकारी मानना सही नहीं होगा। ` +
-              `आज (${todayISO}) का विश्वसनीय वर्तमान डेटा Search से नहीं मिला।`,
+              `आज (${todayISO}) का विश्वसनीय data Search से नहीं मिला।`,
 
             selfChecked: false,
-
             selfCorrected: false,
-
             searchUsed: true,
           });
         }
 
-        // ----------------------------------------------------
-        // OLD DATE BLOCK
-        // ----------------------------------------------------
+        // ====================================================
+        // OLD DATE
+        // ====================================================
 
         if (invalidOldDate) {
           return json({
             answer:
-              `Search में आज के बजाय पुराना डेटा मिला (${invalidOldDate})। ` +
+              `Search में आज के बजाय पुराना data मिला (${invalidOldDate})। ` +
               `इसलिए मैं उसे आज की जानकारी बताकर गलत जानकारी नहीं दूँगा। ` +
-              `आज (${todayISO}) का विश्वसनीय ताजा डेटा Search से नहीं मिला।`,
+              `आज (${todayISO}) का विश्वसनीय ताजा data Search से नहीं मिला।`,
 
             selfChecked: false,
-
             selfCorrected: false,
-
             searchUsed: true,
           });
         }
 
-        // ----------------------------------------------------
-        // WEATHER PROTECTION
-        // ----------------------------------------------------
+        // ====================================================
+        // WEATHER OLD DATA PROTECTION
+        // ====================================================
 
         const asksWeather =
           /मौसम|weather|बारिश|rain|temperature|तापमान|humidity|नमी|आंधी|तूफान/.test(
@@ -493,14 +490,12 @@ IMPORTANT SEARCH INSTRUCTIONS
           if (looksLikeOldWeather) {
             return json({
               answer:
-                `Search में आज के बजाय पुराना मौसम डेटा मिला। ` +
+                `Search में आज के बजाय पुराना मौसम data मिला। ` +
                 `इसलिए मैं उसे आज का मौसम बताकर गलत जानकारी नहीं दूँगा। ` +
-                `आज (${todayISO}) का विश्वसनीय ताजा मौसम डेटा Search से नहीं मिला।`,
+                `आज (${todayISO}) का विश्वसनीय ताजा मौसम data Search से नहीं मिला।`,
 
               selfChecked: false,
-
               selfCorrected: false,
-
               searchUsed: true,
             });
           }
@@ -508,17 +503,16 @@ IMPORTANT SEARCH INSTRUCTIONS
       }
 
       // ======================================================
-      // SEARCH RESULT DIRECTLY RETURN
+      // IMPORTANT:
+      // SEARCH के बाद SELF-CHECK नहीं।
+      //
+      // इससे एक दूसरा Groq request बचता है।
       // ======================================================
-      // Search के बाद Self-check नहीं चलेगा।
-      // इससे दूसरा Groq request बचता है और
-      // valid Search answer के गलत तरीके से बदलने की संभावना भी कम होती है।
 
       return json({
         answer: result.reply,
 
         selfChecked: false,
-
         selfCorrected: false,
 
         searchUsed: true,
@@ -528,6 +522,8 @@ IMPORTANT SEARCH INSTRUCTIONS
     // ========================================================
     // NORMAL CHAT SELF-CHECK
     // ========================================================
+    // Search में यह call नहीं होगा।
+    // इसलिए Search के दौरान 1 Groq request ही लगेगा।
 
     const checked =
       await selfCheckAndCorrect(
