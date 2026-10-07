@@ -27,6 +27,29 @@ Search ON होने पर User के सवाल का उत्तर �
 Search result से मिली जानकारी को समझकर सरल हिंदी में उत्तर दो।
 जहाँ संभव हो स्रोत और तारीख बताओ।
 
+बहुत महत्वपूर्ण तारीख नियम:
+जिस तारीख के बारे में User पूछ रहा है, केवल उसी तारीख या उससे पहले
+प्रकाशित/अपडेट हुए Search result को उस तारीख का प्रमाण मानो।
+
+भविष्य की तारीख वाले स्रोत को कभी भी वर्तमान या पिछली तारीख की
+जानकारी का स्रोत मत बताओ।
+
+स्रोत की तारीख और डेटा की तारीख को आपस में मत मिलाओ।
+
+यदि मांगी गई तारीख का ताजा डेटा उपलब्ध नहीं है,
+तो साफ बताओ कि उपलब्ध स्रोत पिछली तारीख का है।
+
+यदि User "आज" पूछे और Search का सबसे नया विश्वसनीय डेटा कल का हो,
+तो "आज" का पक्का आंकड़ा मत गढ़ो।
+बताओ कि सबसे हाल उपलब्ध डेटा कल का है।
+
+यदि User मौसम पूछता है लेकिन शहर/स्थान नहीं बताता,
+तो पहले स्थान पूछो।
+User की exact location का अनुमान मत लगाओ।
+
+यदि Search result और User के प्रश्न की तारीख में अंतर हो,
+तो तारीख का अंतर साफ बताओ।
+
 परीक्षा के उत्तर में अंक के अनुसार लंबाई रखो।
 2 अंक में छोटा उत्तर।
 5 अंक में भूमिका + 4–6 बिंदु + निष्कर्ष।
@@ -38,12 +61,6 @@ Search result से मिली जानकारी को समझकर �
 फोटो में जो दिखाई देता है उसी के आधार पर उत्तर दो।
 
 अनावश्यक **bold** या *italic* formatting मत लगाओ।`;
-बहुत महत्वपूर्ण:
-जिस तारीख के बारे में User पूछ रहा है, केवल उसी तारीख या उससे पहले प्रकाशित/अपडेट हुए Search result को उस तारीख का प्रमाण मानो।
-भविष्य की तारीख वाले स्रोत को कभी भी वर्तमान या पिछली तारीख की जानकारी का स्रोत मत बताओ।
-स्रोत की तारीख और डेटा की तारीख को आपस में मत मिलाओ।
-यदि मांगी गई तारीख का ताजा डेटा उपलब्ध नहीं है, तो साफ बताओ कि उपलब्ध स्रोत पिछली तारीख का है।
-यदि User "आज" पूछे और Search का सबसे नया विश्वसनीय डेटा कल का हो, तो "आज" का पक्का आंकड़ा मत गढ़ो; बताओ कि सबसे हाल उपलब्ध डेटा कल का है।
 
 // =========================
 // WORKER
@@ -158,7 +175,6 @@ async function handleChat(request, env) {
 
     // ========================================================
     // HISTORY LIMIT
-    // TPM बचाने के लिए बहुत पुरानी/लंबी history नहीं भेजेंगे
     // ========================================================
 
     let messages = history
@@ -206,6 +222,7 @@ async function handleChat(request, env) {
 
     const payload = {
       model: CHAT_MODEL,
+
       messages: [
         {
           role: "system",
@@ -214,8 +231,7 @@ async function handleChat(request, env) {
         ...messages,
       ],
 
-      // TPM बचाने के लिए पहले से 4096 की जगह 2048
-      max_completion_tokens: useSearch ? 2048 : 2048,
+      max_completion_tokens: 2048,
 
       temperature: 0.2,
 
@@ -235,11 +251,8 @@ async function handleChat(request, env) {
         },
       ];
 
-      // Search अनिवार्य
+      // Search ON होने पर Browser Search अनिवार्य
       payload.tool_choice = "required";
-
-      // IMPORTANT:
-      // citation_options बिल्कुल नहीं लगाना है।
     }
 
     // ========================================================
@@ -336,10 +349,6 @@ async function selfCheckAndCorrect(
   wasSearchUsed
 ) {
   try {
-    // ========================================================
-    // SEARCH ANSWER में self-check भी छोटा रखें
-    // ========================================================
-
     const questionText = messages
       .slice(-4)
       .map(
@@ -351,6 +360,21 @@ async function selfCheckAndCorrect(
     const answerText = String(answer)
       .trim()
       .slice(0, 6000);
+
+    const searchInstruction = wasSearchUsed
+      ? `
+यह उत्तर Browser Search के बाद आया है।
+
+यदि Search से वर्तमान जानकारी मिली है और उत्तर उस जानकारी पर आधारित है,
+तो उसे केवल इसलिए गलत मत मानो कि तुम्हारे पास स्वयं live internet access नहीं है।
+
+Search से मिली तारीख और स्रोत को ध्यान में रखो।
+Future-dated source को current/past proof मत मानो।
+`
+      : `
+यदि सवाल current/latest/live जानकारी मांगता है और Search का उपयोग नहीं हुआ,
+तो बिना प्रमाण current fact को सही मत मानो।
+`;
 
     const payload = {
       model: CHAT_MODEL,
@@ -368,6 +392,14 @@ User के सवाल और AI answer की जाँच करो।
 3. अनावश्यक जानकारी तो नहीं है।
 4. उत्तर में मनगढ़ंत जानकारी तो नहीं है।
 5. Current/Search वाले उत्तर में बिना आधार के वर्तमान दावा तो नहीं है।
+6. तारीख और स्रोत आपस में सही तरीके से जुड़े हैं या नहीं।
+
+${searchInstruction}
+
+महत्वपूर्ण:
+सिर्फ शैली पसंद न आने पर उत्तर को मत बदलो।
+सही Search-based उत्तर को "मैं real-time जानकारी नहीं दे सकता"
+जैसे सामान्य refusal में मत बदलो।
 
 अगर उत्तर सही है:
 needs_correction=false
@@ -375,8 +407,9 @@ needs_correction=false
 अगर गलती है:
 needs_correction=true और पूरा सुधरा हुआ उत्तर दो।
 
-मनगढ़ंत जानकारी मत जोड़ो।`
+मनगढ़ंत जानकारी मत जोड़ो।`,
         },
+
         {
           role: "user",
           content:
@@ -384,7 +417,6 @@ needs_correction=true और पूरा सुधरा हुआ उत्त
         },
       ],
 
-      // पहले 4096 था — अब काफी कम
       max_completion_tokens: 1024,
 
       temperature: 0,
@@ -398,34 +430,38 @@ needs_correction=true और पूरा सुधरा हुआ उत्त
         json_schema: {
           name: "sarathi_quality_check",
           strict: true,
+
           schema: {
             type: "object",
+
             properties: {
               needs_correction: {
                 type: "boolean",
               },
+
               corrected_answer: {
                 type: "string",
               },
             },
+
             required: [
               "needs_correction",
               "corrected_answer",
             ],
+
             additionalProperties: false,
           },
         },
       },
     };
 
-    let result = await callGroq(
+    const result = await callGroq(
       payload,
       apiKey,
       30000
     );
 
-    // Self-check rate limit होने पर दोबारा तुरंत request नहीं करेंगे।
-    // इससे TPM और खराब नहीं होगा।
+    // Self-check fail होने पर original answer रखें
     if (!result.ok) {
       return {
         reply: answer,
@@ -474,7 +510,7 @@ needs_correction=true और पूरा सुधरा हुआ उत्त
       };
     }
 
-    // असामान्य रूप से बहुत बड़ा correction रोकें
+    // बहुत बड़ा अनावश्यक correction रोकें
     if (
       corrected.length >
       Math.max(answer.length * 3, 12000)
@@ -569,6 +605,7 @@ async function handleVision(request, env) {
               type: "text",
               text: question,
             },
+
             {
               type: "image_url",
               image_url: {
@@ -580,8 +617,11 @@ async function handleVision(request, env) {
       ],
 
       max_completion_tokens: 2048,
+
       temperature: 0.4,
+
       reasoning_effort: "low",
+
       stream: false,
     };
 
@@ -938,9 +978,10 @@ async function callGroq(
           message
         );
 
-      // Groq TPM error में कभी-कभी
-      // message में seconds आते हैं।
-      if (!retryAfterMs && response.status === 429) {
+      if (
+        !retryAfterMs &&
+        response.status === 429
+      ) {
         retryAfterMs = 9000;
       }
 
@@ -967,15 +1008,12 @@ async function callGroq(
     // ========================================================
 
     const choice =
-      Array.isArray(
-        data?.choices
-      )
+      Array.isArray(data?.choices)
         ? data.choices[0]
         : null;
 
     const content =
-      typeof choice?.message?.content ===
-      "string"
+      typeof choice?.message?.content === "string"
         ? choice.message.content.trim()
         : "";
 
@@ -1041,14 +1079,12 @@ async function callGroq(
       status: 504,
 
       code:
-        error?.name ===
-        "AbortError"
+        error?.name === "AbortError"
           ? "GROQ_TIMEOUT"
           : "GROQ_NETWORK_ERROR",
 
       error:
-        error?.name ===
-        "AbortError"
+        error?.name === "AbortError"
           ? "Groq से जवाब आने में बहुत समय लगा।"
           : `Groq connection error: ${
               error instanceof Error
@@ -1087,16 +1123,14 @@ function getRetryAfterMs(
       seconds > 0
     ) {
       return (
-        Math.min(
-          seconds,
-          30
-        ) * 1000
+        Math.min(seconds, 30) *
+        1000
       );
     }
   }
 
   // Groq error message में
-  // "7.177499999s" जैसा समय हो सकता है।
+  // "try again in 7.17s" जैसा समय
   const match =
     String(message).match(
       /try again in\s+([\d.]+)s/i
@@ -1111,10 +1145,8 @@ function getRetryAfterMs(
       seconds > 0
     ) {
       return (
-        Math.min(
-          seconds + 1,
-          30
-        ) * 1000
+        Math.min(seconds + 1, 30) *
+        1000
       );
     }
   }
@@ -1129,10 +1161,7 @@ function getRetryAfterMs(
 function sleep(ms) {
   return new Promise(
     (resolve) =>
-      setTimeout(
-        resolve,
-        ms
-      )
+      setTimeout(resolve, ms)
   );
 }
 
