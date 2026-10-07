@@ -339,7 +339,68 @@ Search result की तारीख देखकर ही उत्तर द�
         502
       );
     }
+// ========================================================
+// SEARCH DATE SAFETY
+// ========================================================
 
+if (useSearch) {
+  const todayIndia = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "Asia/Kolkata",
+  }).format(new Date());
+
+  const currentQuestion = message.toLowerCase();
+
+  const asksCurrentInfo =
+    /आज|अभी|ताज़ा|ताजा|latest|current|today|now|live/.test(
+      currentQuestion
+    );
+
+  if (asksCurrentInfo) {
+    const oldDateMatch = result.reply.match(
+      /(\d{1,2})\s*(?:सितंबर|अक्टूबर|नवंबर|दिसंबर|जनवरी|फरवरी|मार्च|अप्रैल|मई|जून|जुलाई|अगस्त)\s*(\d{4})/i
+    );
+
+    if (oldDateMatch) {
+      const foundDateText = oldDateMatch[0];
+
+      const monthMap = {
+        जनवरी: "01",
+        फरवरी: "02",
+        मार्च: "03",
+        अप्रैल: "04",
+        मई: "05",
+        जून: "06",
+        जुलाई: "07",
+        अगस्त: "08",
+        सितंबर: "09",
+        अक्टूबर: "10",
+        नवंबर: "11",
+        दिसंबर: "12",
+      };
+
+      const parts = foundDateText.match(
+        /(\d{1,2})\s*(सितंबर|अक्टूबर|नवंबर|दिसंबर|जनवरी|फरवरी|मार्च|अप्रैल|मई|जून|जुलाई|अगस्त)\s*(\d{4})/i
+      );
+
+      if (parts) {
+        const foundDate =
+          `${parts[3]}-${monthMap[parts[2]]}-${String(parts[1]).padStart(2, "0")}`;
+
+        if (foundDate < todayIndia) {
+          return json({
+            answer:
+              `Search में आज के बजाय पुराना मौसम डेटा मिला (${foundDateText})। ` +
+              `इसलिए मैं उसे आज का मौसम बताकर गलत जानकारी नहीं दूँगा। ` +
+              `आज (${todayIndia}) का विश्वसनीय ताजा मौसम डेटा Search से नहीं मिला।`,
+            selfChecked: false,
+            selfCorrected: false,
+            searchUsed: true,
+          });
+        }
+      }
+    }
+  }
+}
     // ========================================================
     // SELF CHECK
     // ========================================================
