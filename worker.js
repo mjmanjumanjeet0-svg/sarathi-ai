@@ -39,7 +39,7 @@ const asksDateOnly =
     message
   );
 
-if (asksDateOnly && !useSearch) {
+if (asksDateOnly) {
   const localDate = new Intl.DateTimeFormat("hi-IN", {
     timeZone: "Asia/Kolkata",
     weekday: "long",
