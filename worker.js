@@ -240,12 +240,7 @@ async function handleChat(request, env) {
       stream: false,
     };
 
-    // ========================================================
-    // BROWSER SEARCH
-    // ========================================================
-
-
-    // ========================================================
+  // ========================================================
 // BROWSER SEARCH
 // ========================================================
 
@@ -259,7 +254,6 @@ if (useSearch) {
   // Search ON होने पर Browser Search अनिवार्य
   payload.tool_choice = "required";
 }
-
     // ========================================================
     // FIRST REQUEST
     // ========================================================
@@ -320,9 +314,6 @@ if (useSearch) {
 // ========================================================
 
 // Search से मिला उत्तर सीधे उपयोग करें।
-// इससे self-check सही current/search उत्तर को
-// "real-time data उपलब्ध नहीं है" जैसे जवाब में नहीं बदलेगा।
-
 if (useSearch) {
   return json({
     answer: result.reply,
@@ -332,7 +323,7 @@ if (useSearch) {
   });
 }
 
-// सामान्य चैट में self-check जारी रहेगा।
+// सामान्य चैट में Self-check जारी रहेगा।
 const checked = await selfCheckAndCorrect(
   messages,
   result.reply,
@@ -340,6 +331,12 @@ const checked = await selfCheckAndCorrect(
   false
 );
 
+return json({
+  answer: checked.reply,
+  selfChecked: checked.selfChecked,
+  selfCorrected: checked.selfCorrected,
+  searchUsed: false,
+});
 // ========================================================
 // SELF CHECK
 // ========================================================
