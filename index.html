@@ -1873,17 +1873,64 @@ async function handleFile(e){
 
       throw new Error(
         "फाइल खाली है।"
+      
+/* =========================================================
+   FILE
+========================================================= */
+
+document
+  .getElementById("fileInput")
+  .addEventListener(
+    "change",
+    handleFile
+  );
+
+
+async function handleFile(e){
+
+  const file =
+    e.target.files?.[0];
+
+  if(!file) return;
+
+  try{
+
+    const ext =
+      file.name
+        .split(".")
+        .pop()
+        .toLowerCase();
+
+    const allowed = [
+      "txt",
+      "csv",
+      "json",
+      "md"
+    ];
+
+    if(!allowed.includes(ext)){
+
+      throw new Error(
+        "अभी TXT, CSV, JSON और MD फाइल ही supported हैं।"
       );
 
     }
 
+    const text =
+      await file.text();
+
+    if(!text.trim()){
+
+      throw new Error(
+        "फाइल खाली है।"
+      );
+
+    }
 
     const display =
       `📄 ${file.name} पढ़ रहा हूँ।`;
 
-
-    const prompt =
-      `
+    const prompt = `
 मैंने "${file.name}" नाम की फाइल भेजी है।
 
 फाइल का content:
@@ -1898,12 +1945,10 @@ ${text.slice(0,30000)}
 यदि फाइल में बहुत ज्यादा जानकारी हो तो केवल जरूरी जानकारी पर ध्यान दो।
 `;
 
-
     await sendMessage(
       prompt,
       display
     );
-
 
   }catch(error){
 
@@ -1925,11 +1970,6 @@ ${text.slice(0,30000)}
   }
 
 }
-
-
-/* =========================================================
-   FILE TO DATA URL
-========================================================= */
 
 function fileToDataURL(file){
 
