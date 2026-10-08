@@ -11,229 +11,481 @@
       box-sizing: border-box;
     }
 
+    html,
     body {
       margin: 0;
+      padding: 0;
+      height: 100%;
+    }
+
+    body {
       font-family:
         system-ui,
         -apple-system,
         BlinkMacSystemFont,
         "Segoe UI",
         sans-serif;
-      background: #f5f7fb;
+
+      background: #f7f8fc;
       color: #172033;
     }
+
+    button,
+    textarea,
+    input {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    /* =========================
+       HEADER
+    ========================= */
 
     .header {
       position: sticky;
       top: 0;
-      z-index: 20;
-      background: #ffffff;
+      z-index: 100;
+
+      background: rgba(255,255,255,.96);
+      backdrop-filter: blur(12px);
+
       border-bottom: 1px solid #e5e7eb;
     }
 
     .header-inner {
-      max-width: 900px;
+      max-width: 950px;
       margin: auto;
-      padding: 13px 14px;
+
+      padding: 10px 14px;
 
       display: flex;
       align-items: center;
       justify-content: space-between;
+
       gap: 10px;
     }
 
     .brand {
-      font-size: 21px;
+      display: flex;
+      align-items: center;
+      gap: 9px;
+
+      font-size: 20px;
       font-weight: 800;
     }
 
-    .study-btn {
-      border: 0;
-      border-radius: 10px;
-      padding: 9px 12px;
-      background: #eef2ff;
-      color: #3730a3;
-      font-weight: 750;
-      cursor: pointer;
-    }
+    /* Sarathi icon */
 
-    .container {
-      max-width: 900px;
-      margin: auto;
-      padding: 18px 14px 35px;
-    }
+    .sarathi-icon {
+      width: 38px;
+      height: 38px;
 
-    .hero,
-    .card {
-      background: #ffffff;
-      border-radius: 18px;
-      padding: 18px;
-      margin-bottom: 15px;
+      border-radius: 50%;
+
+      background:
+        linear-gradient(135deg, #6366f1, #4f46e5);
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      color: white;
+      font-size: 21px;
 
       box-shadow:
-        0 5px 20px rgba(0, 0, 0, 0.05);
+        0 4px 12px rgba(79,70,229,.25);
     }
 
-    .hero h1 {
-      margin: 0 0 7px;
-      font-size: 26px;
+    .header-actions {
+      display: flex;
+      gap: 7px;
     }
 
-    .hero p {
+    .header-btn {
+      border: 0;
+      border-radius: 11px;
+
+      padding: 9px 11px;
+
+      background: #eef2ff;
+      color: #3730a3;
+
+      font-weight: 750;
+    }
+
+    /* =========================
+       MAIN
+    ========================= */
+
+    .container {
+      max-width: 950px;
+      margin: auto;
+
+      padding:
+        20px
+        14px
+        110px;
+    }
+
+    .welcome {
+      text-align: center;
+
+      padding: 30px 15px 25px;
+    }
+
+    .welcome-icon {
+      width: 68px;
+      height: 68px;
+
+      margin: 0 auto 13px;
+
+      border-radius: 50%;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      background:
+        linear-gradient(135deg,#6366f1,#7c3aed);
+
+      color: white;
+      font-size: 34px;
+
+      box-shadow:
+        0 8px 25px rgba(79,70,229,.22);
+    }
+
+    .welcome h1 {
+      margin: 0 0 8px;
+      font-size: 27px;
+    }
+
+    .welcome p {
       margin: 0;
       color: #667085;
       line-height: 1.6;
     }
 
-    textarea {
-      width: 100%;
-      min-height: 120px;
-      resize: vertical;
+    /* =========================
+       CHAT
+    ========================= */
 
-      border: 1px solid #d7dce5;
-      border-radius: 13px;
-
-      padding: 13px;
-
-      font: inherit;
-      font-size: 16px;
-
-      outline: none;
-      background: #ffffff;
-    }
-
-    textarea:focus {
-      border-color: #6366f1;
-    }
-
-    .buttons {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 9px;
-      margin-top: 11px;
-    }
-
-    button {
-      border: 0;
-      border-radius: 12px;
-
-      padding: 11px 15px;
-
-      font-size: 15px;
-      font-weight: 750;
-
-      cursor: pointer;
-    }
-
-    .primary {
-      background: #4f46e5;
-      color: #ffffff;
-    }
-
-    .secondary {
-      background: #eef2ff;
-      color: #3730a3;
-    }
-
-    .search-on {
-      background: #dcfce7;
-      color: #166534;
-    }
-
-    .search-off {
-      background: #f1f5f9;
-      color: #475569;
-    }
-
-    button:disabled {
-      opacity: 0.55;
-      cursor: not-allowed;
-    }
-
-    .status {
-      min-height: 24px;
-      margin-top: 10px;
-
-      color: #667085;
-      font-size: 14px;
-      line-height: 1.5;
-    }
-
-    .messages {
+    .chat-box {
       display: flex;
       flex-direction: column;
-      gap: 10px;
-
-      max-height: 58vh;
-      overflow-y: auto;
-
-      padding: 2px;
+      gap: 12px;
     }
 
-    .message {
-      max-width: 92%;
+    .message-row {
+      display: flex;
+      gap: 9px;
+      align-items: flex-start;
+    }
+
+    .message-row.user-row {
+      justify-content: flex-end;
+    }
+
+    .mini-icon {
+      flex: 0 0 auto;
+
+      width: 32px;
+      height: 32px;
+
+      border-radius: 50%;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      background: #4f46e5;
+      color: white;
+
+      font-size: 17px;
+    }
+
+    .bubble {
+      max-width: min(82%, 720px);
 
       padding: 12px 14px;
 
-      border-radius: 15px;
+      border-radius: 17px;
+
+      line-height: 1.7;
 
       white-space: pre-wrap;
       overflow-wrap: anywhere;
-
-      line-height: 1.7;
     }
 
-    .user {
-      align-self: flex-end;
+    .assistant-bubble {
+      background: white;
+      border: 1px solid #e5e7eb;
 
+      border-bottom-left-radius: 5px;
+
+      box-shadow:
+        0 2px 10px rgba(0,0,0,.03);
+    }
+
+    .user-bubble {
       background: #4f46e5;
-      color: #ffffff;
+      color: white;
 
       border-bottom-right-radius: 5px;
     }
 
-    .assistant {
-      align-self: flex-start;
-
-      background: #f8fafc;
-
-      border: 1px solid #e5e7eb;
-
-      border-bottom-left-radius: 5px;
+    .message-actions {
+      display: flex;
+      gap: 5px;
+      margin-top: 7px;
     }
+
+    .message-action {
+      border: 0;
+      background: transparent;
+
+      color: #667085;
+
+      padding: 3px 6px;
+      font-size: 14px;
+    }
+
+    .message-action:hover {
+      background: #f1f5f9;
+      border-radius: 7px;
+    }
+
+    /* =========================
+       INPUT AREA
+    ========================= */
+
+    .composer {
+      position: fixed;
+
+      left: 0;
+      right: 0;
+      bottom: 0;
+
+      z-index: 90;
+
+      background: rgba(247,248,252,.96);
+      backdrop-filter: blur(12px);
+
+      border-top: 1px solid #e5e7eb;
+
+      padding: 9px 10px;
+    }
+
+    .composer-inner {
+      max-width: 950px;
+      margin: auto;
+    }
+
+    .input-wrap {
+      background: white;
+
+      border: 1px solid #d9dce5;
+
+      border-radius: 18px;
+
+      padding: 8px;
+
+      box-shadow:
+        0 5px 20px rgba(0,0,0,.05);
+    }
+
+    textarea {
+      display: block;
+
+      width: 100%;
+
+      min-height: 52px;
+      max-height: 150px;
+
+      resize: none;
+
+      border: 0;
+      outline: 0;
+
+      padding: 7px 8px;
+
+      background: transparent;
+
+      font-size: 16px;
+      line-height: 1.5;
+    }
+
+    .tools-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      padding-top: 5px;
+    }
+
+    .tool-btn {
+      width: 42px;
+      height: 40px;
+
+      border: 0;
+      border-radius: 12px;
+
+      background: #f1f5f9;
+      color: #334155;
+
+      font-size: 19px;
+    }
+
+    .tool-btn:hover {
+      background: #e8ecf3;
+    }
+
+    .tool-btn.active {
+      background: #fee2e2;
+      color: #dc2626;
+    }
+
+    .send-btn {
+      margin-left: auto;
+
+      width: 45px;
+      height: 40px;
+
+      border: 0;
+      border-radius: 12px;
+
+      background: #4f46e5;
+      color: white;
+
+      font-size: 19px;
+    }
+
+    .send-btn:disabled {
+      opacity: .5;
+    }
+
+    .search-indicator {
+      font-size: 12px;
+      color: #667085;
+
+      padding-left: 5px;
+    }
+
+    .status {
+      min-height: 20px;
+
+      padding:
+        4px
+        7px
+        0;
+
+      color: #667085;
+
+      font-size: 13px;
+    }
+
+    /* =========================
+       SEARCH MENU
+    ========================= */
+
+    .search-on {
+      background: #dcfce7 !important;
+      color: #166534 !important;
+    }
+
+    /* =========================
+       FILE PREVIEW
+    ========================= */
+
+    .attachment-preview {
+      display: none;
+
+      margin-bottom: 7px;
+
+      padding: 8px 10px;
+
+      border-radius: 12px;
+
+      background: #f1f5f9;
+
+      font-size: 13px;
+
+      align-items: center;
+      gap: 8px;
+    }
+
+    .attachment-preview.show {
+      display: flex;
+    }
+
+    .remove-file {
+      margin-left: auto;
+
+      border: 0;
+      background: transparent;
+
+      color: #dc2626;
+
+      font-size: 18px;
+    }
+
+    /* =========================
+       EMPTY
+    ========================= */
 
     .empty {
-      color: #667085;
-
       text-align: center;
 
-      padding: 22px 8px;
-
-      line-height: 1.6;
-    }
-
-    .small {
       color: #667085;
-      font-size: 13px;
-      line-height: 1.6;
+
+      padding: 25px 10px;
+
+      line-height: 1.7;
     }
+
+    /* =========================
+       HIDDEN FILE INPUTS
+    ========================= */
+
+    .hidden {
+      display: none !important;
+    }
+
+    /* =========================
+       RESPONSIVE
+    ========================= */
 
     @media (max-width: 600px) {
 
-      .brand {
-        font-size: 19px;
+      .container {
+        padding-top: 8px;
       }
 
-      .hero h1 {
+      .welcome {
+        padding-top: 20px;
+      }
+
+      .welcome h1 {
         font-size: 23px;
       }
 
-      .buttons button {
-        flex: 1 1 auto;
+      .bubble {
+        max-width: 90%;
       }
 
-      .message {
-        max-width: 96%;
+      .brand {
+        font-size: 18px;
+      }
+
+      .header-btn {
+        padding: 8px 9px;
+      }
+
+      .search-indicator {
+        display: none;
       }
     }
   </style>
@@ -241,103 +493,244 @@
 
 <body>
 
-  <!-- =====================================================
+  <!-- =========================
        HEADER
-  ====================================================== -->
+  ========================= -->
 
   <header class="header">
 
     <div class="header-inner">
 
       <div class="brand">
-        🤖 सारथी AI
+
+        <div class="sarathi-icon">
+          🧭
+        </div>
+
+        <span>सारथी AI</span>
+
       </div>
 
-      <button
-        class="study-btn"
-        onclick="openStudy()"
-      >
-        📚 Study
-      </button>
+      <div class="header-actions">
+
+        <button
+          class="header-btn"
+          onclick="openStudy()"
+        >
+          📚 Study
+        </button>
+
+      </div>
 
     </div>
 
   </header>
 
 
-  <!-- =====================================================
+  <!-- =========================
        MAIN
-  ====================================================== -->
+  ========================= -->
 
   <main class="container">
 
+    <section
+      id="welcome"
+      class="welcome"
+    >
 
-    <!-- ===================================================
-         HERO
-    ==================================================== -->
-
-    <section class="hero">
+      <div class="welcome-icon">
+        🧭
+      </div>
 
       <h1>
         नमस्ते! मैं सारथी हूँ 👋
       </h1>
 
       <p>
-        सवाल पूछो, पढ़ाई में मदद लो और जरूरत पड़ने पर
-        Internet Search से ताज़ा जानकारी खोजो।
+        मुझसे लिखकर या बोलकर बात करो।
+        फोटो भेजो, सवाल पूछो या Internet Search करो।
       </p>
 
     </section>
 
 
-    <!-- ===================================================
-         CHAT INPUT
-    ==================================================== -->
+    <section
+      id="chatBox"
+      class="chat-box"
+    >
 
-    <section class="card">
+      <div
+        id="emptyMessage"
+        class="empty"
+      >
+        नीचे अपना सवाल लिखो या 🎤 माइक दबाकर बोलो।
+      </div>
 
-      <textarea
-        id="input"
-        placeholder="अपना सवाल लिखें..."
-        autocomplete="off"
-      ></textarea>
+    </section>
+
+  </main>
 
 
-      <div class="buttons">
+  <!-- =========================
+       FILE INPUTS
+  ========================= -->
+
+  <input
+    id="photoInput"
+    class="hidden"
+    type="file"
+    accept="image/*"
+  >
+
+  <input
+    id="videoInput"
+    class="hidden"
+    type="file"
+    accept="video/*"
+  >
+
+  <input
+    id="fileInput"
+    class="hidden"
+    type="file"
+    accept=".txt,.csv,.json,.md"
+  >
+
+
+  <!-- =========================
+       COMPOSER
+  ========================= -->
+
+  <div class="composer">
+
+    <div class="composer-inner">
+
+      <div
+        id="attachmentPreview"
+        class="attachment-preview"
+      >
+
+        <span id="attachmentText">
+          फ़ाइल चुनी गई
+        </span>
 
         <button
-          id="sendButton"
-          class="primary"
-          onclick="sendMessage(false)"
-        >
-          ➤ पूछें
-        </button>
-
-
-        <button
-          id="searchButton"
-          class="search-off"
-          onclick="toggleSearch()"
+          class="remove-file"
+          onclick="removeAttachment()"
           type="button"
         >
-          🌐 Search OFF
+          ×
         </button>
 
-
-        <button
-          class="secondary"
-          onclick="sendMessage(true)"
-        >
-          🌐 अभी Search करें
-        </button>
+      </div>
 
 
-        <button
-          class="secondary"
-          onclick="clearChat()"
-        >
-          🗑 साफ करें
-        </button>
+      <div class="input-wrap">
+
+        <textarea
+          id="input"
+          placeholder="सारथी से कुछ पूछें..."
+          rows="1"
+        ></textarea>
+
+
+        <div class="tools-row">
+
+          <!-- MICROPHONE -->
+
+          <button
+            id="micButton"
+            class="tool-btn"
+            type="button"
+            title="माइक"
+            onclick="toggleMicrophone()"
+          >
+            🎤
+          </button>
+
+
+          <!-- PHOTO -->
+
+          <button
+            class="tool-btn"
+            type="button"
+            title="फोटो"
+            onclick="document.getElementById('photoInput').click()"
+          >
+            📷
+          </button>
+
+
+          <!-- VIDEO -->
+
+          <button
+            class="tool-btn"
+            type="button"
+            title="वीडियो"
+            onclick="document.getElementById('videoInput').click()"
+          >
+            🎥
+          </button>
+
+
+          <!-- FILE -->
+
+          <button
+            class="tool-btn"
+            type="button"
+            title="फाइल"
+            onclick="document.getElementById('fileInput').click()"
+          >
+            📎
+          </button>
+
+
+          <!-- SEARCH -->
+
+          <button
+            id="searchButton"
+            class="tool-btn"
+            type="button"
+            title="Internet Search"
+            onclick="toggleSearch()"
+          >
+            🌐
+          </button>
+
+
+          <span
+            id="searchIndicator"
+            class="search-indicator"
+          >
+            Search OFF
+          </span>
+
+
+          <!-- SPEAKER -->
+
+          <button
+            id="voiceButton"
+            class="tool-btn"
+            type="button"
+            title="आवाज़"
+            onclick="toggleVoice()"
+          >
+            🔊
+          </button>
+
+
+          <!-- SEND -->
+
+          <button
+            id="sendButton"
+            class="send-btn"
+            type="button"
+            onclick="sendMessage()"
+          >
+            ➤
+          </button>
+
+        </div>
 
       </div>
 
@@ -347,88 +740,45 @@
         class="status"
       ></div>
 
-    </section>
+    </div>
+
+  </div>
 
 
-    <!-- ===================================================
-         CHAT MESSAGES
-    ==================================================== -->
-
-    <section class="card">
-
-      <div
-        id="messages"
-        class="messages"
-      >
-
-        <div
-          id="emptyMessage"
-          class="empty"
-        >
-          अपना पहला सवाल लिखकर पूछें।
-        </div>
-
-      </div>
-
-    </section>
-
-
-    <!-- ===================================================
-         STUDY
-    ==================================================== -->
-
-    <section class="card">
-
-      <strong>
-        📚 पढ़ाई
-      </strong>
-
-      <p class="small">
-        विषय के अनुसार सवाल पूछने और Quiz करने के लिए
-        Study पेज खोलें।
-      </p>
-
-      <button
-        class="primary"
-        onclick="openStudy()"
-      >
-        📚 Study खोलें
-      </button>
-
-    </section>
-
-
-  </main>
-
-
-  <!-- =====================================================
+  <!-- =========================
        JAVASCRIPT
-  ====================================================== -->
+  ========================= -->
 
   <script>
 
-    // ======================================================
-    // API
-    // ======================================================
+    /* =====================================================
+       API
+    ===================================================== */
 
     const API_BASE =
       "https://sarathi-ai.mjmanjumanjeet0.workers.dev";
 
 
-    // ======================================================
-    // STATE
-    // ======================================================
+    /* =====================================================
+       STATE
+    ===================================================== */
 
     let messages = [];
 
-    let lastAnswer = "";
-
     let useSearch = false;
 
+    let voiceEnabled = true;
 
-    // ======================================================
-    // ELEMENTS
-    // ======================================================
+    let recognition = null;
+
+    let isListening = false;
+
+    let selectedFile = null;
+
+
+    /* =====================================================
+       ELEMENTS
+    ===================================================== */
 
     const input =
       document.getElementById("input");
@@ -436,19 +786,37 @@
     const sendButton =
       document.getElementById("sendButton");
 
+    const micButton =
+      document.getElementById("micButton");
+
     const searchButton =
       document.getElementById("searchButton");
+
+    const voiceButton =
+      document.getElementById("voiceButton");
+
+    const searchIndicator =
+      document.getElementById("searchIndicator");
 
     const status =
       document.getElementById("status");
 
-    const messagesBox =
-      document.getElementById("messages");
+    const chatBox =
+      document.getElementById("chatBox");
+
+    const welcome =
+      document.getElementById("welcome");
+
+    const attachmentPreview =
+      document.getElementById("attachmentPreview");
+
+    const attachmentText =
+      document.getElementById("attachmentText");
 
 
-    // ======================================================
-    // STATUS
-    // ======================================================
+    /* =====================================================
+       STATUS
+    ===================================================== */
 
     function setStatus(text) {
 
@@ -458,73 +826,171 @@
     }
 
 
-    // ======================================================
-    // ADD MESSAGE
-    // ======================================================
+    /* =====================================================
+       ADD MESSAGE
+    ===================================================== */
 
-    function addMessage(
-      role,
-      text
-    ) {
+    function addMessage(role, text) {
 
       const empty =
         document.getElementById(
           "emptyMessage"
         );
 
-
       if (empty) {
         empty.remove();
       }
 
-
-      const div =
-        document.createElement(
-          "div"
-        );
+      welcome.style.display = "none";
 
 
-      div.className =
-        "message " + role;
+      const row =
+        document.createElement("div");
+
+      row.className =
+        "message-row " +
+        (role === "user"
+          ? "user-row"
+          : "");
 
 
-      div.textContent =
+      if (role === "assistant") {
+
+        const icon =
+          document.createElement("div");
+
+        icon.className =
+          "mini-icon";
+
+        icon.textContent =
+          "🧭";
+
+        row.appendChild(icon);
+      }
+
+
+      const content =
+        document.createElement("div");
+
+
+      const bubble =
+        document.createElement("div");
+
+      bubble.className =
+        "bubble " +
+        (role === "user"
+          ? "user-bubble"
+          : "assistant-bubble");
+
+
+      bubble.textContent =
         String(text || "");
 
 
-      messagesBox.appendChild(
-        div
-      );
+      content.appendChild(bubble);
 
 
-      messagesBox.scrollTop =
-        messagesBox.scrollHeight;
+      /* Assistant actions */
+
+      if (role === "assistant") {
+
+        const actions =
+          document.createElement("div");
+
+        actions.className =
+          "message-actions";
+
+
+        const speak =
+          document.createElement("button");
+
+        speak.className =
+          "message-action";
+
+        speak.textContent =
+          "🔊 सुनें";
+
+        speak.onclick =
+          () => speakText(String(text || ""));
+
+
+        const copy =
+          document.createElement("button");
+
+        copy.className =
+          "message-action";
+
+        copy.textContent =
+          "📋 कॉपी";
+
+        copy.onclick =
+          async () => {
+
+            try {
+
+              await navigator.clipboard.writeText(
+                String(text || "")
+              );
+
+              setStatus(
+                "✓ जवाब कॉपी हो गया।"
+              );
+
+            } catch {
+
+              setStatus(
+                "कॉपी नहीं हो पाया।"
+              );
+
+            }
+
+          };
+
+
+        actions.appendChild(speak);
+        actions.appendChild(copy);
+
+        content.appendChild(actions);
+      }
+
+
+      row.appendChild(content);
+
+      chatBox.appendChild(row);
+
+
+      window.scrollTo({
+        top:
+          document.body.scrollHeight,
+        behavior: "smooth"
+      });
 
     }
 
 
-    // ======================================================
-    // SEARCH BUTTON
-    // ======================================================
+    /* =====================================================
+       SEARCH
+    ===================================================== */
 
-    function updateSearchButton() {
+    function updateSearchUI() {
 
       if (useSearch) {
 
-        searchButton.textContent =
-          "🌐 Search ON";
+        searchButton.classList.add(
+          "search-on"
+        );
 
-        searchButton.className =
-          "search-on";
+        searchIndicator.textContent =
+          "Search ON";
 
       } else {
 
-        searchButton.textContent =
-          "🌐 Search OFF";
+        searchButton.classList.remove(
+          "search-on"
+        );
 
-        searchButton.className =
-          "search-off";
-
+        searchIndicator.textContent =
+          "Search OFF";
       }
 
     }
@@ -535,60 +1001,329 @@
       useSearch =
         !useSearch;
 
-
-      updateSearchButton();
-
+      updateSearchUI();
 
       setStatus(
         useSearch
           ? "🌐 Internet Search ON है।"
-          : "Internet Search OFF है।"
+          : "🌐 Internet Search OFF है।"
       );
 
     }
 
 
-    // ======================================================
-    // STUDY PAGE
-    // ======================================================
+    /* =====================================================
+       VOICE OUTPUT
+    ===================================================== */
 
-    function openStudy() {
+    function toggleVoice() {
 
-      window.location.href =
-        "study.html";
+      voiceEnabled =
+        !voiceEnabled;
+
+      voiceButton.textContent =
+        voiceEnabled
+          ? "🔊"
+          : "🔇";
+
+      if (!voiceEnabled) {
+
+        speechSynthesis.cancel();
+
+        setStatus(
+          "🔇 Voice OFF है।"
+        );
+
+      } else {
+
+        setStatus(
+          "🔊 Voice ON है।"
+        );
+      }
 
     }
 
 
-    // ======================================================
-    // DATE QUESTION
-    // ======================================================
+    function speakText(text) {
 
-    function isDateQuestion(
-      text
-    ) {
+      if (!("speechSynthesis" in window)) {
 
-      return /^(आज|आज की तारीख|आज का दिन|today|today's date|current date)\s*[?؟.!]*$/i.test(
-        text
+        setStatus(
+          "इस browser में आवाज़ की सुविधा उपलब्ध नहीं है।"
+        );
+
+        return;
+      }
+
+      speechSynthesis.cancel();
+
+
+      const utterance =
+        new SpeechSynthesisUtterance(
+          String(text || "")
+        );
+
+
+      utterance.lang =
+        "hi-IN";
+
+      utterance.rate =
+        0.95;
+
+      utterance.pitch =
+        1;
+
+
+      const voices =
+        speechSynthesis.getVoices();
+
+
+      const hindiVoice =
+        voices.find(
+          voice =>
+            voice.lang &&
+            voice.lang
+              .toLowerCase()
+              .startsWith("hi")
+        );
+
+
+      if (hindiVoice) {
+
+        utterance.voice =
+          hindiVoice;
+
+      }
+
+
+      utterance.onstart =
+        () => {
+
+          setStatus(
+            "🔊 सारथी बोल रहा है..."
+          );
+
+        };
+
+
+      utterance.onend =
+        () => {
+
+          setStatus("");
+
+        };
+
+
+      speechSynthesis.speak(
+        utterance
       );
 
     }
 
 
-    // ======================================================
-    // CHAT
-    // ======================================================
+    /* =====================================================
+       MICROPHONE
+       Browser Speech Recognition
+    ===================================================== */
+
+    function createRecognition() {
+
+      const SpeechRecognition =
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition;
+
+
+      if (!SpeechRecognition) {
+
+        return null;
+      }
+
+
+      const r =
+        new SpeechRecognition();
+
+
+      r.lang =
+        "hi-IN";
+
+      r.continuous =
+        false;
+
+      r.interimResults =
+        false;
+
+      r.maxAlternatives =
+        1;
+
+
+      r.onstart =
+        () => {
+
+          isListening =
+            true;
+
+          micButton.classList.add(
+            "active"
+          );
+
+          micButton.textContent =
+            "⏹️";
+
+          setStatus(
+            "🎤 सुन रहा हूँ... बोलिए"
+          );
+
+        };
+
+
+      r.onresult =
+        event => {
+
+          const transcript =
+            event
+              ?.results?.[0]?.[0]?.transcript ||
+            "";
+
+
+          input.value =
+            transcript.trim();
+
+
+          if (input.value) {
+
+            setStatus(
+              "✓ आपकी आवाज़ समझ ली।"
+            );
+
+            sendMessage();
+
+          }
+
+        };
+
+
+      r.onerror =
+        event => {
+
+          console.error(
+            "Speech recognition:",
+            event
+          );
+
+
+          setStatus(
+            "माइक से आवाज़ समझने में समस्या हुई।"
+          );
+
+        };
+
+
+      r.onend =
+        () => {
+
+          isListening =
+            false;
+
+          micButton.classList.remove(
+            "active"
+          );
+
+          micButton.textContent =
+            "🎤";
+
+        };
+
+
+      return r;
+
+    }
+
+
+    async function toggleMicrophone() {
+
+      if (isListening) {
+
+        try {
+
+          recognition?.stop();
+
+        } catch {}
+
+        return;
+      }
+
+
+      if (
+        !(
+          window.SpeechRecognition ||
+          window.webkitSpeechRecognition
+        )
+      ) {
+
+        setStatus(
+          "इस browser में Voice Recognition उपलब्ध नहीं है।"
+        );
+
+        return;
+      }
+
+
+      recognition =
+        createRecognition();
+
+
+      if (!recognition) {
+
+        setStatus(
+          "माइक उपलब्ध नहीं है।"
+        );
+
+        return;
+      }
+
+
+      try {
+
+        recognition.start();
+
+      } catch (error) {
+
+        console.error(
+          error
+        );
+
+        setStatus(
+          "माइक शुरू नहीं हो पाया।"
+        );
+
+      }
+
+    }
+
+
+    /* =====================================================
+       DATE
+    ===================================================== */
+
+    function isDateQuestion(text) {
+
+      return /^(आज|आज की तारीख|आज का दिन|today|today's date|current date)\s*[?؟.!]*$/i
+        .test(text);
+
+    }
+
+
+    /* =====================================================
+       CHAT
+    ===================================================== */
 
     async function sendMessage(
-      searchNow = useSearch,
       customText = null
     ) {
 
       const text =
         customText !== null
-          ? String(
-              customText
-            ).trim()
+          ? String(customText).trim()
           : input.value.trim();
 
 
@@ -604,15 +1339,9 @@
       }
 
 
-      // ====================================================
-      // LOCAL DATE
-      // ====================================================
+      /* Date locally */
 
-      if (
-        isDateQuestion(
-          text
-        )
-      ) {
+      if (isDateQuestion(text)) {
 
         const localDate =
           new Intl.DateTimeFormat(
@@ -650,37 +1379,34 @@
         });
 
 
-        const dateAnswer =
+        const answer =
           `आज की तारीख है ${localDate}।`;
-
-
-        lastAnswer =
-          dateAnswer;
 
 
         addMessage(
           "assistant",
-          dateAnswer
+          answer
         );
 
 
         messages.push({
           role: "assistant",
-          content: dateAnswer
+          content: answer
         });
 
 
         input.value = "";
 
-        setStatus("");
+
+        if (voiceEnabled) {
+          speakText(answer);
+        }
 
         return;
       }
 
 
-      // ====================================================
-      // USER MESSAGE
-      // ====================================================
+      /* User message */
 
       addMessage(
         "user",
@@ -696,13 +1422,11 @@
 
       input.value = "";
 
+      resizeInput();
 
-      // ====================================================
-      // STATUS
-      // ====================================================
 
       setStatus(
-        searchNow
+        useSearch
           ? "🌐 Internet Search से जानकारी खोजी जा रही है..."
           : "सारथी जवाब तैयार कर रहा है..."
       );
@@ -711,13 +1435,9 @@
       sendButton.disabled =
         true;
 
-      searchButton.disabled =
+      micButton.disabled =
         true;
 
-
-      // ====================================================
-      // API REQUEST
-      // ====================================================
 
       try {
 
@@ -744,19 +1464,14 @@
 
                   webSearch:
                     Boolean(
-                      searchNow
+                      useSearch
                     )
                 })
             }
           );
 
 
-        // ==================================================
-        // RESPONSE
-        // ==================================================
-
-        let data =
-          null;
+        let data;
 
 
         try {
@@ -773,17 +1488,11 @@
         }
 
 
-        // ==================================================
-        // ERROR
-        // ==================================================
-
-        if (
-          !response.ok
-        ) {
+        if (!response.ok) {
 
           throw new Error(
-            data?.answer ||
             data?.error ||
+            data?.answer ||
             data?.detail ||
             "जवाब नहीं मिल पाया।"
           );
@@ -791,17 +1500,9 @@
         }
 
 
-        // ==================================================
-        // ANSWER
-        // ==================================================
-
         const reply =
           data?.answer ||
           "कोई जवाब नहीं मिला।";
-
-
-        lastAnswer =
-          reply;
 
 
         addMessage(
@@ -819,16 +1520,12 @@
         });
 
 
-        // ==================================================
-        // FINAL STATUS
-        // ==================================================
-
         if (
           data?.searchUsed === true
         ) {
 
           setStatus(
-            "✓ Internet Search से ताज़ा जानकारी खोजकर जवाब दिया गया"
+            "✓ Internet Search से ताज़ा जानकारी मिली।"
           );
 
         } else if (
@@ -836,7 +1533,7 @@
         ) {
 
           setStatus(
-            "✓ Self-check करके जवाब सुधारा गया"
+            "✓ Self-check करके जवाब सुधारा गया।"
           );
 
         } else if (
@@ -844,7 +1541,7 @@
         ) {
 
           setStatus(
-            "✓ Self-check करके जवाब जाँचा गया"
+            "✓ जवाब self-check किया गया।"
           );
 
         } else {
@@ -854,13 +1551,20 @@
         }
 
 
-      } catch (
-        error
-      ) {
+        /* Voice reply */
 
-        // ================================================
-        // ERROR
-        // ================================================
+        if (
+          voiceEnabled
+        ) {
+
+          speakText(
+            reply
+          );
+
+        }
+
+
+      } catch (error) {
 
         console.error(
           "Chat error:",
@@ -885,14 +1589,10 @@
 
       } finally {
 
-        // ================================================
-        // ENABLE
-        // ================================================
-
         sendButton.disabled =
           false;
 
-        searchButton.disabled =
+        micButton.disabled =
           false;
 
         input.focus();
@@ -902,43 +1602,690 @@
     }
 
 
-    // ======================================================
-    // CLEAR CHAT
-    // ======================================================
+    /* =====================================================
+       PHOTO
+    ===================================================== */
 
-    function clearChat() {
-
-      messages = [];
-
-      lastAnswer = "";
-
-
-      messagesBox.innerHTML = `
-        <div
-          id="emptyMessage"
-          class="empty"
-        >
-          अपना पहला सवाल लिखकर पूछें।
-        </div>
-      `;
+    document
+      .getElementById("photoInput")
+      .addEventListener(
+        "change",
+        handlePhoto
+      );
 
 
-      setStatus("");
+    async function handlePhoto(event) {
 
-      input.value = "";
+      const file =
+        event.target.files?.[0];
 
-      input.focus();
+
+      if (!file) {
+        return;
+      }
+
+
+      if (
+        !file.type.startsWith(
+          "image/"
+        )
+      ) {
+
+        setStatus(
+          "कृपया सही फोटो चुनें।"
+        );
+
+        return;
+      }
+
+
+      showAttachment(
+        "📷 " + file.name
+      );
+
+
+      addMessage(
+        "user",
+        "📷 मैंने एक फोटो भेजी है।"
+      );
+
+
+      setStatus(
+        "📷 फोटो को सारथी देख रहा है..."
+      );
+
+
+      try {
+
+        const image =
+          await fileToDataURL(
+            file
+          );
+
+
+        const question =
+          input.value.trim() ||
+          "इस फोटो को ध्यान से देखकर सरल हिंदी में समझाओ।";
+
+
+        input.value = "";
+
+
+        const response =
+          await fetch(
+            API_BASE +
+              "/api/vision",
+            {
+              method:
+                "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body:
+                JSON.stringify({
+                  image:
+                    image,
+
+                  question:
+                    question
+                })
+            }
+          );
+
+
+        const data =
+          await response.json();
+
+
+        if (!response.ok) {
+
+          throw new Error(
+            data?.error ||
+            "फोटो समझी नहीं जा सकी।"
+          );
+
+        }
+
+
+        const answer =
+          data?.answer ||
+          "फोटो से कोई उत्तर नहीं मिला।";
+
+
+        addMessage(
+          "assistant",
+          answer
+        );
+
+
+        if (voiceEnabled) {
+
+          speakText(
+            answer
+          );
+
+        }
+
+
+        setStatus(
+          "✓ फोटो समझ ली गई।"
+        );
+
+
+      } catch (error) {
+
+        console.error(
+          error
+        );
+
+
+        addMessage(
+          "assistant",
+          "फोटो को समझने में समस्या हुई।"
+        );
+
+
+        setStatus(
+          "त्रुटि: " +
+          error.message
+        );
+
+      } finally {
+
+        removeAttachment();
+
+        event.target.value = "";
+
+      }
 
     }
 
 
-    // ======================================================
-    // ENTER KEY
-    // ======================================================
+    /* =====================================================
+       VIDEO
+       First frame → Vision
+    ===================================================== */
+
+    document
+      .getElementById("videoInput")
+      .addEventListener(
+        "change",
+        handleVideo
+      );
+
+
+    async function handleVideo(event) {
+
+      const file =
+        event.target.files?.[0];
+
+
+      if (!file) {
+        return;
+      }
+
+
+      showAttachment(
+        "🎥 " + file.name
+      );
+
+
+      addMessage(
+        "user",
+        "🎥 मैंने एक वीडियो भेजा है।"
+      );
+
+
+      setStatus(
+        "🎥 वीडियो का पहला frame देखा जा रहा है..."
+      );
+
+
+      try {
+
+        const image =
+          await videoFirstFrame(
+            file
+          );
+
+
+        const question =
+          input.value.trim() ||
+          "इस वीडियो के दिखाई दे रहे frame को देखकर सरल हिंदी में बताओ इसमें क्या है।";
+
+
+        input.value = "";
+
+
+        const response =
+          await fetch(
+            API_BASE +
+              "/api/vision",
+            {
+              method:
+                "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body:
+                JSON.stringify({
+                  image:
+                    image,
+
+                  question:
+                    question
+                })
+            }
+          );
+
+
+        const data =
+          await response.json();
+
+
+        if (!response.ok) {
+
+          throw new Error(
+            data?.error ||
+            "वीडियो का frame समझा नहीं जा सका।"
+          );
+
+        }
+
+
+        const answer =
+          data?.answer ||
+          "वीडियो का frame समझ में नहीं आया।";
+
+
+        addMessage(
+          "assistant",
+          answer
+        );
+
+
+        if (voiceEnabled) {
+
+          speakText(
+            answer
+          );
+
+        }
+
+
+        setStatus(
+          "✓ वीडियो के पहले frame की जानकारी मिली।"
+        );
+
+
+      } catch (error) {
+
+        console.error(
+          error
+        );
+
+
+        addMessage(
+          "assistant",
+          "वीडियो को समझने में समस्या हुई।"
+        );
+
+
+        setStatus(
+          "त्रुटि: " +
+          error.message
+        );
+
+      } finally {
+
+        removeAttachment();
+
+        event.target.value = "";
+
+      }
+
+    }
+
+
+    /* =====================================================
+       FILE
+       TXT / CSV / JSON / MD
+    ===================================================== */
+
+    document
+      .getElementById("fileInput")
+      .addEventListener(
+        "change",
+        handleFile
+      );
+
+
+    async function handleFile(event) {
+
+      const file =
+        event.target.files?.[0];
+
+
+      if (!file) {
+        return;
+      }
+
+
+      showAttachment(
+        "📎 " + file.name
+      );
+
+
+      const allowed =
+        [
+          "text/plain",
+          "text/csv",
+          "application/json",
+          "text/markdown"
+        ];
+
+
+      const extension =
+        file.name
+          .split(".")
+          .pop()
+          .toLowerCase();
+
+
+      if (
+        !allowed.includes(file.type) &&
+        ![
+          "txt",
+          "csv",
+          "json",
+          "md"
+        ].includes(extension)
+      ) {
+
+        setStatus(
+          "अभी TXT, CSV, JSON और MD फाइल पढ़ी जा सकती है।"
+        );
+
+        event.target.value = "";
+
+        return;
+      }
+
+
+      try {
+
+        const content =
+          await file.text();
+
+
+        if (!content.trim()) {
+
+          throw new Error(
+            "फाइल खाली है।"
+          );
+
+        }
+
+
+        const question =
+          input.value.trim() ||
+          "इस फाइल को पढ़कर सरल हिंदी में समझाओ।";
+
+
+        input.value = "";
+
+
+        addMessage(
+          "user",
+          "📎 फाइल भेजी: " +
+          file.name
+        );
+
+
+        setStatus(
+          "📎 फाइल पढ़कर सारथी जवाब तैयार कर रहा है..."
+        );
+
+
+        const limitedContent =
+          content.slice(
+            0,
+            30000
+          );
+
+
+        const prompt =
+          `${question}
+
+फाइल का नाम: ${file.name}
+
+फाइल की सामग्री:
+${limitedContent}`;
+
+
+        await sendMessage(
+          prompt
+        );
+
+
+      } catch (error) {
+
+        console.error(
+          error
+        );
+
+
+        addMessage(
+          "assistant",
+          "फाइल पढ़ने में समस्या हुई।"
+        );
+
+
+        setStatus(
+          "त्रुटि: " +
+          error.message
+        );
+
+      } finally {
+
+        removeAttachment();
+
+        event.target.value = "";
+
+      }
+
+    }
+
+
+    /* =====================================================
+       FILE HELPERS
+    ===================================================== */
+
+    function showAttachment(name) {
+
+      attachmentText.textContent =
+        name;
+
+      attachmentPreview.classList.add(
+        "show"
+      );
+
+    }
+
+
+    function removeAttachment() {
+
+      attachmentPreview.classList.remove(
+        "show"
+      );
+
+      selectedFile =
+        null;
+
+    }
+
+
+    function fileToDataURL(file) {
+
+      return new Promise(
+        (resolve, reject) => {
+
+          const reader =
+            new FileReader();
+
+
+          reader.onload =
+            () =>
+              resolve(
+                reader.result
+              );
+
+
+          reader.onerror =
+            reject;
+
+
+          reader.readAsDataURL(
+            file
+          );
+
+        }
+      );
+
+    }
+
+
+    /* =====================================================
+       VIDEO FIRST FRAME
+    ===================================================== */
+
+    function videoFirstFrame(file) {
+
+      return new Promise(
+        (resolve, reject) => {
+
+          const video =
+            document.createElement(
+              "video"
+            );
+
+
+          const canvas =
+            document.createElement(
+              "canvas"
+            );
+
+
+          const url =
+            URL.createObjectURL(
+              file
+            );
+
+
+          video.src =
+            url;
+
+          video.muted =
+            true;
+
+          video.playsInline =
+            true;
+
+
+          video.onloadedmetadata =
+            () => {
+
+              video.currentTime =
+                0;
+
+            };
+
+
+          video.onseeked =
+            () => {
+
+              try {
+
+                const width =
+                  video.videoWidth ||
+                  640;
+
+                const height =
+                  video.videoHeight ||
+                  360;
+
+
+                canvas.width =
+                  width;
+
+                canvas.height =
+                  height;
+
+
+                const ctx =
+                  canvas.getContext(
+                    "2d"
+                  );
+
+
+                ctx.drawImage(
+                  video,
+                  0,
+                  0,
+                  width,
+                  height
+                );
+
+
+                const image =
+                  canvas.toDataURL(
+                    "image/jpeg",
+                    0.82
+                  );
+
+
+                URL.revokeObjectURL(
+                  url
+                );
+
+
+                resolve(
+                  image
+                );
+
+              } catch (error) {
+
+                URL.revokeObjectURL(
+                  url
+                );
+
+                reject(
+                  error
+                );
+
+              }
+
+            };
+
+
+          video.onerror =
+            () => {
+
+              URL.revokeObjectURL(
+                url
+              );
+
+              reject(
+                new Error(
+                  "वीडियो पढ़ा नहीं जा सका।"
+                )
+              );
+
+            };
+
+        }
+      );
+
+    }
+
+
+    /* =====================================================
+       TEXTAREA AUTO RESIZE
+    ===================================================== */
+
+    function resizeInput() {
+
+      input.style.height =
+        "auto";
+
+      input.style.height =
+        Math.min(
+          input.scrollHeight,
+          150
+        ) + "px";
+
+    }
+
+
+    input.addEventListener(
+      "input",
+      resizeInput
+    );
+
+
+    /* =====================================================
+       ENTER
+    ===================================================== */
 
     input.addEventListener(
       "keydown",
-      function(event) {
+      event => {
 
         if (
           event.key === "Enter" &&
@@ -947,9 +2294,7 @@
 
           event.preventDefault();
 
-          sendMessage(
-            useSearch
-          );
+          sendMessage();
 
         }
 
@@ -957,11 +2302,35 @@
     );
 
 
-    // ======================================================
-    // START
-    // ======================================================
+    /* =====================================================
+       STUDY
+    ===================================================== */
 
-    updateSearchButton();
+    function openStudy() {
+
+      window.location.href =
+        "study.html";
+
+    }
+
+
+    /* =====================================================
+       START
+    ===================================================== */
+
+    updateSearchUI();
+
+    resizeInput();
+
+
+    if (
+      "speechSynthesis" in window
+    ) {
+
+      speechSynthesis.onvoiceschanged =
+        () => {};
+
+    }
 
   </script>
 
