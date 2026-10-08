@@ -2,7 +2,11 @@
 <html lang="hi">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
   <title>सारथी AI</title>
 
@@ -15,24 +19,26 @@
     body {
       margin: 0;
       padding: 0;
-      height: 100%;
-    }
-
-    body {
+      width: 100%;
+      min-height: 100%;
       font-family:
         system-ui,
         -apple-system,
         BlinkMacSystemFont,
         "Segoe UI",
         sans-serif;
+      background: #f7f8fa;
+      color: #202124;
+    }
 
-      background: #f7f8fc;
-      color: #172033;
+    body {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
     }
 
     button,
-    textarea,
-    input {
+    textarea {
       font: inherit;
     }
 
@@ -45,128 +51,132 @@
     ========================= */
 
     .header {
+      width: 100%;
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
       position: sticky;
       top: 0;
       z-index: 100;
-
-      background: rgba(255,255,255,.96);
-      backdrop-filter: blur(12px);
-
-      border-bottom: 1px solid #e5e7eb;
     }
 
     .header-inner {
-      max-width: 950px;
+      width: 100%;
+      max-width: 1100px;
       margin: auto;
-
-      padding: 10px 14px;
+      min-height: 64px;
+      padding: 10px 16px;
 
       display: flex;
       align-items: center;
       justify-content: space-between;
-
-      gap: 10px;
+      gap: 12px;
     }
 
     .brand {
       display: flex;
       align-items: center;
-      gap: 9px;
+      gap: 10px;
 
       font-size: 20px;
-      font-weight: 800;
+      font-weight: 700;
+      color: #111827;
     }
 
-    /* Sarathi icon */
-
     .sarathi-icon {
-      width: 38px;
-      height: 38px;
-
+      width: 42px;
+      height: 42px;
       border-radius: 50%;
-
-      background:
-        linear-gradient(135deg, #6366f1, #4f46e5);
 
       display: flex;
       align-items: center;
       justify-content: center;
 
-      color: white;
-      font-size: 21px;
-
-      box-shadow:
-        0 4px 12px rgba(79,70,229,.25);
+      background: #eef2ff;
+      font-size: 24px;
     }
 
     .header-actions {
       display: flex;
-      gap: 7px;
+      align-items: center;
+      gap: 8px;
     }
 
     .header-btn {
-      border: 0;
-      border-radius: 11px;
+      border: 1px solid #d1d5db;
+      background: #ffffff;
+      color: #374151;
 
-      padding: 9px 11px;
+      padding: 8px 13px;
+      border-radius: 10px;
 
-      background: #eef2ff;
-      color: #3730a3;
+      font-size: 14px;
+      font-weight: 600;
+    }
 
-      font-weight: 750;
+    .header-btn:active {
+      transform: scale(0.98);
     }
 
     /* =========================
        MAIN
     ========================= */
 
-    .container {
-      max-width: 950px;
+    .main {
+      width: 100%;
+      max-width: 1100px;
       margin: auto;
 
-      padding:
-        20px
-        14px
-        110px;
+      flex: 1;
+
+      display: flex;
+      flex-direction: column;
+
+      padding: 20px 14px 150px;
     }
+
+    /* =========================
+       WELCOME
+    ========================= */
 
     .welcome {
       text-align: center;
-
-      padding: 30px 15px 25px;
+      padding: 45px 15px 30px;
     }
 
     .welcome-icon {
-      width: 68px;
-      height: 68px;
+      width: 70px;
+      height: 70px;
 
-      margin: 0 auto 13px;
-
-      border-radius: 50%;
+      margin: 0 auto 18px;
 
       display: flex;
       align-items: center;
       justify-content: center;
 
-      background:
-        linear-gradient(135deg,#6366f1,#7c3aed);
+      border-radius: 22px;
 
-      color: white;
-      font-size: 34px;
+      background: #eef2ff;
 
-      box-shadow:
-        0 8px 25px rgba(79,70,229,.22);
+      font-size: 40px;
     }
 
     .welcome h1 {
-      margin: 0 0 8px;
-      font-size: 27px;
+      margin: 0 0 10px;
+
+      font-size: 28px;
+      line-height: 1.25;
+
+      color: #111827;
     }
 
     .welcome p {
-      margin: 0;
-      color: #667085;
+      max-width: 650px;
+      margin: 0 auto;
+
+      font-size: 15px;
       line-height: 1.6;
+
+      color: #6b7280;
     }
 
     /* =========================
@@ -174,247 +184,267 @@
     ========================= */
 
     .chat-box {
+      width: 100%;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 14px;
+    }
+
+    .empty {
+      text-align: center;
+      color: #9ca3af;
+      font-size: 14px;
+      padding: 15px;
     }
 
     .message-row {
+      width: 100%;
       display: flex;
-      gap: 9px;
-      align-items: flex-start;
     }
 
-    .message-row.user-row {
+    .message-row.user {
       justify-content: flex-end;
     }
 
-    .mini-icon {
-      flex: 0 0 auto;
-
-      width: 32px;
-      height: 32px;
-
-      border-radius: 50%;
-
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      background: #4f46e5;
-      color: white;
-
-      font-size: 17px;
+    .message-row.assistant {
+      justify-content: flex-start;
     }
 
-    .bubble {
-      max-width: min(82%, 720px);
+    .message {
+      max-width: min(85%, 760px);
 
       padding: 12px 14px;
 
-      border-radius: 17px;
+      border-radius: 16px;
 
-      line-height: 1.7;
+      line-height: 1.6;
+      font-size: 15px;
 
+      word-break: break-word;
       white-space: pre-wrap;
-      overflow-wrap: anywhere;
     }
 
-    .assistant-bubble {
-      background: white;
-      border: 1px solid #e5e7eb;
-
-      border-bottom-left-radius: 5px;
-
-      box-shadow:
-        0 2px 10px rgba(0,0,0,.03);
-    }
-
-    .user-bubble {
-      background: #4f46e5;
-      color: white;
+    .message.user {
+      background: #2563eb;
+      color: #ffffff;
 
       border-bottom-right-radius: 5px;
     }
 
-    .message-actions {
-      display: flex;
-      gap: 5px;
-      margin-top: 7px;
+    .message.assistant {
+      background: #ffffff;
+      color: #202124;
+
+      border: 1px solid #e5e7eb;
+
+      border-bottom-left-radius: 5px;
     }
 
-    .message-action {
+    .message-tools {
+      display: flex;
+      gap: 6px;
+
+      margin-top: 8px;
+      padding-top: 7px;
+
+      border-top: 1px solid #eeeeee;
+    }
+
+    .message-tool {
       border: 0;
       background: transparent;
 
-      color: #667085;
+      color: #6b7280;
 
-      padding: 3px 6px;
-      font-size: 14px;
-    }
+      font-size: 12px;
+      padding: 4px 6px;
 
-    .message-action:hover {
-      background: #f1f5f9;
       border-radius: 7px;
     }
 
+    .message-tool:hover {
+      background: #f3f4f6;
+      color: #111827;
+    }
+
     /* =========================
-       INPUT AREA
+       STATUS
+    ========================= */
+
+    .status {
+      min-height: 20px;
+
+      padding: 4px 4px 0;
+
+      color: #6b7280;
+      font-size: 12px;
+      text-align: center;
+    }
+
+    /* =========================
+       COMPOSER
     ========================= */
 
     .composer {
       position: fixed;
-
       left: 0;
       right: 0;
       bottom: 0;
 
       z-index: 90;
 
-      background: rgba(247,248,252,.96);
-      backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.96);
 
       border-top: 1px solid #e5e7eb;
 
-      padding: 9px 10px;
+      backdrop-filter: blur(12px);
     }
 
     .composer-inner {
-      max-width: 950px;
+      width: 100%;
+      max-width: 1100px;
+
       margin: auto;
+
+      padding: 10px 12px 12px;
     }
 
     .input-wrap {
-      background: white;
-
-      border: 1px solid #d9dce5;
-
-      border-radius: 18px;
-
-      padding: 8px;
-
-      box-shadow:
-        0 5px 20px rgba(0,0,0,.05);
-    }
-
-    textarea {
-      display: block;
-
       width: 100%;
 
-      min-height: 52px;
+      display: flex;
+      flex-direction: column;
+
+      border: 1px solid #d1d5db;
+
+      background: #ffffff;
+
+      border-radius: 16px;
+
+      overflow: hidden;
+    }
+
+    #input {
+      width: 100%;
+
+      min-height: 48px;
       max-height: 150px;
 
       resize: none;
 
       border: 0;
-      outline: 0;
+      outline: none;
 
-      padding: 7px 8px;
+      padding: 13px 14px 8px;
 
-      background: transparent;
+      color: #111827;
+      background: #ffffff;
 
-      font-size: 16px;
       line-height: 1.5;
     }
+
+    #input::placeholder {
+      color: #9ca3af;
+    }
+
+    /* =========================
+       TOOLS
+    ========================= */
 
     .tools-row {
       display: flex;
       align-items: center;
       gap: 6px;
 
-      padding-top: 5px;
+      padding: 5px 7px 7px;
+
+      overflow-x: auto;
     }
 
     .tool-btn {
-      width: 42px;
-      height: 40px;
+      flex: 0 0 auto;
+
+      width: 38px;
+      height: 38px;
 
       border: 0;
-      border-radius: 12px;
+      border-radius: 10px;
 
-      background: #f1f5f9;
-      color: #334155;
+      background: #f3f4f6;
+      color: #374151;
 
-      font-size: 19px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      font-size: 18px;
     }
 
-    .tool-btn:hover {
-      background: #e8ecf3;
+    .tool-btn:active {
+      transform: scale(0.95);
     }
 
     .tool-btn.active {
-      background: #fee2e2;
-      color: #dc2626;
+      background: #dbeafe;
+      color: #2563eb;
     }
 
     .send-btn {
+      flex: 0 0 auto;
+
+      width: 42px;
+      height: 38px;
+
       margin-left: auto;
 
-      width: 45px;
-      height: 40px;
-
       border: 0;
-      border-radius: 12px;
+      border-radius: 10px;
 
-      background: #4f46e5;
-      color: white;
+      background: #2563eb;
+      color: #ffffff;
 
       font-size: 19px;
+      font-weight: 700;
     }
 
-    .send-btn:disabled {
-      opacity: .5;
+    .send-btn:active {
+      transform: scale(0.95);
     }
 
     .search-indicator {
-      font-size: 12px;
-      color: #667085;
+      flex: 0 0 auto;
 
-      padding-left: 5px;
-    }
+      font-size: 11px;
+      color: #6b7280;
 
-    .status {
-      min-height: 20px;
-
-      padding:
-        4px
-        7px
-        0;
-
-      color: #667085;
-
-      font-size: 13px;
+      white-space: nowrap;
     }
 
     /* =========================
-       SEARCH MENU
-    ========================= */
-
-    .search-on {
-      background: #dcfce7 !important;
-      color: #166534 !important;
-    }
-
-    /* =========================
-       FILE PREVIEW
+       ATTACHMENT
     ========================= */
 
     .attachment-preview {
       display: none;
 
+      align-items: center;
+      justify-content: space-between;
+
+      gap: 10px;
+
+      padding: 8px 12px;
+
       margin-bottom: 7px;
 
-      padding: 8px 10px;
+      background: #eff6ff;
 
-      border-radius: 12px;
+      border: 1px solid #bfdbfe;
 
-      background: #f1f5f9;
+      border-radius: 10px;
+
+      color: #1e40af;
 
       font-size: 13px;
-
-      align-items: center;
-      gap: 8px;
     }
 
     .attachment-preview.show {
@@ -422,32 +452,25 @@
     }
 
     .remove-file {
-      margin-left: auto;
+      width: 28px;
+      height: 28px;
 
       border: 0;
-      background: transparent;
+      border-radius: 8px;
+
+      background: #ffffff;
 
       color: #dc2626;
 
-      font-size: 18px;
+      font-size: 20px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     /* =========================
-       EMPTY
-    ========================= */
-
-    .empty {
-      text-align: center;
-
-      color: #667085;
-
-      padding: 25px 10px;
-
-      line-height: 1.7;
-    }
-
-    /* =========================
-       HIDDEN FILE INPUTS
+       HIDDEN
     ========================= */
 
     .hidden {
@@ -455,37 +478,112 @@
     }
 
     /* =========================
-       RESPONSIVE
+       LOADING
+    ========================= */
+
+    .typing {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .typing span {
+      width: 6px;
+      height: 6px;
+
+      border-radius: 50%;
+
+      background: #9ca3af;
+
+      animation: typing 1.2s infinite ease-in-out;
+    }
+
+    .typing span:nth-child(2) {
+      animation-delay: 0.15s;
+    }
+
+    .typing span:nth-child(3) {
+      animation-delay: 0.3s;
+    }
+
+    @keyframes typing {
+      0%,
+      60%,
+      100% {
+        opacity: 0.35;
+        transform: translateY(0);
+      }
+
+      30% {
+        opacity: 1;
+        transform: translateY(-3px);
+      }
+    }
+
+    /* =========================
+       MOBILE
     ========================= */
 
     @media (max-width: 600px) {
-
-      .container {
-        padding-top: 8px;
-      }
-
-      .welcome {
-        padding-top: 20px;
-      }
-
-      .welcome h1 {
-        font-size: 23px;
-      }
-
-      .bubble {
-        max-width: 90%;
+      .header-inner {
+        min-height: 58px;
+        padding: 8px 12px;
       }
 
       .brand {
         font-size: 18px;
       }
 
-      .header-btn {
-        padding: 8px 9px;
+      .sarathi-icon {
+        width: 38px;
+        height: 38px;
+        font-size: 22px;
       }
 
-      .search-indicator {
-        display: none;
+      .header-btn {
+        padding: 7px 10px;
+        font-size: 13px;
+      }
+
+      .main {
+        padding: 12px 10px 150px;
+      }
+
+      .welcome {
+        padding: 35px 10px 24px;
+      }
+
+      .welcome-icon {
+        width: 62px;
+        height: 62px;
+        font-size: 34px;
+      }
+
+      .welcome h1 {
+        font-size: 23px;
+      }
+
+      .welcome p {
+        font-size: 14px;
+      }
+
+      .message {
+        max-width: 92%;
+        font-size: 14px;
+      }
+
+      .tools-row {
+        gap: 5px;
+      }
+
+      .tool-btn {
+        width: 36px;
+        height: 36px;
+      }
+
+      .send-btn {
+        width: 40px;
+        height: 36px;
       }
     }
   </style>
@@ -498,45 +596,33 @@
   ========================= -->
 
   <header class="header">
-
     <div class="header-inner">
 
       <div class="brand">
-
-        <div class="sarathi-icon">
-          🧭
-        </div>
-
+        <div class="sarathi-icon">🧭</div>
         <span>सारथी AI</span>
-
       </div>
 
       <div class="header-actions">
-
         <button
           class="header-btn"
+          type="button"
           onclick="openStudy()"
         >
           📚 Study
         </button>
-
       </div>
 
     </div>
-
   </header>
-
 
   <!-- =========================
        MAIN
   ========================= -->
 
-  <main class="container">
+  <main class="main">
 
-    <section
-      id="welcome"
-      class="welcome"
-    >
+    <section id="welcome" class="welcome">
 
       <div class="welcome-icon">
         🧭
@@ -553,23 +639,15 @@
 
     </section>
 
+    <section id="chatBox" class="chat-box">
 
-    <section
-      id="chatBox"
-      class="chat-box"
-    >
-
-      <div
-        id="emptyMessage"
-        class="empty"
-      >
+      <div id="emptyMessage" class="empty">
         नीचे अपना सवाल लिखो या 🎤 माइक दबाकर बोलो।
       </div>
 
     </section>
 
   </main>
-
 
   <!-- =========================
        FILE INPUTS
@@ -596,7 +674,6 @@
     accept=".txt,.csv,.json,.md"
   >
 
-
   <!-- =========================
        COMPOSER
   ========================= -->
@@ -609,34 +686,28 @@
         id="attachmentPreview"
         class="attachment-preview"
       >
-
         <span id="attachmentText">
           फ़ाइल चुनी गई
         </span>
 
         <button
           class="remove-file"
-          onclick="removeAttachment()"
           type="button"
+          onclick="removeAttachment()"
         >
           ×
         </button>
-
       </div>
-
 
       <div class="input-wrap">
 
         <textarea
           id="input"
-          placeholder="सारथी से कुछ पूछें..."
           rows="1"
+          placeholder="सारथी से कुछ पूछें..."
         ></textarea>
 
-
         <div class="tools-row">
-
-          <!-- MICROPHONE -->
 
           <button
             id="micButton"
@@ -648,9 +719,6 @@
             🎤
           </button>
 
-
-          <!-- PHOTO -->
-
           <button
             class="tool-btn"
             type="button"
@@ -659,9 +727,6 @@
           >
             📷
           </button>
-
-
-          <!-- VIDEO -->
 
           <button
             class="tool-btn"
@@ -672,9 +737,6 @@
             🎥
           </button>
 
-
-          <!-- FILE -->
-
           <button
             class="tool-btn"
             type="button"
@@ -683,9 +745,6 @@
           >
             📎
           </button>
-
-
-          <!-- SEARCH -->
 
           <button
             id="searchButton"
@@ -697,16 +756,12 @@
             🌐
           </button>
 
-
           <span
             id="searchIndicator"
             class="search-indicator"
           >
             Search OFF
           </span>
-
-
-          <!-- SPEAKER -->
 
           <button
             id="voiceButton"
@@ -717,9 +772,6 @@
           >
             🔊
           </button>
-
-
-          <!-- SEND -->
 
           <button
             id="sendButton"
@@ -734,7 +786,6 @@
 
       </div>
 
-
       <div
         id="status"
         class="status"
@@ -744,47 +795,37 @@
 
   </div>
 
-
-  <!-- =========================
-       JAVASCRIPT
-  ========================= -->
-
+  <!-- भाग 2 में यहीं से JavaScript शुरू होगा -->
   <script>
 
-    /* =====================================================
-       API
-    ===================================================== */
+    /* =========================
+       SARATHI AI JAVASCRIPT
+    ========================= */
 
     const API_BASE =
       "https://sarathi-ai.mjmanjumanjeet0.workers.dev";
 
-
-    /* =====================================================
-       STATE
-    ===================================================== */
-
     let messages = [];
-
     let useSearch = false;
 
-    let voiceEnabled = true;
-
-    let recognition = null;
+    // अपने-आप आवाज नहीं बोलेगी
+    let voiceEnabled = false;
 
     let isListening = false;
+    let mediaRecorder = null;
+    let audioChunks = [];
+    let microphoneStream = null;
 
     let selectedFile = null;
-
-
-    /* =====================================================
-       ELEMENTS
-    ===================================================== */
 
     const input =
       document.getElementById("input");
 
-    const sendButton =
-      document.getElementById("sendButton");
+    const chatBox =
+      document.getElementById("chatBox");
+
+    const status =
+      document.getElementById("status");
 
     const micButton =
       document.getElementById("micButton");
@@ -792,20 +833,11 @@
     const searchButton =
       document.getElementById("searchButton");
 
-    const voiceButton =
-      document.getElementById("voiceButton");
-
     const searchIndicator =
       document.getElementById("searchIndicator");
 
-    const status =
-      document.getElementById("status");
-
-    const chatBox =
-      document.getElementById("chatBox");
-
-    const welcome =
-      document.getElementById("welcome");
+    const voiceButton =
+      document.getElementById("voiceButton");
 
     const attachmentPreview =
       document.getElementById("attachmentPreview");
@@ -814,117 +846,110 @@
       document.getElementById("attachmentText");
 
 
-    /* =====================================================
-       STATUS
-    ===================================================== */
+    /* =========================
+       BASIC HELPERS
+    ========================= */
 
     function setStatus(text) {
-
-      status.textContent =
-        text || "";
-
+      if (status) {
+        status.textContent = text || "";
+      }
     }
 
 
-    /* =====================================================
-       ADD MESSAGE
-    ===================================================== */
+    function escapeHtml(text) {
+      return String(text || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
 
-    function addMessage(role, text) {
 
+    function removeEmptyMessage() {
       const empty =
-        document.getElementById(
-          "emptyMessage"
-        );
+        document.getElementById("emptyMessage");
 
       if (empty) {
         empty.remove();
       }
+    }
 
-      welcome.style.display = "none";
 
+    /* =========================
+       ADD MESSAGE
+    ========================= */
+
+    function addMessage(role, text) {
+
+      removeEmptyMessage();
 
       const row =
         document.createElement("div");
 
       row.className =
-        "message-row " +
-        (role === "user"
-          ? "user-row"
-          : "");
+        "message-row " + role;
 
+      const message =
+        document.createElement("div");
 
-      if (role === "assistant") {
-
-        const icon =
-          document.createElement("div");
-
-        icon.className =
-          "mini-icon";
-
-        icon.textContent =
-          "🧭";
-
-        row.appendChild(icon);
-      }
-
+      message.className =
+        "message " + role;
 
       const content =
         document.createElement("div");
 
+      content.className =
+        "message-content";
 
-      const bubble =
-        document.createElement("div");
-
-      bubble.className =
-        "bubble " +
-        (role === "user"
-          ? "user-bubble"
-          : "assistant-bubble");
-
-
-      bubble.textContent =
+      content.textContent =
         String(text || "");
 
+      message.appendChild(content);
 
-      content.appendChild(bubble);
 
-
-      /* Assistant actions */
-
+      // Assistant के लिए buttons
       if (role === "assistant") {
 
-        const actions =
+        const tools =
           document.createElement("div");
 
-        actions.className =
-          "message-actions";
+        tools.className =
+          "message-tools";
 
-
-        const speak =
+        const speakButton =
           document.createElement("button");
 
-        speak.className =
-          "message-action";
+        speakButton.className =
+          "message-tool";
 
-        speak.textContent =
+        speakButton.type =
+          "button";
+
+        speakButton.textContent =
           "🔊 सुनें";
 
-        speak.onclick =
-          () => speakText(String(text || ""));
+        speakButton.onclick =
+          function () {
+            speakText(String(text || ""));
+          };
 
 
-        const copy =
+        const copyButton =
           document.createElement("button");
 
-        copy.className =
-          "message-action";
+        copyButton.className =
+          "message-tool";
 
-        copy.textContent =
+        copyButton.type =
+          "button";
+
+        copyButton.textContent =
           "📋 कॉपी";
 
-        copy.onclick =
-          async () => {
+        copyButton.onclick =
+          async function () {
 
             try {
 
@@ -933,136 +958,151 @@
               );
 
               setStatus(
-                "✓ जवाब कॉपी हो गया।"
+                "जवाब कॉपी हो गया।"
               );
 
-            } catch {
+              setTimeout(
+                () => setStatus(""),
+                1500
+              );
+
+            } catch (error) {
 
               setStatus(
                 "कॉपी नहीं हो पाया।"
               );
-
             }
-
           };
 
 
-        actions.appendChild(speak);
-        actions.appendChild(copy);
+        tools.appendChild(speakButton);
+        tools.appendChild(copyButton);
 
-        content.appendChild(actions);
+        message.appendChild(tools);
       }
 
 
-      row.appendChild(content);
-
+      row.appendChild(message);
       chatBox.appendChild(row);
 
+      chatBox.scrollTop =
+        chatBox.scrollHeight;
 
       window.scrollTo({
-        top:
-          document.body.scrollHeight,
+        top: document.body.scrollHeight,
         behavior: "smooth"
       });
 
+      return message;
     }
 
 
-    /* =====================================================
-       SEARCH
-    ===================================================== */
+    /* =========================
+       TYPING INDICATOR
+    ========================= */
 
-    function updateSearchUI() {
+    function showTyping() {
 
-      if (useSearch) {
+      removeEmptyMessage();
 
-        searchButton.classList.add(
-          "search-on"
-        );
+      const row =
+        document.createElement("div");
 
-        searchIndicator.textContent =
-          "Search ON";
+      row.className =
+        "message-row assistant";
 
-      } else {
+      row.id =
+        "typingRow";
 
-        searchButton.classList.remove(
-          "search-on"
-        );
+      const message =
+        document.createElement("div");
 
-        searchIndicator.textContent =
-          "Search OFF";
+      message.className =
+        "message assistant";
+
+      message.innerHTML = `
+        <div class="typing">
+          <span></span>
+          <span></span>
+          <span></span>
+        </div>
+      `;
+
+      row.appendChild(message);
+      chatBox.appendChild(row);
+
+      chatBox.scrollTop =
+        chatBox.scrollHeight;
+    }
+
+
+    function hideTyping() {
+
+      const typing =
+        document.getElementById("typingRow");
+
+      if (typing) {
+        typing.remove();
       }
-
     }
 
 
-    function toggleSearch() {
-
-      useSearch =
-        !useSearch;
-
-      updateSearchUI();
-
-      setStatus(
-        useSearch
-          ? "🌐 Internet Search ON है।"
-          : "🌐 Internet Search OFF है।"
-      );
-
-    }
-
-
-    /* =====================================================
+    /* =========================
        VOICE OUTPUT
-    ===================================================== */
+    ========================= */
 
     function toggleVoice() {
 
       voiceEnabled =
         !voiceEnabled;
 
-      voiceButton.textContent =
-        voiceEnabled
-          ? "🔊"
-          : "🔇";
+      if (voiceEnabled) {
 
-      if (!voiceEnabled) {
-
-        speechSynthesis.cancel();
+        voiceButton.classList.add(
+          "active"
+        );
 
         setStatus(
-          "🔇 Voice OFF है।"
+          "🔊 सुनें बटन से जवाब की आवाज सुन सकते हो।"
         );
 
       } else {
 
+        voiceButton.classList.remove(
+          "active"
+        );
+
         setStatus(
-          "🔊 Voice ON है।"
+          "आवाज़ बंद है।"
         );
       }
 
+      setTimeout(
+        () => setStatus(""),
+        1800
+      );
     }
 
 
     function speakText(text) {
 
-      if (!("speechSynthesis" in window)) {
+      if (
+        !("speechSynthesis" in window)
+      ) {
 
         setStatus(
-          "इस browser में आवाज़ की सुविधा उपलब्ध नहीं है।"
+          "इस browser में आवाज उपलब्ध नहीं है।"
         );
 
         return;
       }
 
-      speechSynthesis.cancel();
-
+      window.speechSynthesis.cancel();
 
       const utterance =
         new SpeechSynthesisUtterance(
           String(text || "")
         );
-
 
       utterance.lang =
         "hi-IN";
@@ -1073,10 +1113,8 @@
       utterance.pitch =
         1;
 
-
       const voices =
-        speechSynthesis.getVoices();
-
+        window.speechSynthesis.getVoices();
 
       const hindiVoice =
         voices.find(
@@ -1087,155 +1125,73 @@
               .startsWith("hi")
         );
 
-
       if (hindiVoice) {
-
         utterance.voice =
           hindiVoice;
-
       }
 
-
-      utterance.onstart =
-        () => {
-
-          setStatus(
-            "🔊 सारथी बोल रहा है..."
-          );
-
-        };
-
-
-      utterance.onend =
-        () => {
-
-          setStatus("");
-
-        };
-
-
-      speechSynthesis.speak(
+      window.speechSynthesis.speak(
         utterance
       );
-
     }
 
 
-    /* =====================================================
+    /* =========================
+       SEARCH
+    ========================= */
+
+    function toggleSearch() {
+
+      useSearch =
+        !useSearch;
+
+      if (useSearch) {
+
+        searchButton.classList.add(
+          "active"
+        );
+
+        searchIndicator.textContent =
+          "Search ON";
+
+      } else {
+
+        searchButton.classList.remove(
+          "active"
+        );
+
+        searchIndicator.textContent =
+          "Search OFF";
+      }
+    }
+
+
+    /* =========================
        MICROPHONE
-       Browser Speech Recognition
-    ===================================================== */
+       MediaRecorder + Whisper
+    ========================= */
 
-    function createRecognition() {
+    function getSupportedAudioMimeType() {
 
-      const SpeechRecognition =
-        window.SpeechRecognition ||
-        window.webkitSpeechRecognition;
+      const types = [
+        "audio/webm;codecs=opus",
+        "audio/webm",
+        "audio/mp4",
+        "audio/ogg;codecs=opus",
+        "audio/ogg"
+      ];
 
+      for (const type of types) {
 
-      if (!SpeechRecognition) {
-
-        return null;
+        if (
+          window.MediaRecorder &&
+          MediaRecorder.isTypeSupported(type)
+        ) {
+          return type;
+        }
       }
 
-
-      const r =
-        new SpeechRecognition();
-
-
-      r.lang =
-        "hi-IN";
-
-      r.continuous =
-        false;
-
-      r.interimResults =
-        false;
-
-      r.maxAlternatives =
-        1;
-
-
-      r.onstart =
-        () => {
-
-          isListening =
-            true;
-
-          micButton.classList.add(
-            "active"
-          );
-
-          micButton.textContent =
-            "⏹️";
-
-          setStatus(
-            "🎤 सुन रहा हूँ... बोलिए"
-          );
-
-        };
-
-
-      r.onresult =
-        event => {
-
-          const transcript =
-            event
-              ?.results?.[0]?.[0]?.transcript ||
-            "";
-
-
-          input.value =
-            transcript.trim();
-
-
-          if (input.value) {
-
-            setStatus(
-              "✓ आपकी आवाज़ समझ ली।"
-            );
-
-            sendMessage();
-
-          }
-
-        };
-
-
-      r.onerror =
-        event => {
-
-          console.error(
-            "Speech recognition:",
-            event
-          );
-
-
-          setStatus(
-            "माइक से आवाज़ समझने में समस्या हुई।"
-          );
-
-        };
-
-
-      r.onend =
-        () => {
-
-          isListening =
-            false;
-
-          micButton.classList.remove(
-            "active"
-          );
-
-          micButton.textContent =
-            "🎤";
-
-        };
-
-
-      return r;
-
+      return "";
     }
 
 
@@ -1243,39 +1199,31 @@
 
       if (isListening) {
 
-        try {
-
-          recognition?.stop();
-
-        } catch {}
+        stopRecording();
 
         return;
       }
 
 
       if (
-        !(
-          window.SpeechRecognition ||
-          window.webkitSpeechRecognition
-        )
+        !navigator.mediaDevices ||
+        !navigator.mediaDevices.getUserMedia
       ) {
 
         setStatus(
-          "इस browser में Voice Recognition उपलब्ध नहीं है।"
+          "इस browser में microphone उपलब्ध नहीं है।"
         );
 
         return;
       }
 
 
-      recognition =
-        createRecognition();
-
-
-      if (!recognition) {
+      if (
+        !window.MediaRecorder
+      ) {
 
         setStatus(
-          "माइक उपलब्ध नहीं है।"
+          "इस browser में audio recording उपलब्ध नहीं है।"
         );
 
         return;
@@ -1284,129 +1232,373 @@
 
       try {
 
-        recognition.start();
+        microphoneStream =
+          await navigator.mediaDevices.getUserMedia({
+            audio: true
+          });
+
+
+        audioChunks = [];
+
+
+        const mimeType =
+          getSupportedAudioMimeType();
+
+
+        if (mimeType) {
+
+          mediaRecorder =
+            new MediaRecorder(
+              microphoneStream,
+              {
+                mimeType
+              }
+            );
+
+        } else {
+
+          mediaRecorder =
+            new MediaRecorder(
+              microphoneStream
+            );
+        }
+
+
+        mediaRecorder.ondataavailable =
+          function (event) {
+
+            if (
+              event.data &&
+              event.data.size > 0
+            ) {
+
+              audioChunks.push(
+                event.data
+              );
+            }
+          };
+
+
+        mediaRecorder.onstop =
+          async function () {
+
+            try {
+
+              await processRecordedAudio();
+
+            } catch (error) {
+
+              console.error(
+                "Audio processing error:",
+                error
+              );
+
+              setStatus(
+                "आवाज़ समझने में समस्या हुई।"
+              );
+
+            } finally {
+
+              if (microphoneStream) {
+
+                microphoneStream
+                  .getTracks()
+                  .forEach(
+                    track => track.stop()
+                  );
+
+                microphoneStream =
+                  null;
+              }
+            }
+          };
+
+
+        mediaRecorder.start();
+
+        isListening = true;
+
+        micButton.classList.add(
+          "active"
+        );
+
+        micButton.textContent =
+          "⏹️";
+
+        setStatus(
+          "🎤 बोलो... रिकॉर्डिंग चालू है।"
+        );
+
 
       } catch (error) {
 
         console.error(
+          "Microphone error:",
           error
         );
 
-        setStatus(
-          "माइक शुरू नहीं हो पाया।"
+        isListening = false;
+
+        micButton.classList.remove(
+          "active"
         );
 
+        micButton.textContent =
+          "🎤";
+
+
+        if (
+          error &&
+          error.name ===
+            "NotAllowedError"
+        ) {
+
+          setStatus(
+            "Microphone permission Allow करो।"
+          );
+
+        } else {
+
+          setStatus(
+            "Microphone शुरू नहीं हो पाया।"
+          );
+        }
+      }
+    }
+
+
+    function stopRecording() {
+
+      if (
+        mediaRecorder &&
+        mediaRecorder.state !== "inactive"
+      ) {
+
+        mediaRecorder.stop();
+
+      } else {
+
+        isListening = false;
+
+        micButton.classList.remove(
+          "active"
+        );
+
+        micButton.textContent =
+          "🎤";
+      }
+    }
+
+
+    /* =========================
+       SEND AUDIO TO WORKER
+    ========================= */
+
+    async function processRecordedAudio() {
+
+      isListening = false;
+
+      micButton.classList.remove(
+        "active"
+      );
+
+      micButton.textContent =
+        "🎤";
+
+
+      if (
+        audioChunks.length === 0
+      ) {
+
+        setStatus(
+          "कोई आवाज रिकॉर्ड नहीं हुई।"
+        );
+
+        return;
       }
 
+
+      setStatus(
+        "🎧 आवाज को समझ रहा हूँ..."
+      );
+
+
+      const mimeType =
+        (
+          mediaRecorder &&
+          mediaRecorder.mimeType
+        ) ||
+        "audio/webm";
+
+
+      const audioBlob =
+        new Blob(
+          audioChunks,
+          {
+            type: mimeType
+          }
+        );
+
+
+      audioChunks = [];
+
+
+      const formData =
+        new FormData();
+
+
+      let extension =
+        "webm";
+
+
+      if (
+        mimeType.includes("mp4")
+      ) {
+
+        extension =
+          "mp4";
+
+      } else if (
+        mimeType.includes("ogg")
+      ) {
+
+        extension =
+          "ogg";
+      }
+
+
+      formData.append(
+        "file",
+        audioBlob,
+        "voice." + extension
+      );
+
+
+      const response =
+        await fetch(
+          API_BASE +
+            "/api/transcribe",
+          {
+            method: "POST",
+            body: formData
+          }
+        );
+
+
+      const data =
+        await response.json()
+          .catch(() => ({}));
+
+
+      if (!response.ok) {
+
+        throw new Error(
+          data.error ||
+          "Transcription failed"
+        );
+      }
+
+
+      const transcript =
+        String(
+          data.text ||
+          data.transcript ||
+          ""
+        ).trim();
+
+
+      if (!transcript) {
+
+        setStatus(
+          "आवाज़ में कोई शब्द समझ नहीं आया।"
+        );
+
+        return;
+      }
+
+
+      input.value =
+        transcript;
+
+
+      autoResizeTextarea();
+
+
+      setStatus(
+        "✅ आवाज समझ ली गई।"
+      );
+
+
+      // आवाज को सीधे सवाल के रूप में भेजना
+      await sendMessage();
     }
 
 
-    /* =====================================================
-       DATE
-    ===================================================== */
+    /* =========================
+       TEXTAREA AUTO RESIZE
+    ========================= */
 
-    function isDateQuestion(text) {
+    function autoResizeTextarea() {
 
-      return /^(आज|आज की तारीख|आज का दिन|today|today's date|current date)\s*[?؟.!]*$/i
-        .test(text);
+      input.style.height =
+        "auto";
 
+      input.style.height =
+        Math.min(
+          input.scrollHeight,
+          150
+        ) + "px";
     }
 
 
-    /* =====================================================
-       CHAT
-    ===================================================== */
+    input.addEventListener(
+      "input",
+      autoResizeTextarea
+    );
 
-    async function sendMessage(
-      customText = null
-    ) {
+
+    /* =========================
+       ENTER TO SEND
+    ========================= */
+
+    input.addEventListener(
+      "keydown",
+      function (event) {
+
+        if (
+          event.key === "Enter" &&
+          !event.shiftKey
+        ) {
+
+          event.preventDefault();
+
+          sendMessage();
+        }
+      }
+    );
+
+        /* =========================
+       SEND MESSAGE
+    ========================= */
+
+    async function sendMessage(customText = null) {
 
       const text =
-        customText !== null
-          ? String(customText).trim()
-          : input.value.trim();
+        String(
+          customText !== null
+            ? customText
+            : input.value
+        ).trim();
 
 
       if (!text) {
-
-        setStatus(
-          "कृपया पहले अपना सवाल लिखें।"
-        );
-
-        input.focus();
-
         return;
       }
 
 
-      /* Date locally */
+      input.value = "";
+      autoResizeTextarea();
 
-      if (isDateQuestion(text)) {
-
-        const localDate =
-          new Intl.DateTimeFormat(
-            "hi-IN",
-            {
-              timeZone:
-                "Asia/Kolkata",
-
-              weekday:
-                "long",
-
-              day:
-                "numeric",
-
-              month:
-                "long",
-
-              year:
-                "numeric"
-            }
-          ).format(
-            new Date()
-          );
-
-
-        addMessage(
-          "user",
-          text
-        );
-
-
-        messages.push({
-          role: "user",
-          content: text
-        });
-
-
-        const answer =
-          `आज की तारीख है ${localDate}।`;
-
-
-        addMessage(
-          "assistant",
-          answer
-        );
-
-
-        messages.push({
-          role: "assistant",
-          content: answer
-        });
-
-
-        input.value = "";
-
-
-        if (voiceEnabled) {
-          speakText(answer);
-        }
-
-        return;
-      }
-
-
-      /* User message */
 
       addMessage(
         "user",
@@ -1420,89 +1612,71 @@
       });
 
 
-      input.value = "";
-
-      resizeInput();
+      showTyping();
 
 
       setStatus(
         useSearch
-          ? "🌐 Internet Search से जानकारी खोजी जा रही है..."
-          : "सारथी जवाब तैयार कर रहा है..."
+          ? "🌐 Internet Search चल रहा है..."
+          : "सारथी सोच रहा है..."
       );
-
-
-      sendButton.disabled =
-        true;
-
-      micButton.disabled =
-        true;
 
 
       try {
 
         const response =
           await fetch(
-            API_BASE +
-              "/api/chat",
+            API_BASE + "/api/chat",
             {
-              method:
-                "POST",
+              method: "POST",
 
               headers: {
                 "Content-Type":
                   "application/json"
               },
 
-              body:
-                JSON.stringify({
-                  message:
-                    text,
-
-                  history:
-                    messages,
-
-                  webSearch:
-                    Boolean(
-                      useSearch
-                    )
-                })
+              body: JSON.stringify({
+                messages:
+                  messages.slice(-20),
+                useSearch:
+                  useSearch
+              })
             }
           );
 
 
-        let data;
-
-
-        try {
-
-          data =
-            await response.json();
-
-        } catch {
-
-          throw new Error(
-            "Server response पढ़ा नहीं जा सका।"
-          );
-
-        }
+        const data =
+          await response.json()
+            .catch(() => ({}));
 
 
         if (!response.ok) {
 
           throw new Error(
-            data?.error ||
-            data?.answer ||
-            data?.detail ||
-            "जवाब नहीं मिल पाया।"
+            data.error ||
+            "Server error"
           );
-
         }
 
 
         const reply =
-          data?.answer ||
-          "कोई जवाब नहीं मिला।";
+          String(
+            data.reply ||
+            data.content ||
+            data.message ||
+            ""
+          ).trim();
+
+
+        if (!reply) {
+
+          throw new Error(
+            "सारथी का जवाब खाली आया।"
+          );
+        }
+
+
+        hideTyping();
 
 
         addMessage(
@@ -1512,47 +1686,21 @@
 
 
         messages.push({
-          role:
-            "assistant",
-
-          content:
-            reply
+          role: "assistant",
+          content: reply
         });
 
 
-        if (
-          data?.searchUsed === true
-        ) {
+        /*
+          IMPORTANT:
+          यहाँ speakText(reply) नहीं है।
 
-          setStatus(
-            "✓ Internet Search से ताज़ा जानकारी मिली।"
-          );
+          इसलिए सारथी अपने-आप नहीं बोलेगा।
+          🔊 सुनें दबाने पर ही आवाज आएगी।
+        */
 
-        } else if (
-          data?.selfCorrected === true
-        ) {
 
-          setStatus(
-            "✓ Self-check करके जवाब सुधारा गया।"
-          );
-
-        } else if (
-          data?.selfChecked === true
-        ) {
-
-          setStatus(
-            "✓ जवाब self-check किया गया।"
-          );
-
-        } else {
-
-          setStatus("");
-
-        }
-
-        /* Voice reply */
-
-// नया जवाब अपने-आप नहीं पढ़ेगा
+        setStatus("");
 
 
       } catch (error) {
@@ -1563,522 +1711,266 @@
         );
 
 
+        hideTyping();
+
+
+        const errorMessage =
+          error &&
+          error.message
+            ? error.message
+            : "कुछ समस्या हो गई।";
+
+
         addMessage(
           "assistant",
-          "अभी जवाब नहीं मिल पाया। कृपया फिर से कोशिश करें।"
+          "माफ़ करना, अभी जवाब देने में समस्या हुई।\n\n" +
+          errorMessage
         );
 
 
         setStatus(
-          "त्रुटि: " +
-          (
-            error?.message ||
-            "Unknown error"
-          )
+          "❌ जवाब नहीं मिल पाया।"
         );
 
 
       } finally {
 
-        sendButton.disabled =
-          false;
-
-        micButton.disabled =
-          false;
-
-        input.focus();
-
+        setTimeout(
+          () => setStatus(""),
+          2500
+        );
       }
-
     }
 
 
-    /* =====================================================
+    /* =========================
+       LOCAL DATE QUESTION
+    ========================= */
+
+    function getLocalDateAnswer(text) {
+
+      const normalized =
+        String(text || "")
+          .toLowerCase()
+          .trim();
+
+
+      const dateWords = [
+        "आज का दिन",
+        "आज कौन सा दिन",
+        "आज की तारीख",
+        "आज तारीख",
+        "आज क्या तारीख",
+        "आज कौन सा डेट",
+        "today",
+        "date today"
+      ];
+
+
+      const matched =
+        dateWords.some(
+          word =>
+            normalized.includes(word)
+        );
+
+
+      if (!matched) {
+        return null;
+      }
+
+
+      const now =
+        new Date();
+
+
+      const days = [
+        "रविवार",
+        "सोमवार",
+        "मंगलवार",
+        "बुधवार",
+        "गुरुवार",
+        "शुक्रवार",
+        "शनिवार"
+      ];
+
+
+      const months = [
+        "जनवरी",
+        "फ़रवरी",
+        "मार्च",
+        "अप्रैल",
+        "मई",
+        "जून",
+        "जुलाई",
+        "अगस्त",
+        "सितंबर",
+        "अक्टूबर",
+        "नवंबर",
+        "दिसंबर"
+      ];
+
+
+      return (
+        "आज " +
+        days[now.getDay()] +
+        ", " +
+        now.getDate() +
+        " " +
+        months[now.getMonth()] +
+        " " +
+        now.getFullYear() +
+        " है।"
+      );
+    }
+
+
+    /* =========================
        PHOTO
-    ===================================================== */
+    ========================= */
 
     document
       .getElementById("photoInput")
       .addEventListener(
         "change",
-        handlePhoto
+        async function (event) {
+
+          const file =
+            event.target.files &&
+            event.target.files[0];
+
+
+          if (!file) {
+            return;
+          }
+
+
+          await handlePhoto(file);
+
+
+          event.target.value =
+            "";
+        }
       );
 
 
-    async function handlePhoto(event) {
-
-      const file =
-        event.target.files?.[0];
-
-
-      if (!file) {
-        return;
-      }
-
-
-      if (
-        !file.type.startsWith(
-          "image/"
-        )
-      ) {
-
-        setStatus(
-          "कृपया सही फोटो चुनें।"
-        );
-
-        return;
-      }
-
-
-      showAttachment(
-        "📷 " + file.name
-      );
-
-
-      addMessage(
-        "user",
-        "📷 मैंने एक फोटो भेजी है।"
-      );
-
-
-      setStatus(
-        "📷 फोटो को सारथी देख रहा है..."
-      );
-
+    async function handlePhoto(file) {
 
       try {
 
-        const image =
-          await fileToDataURL(
-            file
-          );
+        setStatus(
+          "📷 फोटो पढ़ रहा हूँ..."
+        );
+
+
+        const dataUrl =
+          await fileToDataURL(file);
 
 
         const question =
           input.value.trim() ||
-          "इस फोटो को ध्यान से देखकर सरल हिंदी में समझाओ।";
+          "इस फोटो को ध्यान से देखकर बताओ इसमें क्या है।";
 
 
         input.value = "";
-
-
-        const response =
-          await fetch(
-            API_BASE +
-              "/api/vision",
-            {
-              method:
-                "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json"
-              },
-
-              body:
-                JSON.stringify({
-                  image:
-                    image,
-
-                  question:
-                    question
-                })
-            }
-          );
-
-
-        const data =
-          await response.json();
-
-
-        if (!response.ok) {
-
-          throw new Error(
-            data?.error ||
-            "फोटो समझी नहीं जा सकी।"
-          );
-
-        }
-
-
-        const answer =
-          data?.answer ||
-          "फोटो से कोई उत्तर नहीं मिला।";
-
-
-        addMessage(
-          "assistant",
-          answer
-        );
-
-
-        if (voiceEnabled) {
-
-          speakText(
-            answer
-          );
-
-        }
-
-
-        setStatus(
-          "✓ फोटो समझ ली गई।"
-        );
-
-
-      } catch (error) {
-
-        console.error(
-          error
-        );
-
-
-        addMessage(
-          "assistant",
-          "फोटो को समझने में समस्या हुई।"
-        );
-
-
-        setStatus(
-          "त्रुटि: " +
-          error.message
-        );
-
-      } finally {
-
-        removeAttachment();
-
-        event.target.value = "";
-
-      }
-
-    }
-
-
-    /* =====================================================
-       VIDEO
-       First frame → Vision
-    ===================================================== */
-
-    document
-      .getElementById("videoInput")
-      .addEventListener(
-        "change",
-        handleVideo
-      );
-
-
-    async function handleVideo(event) {
-
-      const file =
-        event.target.files?.[0];
-
-
-      if (!file) {
-        return;
-      }
-
-
-      showAttachment(
-        "🎥 " + file.name
-      );
-
-
-      addMessage(
-        "user",
-        "🎥 मैंने एक वीडियो भेजा है।"
-      );
-
-
-      setStatus(
-        "🎥 वीडियो का पहला frame देखा जा रहा है..."
-      );
-
-
-      try {
-
-        const image =
-          await videoFirstFrame(
-            file
-          );
-
-
-        const question =
-          input.value.trim() ||
-          "इस वीडियो के दिखाई दे रहे frame को देखकर सरल हिंदी में बताओ इसमें क्या है।";
-
-
-        input.value = "";
-
-
-        const response =
-          await fetch(
-            API_BASE +
-              "/api/vision",
-            {
-              method:
-                "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json"
-              },
-
-              body:
-                JSON.stringify({
-                  image:
-                    image,
-
-                  question:
-                    question
-                })
-            }
-          );
-
-
-        const data =
-          await response.json();
-
-
-        if (!response.ok) {
-
-          throw new Error(
-            data?.error ||
-            "वीडियो का frame समझा नहीं जा सका।"
-          );
-
-        }
-
-
-        const answer =
-          data?.answer ||
-          "वीडियो का frame समझ में नहीं आया।";
-
-
-        addMessage(
-          "assistant",
-          answer
-        );
-
-
-        if (voiceEnabled) {
-
-          speakText(
-            answer
-          );
-
-        }
-
-
-        setStatus(
-          "✓ वीडियो के पहले frame की जानकारी मिली।"
-        );
-
-
-      } catch (error) {
-
-        console.error(
-          error
-        );
-
-
-        addMessage(
-          "assistant",
-          "वीडियो को समझने में समस्या हुई।"
-        );
-
-
-        setStatus(
-          "त्रुटि: " +
-          error.message
-        );
-
-      } finally {
-
-        removeAttachment();
-
-        event.target.value = "";
-
-      }
-
-    }
-
-
-    /* =====================================================
-       FILE
-       TXT / CSV / JSON / MD
-    ===================================================== */
-
-    document
-      .getElementById("fileInput")
-      .addEventListener(
-        "change",
-        handleFile
-      );
-
-
-    async function handleFile(event) {
-
-      const file =
-        event.target.files?.[0];
-
-
-      if (!file) {
-        return;
-      }
-
-
-      showAttachment(
-        "📎 " + file.name
-      );
-
-
-      const allowed =
-        [
-          "text/plain",
-          "text/csv",
-          "application/json",
-          "text/markdown"
-        ];
-
-
-      const extension =
-        file.name
-          .split(".")
-          .pop()
-          .toLowerCase();
-
-
-      if (
-        !allowed.includes(file.type) &&
-        ![
-          "txt",
-          "csv",
-          "json",
-          "md"
-        ].includes(extension)
-      ) {
-
-        setStatus(
-          "अभी TXT, CSV, JSON और MD फाइल पढ़ी जा सकती है।"
-        );
-
-        event.target.value = "";
-
-        return;
-      }
-
-
-      try {
-
-        const content =
-          await file.text();
-
-
-        if (!content.trim()) {
-
-          throw new Error(
-            "फाइल खाली है।"
-          );
-
-        }
-
-
-        const question =
-          input.value.trim() ||
-          "इस फाइल को पढ़कर सरल हिंदी में समझाओ।";
-
-
-        input.value = "";
+        autoResizeTextarea();
 
 
         addMessage(
           "user",
-          "📎 फाइल भेजी: " +
-          file.name
+          "📷 फोटो भेजी गई\n" +
+          question
         );
 
 
-        setStatus(
-          "📎 फाइल पढ़कर सारथी जवाब तैयार कर रहा है..."
-        );
+        showTyping();
 
 
-        const limitedContent =
-          content.slice(
-            0,
-            30000
+        const response =
+          await fetch(
+            API_BASE + "/api/vision",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body: JSON.stringify({
+                image: dataUrl,
+                prompt: question
+              })
+            }
           );
 
 
-        const prompt =
-          `${question}
-
-फाइल का नाम: ${file.name}
-
-फाइल की सामग्री:
-${limitedContent}`;
+        const data =
+          await response.json()
+            .catch(() => ({}));
 
 
-        await sendMessage(
-          prompt
+        if (!response.ok) {
+
+          throw new Error(
+            data.error ||
+            "Photo analysis failed"
+          );
+        }
+
+
+        const reply =
+          String(
+            data.reply ||
+            data.content ||
+            ""
+          ).trim();
+
+
+        hideTyping();
+
+
+        addMessage(
+          "assistant",
+          reply ||
+          "फोटो समझने में जवाब नहीं मिला।"
         );
+
+
+        setStatus("");
 
 
       } catch (error) {
 
+        hideTyping();
+
         console.error(
+          "Photo error:",
           error
         );
 
 
         addMessage(
           "assistant",
-          "फाइल पढ़ने में समस्या हुई।"
+          "फोटो पढ़ने में समस्या हुई।\n\n" +
+          (
+            error.message ||
+            "Unknown error"
+          )
         );
 
 
         setStatus(
-          "त्रुटि: " +
-          error.message
+          "❌ फोटो विश्लेषण असफल।"
         );
+
 
       } finally {
 
-        removeAttachment();
-
-        event.target.value = "";
-
+        setTimeout(
+          () => setStatus(""),
+          2500
+        );
       }
-
-    }
-
-
-    /* =====================================================
-       FILE HELPERS
-    ===================================================== */
-
-    function showAttachment(name) {
-
-      attachmentText.textContent =
-        name;
-
-      attachmentPreview.classList.add(
-        "show"
-      );
-
-    }
-
-
-    function removeAttachment() {
-
-      attachmentPreview.classList.remove(
-        "show"
-      );
-
-      selectedFile =
-        null;
-
     }
 
 
@@ -2092,31 +1984,177 @@ ${limitedContent}`;
 
 
           reader.onload =
-            () =>
-              resolve(
-                reader.result
-              );
+            () => resolve(
+              reader.result
+            );
 
 
           reader.onerror =
-            reject;
+            () => reject(
+              new Error(
+                "File read failed"
+              )
+            );
 
 
-          reader.readAsDataURL(
-            file
-          );
-
+          reader.readAsDataURL(file);
         }
       );
-
     }
 
 
-    /* =====================================================
-       VIDEO FIRST FRAME
-    ===================================================== */
+    /* =========================
+       VIDEO
+       First frame analysis
+    ========================= */
 
-    function videoFirstFrame(file) {
+    document
+      .getElementById("videoInput")
+      .addEventListener(
+        "change",
+        async function (event) {
+
+          const file =
+            event.target.files &&
+            event.target.files[0];
+
+
+          if (!file) {
+            return;
+          }
+
+
+          await handleVideo(file);
+
+
+          event.target.value =
+            "";
+        }
+      );
+
+
+    async function handleVideo(file) {
+
+      try {
+
+        setStatus(
+          "🎥 वीडियो का पहला फ्रेम पढ़ रहा हूँ..."
+        );
+
+
+        const frame =
+          await extractVideoFrame(file);
+
+
+        const question =
+          input.value.trim() ||
+          "इस वीडियो के दिखाई दे रहे दृश्य को देखकर बताओ इसमें क्या है।";
+
+
+        input.value = "";
+        autoResizeTextarea();
+
+
+        addMessage(
+          "user",
+          "🎥 वीडियो भेजी गई\n" +
+          question
+        );
+
+
+        showTyping();
+
+
+        const response =
+          await fetch(
+            API_BASE + "/api/vision",
+            {
+              method: "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body: JSON.stringify({
+                image: frame,
+                prompt: question
+              })
+            }
+          );
+
+
+        const data =
+          await response.json()
+            .catch(() => ({}));
+
+
+        if (!response.ok) {
+
+          throw new Error(
+            data.error ||
+            "Video analysis failed"
+          );
+        }
+
+
+        const reply =
+          String(
+            data.reply ||
+            data.content ||
+            ""
+          ).trim();
+
+
+        hideTyping();
+
+
+        addMessage(
+          "assistant",
+          reply ||
+          "वीडियो का दृश्य समझने में जवाब नहीं मिला।"
+        );
+
+
+        setStatus("");
+
+
+      } catch (error) {
+
+        hideTyping();
+
+        console.error(
+          "Video error:",
+          error
+        );
+
+
+        addMessage(
+          "assistant",
+          "वीडियो पढ़ने में समस्या हुई।\n\n" +
+          (
+            error.message ||
+            "Unknown error"
+          )
+        );
+
+
+        setStatus(
+          "❌ वीडियो विश्लेषण असफल।"
+        );
+
+
+      } finally {
+
+        setTimeout(
+          () => setStatus(""),
+          2500
+        );
+      }
+    }
+
+
+    function extractVideoFrame(file) {
 
       return new Promise(
         (resolve, reject) => {
@@ -2134,42 +2172,63 @@ ${limitedContent}`;
 
 
           const url =
-            URL.createObjectURL(
-              file
-            );
+            URL.createObjectURL(file);
 
 
-          video.src =
-            url;
+          video.src = url;
 
-          video.muted =
-            true;
+          video.muted = true;
 
-          video.playsInline =
-            true;
+          video.playsInline = true;
 
 
-          video.onloadedmetadata =
-            () => {
+          video.addEventListener(
+            "loadedmetadata",
+            function () {
 
               video.currentTime =
-                0;
+                Math.min(
+                  0.5,
+                  video.duration || 0
+                );
+            }
+          );
 
-            };
 
-
-          video.onseeked =
-            () => {
+          video.addEventListener(
+            "seeked",
+            function () {
 
               try {
 
-                const width =
-                  video.videoWidth ||
-                  640;
+                const maxWidth =
+                  1280;
 
-                const height =
-                  video.videoHeight ||
-                  360;
+
+                let width =
+                  video.videoWidth;
+
+
+                let height =
+                  video.videoHeight;
+
+
+                if (
+                  width > maxWidth
+                ) {
+
+                  const ratio =
+                    maxWidth /
+                    width;
+
+                  width =
+                    maxWidth;
+
+                  height =
+                    Math.round(
+                      height * ratio
+                    );
+                }
 
 
                 canvas.width =
@@ -2194,10 +2253,10 @@ ${limitedContent}`;
                 );
 
 
-                const image =
+                const dataUrl =
                   canvas.toDataURL(
                     "image/jpeg",
-                    0.82
+                    0.85
                   );
 
 
@@ -2207,7 +2266,7 @@ ${limitedContent}`;
 
 
                 resolve(
-                  image
+                  dataUrl
                 );
 
               } catch (error) {
@@ -2216,17 +2275,15 @@ ${limitedContent}`;
                   url
                 );
 
-                reject(
-                  error
-                );
-
+                reject(error);
               }
+            }
+          );
 
-            };
 
-
-          video.onerror =
-            () => {
+          video.addEventListener(
+            "error",
+            function () {
 
               URL.revokeObjectURL(
                 url
@@ -2237,91 +2294,201 @@ ${limitedContent}`;
                   "वीडियो पढ़ा नहीं जा सका।"
                 )
               );
+            }
+          );
+        }
+      );
+    }
 
-            };
 
+    /* =========================
+       FILE
+       TXT / CSV / JSON / MD
+    ========================= */
+
+    document
+      .getElementById("fileInput")
+      .addEventListener(
+        "change",
+        async function (event) {
+
+          const file =
+            event.target.files &&
+            event.target.files[0];
+
+
+          if (!file) {
+            return;
+          }
+
+
+          selectedFile =
+            file;
+
+
+          attachmentText.textContent =
+            file.name;
+
+
+          attachmentPreview.classList.add(
+            "show"
+          );
+
+
+          await handleFile(file);
+
+
+          event.target.value =
+            "";
         }
       );
 
-    }
+
+    async function handleFile(file) {
+
+      try {
+
+        setStatus(
+          "📎 फाइल पढ़ रहा हूँ..."
+        );
 
 
-    /* =====================================================
-       TEXTAREA AUTO RESIZE
-    ===================================================== */
-
-    function resizeInput() {
-
-      input.style.height =
-        "auto";
-
-      input.style.height =
-        Math.min(
-          input.scrollHeight,
-          150
-        ) + "px";
-
-    }
+        const text =
+          await file.text();
 
 
-    input.addEventListener(
-      "input",
-      resizeInput
-    );
+        const limitedText =
+          text.slice(
+            0,
+            30000
+          );
 
 
-    /* =====================================================
-       ENTER
-    ===================================================== */
+        const prompt =
+          "मैंने एक फाइल भेजी है। " +
+          "उसकी सामग्री को ध्यान से पढ़कर " +
+          "मेरे सवाल का जवाब दो।\n\n" +
+          "फाइल का नाम: " +
+          file.name +
+          "\n\n" +
+          "फाइल की सामग्री:\n" +
+          limitedText;
 
-    input.addEventListener(
-      "keydown",
-      event => {
 
-        if (
-          event.key === "Enter" &&
-          !event.shiftKey
-        ) {
+        removeAttachment();
 
-          event.preventDefault();
 
-          sendMessage();
+        await sendMessage(
+          prompt
+        );
 
-        }
 
+      } catch (error) {
+
+        console.error(
+          "File error:",
+          error
+        );
+
+
+        setStatus(
+          "❌ फाइल पढ़ने में समस्या हुई।"
+        );
+
+      } finally {
+
+        setTimeout(
+          () => setStatus(""),
+          2500
+        );
       }
-    );
+    }
 
 
-    /* =====================================================
-       STUDY
-    ===================================================== */
+    /* =========================
+       REMOVE FILE
+    ========================= */
+
+    function removeAttachment() {
+
+      selectedFile =
+        null;
+
+
+      attachmentText.textContent =
+        "फ़ाइल चुनी गई";
+
+
+      attachmentPreview.classList.remove(
+        "show"
+      );
+    }
+
+
+    /* =========================
+       STUDY PAGE
+    ========================= */
 
     function openStudy() {
 
       window.location.href =
         "study.html";
-
     }
 
 
-    /* =====================================================
-       START
-    ===================================================== */
+    /* =========================
+       INITIAL SETUP
+    ========================= */
 
-    updateSearchUI();
+    // शुरुआत में आवाज बंद
+    voiceEnabled =
+      false;
 
-    resizeInput();
+
+    voiceButton.classList.remove(
+      "active"
+    );
 
 
+    // Browser speech voices load होने पर
+    // उन्हें तैयार रहने देते हैं।
     if (
       "speechSynthesis" in window
     ) {
 
-      speechSynthesis.onvoiceschanged =
-        () => {};
+      window.speechSynthesis
+        .getVoices();
 
     }
+
+
+    /* =========================
+       GLOBAL ERROR HANDLER
+    ========================= */
+
+    window.addEventListener(
+      "error",
+      function (event) {
+
+        console.error(
+          "Sarathi error:",
+          event.error ||
+          event.message
+        );
+      }
+    );
+
+
+    window.addEventListener(
+      "unhandledrejection",
+      function (event) {
+
+        console.error(
+          "Unhandled promise:",
+          event.reason
+        );
+      }
+    );
 
   </script>
 
