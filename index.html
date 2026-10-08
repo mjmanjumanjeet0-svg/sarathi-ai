@@ -932,23 +932,14 @@ async function readResponse(response){
 function extractReply(data){
 
   const candidates = [
-
-    data?.reply,
-
-    data?.content,
-
-    data?.message,
-
     data?.answer,
-
+    data?.reply,
+    data?.content,
+    data?.message,
     data?.output_text,
-
+    data?.result?.answer,
     data?.result?.reply,
-
-    data?.result?.content,
-
-    data?.result?.message
-
+    data?.result?.content
   ];
 
   for(const item of candidates){
@@ -957,15 +948,12 @@ function extractReply(data){
       typeof item === "string" &&
       item.trim()
     ){
-
       return item.trim();
-
     }
 
   }
 
   return "";
-
 }
 
 
