@@ -129,11 +129,36 @@ async function handleChat(request, env) {
     const body = await request.json();
 
     const history = Array.isArray(body?.history)
-      ? body.history
-      : [];
+  ? body.history
+  : Array.isArray(body?.messages)
+    ? body.messages
+    : [];
 
-    const message = String(body?.message ?? "").trim();
-    const useSearch = body?.webSearch === true;
+let message = String(
+  body?.message ??
+  body?.question ??
+  ""
+).trim();
+
+const useSearch =
+  body?.webSearch === true ||
+  body?.useSearch === true;
+
+if (!message && history.length) {
+  const lastUserMessage = [...history]
+    .reverse()
+    .find(
+      (m) =>
+        (m?.role === "user" || !m?.role) &&
+        String(m?.content ?? "").trim()
+    );
+
+  if (lastUserMessage) {
+    message = String(
+      lastUserMessage.content
+    ).trim();
+  }
+}
 
     let messages = history
       .slice(-20)
