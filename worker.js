@@ -236,7 +236,7 @@ if (!message && history.length) {
         }
       ];
 
-      payload.tool_choice = "required";
+      payload.tool_choice = "auto";
     }
 
     let result = await callGroq(
