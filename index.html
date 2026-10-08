@@ -1836,43 +1836,120 @@ document
 
 async function handleFile(e){
 
-  const file =
-    e.target.files?.[0];
+  const file = e.target.files?.[0];
 
   if(!file) return;
 
   try{
 
-    const ext =
-      file.name
-        .split(".")
-        .pop()
-        .toLowerCase();
+    const ext = file.name
+      .split(".")
+      .pop()
+      .toLowerCase();
 
     const allowed = [
       "txt",
       "csv",
       "json",
-      "md"
+      "md",
+      "pdf",
+      "docx"
     ];
 
     if(!allowed.includes(ext)){
-
       throw new Error(
-        "अभी TXT, CSV, JSON और MD फाइल ही supported हैं।"
+        "TXT, CSV, JSON, MD, PDF और DOCX फाइल ही supported हैं।"
       );
+    }
+
+    let text = "";
+
+    if(
+      ext === "txt" ||
+      ext === "csv" ||
+      ext === "json" ||
+      ext === "md"
+    ){
+
+      text = await file.text();
 
     }
 
-    const text =
-      await file.text();
+    else if(ext === "pdf"){
+
+      if(!window.pdfjsLib){
+        throw new Error(
+          "PDF reader load नहीं हुआ। पेज को फिर से खोलें।"
+        );
+      }
+
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+      const arrayBuffer =
+        await file.arrayBuffer();
+
+      const pdf =
+        await pdfjsLib.getDocument({
+          data: arrayBuffer
+        }).promise;
+
+      const pages = [];
+
+      for(
+        let pageNumber = 1;
+        pageNumber <= pdf.numPages;
+        pageNumber++
+      ){
+
+        const page =
+          await pdf.getPage(pageNumber);
+
+        const content =
+          await page.getTextContent();
+
+        const pageText =
+          content.items
+            .map(item =>
+              typeof item.str === "string"
+                ? item.str
+                : ""
+            )
+            .join(" ");
+
+        pages.push(
+          `पेज ${pageNumber}:\n${pageText}`
+        );
+      }
+
+      text = pages.join("\n\n");
+
+    }
+
+    else if(ext === "docx"){
+
+      if(!window.mammoth){
+        throw new Error(
+          "DOCX reader load नहीं हुआ। पेज को फिर से खोलें।"
+        );
+      }
+
+      const arrayBuffer =
+        await file.arrayBuffer();
+
+      const result =
+        await mammoth.extractRawText({
+          arrayBuffer
+        });
+
+      text = result.value || "";
+
+    }
 
     if(!text.trim()){
-
       throw new Error(
-        "फाइल खाली है।"
+        "फाइल में पढ़ने योग्य text नहीं मिला।"
       );
-
     }
 
     const display =
@@ -1889,8 +1966,10 @@ ${text.slice(0,30000)}
 
 --------------------
 
-इस फाइल को ध्यान से पढ़कर मेरे सवाल/निर्देश के अनुसार हिंदी में उत्तर दो।
-यदि फाइल में बहुत ज्यादा जानकारी हो तो केवल जरूरी जानकारी पर ध्यान दो।
+इस फाइल को ध्यान से पढ़कर मेरे सवाल/निर्देश के अनुसार आसान हिंदी में उत्तर दो।
+
+फाइल में जो जानकारी उपलब्ध नहीं है उसे मत गढ़ो।
+यदि फाइल बहुत बड़ी है तो मेरे सवाल से संबंधित जानकारी पर ध्यान दो।
 `;
 
     await sendMessage(
@@ -1908,7 +1987,7 @@ ${text.slice(0,30000)}
     addMessage(
       "assistant",
       "फाइल पढ़ने में समस्या हुई।\n\n" +
-      error.message
+      (error?.message || "अज्ञात समस्या")
     );
 
   }finally{
