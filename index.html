@@ -739,25 +739,84 @@ function speakText(button){
 
   const text = clone.innerText.trim();
 
+  if(!text) return;
+
   if(!("speechSynthesis" in window)){
 
-    setStatus("इस फोन के ब्राउज़र में आवाज की सुविधा उपलब्ध नहीं है।");
+    setStatus(
+      "इस फोन के ब्राउज़र में आवाज़ चलाने की सुविधा उपलब्ध नहीं है।"
+    );
 
     return;
   }
 
   speechSynthesis.cancel();
 
-  const utterance =
-    new SpeechSynthesisUtterance(text);
+  const speak = () => {
 
-  utterance.lang = "hi-IN";
-  utterance.rate = 0.92;
-  utterance.pitch = 1;
+    const utterance =
+      new SpeechSynthesisUtterance(text);
 
-  speechSynthesis.speak(utterance);
+    utterance.lang = "hi-IN";
+    utterance.rate = 0.92;
+    utterance.pitch = 1;
+    utterance.volume = 1;
+
+    const voices =
+      speechSynthesis.getVoices();
+
+    const hindiVoice =
+      voices.find(v =>
+        /^hi(-|_)/i.test(v.lang)
+      ) ||
+      voices.find(v =>
+        /hindi/i.test(v.name)
+      );
+
+    if(hindiVoice){
+      utterance.voice = hindiVoice;
+    }
+
+    utterance.onstart = () => {
+      setStatus("🔊 जवाब पढ़ रहा हूँ...");
+    };
+
+    utterance.onend = () => {
+      setStatus("तैयार है।");
+    };
+
+    utterance.onerror = (event) => {
+      console.error(
+        "Speech synthesis error:",
+        event
+      );
+
+      setStatus(
+        "⚠️ आवाज़ चलाने में समस्या हुई।"
+      );
+    };
+
+    speechSynthesis.speak(utterance);
+  };
+
+  const voices =
+    speechSynthesis.getVoices();
+
+  if(voices.length){
+
+    speak();
+
+  }else{
+
+    speechSynthesis.onvoiceschanged = () => {
+
+      speechSynthesis.onvoiceschanged = null;
+
+      speak();
+
+    };
+  }
 }
-
 
 /* =========================================================
    VOICE TOGGLE
