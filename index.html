@@ -202,17 +202,15 @@ async function sendMessage(
       data?.selfChecked === true
     ) {
 
-      setStatus(
-        useSearch
-          ? "✓ Search करके और Self-check करके जवाब दिया गया"
-          : "✓ Self-check करके जवाब सुधारा गया"
-      );
-
-    } else {
-
-      setStatus("");
-
-    }
+     if (data?.searchUsed === true) {
+  setStatus("✓ Internet Search से ताज़ा जानकारी खोजकर जवाब दिया गया");
+} else if (data?.selfCorrected === true) {
+  setStatus("✓ Self-check करके जवाब सुधारा गया");
+} else if (data?.selfChecked === true) {
+  setStatus("✓ Self-check करके जवाब जाँचा गया");
+} else {
+  setStatus("");
+} 
 
 
   } catch (error) {
