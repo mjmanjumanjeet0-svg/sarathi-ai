@@ -1819,60 +1819,6 @@ async function handleVideo(e){
 }
 
 
-/* =========================================================
-   FILE
-========================================================= */
-
-document
-  .getElementById("fileInput")
-  .addEventListener(
-    "change",
-    handleFile
-  );
-
-
-async function handleFile(e){
-
-  const file =
-    e.target.files?.[0];
-
-  if(!file) return;
-
-
-  try{
-
-    const allowed = [
-      "txt",
-      "csv",
-      "json",
-      "md"
-    ];
-
-
-    const ext =
-      file.name
-        .split(".")
-        .pop()
-        .toLowerCase();
-
-
-    if(!allowed.includes(ext)){
-
-      throw new Error(
-        "अभी TXT, CSV, JSON और MD फाइल ही supported हैं।"
-      );
-
-    }
-
-
-    const text =
-      await file.text();
-
-
-    if(!text.trim()){
-
-      throw new Error(
-        "फाइल खाली है।"
       
 /* =========================================================
    FILE
