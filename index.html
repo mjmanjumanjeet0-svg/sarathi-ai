@@ -20,7 +20,6 @@ async function sendMessage(
     );
 
     return;
-
   }
 
 
@@ -84,7 +83,6 @@ async function sendMessage(
     setStatus("");
 
     return;
-
   }
 
 
@@ -107,6 +105,10 @@ async function sendMessage(
   input.value = "";
 
 
+  // ==========================================================
+  // STATUS
+  // ==========================================================
+
   setStatus(
     useSearch
       ? "🌐 Internet Search से जानकारी खोजी जा रही है..."
@@ -119,6 +121,10 @@ async function sendMessage(
   searchButton.disabled = true;
 
 
+  // ==========================================================
+  // API REQUEST
+  // ==========================================================
+
   try {
 
     const response =
@@ -128,25 +134,21 @@ async function sendMessage(
           method: "POST",
 
           headers: {
-            "Content-Type":
-              "application/json"
+            "Content-Type": "application/json"
           },
 
           body: JSON.stringify({
-
-            message:
-              text,
-
-            history:
-              messages,
-
-            webSearch:
-              Boolean(useSearch)
-
+            message: text,
+            history: messages,
+            webSearch: Boolean(useSearch)
           })
         }
       );
 
+
+    // ========================================================
+    // RESPONSE JSON
+    // ========================================================
 
     let data = null;
 
@@ -161,9 +163,12 @@ async function sendMessage(
       throw new Error(
         "Server response पढ़ा नहीं जा सका।"
       );
-
     }
 
+
+    // ========================================================
+    // API ERROR
+    // ========================================================
 
     if (!response.ok) {
 
@@ -173,9 +178,12 @@ async function sendMessage(
         data?.detail ||
         "जवाब नहीं मिल पाया।"
       );
-
     }
 
+
+    // ========================================================
+    // ANSWER
+    // ========================================================
 
     const reply =
       data?.answer ||
@@ -198,22 +206,39 @@ async function sendMessage(
     });
 
 
-    if (
-      data?.selfChecked === true
-    ) {
+    // ========================================================
+    // FINAL STATUS
+    // ========================================================
 
-     if (data?.searchUsed === true) {
-  setStatus("✓ Internet Search से ताज़ा जानकारी खोजकर जवाब दिया गया");
-} else if (data?.selfCorrected === true) {
-  setStatus("✓ Self-check करके जवाब सुधारा गया");
-} else if (data?.selfChecked === true) {
-  setStatus("✓ Self-check करके जवाब जाँचा गया");
-} else {
-  setStatus("");
-} 
+    if (data?.searchUsed === true) {
+
+      setStatus(
+        "✓ Internet Search से ताज़ा जानकारी खोजकर जवाब दिया गया"
+      );
+
+    } else if (data?.selfCorrected === true) {
+
+      setStatus(
+        "✓ Self-check करके जवाब सुधारा गया"
+      );
+
+    } else if (data?.selfChecked === true) {
+
+      setStatus(
+        "✓ Self-check करके जवाब जाँचा गया"
+      );
+
+    } else {
+
+      setStatus("");
+    }
 
 
   } catch (error) {
+
+    // ========================================================
+    // ERROR
+    // ========================================================
 
     console.error(
       "Chat error:",
@@ -237,6 +262,10 @@ async function sendMessage(
 
 
   } finally {
+
+    // ========================================================
+    // ENABLE BUTTONS
+    // ========================================================
 
     sendButton.disabled = false;
 
