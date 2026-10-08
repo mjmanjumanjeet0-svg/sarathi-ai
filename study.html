@@ -1,1554 +1,1253 @@
-// ============================================================
-// SARATHI AI - CLOUDFLARE WORKER
-// ============================================================
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
 
-const GROQ_URL =
-  "https://api.groq.com/openai/v1/chat/completions";
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
 
-const GROQ_AUDIO_URL =
-  "https://api.groq.com/openai/v1/audio/transcriptions";
+  <title>सारथी AI - Study</title>
 
-
-// ============================================================
-// CORS
-// ============================================================
-
-function corsHeaders() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods":
-      "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers":
-      "Content-Type",
-  };
-}
-
-
-// ============================================================
-// JSON RESPONSE
-// ============================================================
-
-function json(data, status = 200) {
-
-  return new Response(
-    JSON.stringify(data),
-    {
-      status,
-      headers: {
-        ...corsHeaders(),
-        "Content-Type":
-          "application/json; charset=utf-8",
-      },
-    }
-  );
-
-}
-
-
-// ============================================================
-// MAIN WORKER
-// ============================================================
-
-export default {
-
-  async fetch(request, env) {
-
-    const url =
-      new URL(request.url);
-
-
-    // --------------------------------------------------------
-    // CORS
-    // --------------------------------------------------------
-
-    if (request.method === "OPTIONS") {
-
-      return new Response(
-        null,
-        {
-          status: 204,
-          headers:
-            corsHeaders(),
-        }
-      );
-
+  <style>
+    * {
+      box-sizing: border-box;
     }
 
+    body {
+      margin: 0;
+      font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
 
-    // --------------------------------------------------------
-    // CHAT
-    // --------------------------------------------------------
+      background: #f5f7fb;
+      color: #172033;
+    }
 
-    if (
-      url.pathname === "/api/chat"
-    ) {
+    .header {
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 14px 16px;
 
-      if (
-        request.method !== "POST"
-      ) {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
 
-        return json(
-          {
-            error:
-              "Only POST requests are allowed.",
-          },
-          405
-        );
+    .header-inner {
+      max-width: 900px;
+      margin: auto;
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .brand {
+      font-size: 21px;
+      font-weight: 800;
+    }
+
+    .back-btn {
+      border: 0;
+      background: #eef2ff;
+      color: #3730a3;
+      padding: 9px 13px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+      padding: 18px 14px 40px;
+    }
+
+    .hero {
+      background: white;
+      border-radius: 18px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow:
+        0 5px 20px rgba(0,0,0,.05);
+    }
+
+    .hero h1 {
+      margin: 0 0 8px;
+      font-size: 25px;
+    }
+
+    .hero p {
+      margin: 0;
+      color: #667085;
+      line-height: 1.6;
+    }
+
+    .card {
+      background: white;
+      border-radius: 18px;
+      padding: 18px;
+      margin-bottom: 16px;
+      box-shadow:
+        0 5px 20px rgba(0,0,0,.05);
+    }
+
+    .card h2 {
+      margin-top: 0;
+      font-size: 19px;
+    }
+
+    label {
+      display: block;
+      margin: 12px 0 7px;
+      font-weight: 700;
+    }
+
+    select,
+    textarea,
+    input {
+      width: 100%;
+      border: 1px solid #d7dce5;
+      border-radius: 12px;
+      padding: 12px;
+      font-size: 16px;
+      outline: none;
+      background: white;
+    }
+
+    select:focus,
+    textarea:focus,
+    input:focus {
+      border-color: #6366f1;
+    }
+
+    textarea {
+      min-height: 130px;
+      resize: vertical;
+    }
+
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 15px;
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    .primary {
+      background: #4f46e5;
+      color: white;
+    }
+
+    .secondary {
+      background: #eef2ff;
+      color: #3730a3;
+    }
+
+    .success {
+      background: #e8f7ee;
+      color: #187a45;
+    }
+
+    .danger {
+      background: #feecec;
+      color: #b42318;
+    }
+
+    button:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
+    .status {
+      min-height: 24px;
+      margin-top: 12px;
+      color: #667085;
+      font-size: 14px;
+    }
+
+    .answer {
+      background: #f8fafc;
+      border: 1px solid #e5e7eb;
+      border-radius: 14px;
+      padding: 15px;
+      line-height: 1.75;
+      white-space: pre-wrap;
+      min-height: 70px;
+    }
+
+    .quiz-question {
+      font-size: 19px;
+      font-weight: 750;
+      line-height: 1.6;
+      margin-bottom: 14px;
+    }
+
+    .quiz-options {
+      display: grid;
+      gap: 10px;
+    }
+
+    .option {
+      text-align: left;
+      width: 100%;
+      background: #f8fafc;
+      border: 1px solid #dfe3ea;
+      color: #172033;
+    }
+
+    .option:hover {
+      background: #eef2ff;
+    }
+
+    .option.correct {
+      background: #dcfce7;
+      border-color: #22c55e;
+    }
+
+    .option.wrong {
+      background: #fee2e2;
+      border-color: #ef4444;
+    }
+
+    .score {
+      font-size: 18px;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    .small {
+      font-size: 13px;
+      color: #667085;
+      line-height: 1.6;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    @media (max-width: 600px) {
+      .hero h1 {
+        font-size: 22px;
+      }
+
+      .buttons button {
+        flex: 1;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- =====================================================
+       HEADER
+  ====================================================== -->
+
+  <header class="header">
+
+    <div class="header-inner">
+
+      <div class="brand">
+        📚 सारथी AI Study
+      </div>
+
+      <button
+        class="back-btn"
+        onclick="goHome()"
+      >
+        ← मुख्य पेज
+      </button>
+
+    </div>
+
+  </header>
+
+
+  <!-- =====================================================
+       MAIN
+  ====================================================== -->
+
+  <main class="container">
+
+
+    <!-- HERO -->
+
+    <section class="hero">
+
+      <h1>
+        पढ़ाई में सारथी AI
+      </h1>
+
+      <p>
+        विषय चुनो, अपना सवाल लिखो और AI से
+        आसान हिंदी में समझो।
+      </p>
+
+    </section>
+
+
+    <!-- ===================================================
+         AI STUDY
+    ==================================================== -->
+
+    <section class="card">
+
+      <h2>
+        🤖 AI से पढ़ाई
+      </h2>
+
+      <label for="subject">
+        विषय
+      </label>
+
+      <select id="subject">
+
+        <option value="सामान्य अध्ययन">
+          सामान्य अध्ययन
+        </option>
+
+        <option value="दर्शनशास्त्र">
+          दर्शनशास्त्र
+        </option>
+
+        <option value="इतिहास">
+          इतिहास
+        </option>
+
+        <option value="होम साइंस">
+          होम साइंस
+        </option>
+
+        <option value="राजनीति विज्ञान">
+          राजनीति विज्ञान
+        </option>
+
+        <option value="मनोविज्ञान">
+          मनोविज्ञान
+        </option>
+
+        <option value="हिंदी">
+          हिंदी
+        </option>
+
+        <option value="अंग्रेज़ी">
+          अंग्रेज़ी
+        </option>
+
+        <option value="विज्ञान">
+          विज्ञान
+        </option>
+
+        <option value="गणित">
+          गणित
+        </option>
+
+      </select>
+
+
+      <label for="question">
+        अपना प्रश्न
+      </label>
+
+      <textarea
+        id="question"
+        placeholder="उदाहरण: दर्शनशास्त्र क्या है? परीक्षा के लिए समझाइए।"
+      ></textarea>
+
+
+      <div class="buttons">
+
+        <button
+          class="primary"
+          id="askBtn"
+          onclick="askAI()"
+        >
+          🤖 उत्तर बताओ
+        </button>
+
+        <button
+          class="secondary"
+          onclick="clearQuestion()"
+        >
+          साफ करें
+        </button>
+
+      </div>
+
+
+      <div
+        class="status"
+        id="status"
+      ></div>
+
+    </section>
+
+
+    <!-- ===================================================
+         ANSWER
+    ==================================================== -->
+
+    <section
+      class="card"
+      id="answerCard"
+    >
+
+      <h2>
+        📝 उत्तर
+      </h2>
+
+      <div
+        class="answer"
+        id="answer"
+      >
+        अपना प्रश्न पूछने के बाद उत्तर यहाँ दिखाई देगा।
+      </div>
+
+    </section>
+
+
+    <!-- ===================================================
+         QUIZ
+    ==================================================== -->
+
+    <section class="card">
+
+      <h2>
+        🧠 Quiz
+      </h2>
+
+      <p class="small">
+        विषय चुनकर अभ्यास प्रश्न शुरू करो।
+      </p>
+
+
+      <label for="quizSubject">
+        Quiz विषय
+      </label>
+
+      <select id="quizSubject">
+
+        <option value="सामान्य अध्ययन">
+          सामान्य अध्ययन
+        </option>
+
+        <option value="इतिहास">
+          इतिहास
+        </option>
+
+        <option value="दर्शनशास्त्र">
+          दर्शनशास्त्र
+        </option>
+
+        <option value="होम साइंस">
+          होम साइंस
+        </option>
+
+        <option value="विज्ञान">
+          विज्ञान
+        </option>
+
+        <option value="गणित">
+          गणित
+        </option>
+
+      </select>
+
+
+      <div class="buttons">
+
+        <button
+          class="success"
+          onclick="startQuiz()"
+        >
+          ▶ Quiz शुरू करें
+        </button>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================================================
+         QUIZ AREA
+    ==================================================== -->
+
+    <section
+      class="card hidden"
+      id="quizCard"
+    >
+
+      <div
+        class="score"
+        id="score"
+      >
+        अंक: 0
+      </div>
+
+      <div
+        class="quiz-question"
+        id="quizQuestion"
+      ></div>
+
+      <div
+        class="quiz-options"
+        id="quizOptions"
+      ></div>
+
+      <div
+        class="status"
+        id="quizStatus"
+      ></div>
+
+      <div class="buttons">
+
+        <button
+          class="primary"
+          id="nextBtn"
+          onclick="nextQuestion()"
+          disabled
+        >
+          अगला प्रश्न →
+        </button>
+
+      </div>
+
+    </section>
+
+
+  </main>
+
+
+  <script>
+
+    // =======================================================
+    // WORKER URL
+    // =======================================================
+
+    const API_BASE =
+      "https://sarathi-ai.mjmanjumanjeet0.workers.dev";
+
+
+    // =======================================================
+    // HOME
+    // =======================================================
+
+    function goHome() {
+
+      window.location.href =
+        "index.html";
+
+    }
+
+
+    // =======================================================
+    // AI STUDY
+    // =======================================================
+
+    async function askAI() {
+
+      const subject =
+        document
+          .getElementById(
+            "subject"
+          )
+          .value;
+
+      const question =
+        document
+          .getElementById(
+            "question"
+          )
+          .value
+          .trim();
+
+      const answer =
+        document
+          .getElementById(
+            "answer"
+          );
+
+      const status =
+        document
+          .getElementById(
+            "status"
+          );
+
+      const button =
+        document
+          .getElementById(
+            "askBtn"
+          );
+
+
+      if (!question) {
+
+        status.textContent =
+          "कृपया पहले प्रश्न लिखें।";
+
+        return;
 
       }
 
-      return handleChat(
-        request,
-        env
-      );
 
-    }
+      button.disabled =
+        true;
 
+      status.textContent =
+        "🤖 सारथी उत्तर तैयार कर रहा है...";
 
-    // --------------------------------------------------------
-    // VISION
-    // --------------------------------------------------------
+      answer.textContent =
+        "कृपया प्रतीक्षा करें...";
 
-    if (
-      url.pathname === "/api/vision"
-    ) {
 
-      if (
-        request.method !== "POST"
-      ) {
-
-        return json(
-          {
-            error:
-              "Only POST requests are allowed.",
-          },
-          405
-        );
-
-      }
-
-      return handleVision(
-        request,
-        env
-      );
-
-    }
-
-
-    // --------------------------------------------------------
-    // TRANSCRIPTION
-    // --------------------------------------------------------
-
-    if (
-      url.pathname === "/api/transcribe"
-    ) {
-
-      if (
-        request.method !== "POST"
-      ) {
-
-        return json(
-          {
-            error:
-              "Only POST requests are allowed.",
-          },
-          405
-        );
-
-      }
-
-      return handleTranscribe(
-        request,
-        env
-      );
-
-    }
-
-
-    // --------------------------------------------------------
-    // HEALTH CHECK
-    // --------------------------------------------------------
-
-    if (
-      url.pathname === "/"
-    ) {
-
-      return new Response(
-        "Sarathi AI is running.",
-        {
-          status: 200,
-          headers: {
-            ...corsHeaders(),
-            "Content-Type":
-              "text/plain; charset=utf-8",
-          },
-        }
-      );
-
-    }
-
-
-    // --------------------------------------------------------
-    // CLOUDFLARE ASSETS
-    // --------------------------------------------------------
-
-    if (env.ASSETS) {
-
-      return env.ASSETS.fetch(
-        request
-      );
-
-    }
-
-
-    return new Response(
-      "Sarathi AI is running.",
-      {
-        status: 200,
-        headers: {
-          ...corsHeaders(),
-          "Content-Type":
-            "text/plain; charset=utf-8",
-        },
-      }
-    );
-
-  },
-
-};
-
-
-// ============================================================
-// CHAT HANDLER
-// ============================================================
-
-async function handleChat(
-  request,
-  env
-) {
-
-  if (!env.GROQ_API_KEY) {
-
-    return json(
-      {
-        error:
-          "GROQ_API_KEY Cloudflare Secret में configured नहीं है.",
-        code:
-          "MISSING_API_KEY",
-      },
-      500
-    );
-
-  }
-
-
-  try {
-
-    const body =
-      await request.json();
-
-
-    const userMessage =
-      String(
-        body?.message || ""
-      ).trim();
-
-
-    if (!userMessage) {
-
-      return json(
-        {
-          error:
-            "कृपया अपना सवाल लिखें.",
-          code:
-            "EMPTY_MESSAGE",
-        },
-        400
-      );
-
-    }
-
-
-    // --------------------------------------------------------
-    // HISTORY
-    // --------------------------------------------------------
-
-    const history =
-      Array.isArray(
-        body?.history
-      )
-        ? body.history
-        : [];
-
-
-    const messages =
-      history
-        .slice(-10)
-        .map((item) => {
-
-          const role =
-            item?.role ===
-            "assistant"
-              ? "assistant"
-              : "user";
-
-          const content =
-            String(
-              item?.content || ""
-            )
-              .trim()
-              .slice(0, 4000);
-
-          return {
-            role,
-            content,
-          };
-
-        })
-        .filter(
-          (item) =>
-            item.content
-              .length > 0
-        );
-
-
-    // Current question मौजूद है या नहीं
-    const last =
-      messages[
-        messages.length - 1
-      ];
-
-
-    if (
-      !last ||
-      last.role !== "user" ||
-      last.content !== userMessage
-    ) {
-
-      messages.push({
-        role:
-          "user",
-        content:
-          userMessage,
-      });
-
-    }
-
-
-    // --------------------------------------------------------
-    // CURRENT DATE
-    // --------------------------------------------------------
-
-    const currentDate =
-      new Intl.DateTimeFormat(
-        "hi-IN",
-        {
-          timeZone:
-            "Asia/Kolkata",
-          weekday:
-            "long",
-          day:
-            "numeric",
-          month:
-            "long",
-          year:
-            "numeric",
-        }
-      ).format(
-        new Date()
-      );
-
-
-    // --------------------------------------------------------
-    // SYSTEM PROMPT
-    // --------------------------------------------------------
-
-    const systemPrompt = `
-तुम "सारथी AI" हो।
-
-उपयोगकर्ता से मुख्य रूप से सरल हिंदी में बात करो।
-
-आज की तारीख:
-${currentDate}
-
-नियम:
-
-1. सही और स्पष्ट उत्तर दो।
-2. तथ्य मत गढ़ो।
-3. उपयोगकर्ता के प्रश्न का सीधे उत्तर दो।
-4. हिंदी में पूछे गए प्रश्न का उत्तर हिंदी में दो।
-5. गणित की calculation ध्यान से करो।
-6. पढ़ाई के सवालों में परीक्षा-योग्य उत्तर दो।
-7. जरूरत से ज्यादा लंबा उत्तर मत दो।
-8. यदि Internet Search से जानकारी दी गई है तो उपलब्ध स्रोतों के आधार पर उत्तर दो।
-9. Search result पुराना हो सकता है, इसलिए तारीख जरूर देखो।
-10. भविष्य की तारीख की जानकारी को वर्तमान जानकारी मत बताओ।
-11. यदि जानकारी उपलब्ध नहीं है तो साफ-साफ बताओ।
-`;
-
-
-    // --------------------------------------------------------
-    // INTERNET SEARCH
-    // --------------------------------------------------------
-
-    let searchContext =
-      "";
-
-
-    if (
-      body?.webSearch === true
-    ) {
-
-      searchContext =
-        await internetSearch(
-          userMessage
-        );
-
-    }
-
-
-    // --------------------------------------------------------
-    // SEARCH CONTEXT
-    // --------------------------------------------------------
-
-    let finalSystemPrompt =
-      systemPrompt;
-
-
-    if (searchContext) {
-
-      finalSystemPrompt += `
-
-Internet Search से प्राप्त जानकारी:
-
-${searchContext}
-
-ऊपर दिए गए Search results का उपयोग करके उत्तर दो।
-
-महत्वपूर्ण:
-- Search result की तारीख ध्यान से देखो।
-- यदि result पुराना है तो उसे आज की जानकारी मत बताओ।
-- यदि कई results हैं तो आपस में तुलना करो।
-- यदि Search result पर्याप्त नहीं है तो ऐसा स्पष्ट बताओ।
-`;
-
-    }
-
-
-    // --------------------------------------------------------
-    // GROQ REQUEST
-    // --------------------------------------------------------
-
-    const payload = {
-
-      model:
-        "openai/gpt-oss-20b",
-
-      messages: [
-        {
-          role:
-            "system",
-          content:
-            finalSystemPrompt,
-        },
-        ...messages,
-      ],
-
-      max_completion_tokens:
-        1200,
-
-      temperature:
-        0.2,
-
-      reasoning_effort:
-        "low",
-
-      stream:
-        false,
-    };
-
-
-    const result =
-      await callGroq(
-        payload,
-        env.GROQ_API_KEY,
-        45000
-      );
-
-
-    if (!result.ok) {
-
-      return json(
-        {
-          error:
-            result.error ||
-            "AI से जवाब नहीं मिला।",
-
-          code:
-            result.code ||
-            "GROQ_ERROR",
-
-          requestId:
-            result.requestId ||
-            null,
-        },
-        result.status || 502
-      );
-
-    }
-
-
-    if (!result.reply) {
-
-      return json(
-        {
-          error:
-            "AI ने खाली उत्तर दिया।",
-          code:
-            "EMPTY_RESPONSE",
-        },
-        502
-      );
-
-    }
-
-
-    // --------------------------------------------------------
-    // SELF CHECK
-    // --------------------------------------------------------
-
-    let finalAnswer =
-      result.reply;
-
-    let selfChecked =
-      false;
-
-    let selfCorrected =
-      false;
-
-
-    const shouldCheck =
-      messages.length <= 12;
-
-
-    if (shouldCheck) {
-
-      const checked =
-        await selfCheck(
-          userMessage,
-          result.reply,
-          env.GROQ_API_KEY
-        );
-
-
-      if (
-        checked &&
-        checked.answer
-      ) {
-
-        finalAnswer =
-          checked.answer;
-
-        selfChecked =
-          true;
-
-        selfCorrected =
-          checked.corrected ===
-          true;
-
-      }
-
-    }
-
-
-    // --------------------------------------------------------
-    // FINAL RESPONSE
-    // --------------------------------------------------------
-
-    return json({
-
-      answer:
-        finalAnswer,
-
-      selfChecked:
-        selfChecked,
-
-      selfCorrected:
-        selfCorrected,
-
-      factChecked:
-        Boolean(
-          searchContext
-        ),
-
-      searchUsed:
-        Boolean(
-          searchContext
-        ),
-
-    });
-
-
-  } catch (error) {
-
-    console.error(
-      "CHAT ERROR:",
-      error
-    );
-
-
-    return json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : String(error),
-
-        code:
-          "WORKER_ERROR",
-      },
-      500
-    );
-
-  }
-
-}
-
-
-// ============================================================
-// GROQ CALL
-// ============================================================
-
-async function callGroq(
-  payload,
-  apiKey,
-  timeoutMs = 45000
-) {
-
-  const controller =
-    new AbortController();
-
-
-  const timeout =
-    setTimeout(
-      () =>
-        controller.abort(),
-      timeoutMs
-    );
-
-
-  try {
-
-    const response =
-      await fetch(
-        GROQ_URL,
-        {
-          method:
-            "POST",
-
-          headers: {
-            Authorization:
-              `Bearer ${apiKey}`,
-
-            "Content-Type":
-              "application/json",
-
-            Accept:
-              "application/json",
-          },
-
-          body:
-            JSON.stringify(
-              payload
-            ),
-
-          signal:
-            controller.signal,
-        }
-      );
-
-
-    const text =
-      await response.text();
-
-
-    let data = null;
-
-
-    try {
-
-      data =
-        JSON.parse(text);
-
-    } catch {
-
-      data = null;
-
-    }
-
-
-    const requestId =
-      response.headers.get(
-        "x-request-id"
-      );
-
-
-    if (!response.ok) {
-
-      const errorMessage =
-        data?.error?.message ||
-        data?.error ||
-        text ||
-        `HTTP ${response.status}`;
-
-
-      return {
-        ok:
-          false,
-
-        error:
-          String(
-            errorMessage
-          ),
-
-        status:
-          response.status,
-
-        code:
-          data?.error?.code ||
-          "GROQ_HTTP_ERROR",
-
-        requestId:
-          requestId,
-      };
-
-    }
-
-
-    const content =
-      data?.choices?.[0]
-        ?.message
-        ?.content;
-
-
-    if (
-      typeof content !==
-      "string"
-    ) {
-
-      return {
-        ok:
-          false,
-
-        error:
-          "Groq ने valid text response नहीं दिया।",
-
-        status:
-          502,
-
-        code:
-          "INVALID_GROQ_RESPONSE",
-
-        requestId:
-          requestId,
-      };
-
-    }
-
-
-    return {
-
-      ok:
-        true,
-
-      reply:
-        content.trim(),
-
-      requestId:
-        requestId,
-
-    };
-
-
-  } catch (error) {
-
-    return {
-
-      ok:
-        false,
-
-      error:
-        error?.name ===
-        "AbortError"
-          ? "Groq request timeout हो गया।"
-          : (
-              error?.message ||
-              "Groq request failed."
-            ),
-
-      status:
-        502,
-
-      code:
-        error?.name ===
-        "AbortError"
-          ? "TIMEOUT"
-          : "NETWORK_ERROR",
-
-      requestId:
-        null,
-
-    };
-
-  } finally {
-
-    clearTimeout(
-      timeout
-    );
-
-  }
-
-}
-
-
-// ============================================================
-// SELF CHECK
-// ============================================================
-
-async function selfCheck(
-  question,
-  answer,
-  apiKey
-) {
-
-  try {
-
-    const prompt = `
-नीचे दिए गए प्रश्न और उत्तर की जाँच करो।
+      const prompt = `
+विषय: ${subject}
 
 प्रश्न:
 ${question}
 
-उत्तर:
-${answer}
+इस प्रश्न का उत्तर सरल हिंदी में दो।
 
-देखो:
-1. तथ्य सही हैं या नहीं।
-2. गणित सही है या नहीं।
-3. प्रश्न का उत्तर वास्तव में दिया गया है या नहीं।
-4. कोई महत्वपूर्ण गलती है या नहीं।
+यदि यह परीक्षा का प्रश्न है तो:
+- भूमिका
+- मुख्य बिंदु
+- आवश्यक उदाहरण
+- निष्कर्ष
 
-यदि उत्तर सही है तो उसे लगभग वैसा ही रखो।
+के साथ उत्तर दो।
 
-यदि गलती है तो उत्तर को सही करके दो।
-
-केवल JSON दो:
-
-{
-  "answer": "सुधारा हुआ अंतिम उत्तर",
-  "corrected": false
-}
-
-corrected true केवल तब रखो जब तुमने वास्तविक correction किया हो।
+उत्तर प्रश्न के अनुसार ही रखो।
 `;
 
 
-    const payload = {
+      try {
 
-      model:
-        "openai/gpt-oss-20b",
+        const response =
+          await fetch(
+            API_BASE +
+              "/api/chat",
+            {
+              method:
+                "POST",
 
-      messages: [
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body:
+                JSON.stringify({
+
+                  message:
+                    prompt,
+
+                  history: [
+                    {
+                      role:
+                        "user",
+
+                      content:
+                        prompt,
+                    },
+                  ],
+
+                  webSearch:
+                    false,
+
+                }),
+
+            }
+          );
+
+
+        const data =
+          await response.json();
+
+
+        if (!response.ok) {
+
+          throw new Error(
+            data?.error ||
+            "उत्तर नहीं मिला।"
+          );
+
+        }
+
+
+        answer.textContent =
+          data?.answer ||
+          "कोई उत्तर नहीं मिला।";
+
+
+        status.textContent =
+          data?.selfChecked
+            ? "✓ उत्तर जाँचकर दिया गया"
+            : "✓ उत्तर तैयार है";
+
+
+      } catch (error) {
+
+        console.error(
+          error
+        );
+
+
+        answer.textContent =
+          "अभी उत्तर नहीं मिल पाया।";
+
+
+        status.textContent =
+          "त्रुटि: " +
+          (
+            error?.message ||
+            "Unknown error"
+          );
+
+      } finally {
+
+        button.disabled =
+          false;
+
+      }
+
+    }
+
+
+    // =======================================================
+    // CLEAR
+    // =======================================================
+
+    function clearQuestion() {
+
+      document
+        .getElementById(
+          "question"
+        )
+        .value = "";
+
+      document
+        .getElementById(
+          "answer"
+        )
+        .textContent =
+        "अपना प्रश्न पूछने के बाद उत्तर यहाँ दिखाई देगा।";
+
+      document
+        .getElementById(
+          "status"
+        )
+        .textContent = "";
+
+    }
+
+
+    // =======================================================
+    // QUIZ DATA
+    // =======================================================
+
+    const quizData = {
+
+      "सामान्य अध्ययन": [
+
         {
-          role:
-            "system",
-
-          content:
-            "तुम उत्तर जाँचने वाले AI हो। केवल valid JSON लौटाओ।",
+          q: "भारत की राजधानी क्या है?",
+          options: [
+            "मुंबई",
+            "नई दिल्ली",
+            "कोलकाता",
+            "चेन्नई"
+          ],
+          answer: 1
         },
 
         {
-          role:
-            "user",
-
-          content:
-            prompt,
+          q: "भारत का राष्ट्रीय पशु कौन है?",
+          options: [
+            "शेर",
+            "हाथी",
+            "बाघ",
+            "हिरण"
+          ],
+          answer: 2
         },
+
       ],
 
-      max_completion_tokens:
-        700,
 
-      temperature:
-        0,
+      "इतिहास": [
 
-      reasoning_effort:
-        "low",
-
-      stream:
-        false,
-
-      response_format: {
-        type:
-          "json_object",
-      },
-
-    };
-
-
-    const result =
-      await callGroq(
-        payload,
-        apiKey,
-        30000
-      );
-
-
-    if (
-      !result.ok ||
-      !result.reply
-    ) {
-
-      return null;
-
-    }
-
-
-    let parsed;
-
-
-    try {
-
-      parsed =
-        JSON.parse(
-          result.reply
-        );
-
-    } catch {
-
-      return null;
-
-    }
-
-
-    if (
-      typeof parsed?.answer !==
-      "string"
-    ) {
-
-      return null;
-
-    }
-
-
-    return {
-
-      answer:
-        parsed.answer.trim(),
-
-      corrected:
-        parsed.corrected ===
-        true,
-
-    };
-
-
-  } catch {
-
-    return null;
-
-  }
-
-}
-
-
-// ============================================================
-// INTERNET SEARCH
-// ============================================================
-
-async function internetSearch(
-  query
-) {
-
-  try {
-
-    const searchUrl =
-      "https://html.duckduckgo.com/html/?q=" +
-      encodeURIComponent(
-        query
-      );
-
-
-    const response =
-      await fetch(
-        searchUrl,
         {
-          headers: {
-            "User-Agent":
-              "Mozilla/5.0 SarathiAI/1.0",
-            Accept:
-              "text/html",
-          },
-        }
-      );
+          q: "भारत को स्वतंत्रता कब मिली?",
+          options: [
+            "1945",
+            "1946",
+            "1947",
+            "1950"
+          ],
+          answer: 2
+        },
+
+        {
+          q: "मुगल साम्राज्य की स्थापना किसने की?",
+          options: [
+            "अकबर",
+            "बाबर",
+            "हुमायूँ",
+            "शाहजहाँ"
+          ],
+          answer: 1
+        },
+
+      ],
 
 
-    if (!response.ok) {
+      "दर्शनशास्त्र": [
 
-      return "";
+        {
+          q: "दर्शन शब्द का सामान्य अर्थ क्या है?",
+          options: [
+            "ज्ञान के प्रति प्रेम",
+            "केवल विज्ञान",
+            "केवल धर्म",
+            "केवल इतिहास"
+          ],
+          answer: 0
+        },
 
-    }
+        {
+          q: "सुकरात किस क्षेत्र से संबंधित थे?",
+          options: [
+            "दर्शन",
+            "भौतिकी",
+            "जीवविज्ञान",
+            "अर्थशास्त्र"
+          ],
+          answer: 0
+        },
+
+      ],
 
 
-    const html =
-      await response.text();
+      "विज्ञान": [
+
+        {
+          q: "पौधे प्रकाश संश्लेषण में मुख्य रूप से किस गैस का उपयोग करते हैं?",
+          options: [
+            "ऑक्सीजन",
+            "नाइट्रोजन",
+            "कार्बन डाइऑक्साइड",
+            "हाइड्रोजन"
+          ],
+          answer: 2
+        },
+
+        {
+          q: "जल का रासायनिक सूत्र क्या है?",
+          options: [
+            "CO₂",
+            "H₂O",
+            "O₂",
+            "NaCl"
+          ],
+          answer: 1
+        },
+
+      ],
 
 
-    const results =
+      "गणित": [
+
+        {
+          q: "25 × 16 कितना है?",
+          options: [
+            "300",
+            "350",
+            "400",
+            "450"
+          ],
+          answer: 2
+        },
+
+        {
+          q: "100 का 25% कितना है?",
+          options: [
+            "10",
+            "20",
+            "25",
+            "50"
+          ],
+          answer: 2
+        },
+
+      ],
+
+    };
+
+
+    // =======================================================
+    // QUIZ STATE
+    // =======================================================
+
+    let currentQuiz =
       [];
 
+    let currentIndex =
+      0;
 
-    // --------------------------------------------------------
-    // DuckDuckGo result blocks
-    // --------------------------------------------------------
+    let scoreValue =
+      0;
 
-    const blocks =
-      html.split(
-        /result__body/
-      );
-
-
-    for (
-      let i = 1;
-      i < blocks.length &&
-      results.length < 6;
-      i++
-    ) {
-
-      const block =
-        blocks[i];
+    let selectedAnswer =
+      false;
 
 
-      const titleMatch =
-        block.match(
-          /result__a[^>]*>([\s\S]*?)<\/a>/
+    // =======================================================
+    // START QUIZ
+    // =======================================================
+
+    function startQuiz() {
+
+      const subject =
+        document
+          .getElementById(
+            "quizSubject"
+          )
+          .value;
+
+
+      currentQuiz =
+        quizData[
+          subject
+        ] || [];
+
+
+      currentIndex =
+        0;
+
+      scoreValue =
+        0;
+
+      selectedAnswer =
+        false;
+
+
+      document
+        .getElementById(
+          "quizCard"
+        )
+        .classList
+        .remove(
+          "hidden"
         );
 
 
-      const snippetMatch =
-        block.match(
-          /result__snippet[^>]*>([\s\S]*?)<\/a?>/
-        );
+      document
+        .getElementById(
+          "score"
+        )
+        .textContent =
+        "अंक: 0";
 
 
-      const urlMatch =
-        block.match(
-          /uddg=([^&"]+)/
-        );
+      showQuestion();
 
+    }
+
+
+    // =======================================================
+    // SHOW QUESTION
+    // =======================================================
+
+    function showQuestion() {
 
       if (
-        !titleMatch
+        currentIndex >=
+        currentQuiz.length
       ) {
 
-        continue;
+        finishQuiz();
+
+        return;
 
       }
 
 
-      const title =
-        cleanHtml(
-          titleMatch[1]
-        );
+      selectedAnswer =
+        false;
 
 
-      const snippet =
-        snippetMatch
-          ? cleanHtml(
-              snippetMatch[1]
-            )
-          : "";
+      const item =
+        currentQuiz[
+          currentIndex
+        ];
 
 
-      let url =
+      document
+        .getElementById(
+          "quizQuestion"
+        )
+        .textContent =
+        `${currentIndex + 1}. ${item.q}`;
+
+
+      const options =
+        document
+          .getElementById(
+            "quizOptions"
+          );
+
+
+      options.innerHTML =
         "";
 
 
-      if (urlMatch) {
+      item.options
+        .forEach(
+          (
+            option,
+            index
+          ) => {
 
-        try {
+            const button =
+              document
+                .createElement(
+                  "button"
+                );
 
-          url =
-            decodeURIComponent(
-              urlMatch[1]
+
+            button.className =
+              "option";
+
+
+            button.textContent =
+              option;
+
+
+            button.onclick =
+              () =>
+                selectAnswer(
+                  index,
+                  button
+                );
+
+
+            options.appendChild(
+              button
             );
 
-        } catch {
+          }
+        );
 
-          url =
-            "";
 
-        }
+      document
+        .getElementById(
+          "nextBtn"
+        )
+        .disabled =
+        true;
+
+
+      document
+        .getElementById(
+          "quizStatus"
+        )
+        .textContent =
+        "";
+
+    }
+
+
+    // =======================================================
+    // SELECT ANSWER
+    // =======================================================
+
+    function selectAnswer(
+      index,
+      button
+    ) {
+
+      if (
+        selectedAnswer
+      ) {
+
+        return;
 
       }
+
+
+      selectedAnswer =
+        true;
+
+
+      const item =
+        currentQuiz[
+          currentIndex
+        ];
+
+
+      const buttons =
+        document
+          .querySelectorAll(
+            ".option"
+          );
+
+
+      buttons.forEach(
+        (
+          btn,
+          i
+        ) => {
+
+          btn.disabled =
+            true;
+
+
+          if (
+            i ===
+            item.answer
+          ) {
+
+            btn.classList
+              .add(
+                "correct"
+              );
+
+          }
+
+        }
+      );
 
 
       if (
-        title ||
-        snippet
+        index ===
+        item.answer
       ) {
 
-        results.push(
-          [
-            `शीर्षक: ${title}`,
-            `सारांश: ${snippet}`,
-            url
-              ? `लिंक: ${url}`
-              : "",
-          ]
-            .filter(Boolean)
-            .join("\n")
-        );
+        scoreValue++;
+
+        button.classList
+          .add(
+            "correct"
+          );
+
+
+        document
+          .getElementById(
+            "quizStatus"
+          )
+          .textContent =
+          "✓ सही उत्तर!";
+
+      } else {
+
+        button.classList
+          .add(
+            "wrong"
+          );
+
+
+        document
+          .getElementById(
+            "quizStatus"
+          )
+          .textContent =
+          "✗ गलत उत्तर। सही उत्तर हरे रंग में है।";
 
       }
 
-    }
+
+      document
+        .getElementById(
+          "score"
+        )
+        .textContent =
+        `अंक: ${scoreValue}`;
 
 
-    if (
-      results.length === 0
-    ) {
-
-      return "";
-
-    }
-
-
-    return results.join(
-      "\n\n"
-    );
-
-
-  } catch (error) {
-
-    console.error(
-      "SEARCH ERROR:",
-      error
-    );
-
-    return "";
-
-  }
-
-}
-
-
-// ============================================================
-// HTML CLEANER
-// ============================================================
-
-function cleanHtml(
-  value
-) {
-
-  return String(
-    value || ""
-  )
-
-    .replace(
-      /<[^>]*>/g,
-      " "
-    )
-
-    .replace(
-      /&amp;/g,
-      "&"
-    )
-
-    .replace(
-      /&quot;/g,
-      '"'
-    )
-
-    .replace(
-      /&#x27;/g,
-      "'"
-    )
-
-    .replace(
-      /&#39;/g,
-      "'"
-    )
-
-    .replace(
-      /&lt;/g,
-      "<"
-    )
-
-    .replace(
-      /&gt;/g,
-      ">"
-    )
-
-    .replace(
-      /\s+/g,
-      " "
-    )
-
-    .trim()
-
-    .slice(
-      0,
-      1500
-    );
-
-}
-
-
-// ============================================================
-// VISION
-// ============================================================
-
-async function handleVision(
-  request,
-  env
-) {
-
-  if (!env.GROQ_API_KEY) {
-
-    return json(
-      {
-        error:
-          "GROQ_API_KEY configured नहीं है.",
-      },
-      500
-    );
-
-  }
-
-
-  try {
-
-    const body =
-      await request.json();
-
-
-    const image =
-      String(
-        body?.image ||
-        body?.imageData ||
-        body?.dataUrl ||
-        ""
-      ).trim();
-
-
-    const prompt =
-      String(
-        body?.prompt ||
-        body?.question ||
-        "इस तस्वीर को ध्यान से देखकर सरल हिंदी में बताओ कि इसमें क्या दिखाई दे रहा है।"
-      ).trim();
-
-
-    if (!image) {
-
-      return json(
-        {
-          error:
-            "Image उपलब्ध नहीं है.",
-          code:
-            "NO_IMAGE",
-        },
-        400
-      );
+      document
+        .getElementById(
+          "nextBtn"
+        )
+        .disabled =
+        false;
 
     }
 
 
-    const payload = {
+    // =======================================================
+    // NEXT
+    // =======================================================
 
-      model:
-        "meta-llama/llama-4-scout-17b-16e-instruct",
+    function nextQuestion() {
 
-      messages: [
+      currentIndex++;
 
-        {
-          role:
-            "system",
-
-          content:
-            "तस्वीर को ध्यान से देखकर सरल और सही हिंदी में उत्तर दो। जो दिखाई नहीं देता उसे मत गढ़ो।",
-        },
-
-        {
-          role:
-            "user",
-
-          content: [
-
-            {
-              type:
-                "text",
-
-              text:
-                prompt,
-            },
-
-            {
-              type:
-                "image_url",
-
-              image_url: {
-                url:
-                  image,
-              },
-            },
-
-          ],
-        },
-
-      ],
-
-      max_completion_tokens:
-        1200,
-
-      temperature:
-        0.2,
-
-    };
-
-
-    const result =
-      await callGroq(
-        payload,
-        env.GROQ_API_KEY,
-        60000
-      );
-
-
-    if (!result.ok) {
-
-      return json(
-        {
-          error:
-            result.error ||
-            "Image analysis failed.",
-        },
-        result.status || 502
-      );
+      showQuestion();
 
     }
 
 
-    return json({
+    // =======================================================
+    // FINISH
+    // =======================================================
 
-      answer:
-        result.reply,
+    function finishQuiz() {
 
-      selfChecked:
-        false,
-
-    });
-
-
-  } catch (error) {
-
-    console.error(
-      "VISION ERROR:",
-      error
-    );
+      const total =
+        currentQuiz.length;
 
 
-    return json(
-      {
-        error:
-          error?.message ||
-          "Image analysis failed.",
-        code:
-          "VISION_ERROR",
-      },
-      500
-    );
-
-  }
-
-}
+      document
+        .getElementById(
+          "quizQuestion"
+        )
+        .textContent =
+        "🎉 Quiz पूरा हो गया!";
 
 
-// ============================================================
-// AUDIO TRANSCRIPTION
-// ============================================================
-
-async function handleTranscribe(
-  request,
-  env
-) {
-
-  if (!env.GROQ_API_KEY) {
-
-    return json(
-      {
-        error:
-          "GROQ_API_KEY configured नहीं है.",
-      },
-      500
-    );
-
-  }
+      document
+        .getElementById(
+          "quizOptions"
+        )
+        .innerHTML =
+        `<div class="answer">
+          तुम्हारा स्कोर: ${scoreValue} / ${total}
+        </div>`;
 
 
-  try {
-
-    const form =
-      await request.formData();
-
-
-    const audio =
-      form.get(
-        "file"
-      ) ||
-      form.get(
-        "audio"
-      );
+      document
+        .getElementById(
+          "quizStatus"
+        )
+        .textContent =
+        "फिर से अभ्यास करने के लिए Quiz शुरू करें।";
 
 
-    if (
-      !audio ||
-      typeof audio ===
-      "string"
-    ) {
-
-      return json(
-        {
-          error:
-            "Audio file नहीं मिला.",
-          code:
-            "NO_AUDIO",
-        },
-        400
-      );
+      document
+        .getElementById(
+          "nextBtn"
+        )
+        .disabled =
+        true;
 
     }
 
+  </script>
 
-    const upload =
-      new FormData();
-
-
-    upload.append(
-      "file",
-      audio,
-      audio.name ||
-        "audio.webm"
-    );
-
-
-    upload.append(
-      "model",
-      "whisper-large-v3-turbo"
-    );
-
-
-    upload.append(
-      "language",
-      "hi"
-    );
-
-
-    upload.append(
-      "response_format",
-      "json"
-    );
-
-
-    const response =
-      await fetch(
-        GROQ_AUDIO_URL,
-        {
-          method:
-            "POST",
-
-          headers: {
-            Authorization:
-              `Bearer ${env.GROQ_API_KEY}`,
-          },
-
-          body:
-            upload,
-        }
-      );
-
-
-    const text =
-      await response.text();
-
-
-    let data = null;
-
-
-    try {
-
-      data =
-        JSON.parse(text);
-
-    } catch {
-
-      data = null;
-
-    }
-
-
-    if (!response.ok) {
-
-      return json(
-        {
-          error:
-            data?.error?.message ||
-            text ||
-            "Transcription failed.",
-        },
-        response.status || 502
-      );
-
-    }
-
-
-    const transcript =
-      String(
-        data?.text || ""
-      ).trim();
-
-
-    return json({
-
-      text:
-        transcript,
-
-      transcript:
-        transcript,
-
-    });
-
-
-  } catch (error) {
-
-    console.error(
-      "TRANSCRIBE ERROR:",
-      error
-    );
-
-
-    return json(
-      {
-        error:
-          error?.message ||
-          "Audio transcription failed.",
-        code:
-          "TRANSCRIBE_ERROR",
-      },
-      500
-    );
-
-  }
-
-}
+</body>
+</html>
