@@ -1,2496 +1,2171 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8">
-
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
-
-  <title>सारथी AI</title>
-
-  <style>
-    * {
-      box-sizing: border-box;
-    }
-
-    html,
-    body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      min-height: 100%;
-      font-family:
-        system-ui,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
-      background: #f7f8fa;
-      color: #202124;
-    }
-
-    body {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    button,
-    textarea {
-      font: inherit;
-    }
-
-    button {
-      cursor: pointer;
-    }
-
-    /* =========================
-       HEADER
-    ========================= */
-
-    .header {
-      width: 100%;
-      background: #ffffff;
-      border-bottom: 1px solid #e5e7eb;
-      position: sticky;
-      top: 0;
-      z-index: 100;
-    }
-
-    .header-inner {
-      width: 100%;
-      max-width: 1100px;
-      margin: auto;
-      min-height: 64px;
-      padding: 10px 16px;
-
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .brand {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-
-      font-size: 20px;
-      font-weight: 700;
-      color: #111827;
-    }
-
-    .sarathi-icon {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      background: #eef2ff;
-      font-size: 24px;
-    }
-
-    .header-actions {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .header-btn {
-      border: 1px solid #d1d5db;
-      background: #ffffff;
-      color: #374151;
-
-      padding: 8px 13px;
-      border-radius: 10px;
-
-      font-size: 14px;
-      font-weight: 600;
-    }
-
-    .header-btn:active {
-      transform: scale(0.98);
-    }
-
-    /* =========================
-       MAIN
-    ========================= */
-
-    .main {
-      width: 100%;
-      max-width: 1100px;
-      margin: auto;
-
-      flex: 1;
-
-      display: flex;
-      flex-direction: column;
-
-      padding: 20px 14px 150px;
-    }
-
-    /* =========================
-       WELCOME
-    ========================= */
-
-    .welcome {
-      text-align: center;
-      padding: 45px 15px 30px;
-    }
-
-    .welcome-icon {
-      width: 70px;
-      height: 70px;
-
-      margin: 0 auto 18px;
-
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      border-radius: 22px;
-
-      background: #eef2ff;
-
-      font-size: 40px;
-    }
-
-    .welcome h1 {
-      margin: 0 0 10px;
-
-      font-size: 28px;
-      line-height: 1.25;
-
-      color: #111827;
-    }
-
-    .welcome p {
-      max-width: 650px;
-      margin: 0 auto;
-
-      font-size: 15px;
-      line-height: 1.6;
-
-      color: #6b7280;
-    }
-
-    /* =========================
-       CHAT
-    ========================= */
-
-    .chat-box {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-
-    .empty {
-      text-align: center;
-      color: #9ca3af;
-      font-size: 14px;
-      padding: 15px;
-    }
-
-    .message-row {
-      width: 100%;
-      display: flex;
-    }
-
-    .message-row.user {
-      justify-content: flex-end;
-    }
-
-    .message-row.assistant {
-      justify-content: flex-start;
-    }
-
-    .message {
-      max-width: min(85%, 760px);
-
-      padding: 12px 14px;
-
-      border-radius: 16px;
-
-      line-height: 1.6;
-      font-size: 15px;
-
-      word-break: break-word;
-      white-space: pre-wrap;
-    }
-
-    .message.user {
-      background: #2563eb;
-      color: #ffffff;
-
-      border-bottom-right-radius: 5px;
-    }
-
-    .message.assistant {
-      background: #ffffff;
-      color: #202124;
-
-      border: 1px solid #e5e7eb;
-
-      border-bottom-left-radius: 5px;
-    }
-
-    .message-tools {
-      display: flex;
-      gap: 6px;
-
-      margin-top: 8px;
-      padding-top: 7px;
-
-      border-top: 1px solid #eeeeee;
-    }
-
-    .message-tool {
-      border: 0;
-      background: transparent;
-
-      color: #6b7280;
-
-      font-size: 12px;
-      padding: 4px 6px;
-
-      border-radius: 7px;
-    }
-
-    .message-tool:hover {
-      background: #f3f4f6;
-      color: #111827;
-    }
-
-    /* =========================
-       STATUS
-    ========================= */
-
-    .status {
-      min-height: 20px;
-
-      padding: 4px 4px 0;
-
-      color: #6b7280;
-      font-size: 12px;
-      text-align: center;
-    }
-
-    /* =========================
-       COMPOSER
-    ========================= */
-
-    .composer {
-      position: fixed;
-      left: 0;
-      right: 0;
-      bottom: 0;
-
-      z-index: 90;
-
-      background: rgba(255, 255, 255, 0.96);
-
-      border-top: 1px solid #e5e7eb;
-
-      backdrop-filter: blur(12px);
-    }
-
-    .composer-inner {
-      width: 100%;
-      max-width: 1100px;
-
-      margin: auto;
-
-      padding: 10px 12px 12px;
-    }
-
-    .input-wrap {
-      width: 100%;
-
-      display: flex;
-      flex-direction: column;
-
-      border: 1px solid #d1d5db;
-
-      background: #ffffff;
-
-      border-radius: 16px;
-
-      overflow: hidden;
-    }
-
-    #input {
-      width: 100%;
-
-      min-height: 48px;
-      max-height: 150px;
-
-      resize: none;
-
-      border: 0;
-      outline: none;
-
-      padding: 13px 14px 8px;
-
-      color: #111827;
-      background: #ffffff;
-
-      line-height: 1.5;
-    }
-
-    #input::placeholder {
-      color: #9ca3af;
-    }
-
-    /* =========================
-       TOOLS
-    ========================= */
-
-    .tools-row {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-
-      padding: 5px 7px 7px;
-
-      overflow-x: auto;
-    }
-
-    .tool-btn {
-      flex: 0 0 auto;
-
-      width: 38px;
-      height: 38px;
-
-      border: 0;
-      border-radius: 10px;
-
-      background: #f3f4f6;
-      color: #374151;
-
-      display: flex;
-      align-items: center;
-      justify-content: center;
-
-      font-size: 18px;
-    }
-
-    .tool-btn:active {
-      transform: scale(0.95);
-    }
-
-    .tool-btn.active {
-      background: #dbeafe;
-      color: #2563eb;
-    }
-
-    .send-btn {
-      flex: 0 0 auto;
-
-      width: 42px;
-      height: 38px;
-
-      margin-left: auto;
-
-      border: 0;
-      border-radius: 10px;
-
-      background: #2563eb;
-      color: #ffffff;
-
-      font-size: 19px;
-      font-weight: 700;
-    }
-
-    .send-btn:active {
-      transform: scale(0.95);
-    }
-
-    .search-indicator {
-      flex: 0 0 auto;
-
-      font-size: 11px;
-      color: #6b7280;
-
-      white-space: nowrap;
-    }
-
-    /* =========================
-       ATTACHMENT
-    ========================= */
-
-    .attachment-preview {
-      display: none;
-
-      align-items: center;
-      justify-content: space-between;
-
-      gap: 10px;
-
-      padding: 8px 12px;
-
-      margin-bottom: 7px;
-
-      background: #eff6ff;
-
-      border: 1px solid #bfdbfe;
-
-      border-radius: 10px;
-
-      color: #1e40af;
-
-      font-size: 13px;
-    }
-
-    .attachment-preview.show {
-      display: flex;
-    }
-
-    .remove-file {
-      width: 28px;
-      height: 28px;
-
-      border: 0;
-      border-radius: 8px;
-
-      background: #ffffff;
-
-      color: #dc2626;
-
-      font-size: 20px;
-
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    /* =========================
-       HIDDEN
-    ========================= */
-
-    .hidden {
-      display: none !important;
-    }
-
-    /* =========================
-       LOADING
-    ========================= */
-
-    .typing {
-      display: inline-flex;
-      align-items: center;
-      gap: 4px;
-    }
-
-    .typing span {
-      width: 6px;
-      height: 6px;
-
-      border-radius: 50%;
-
-      background: #9ca3af;
-
-      animation: typing 1.2s infinite ease-in-out;
-    }
-
-    .typing span:nth-child(2) {
-      animation-delay: 0.15s;
-    }
-
-    .typing span:nth-child(3) {
-      animation-delay: 0.3s;
-    }
-
-    @keyframes typing {
-      0%,
-      60%,
-      100% {
-        opacity: 0.35;
-        transform: translateY(0);
-      }
-
-      30% {
-        opacity: 1;
-        transform: translateY(-3px);
-      }
-    }
-
-    /* =========================
-       MOBILE
-    ========================= */
-
-    @media (max-width: 600px) {
-      .header-inner {
-        min-height: 58px;
-        padding: 8px 12px;
-      }
-
-      .brand {
-        font-size: 18px;
-      }
-
-      .sarathi-icon {
-        width: 38px;
-        height: 38px;
-        font-size: 22px;
-      }
-
-      .header-btn {
-        padding: 7px 10px;
-        font-size: 13px;
-      }
-
-      .main {
-        padding: 12px 10px 150px;
-      }
-
-      .welcome {
-        padding: 35px 10px 24px;
-      }
-
-      .welcome-icon {
-        width: 62px;
-        height: 62px;
-        font-size: 34px;
-      }
-
-      .welcome h1 {
-        font-size: 23px;
-      }
-
-      .welcome p {
-        font-size: 14px;
-      }
-
-      .message {
-        max-width: 92%;
-        font-size: 14px;
-      }
-
-      .tools-row {
-        gap: 5px;
-      }
-
-      .tool-btn {
-        width: 36px;
-        height: 36px;
-      }
-
-      .send-btn {
-        width: 40px;
-        height: 36px;
-      }
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="theme-color" content="#0f172a">
+<title>सारथी AI</title>
+
+<style>
+*{
+  box-sizing:border-box;
+  -webkit-tap-highlight-color:transparent;
+}
+
+body{
+  margin:0;
+  font-family:system-ui,-apple-system,"Noto Sans Devanagari",sans-serif;
+  background:#f5f7fb;
+  color:#172033;
+}
+
+.app{
+  max-width:900px;
+  margin:auto;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  background:#fff;
+}
+
+header{
+  position:sticky;
+  top:0;
+  z-index:20;
+  background:#0f172a;
+  color:#fff;
+  padding:13px 15px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  box-shadow:0 2px 8px #0002;
+}
+
+.brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.logo{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  background:#fff;
+  color:#0f172a;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:23px;
+  font-weight:800;
+}
+
+.brand h1{
+  margin:0;
+  font-size:20px;
+}
+
+.brand small{
+  display:block;
+  color:#cbd5e1;
+  font-size:11px;
+  margin-top:2px;
+}
+
+.headerBtns{
+  display:flex;
+  gap:7px;
+}
+
+.headerBtns button{
+  border:0;
+  background:#ffffff18;
+  color:#fff;
+  border-radius:9px;
+  padding:8px 10px;
+  font-size:17px;
+  cursor:pointer;
+}
+
+.status{
+  font-size:12px;
+  padding:7px 13px;
+  background:#f1f5f9;
+  color:#475569;
+  min-height:30px;
+}
+
+.chat{
+  flex:1;
+  padding:14px;
+  padding-bottom:160px;
+  overflow-y:auto;
+}
+
+.message{
+  display:flex;
+  margin:10px 0;
+}
+
+.message.user{
+  justify-content:flex-end;
+}
+
+.bubble{
+  max-width:88%;
+  padding:11px 13px;
+  border-radius:15px;
+  line-height:1.55;
+  font-size:15px;
+  word-break:break-word;
+  overflow-wrap:anywhere;
+}
+
+.user .bubble{
+  background:#0f172a;
+  color:#fff;
+  border-bottom-right-radius:4px;
+}
+
+.assistant .bubble{
+  background:#eef2f7;
+  color:#172033;
+  border-bottom-left-radius:4px;
+}
+
+.bubble pre{
+  background:#0b1220;
+  color:#e5e7eb;
+  padding:11px;
+  border-radius:9px;
+  overflow:auto;
+  white-space:pre-wrap;
+}
+
+.bubble code{
+  background:#dbe3ee;
+  padding:2px 5px;
+  border-radius:4px;
+}
+
+.bubble pre code{
+  background:transparent;
+  padding:0;
+}
+
+.actions{
+  display:flex;
+  gap:6px;
+  margin-top:8px;
+  flex-wrap:wrap;
+}
+
+.actions button{
+  border:1px solid #cbd5e1;
+  background:#fff;
+  color:#334155;
+  border-radius:7px;
+  padding:5px 8px;
+  font-size:12px;
+}
+
+.typing{
+  display:flex;
+  gap:4px;
+  padding:10px 12px;
+}
+
+.dot{
+  width:7px;
+  height:7px;
+  background:#64748b;
+  border-radius:50%;
+  animation:b 1s infinite;
+}
+
+.dot:nth-child(2){animation-delay:.15s}
+.dot:nth-child(3){animation-delay:.3s}
+
+@keyframes b{
+  0%,100%{opacity:.25}
+  50%{opacity:1}
+}
+
+.composer{
+  position:fixed;
+  bottom:0;
+  left:0;
+  right:0;
+  z-index:30;
+  background:#fff;
+  border-top:1px solid #dbe1e8;
+  padding:9px;
+}
+
+.composerInner{
+  max-width:900px;
+  margin:auto;
+}
+
+.tools{
+  display:flex;
+  gap:6px;
+  margin-bottom:7px;
+  overflow-x:auto;
+}
+
+.tool{
+  flex:0 0 auto;
+  border:1px solid #cbd5e1;
+  background:#fff;
+  border-radius:9px;
+  padding:7px 10px;
+  font-size:13px;
+  color:#334155;
+}
+
+.tool.active{
+  background:#0f172a;
+  color:#fff;
+  border-color:#0f172a;
+}
+
+.inputRow{
+  display:flex;
+  align-items:flex-end;
+  gap:7px;
+}
+
+textarea{
+  flex:1;
+  resize:none;
+  min-height:45px;
+  max-height:130px;
+  border:1px solid #cbd5e1;
+  border-radius:13px;
+  padding:11px 12px;
+  outline:none;
+  font:inherit;
+  background:#f8fafc;
+}
+
+textarea:focus{
+  border-color:#64748b;
+  background:#fff;
+}
+
+.send{
+  width:47px;
+  height:47px;
+  border:0;
+  border-radius:13px;
+  background:#0f172a;
+  color:#fff;
+  font-size:20px;
+}
+
+.send:disabled{
+  opacity:.45;
+}
+
+.fileLabel{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+
+input[type=file]{
+  display:none;
+}
+
+.empty{
+  text-align:center;
+  color:#64748b;
+  padding:55px 20px;
+}
+
+.empty strong{
+  display:block;
+  color:#0f172a;
+  font-size:22px;
+  margin-bottom:7px;
+}
+
+.photoPreview{
+  max-width:220px;
+  max-height:220px;
+  border-radius:10px;
+  margin-top:8px;
+}
+
+@media(min-width:901px){
+  .composer{
+    left:50%;
+    transform:translateX(-50%);
+    width:100%;
+    max-width:900px;
+  }
+}
+</style>
 </head>
 
 <body>
 
-  <!-- =========================
-       HEADER
-  ========================= -->
+<div class="app">
 
-  <header class="header">
-    <div class="header-inner">
+<header>
+  <div class="brand">
+    <div class="logo">स</div>
+    <div>
+      <h1>सारथी AI</h1>
+      <small>आपका हिंदी AI सहायक</small>
+    </div>
+  </div>
 
-      <div class="brand">
-        <div class="sarathi-icon">🧭</div>
-        <span>सारथी AI</span>
-      </div>
+  <div class="headerBtns">
+    <button onclick="clearChat()" title="नई चैट">＋</button>
+  </div>
+</header>
 
-      <div class="header-actions">
-        <button
-          class="header-btn"
-          type="button"
-          onclick="openStudy()"
-        >
-          📚 Study
-        </button>
-      </div>
+<div id="status" class="status">सारथी तैयार हो रहा है...</div>
+
+<main id="chat" class="chat">
+  <div id="empty" class="empty">
+    <strong>हेलो 👋</strong>
+    मैं सारथी AI हूँ।<br>
+    अपना सवाल लिखो या माइक से बोलो।
+  </div>
+</main>
+
+<div class="composer">
+  <div class="composerInner">
+
+    <div class="tools">
+
+      <button id="searchBtn" class="tool" onclick="toggleSearch()">
+        🌐 Search OFF
+      </button>
+
+      <button id="voiceBtn" class="tool" onclick="toggleVoice()">
+        🔊 आवाज OFF
+      </button>
+
+      <button class="tool" onclick="startRecording()">
+        🎙️ बोलें
+      </button>
+
+      <label class="tool fileLabel">
+        📷 फोटो
+        <input id="photoInput" type="file" accept="image/*">
+      </label>
+
+      <label class="tool fileLabel">
+        🎬 वीडियो
+        <input id="videoInput" type="file" accept="video/*">
+      </label>
+
+      <label class="tool fileLabel">
+        📄 फाइल
+        <input id="fileInput" type="file" accept=".txt,.csv,.json,.md,text/plain,text/csv,application/json,text/markdown">
+      </label>
+
+      <button class="tool" onclick="openStudy()">
+        📚 Study
+      </button>
 
     </div>
-  </header>
 
-  <!-- =========================
-       MAIN
-  ========================= -->
+    <div class="inputRow">
 
-  <main class="main">
+      <textarea
+        id="input"
+        rows="1"
+        placeholder="सारथी से कुछ पूछें..."
+        autocomplete="off"
+      ></textarea>
 
-    <section id="welcome" class="welcome">
-
-      <div class="welcome-icon">
-        🧭
-      </div>
-
-      <h1>
-        नमस्ते! मैं सारथी हूँ 👋
-      </h1>
-
-      <p>
-        मुझसे लिखकर या बोलकर बात करो।
-        फोटो भेजो, सवाल पूछो या Internet Search करो।
-      </p>
-
-    </section>
-
-    <section id="chatBox" class="chat-box">
-
-      <div id="emptyMessage" class="empty">
-        नीचे अपना सवाल लिखो या 🎤 माइक दबाकर बोलो।
-      </div>
-
-    </section>
-
-  </main>
-
-  <!-- =========================
-       FILE INPUTS
-  ========================= -->
-
-  <input
-    id="photoInput"
-    class="hidden"
-    type="file"
-    accept="image/*"
-  >
-
-  <input
-    id="videoInput"
-    class="hidden"
-    type="file"
-    accept="video/*"
-  >
-
-  <input
-    id="fileInput"
-    class="hidden"
-    type="file"
-    accept=".txt,.csv,.json,.md"
-  >
-
-  <!-- =========================
-       COMPOSER
-  ========================= -->
-
-  <div class="composer">
-
-    <div class="composer-inner">
-
-      <div
-        id="attachmentPreview"
-        class="attachment-preview"
-      >
-        <span id="attachmentText">
-          फ़ाइल चुनी गई
-        </span>
-
-        <button
-          class="remove-file"
-          type="button"
-          onclick="removeAttachment()"
-        >
-          ×
-        </button>
-      </div>
-
-      <div class="input-wrap">
-
-        <textarea
-          id="input"
-          rows="1"
-          placeholder="सारथी से कुछ पूछें..."
-        ></textarea>
-
-        <div class="tools-row">
-
-          <button
-            id="micButton"
-            class="tool-btn"
-            type="button"
-            title="माइक"
-            onclick="toggleMicrophone()"
-          >
-            🎤
-          </button>
-
-          <button
-            class="tool-btn"
-            type="button"
-            title="फोटो"
-            onclick="document.getElementById('photoInput').click()"
-          >
-            📷
-          </button>
-
-          <button
-            class="tool-btn"
-            type="button"
-            title="वीडियो"
-            onclick="document.getElementById('videoInput').click()"
-          >
-            🎥
-          </button>
-
-          <button
-            class="tool-btn"
-            type="button"
-            title="फाइल"
-            onclick="document.getElementById('fileInput').click()"
-          >
-            📎
-          </button>
-
-          <button
-            id="searchButton"
-            class="tool-btn"
-            type="button"
-            title="Internet Search"
-            onclick="toggleSearch()"
-          >
-            🌐
-          </button>
-
-          <span
-            id="searchIndicator"
-            class="search-indicator"
-          >
-            Search OFF
-          </span>
-
-          <button
-            id="voiceButton"
-            class="tool-btn"
-            type="button"
-            title="आवाज़"
-            onclick="toggleVoice()"
-          >
-            🔊
-          </button>
-
-          <button
-            id="sendButton"
-            class="send-btn"
-            type="button"
-            onclick="sendMessage()"
-          >
-            ➤
-          </button>
-
-        </div>
-
-      </div>
-
-      <div
-        id="status"
-        class="status"
-      ></div>
+      <button id="sendBtn" class="send" onclick="sendMessage()">
+        ➤
+      </button>
 
     </div>
 
   </div>
+</div>
 
-  <!-- भाग 2 में यहीं से JavaScript शुरू होगा -->
-  <script>
+</div>
 
-    /* =========================
-       SARATHI AI JAVASCRIPT
-    ========================= */
+<script>
 
-    const API_BASE =
-      "https://sarathi-ai.mjmanjumanjeet0.workers.dev";
+/* =========================================================
+   CONFIG
+========================================================= */
 
-    let messages = [];
-    let useSearch = false;
-
-    // अपने-आप आवाज नहीं बोलेगी
-    let voiceEnabled = false;
-
-    let isListening = false;
-    let mediaRecorder = null;
-    let audioChunks = [];
-    let microphoneStream = null;
-
-    let selectedFile = null;
-
-    const input =
-      document.getElementById("input");
-
-    const chatBox =
-      document.getElementById("chatBox");
-
-    const status =
-      document.getElementById("status");
-
-    const micButton =
-      document.getElementById("micButton");
-
-    const searchButton =
-      document.getElementById("searchButton");
-
-    const searchIndicator =
-      document.getElementById("searchIndicator");
-
-    const voiceButton =
-      document.getElementById("voiceButton");
-
-    const attachmentPreview =
-      document.getElementById("attachmentPreview");
-
-    const attachmentText =
-      document.getElementById("attachmentText");
+const API_BASE =
+  "https://sarathi-ai.mjmanjumanjeet0.workers.dev";
 
 
-    /* =========================
-       BASIC HELPERS
-    ========================= */
+/* =========================================================
+   STATE
+========================================================= */
 
-    function setStatus(text) {
-      if (status) {
-        status.textContent = text || "";
-      }
+let messages = [];
+let useSearch = false;
+let voiceEnabled = false;
+
+let isSending = false;
+let isListening = false;
+
+let mediaRecorder = null;
+let audioChunks = [];
+let microphoneStream = null;
+
+
+/* =========================================================
+   ELEMENTS
+========================================================= */
+
+const chat = document.getElementById("chat");
+const input = document.getElementById("input");
+const sendBtn = document.getElementById("sendBtn");
+const statusBox = document.getElementById("status");
+const searchBtn = document.getElementById("searchBtn");
+const voiceBtn = document.getElementById("voiceBtn");
+const empty = document.getElementById("empty");
+
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+function setStatus(text){
+  statusBox.textContent = text || "";
+}
+
+
+/* =========================================================
+   HTML ESCAPE
+========================================================= */
+
+function escapeHtml(value){
+  return String(value ?? "")
+    .replace(/&/g,"&amp;")
+    .replace(/</g,"&lt;")
+    .replace(/>/g,"&gt;")
+    .replace(/"/g,"&quot;")
+    .replace(/'/g,"&#039;");
+}
+
+
+/* =========================================================
+   SARATHI *** FIX
+========================================================= */
+
+function cleanSarathiStars(text){
+
+  let value = String(text ?? "");
+
+  /*
+    सारथी*** 
+    ***सारथी
+    ***सारथी***
+    जैसी समस्या हटाएँ।
+  */
+
+  value = value.replace(/(\bसारथी)\*+/g,"$1");
+  value = value.replace(/\*+(\bसारथी)/g,"$1");
+
+  /*
+    तीन या उससे ज्यादा लगातार * हटाएँ।
+    इससे *** जैसी खराब formatting नहीं दिखेगी।
+  */
+
+  value = value.replace(/\*{3,}/g,"");
+
+  return value;
+}
+
+
+/* =========================================================
+   SIMPLE MARKDOWN
+========================================================= */
+
+function renderMarkdown(text){
+
+  let value = cleanSarathiStars(text);
+
+  value = escapeHtml(value);
+
+  /*
+    Code blocks
+  */
+
+  const codeBlocks = [];
+
+  value = value.replace(
+    /```([\s\S]*?)```/g,
+    function(_, code){
+      const id = "___CODE_BLOCK_" + codeBlocks.length + "___";
+      codeBlocks.push(code);
+      return id;
     }
+  );
+
+  /*
+    Inline code
+  */
+
+  value = value.replace(
+    /`([^`]+)`/g,
+    "<code>$1</code>"
+  );
+
+  /*
+    Bold
+  */
+
+  value = value.replace(
+    /\*\*([^*]+)\*\*/g,
+    "<strong>$1</strong>"
+  );
+
+  /*
+    Italic
+  */
+
+  value = value.replace(
+    /(^|[^\*])\*([^*\n]+)\*(?!\*)/g,
+    "$1<em>$2</em>"
+  );
+
+  /*
+    Headings
+  */
+
+  value = value.replace(
+    /^### (.*)$/gm,
+    "<strong>$1</strong>"
+  );
+
+  value = value.replace(
+    /^## (.*)$/gm,
+    "<strong>$1</strong>"
+  );
+
+  value = value.replace(
+    /^# (.*)$/gm,
+    "<strong>$1</strong>"
+  );
+
+  /*
+    Bullets
+  */
+
+  value = value.replace(
+    /^[•\-] (.*)$/gm,
+    "• $1"
+  );
+
+  /*
+    New lines
+  */
+
+  value = value.replace(/\n/g,"<br>");
+
+  /*
+    Restore code blocks
+  */
+
+  codeBlocks.forEach(function(code,index){
+
+    const safeCode = escapeHtml(code);
+
+    value = value.replace(
+      "___CODE_BLOCK_" + index + "___",
+      "<pre><code>" + safeCode + "</code></pre>"
+    );
+
+  });
+
+  return value;
+}
 
 
-    function escapeHtml(text) {
-      return String(text || "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-    }
+/* =========================================================
+   ADD MESSAGE
+========================================================= */
 
+function addMessage(role,text,extra=""){
 
-    function removeEmptyMessage() {
-      const empty =
-        document.getElementById("emptyMessage");
+  if(empty){
+    empty.style.display = "none";
+  }
 
-      if (empty) {
-        empty.remove();
-      }
-    }
+  const row = document.createElement("div");
 
+  row.className =
+    "message " + (role === "user" ? "user" : "assistant");
 
-    /* =========================
-       ADD MESSAGE
-    ========================= */
+  const bubble = document.createElement("div");
 
-    function addMessage(role, text) {
+  bubble.className = "bubble";
 
-      removeEmptyMessage();
+  if(role === "assistant"){
 
-      const row =
-        document.createElement("div");
+    bubble.innerHTML =
+      renderMarkdown(text) +
+      `
+      <div class="actions">
 
-      row.className =
-        "message-row " + role;
+        <button onclick="speakText(this)">
+          🔊 सुनें
+        </button>
 
-      const message =
-        document.createElement("div");
+        <button onclick="copyText(this)">
+          📋 कॉपी
+        </button>
 
-      message.className =
-        "message " + role;
-
-      const content =
-        document.createElement("div");
-
-      content.className =
-        "message-content";
-
-      content.textContent =
-        String(text || "");
-
-      message.appendChild(content);
-
-
-      // Assistant के लिए buttons
-      if (role === "assistant") {
-
-        const tools =
-          document.createElement("div");
-
-        tools.className =
-          "message-tools";
-
-        const speakButton =
-          document.createElement("button");
-
-        speakButton.className =
-          "message-tool";
-
-        speakButton.type =
-          "button";
-
-        speakButton.textContent =
-          "🔊 सुनें";
-
-        speakButton.onclick =
-          function () {
-            speakText(String(text || ""));
-          };
-
-
-        const copyButton =
-          document.createElement("button");
-
-        copyButton.className =
-          "message-tool";
-
-        copyButton.type =
-          "button";
-
-        copyButton.textContent =
-          "📋 कॉपी";
-
-        copyButton.onclick =
-          async function () {
-
-            try {
-
-              await navigator.clipboard.writeText(
-                String(text || "")
-              );
-
-              setStatus(
-                "जवाब कॉपी हो गया।"
-              );
-
-              setTimeout(
-                () => setStatus(""),
-                1500
-              );
-
-            } catch (error) {
-
-              setStatus(
-                "कॉपी नहीं हो पाया।"
-              );
-            }
-          };
-
-
-        tools.appendChild(speakButton);
-        tools.appendChild(copyButton);
-
-        message.appendChild(tools);
-      }
-
-
-      row.appendChild(message);
-      chatBox.appendChild(row);
-
-      chatBox.scrollTop =
-        chatBox.scrollHeight;
-
-      window.scrollTo({
-        top: document.body.scrollHeight,
-        behavior: "smooth"
-      });
-
-      return message;
-    }
-
-
-    /* =========================
-       TYPING INDICATOR
-    ========================= */
-
-    function showTyping() {
-
-      removeEmptyMessage();
-
-      const row =
-        document.createElement("div");
-
-      row.className =
-        "message-row assistant";
-
-      row.id =
-        "typingRow";
-
-      const message =
-        document.createElement("div");
-
-      message.className =
-        "message assistant";
-
-      message.innerHTML = `
-        <div class="typing">
-          <span></span>
-          <span></span>
-          <span></span>
-        </div>
+      </div>
       `;
 
-      row.appendChild(message);
-      chatBox.appendChild(row);
+  }else{
 
-      chatBox.scrollTop =
-        chatBox.scrollHeight;
+    bubble.innerHTML =
+      renderMarkdown(text) + extra;
+
+  }
+
+  row.appendChild(bubble);
+  chat.appendChild(row);
+
+  chat.scrollTop = chat.scrollHeight;
+
+  return row;
+}
+
+
+/* =========================================================
+   TYPING
+========================================================= */
+
+function showTyping(){
+
+  hideTyping();
+
+  const row = document.createElement("div");
+
+  row.className = "message assistant";
+  row.id = "typing";
+
+  row.innerHTML = `
+    <div class="bubble">
+      <div class="typing">
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+      </div>
+    </div>
+  `;
+
+  chat.appendChild(row);
+
+  chat.scrollTop = chat.scrollHeight;
+}
+
+
+function hideTyping(){
+
+  const old = document.getElementById("typing");
+
+  if(old){
+    old.remove();
+  }
+
+}
+
+
+/* =========================================================
+   COPY
+========================================================= */
+
+async function copyText(button){
+
+  const bubble = button.closest(".bubble");
+
+  if(!bubble) return;
+
+  const clone = bubble.cloneNode(true);
+
+  clone.querySelectorAll(".actions").forEach(
+    el => el.remove()
+  );
+
+  const text = clone.innerText.trim();
+
+  try{
+
+    await navigator.clipboard.writeText(text);
+
+    button.textContent = "✅ कॉपी";
+
+    setTimeout(()=>{
+      button.textContent = "📋 कॉपी";
+    },1200);
+
+  }catch{
+
+    setStatus("कॉपी नहीं हो सका।");
+
+  }
+}
+
+
+/* =========================================================
+   SPEAK
+========================================================= */
+
+function speakText(button){
+
+  const bubble = button.closest(".bubble");
+
+  if(!bubble) return;
+
+  const clone = bubble.cloneNode(true);
+
+  clone.querySelectorAll(".actions").forEach(
+    el => el.remove()
+  );
+
+  const text = clone.innerText.trim();
+
+  if(!("speechSynthesis" in window)){
+
+    setStatus("इस फोन के ब्राउज़र में आवाज की सुविधा उपलब्ध नहीं है।");
+
+    return;
+  }
+
+  speechSynthesis.cancel();
+
+  const utterance =
+    new SpeechSynthesisUtterance(text);
+
+  utterance.lang = "hi-IN";
+  utterance.rate = 0.92;
+  utterance.pitch = 1;
+
+  speechSynthesis.speak(utterance);
+}
+
+
+/* =========================================================
+   VOICE TOGGLE
+========================================================= */
+
+function toggleVoice(){
+
+  voiceEnabled = !voiceEnabled;
+
+  voiceBtn.textContent =
+    voiceEnabled
+      ? "🔊 आवाज ON"
+      : "🔊 आवाज OFF";
+
+  voiceBtn.classList.toggle(
+    "active",
+    voiceEnabled
+  );
+
+  setStatus(
+    voiceEnabled
+      ? "आवाज ON है। जवाब के नीचे 🔊 सुनें दबा सकते हो।"
+      : "आवाज OFF है।"
+  );
+}
+
+
+/* =========================================================
+   SEARCH
+========================================================= */
+
+function toggleSearch(){
+
+  useSearch = !useSearch;
+
+  searchBtn.textContent =
+    useSearch
+      ? "🌐 Search ON"
+      : "🌐 Search OFF";
+
+  searchBtn.classList.toggle(
+    "active",
+    useSearch
+  );
+
+  setStatus(
+    useSearch
+      ? "🌐 इंटरनेट Search ON है।"
+      : "Search OFF है।"
+  );
+}
+
+
+/* =========================================================
+   TEXTAREA
+========================================================= */
+
+function autoResize(){
+
+  input.style.height = "auto";
+
+  input.style.height =
+    Math.min(input.scrollHeight,130) + "px";
+}
+
+input.addEventListener(
+  "input",
+  autoResize
+);
+
+input.addEventListener(
+  "keydown",
+  function(e){
+
+    if(e.key === "Enter" && !e.shiftKey){
+
+      e.preventDefault();
+
+      sendMessage();
+
     }
 
+  }
+);
 
-    function hideTyping() {
 
-      const typing =
-        document.getElementById("typingRow");
+/* =========================================================
+   LOCAL DATE ANSWER
+========================================================= */
 
-      if (typing) {
-        typing.remove();
+function getLocalDateAnswer(text){
+
+  const q = String(text).trim().toLowerCase();
+
+  const patterns = [
+    "आज कौन सा दिन",
+    "आज कौन-सा दिन",
+    "आज का दिन",
+    "आज क्या दिन",
+    "आज कौन सा वार",
+    "आज कौन-सा वार",
+    "आज की तारीख",
+    "आज तारीख क्या है",
+    "आज की डेट"
+  ];
+
+  const matched =
+    patterns.some(p => q.includes(p));
+
+  if(!matched){
+    return null;
+  }
+
+  const now = new Date();
+
+  const day =
+    now.toLocaleDateString(
+      "hi-IN",
+      {weekday:"long"}
+    );
+
+  const date =
+    now.toLocaleDateString(
+      "hi-IN",
+      {
+        day:"numeric",
+        month:"long",
+        year:"numeric"
       }
+    );
+
+  return `आज ${day} है और तारीख ${date} है।`;
+
+}
+
+
+/* =========================================================
+   READ JSON RESPONSE SAFELY
+========================================================= */
+
+async function readResponse(response){
+
+  const raw = await response.text();
+
+  let data = {};
+
+  try{
+
+    data =
+      raw
+        ? JSON.parse(raw)
+        : {};
+
+  }catch{
+
+    data = {};
+
+  }
+
+  return {
+    data,
+    raw
+  };
+
+}
+
+
+/* =========================================================
+   EXTRACT AI REPLY
+========================================================= */
+
+function extractReply(data){
+
+  const candidates = [
+
+    data?.reply,
+
+    data?.content,
+
+    data?.message,
+
+    data?.answer,
+
+    data?.output_text,
+
+    data?.result?.reply,
+
+    data?.result?.content,
+
+    data?.result?.message
+
+  ];
+
+  for(const item of candidates){
+
+    if(
+      typeof item === "string" &&
+      item.trim()
+    ){
+
+      return item.trim();
+
     }
 
+  }
 
-    /* =========================
-       VOICE OUTPUT
-    ========================= */
+  return "";
 
-    function toggleVoice() {
+}
 
-      voiceEnabled =
-        !voiceEnabled;
 
-      if (voiceEnabled) {
+/* =========================================================
+   SEND MESSAGE
+========================================================= */
 
-        voiceButton.classList.add(
-          "active"
-        );
+async function sendMessage(customText=null,displayText=null){
 
-        setStatus(
-          "🔊 सुनें बटन से जवाब की आवाज सुन सकते हो।"
-        );
+  if(isSending){
 
-      } else {
+    return;
 
-        voiceButton.classList.remove(
-          "active"
-        );
+  }
 
-        setStatus(
-          "आवाज़ बंद है।"
-        );
-      }
+  const text =
+    String(
+      customText !== null
+        ? customText
+        : input.value
+    ).trim();
 
-      setTimeout(
-        () => setStatus(""),
-        1800
+  if(!text){
+
+    return;
+
+  }
+
+  isSending = true;
+
+  sendBtn.disabled = true;
+
+  if(customText === null){
+
+    input.value = "";
+
+    autoResize();
+
+  }
+
+  const shownText =
+    displayText !== null
+      ? displayText
+      : text;
+
+  addMessage(
+    "user",
+    shownText
+  );
+
+  messages.push({
+    role:"user",
+    content:text
+  });
+
+  /*
+    Local date questions को Worker पर भेजने की जरूरत नहीं।
+  */
+
+  if(!useSearch){
+
+    const localAnswer =
+      getLocalDateAnswer(text);
+
+    if(localAnswer){
+
+      addMessage(
+        "assistant",
+        localAnswer
       );
+
+      messages.push({
+        role:"assistant",
+        content:localAnswer
+      });
+
+      setStatus("तैयार है।");
+
+      isSending = false;
+
+      sendBtn.disabled = false;
+
+      return;
+    }
+
+  }
+
+
+  showTyping();
+
+  setStatus(
+    useSearch
+      ? "🌐 इंटरनेट से जानकारी खोज रहा हूँ..."
+      : "सारथी सोच रहा है..."
+  );
+
+
+  /*
+    60 सेकंड timeout
+  */
+
+  const controller =
+    new AbortController();
+
+  const timeout =
+    setTimeout(
+      ()=>controller.abort(),
+      60000
+    );
+
+
+  try{
+
+    const response =
+      await fetch(
+        API_BASE + "/api/chat",
+        {
+          method:"POST",
+
+          headers:{
+            "Content-Type":
+              "application/json"
+          },
+
+          body:JSON.stringify({
+
+            /*
+              बहुत ज्यादा पुरानी history भेजने
+              से request भारी हो सकती है।
+            */
+
+            messages:
+              messages.slice(-12),
+
+            useSearch:
+              Boolean(useSearch)
+
+          }),
+
+          signal:
+            controller.signal
+
+        }
+      );
+
+
+    const result =
+      await readResponse(response);
+
+    const data =
+      result.data;
+
+    const raw =
+      result.raw;
+
+
+    if(!response.ok){
+
+      const serverError =
+        data?.error ||
+        data?.message ||
+        raw ||
+        `HTTP ${response.status}`;
+
+      throw new Error(
+        `सर्वर त्रुटि (${response.status}): ${serverError}`
+      );
+
     }
 
 
-    function speakText(text) {
+    const reply =
+      extractReply(data);
 
-      if (
-        !("speechSynthesis" in window)
-      ) {
 
-        setStatus(
-          "इस browser में आवाज उपलब्ध नहीं है।"
-        );
+    if(!reply){
 
-        return;
-      }
+      throw new Error(
+        "Worker ने खाली जवाब भेजा।"
+      );
 
-      window.speechSynthesis.cancel();
+    }
+
+
+    /*
+      *** वाली समस्या यहाँ भी साफ होगी।
+    */
+
+    const cleanReply =
+      cleanSarathiStars(reply);
+
+
+    hideTyping();
+
+    addMessage(
+      "assistant",
+      cleanReply
+    );
+
+    messages.push({
+      role:"assistant",
+      content:cleanReply
+    });
+
+
+    setStatus(
+      useSearch
+        ? "🌐 Search के साथ जवाब दिया गया।"
+        : "तैयार है।"
+    );
+
+
+    /*
+      Auto voice सिर्फ तभी जब user ने ON किया हो।
+    */
+
+    if(
+      voiceEnabled &&
+      "speechSynthesis" in window
+    ){
 
       const utterance =
         new SpeechSynthesisUtterance(
-          String(text || "")
+          cleanReply
         );
 
-      utterance.lang =
-        "hi-IN";
+      utterance.lang = "hi-IN";
+      utterance.rate = 0.92;
 
-      utterance.rate =
-        0.95;
+      speechSynthesis.cancel();
 
-      utterance.pitch =
-        1;
-
-      const voices =
-        window.speechSynthesis.getVoices();
-
-      const hindiVoice =
-        voices.find(
-          voice =>
-            voice.lang &&
-            voice.lang
-              .toLowerCase()
-              .startsWith("hi")
-        );
-
-      if (hindiVoice) {
-        utterance.voice =
-          hindiVoice;
-      }
-
-      window.speechSynthesis.speak(
+      speechSynthesis.speak(
         utterance
       );
+
     }
 
 
-    /* =========================
-       SEARCH
-    ========================= */
+  }catch(error){
 
-    function toggleSearch() {
+    hideTyping();
 
-      useSearch =
-        !useSearch;
-
-      if (useSearch) {
-
-        searchButton.classList.add(
-          "active"
-        );
-
-        searchIndicator.textContent =
-          "Search ON";
-
-      } else {
-
-        searchButton.classList.remove(
-          "active"
-        );
-
-        searchIndicator.textContent =
-          "Search OFF";
-      }
-    }
-
-
-    /* =========================
-       MICROPHONE
-       MediaRecorder + Whisper
-    ========================= */
-
-    function getSupportedAudioMimeType() {
-
-      const types = [
-        "audio/webm;codecs=opus",
-        "audio/webm",
-        "audio/mp4",
-        "audio/ogg;codecs=opus",
-        "audio/ogg"
-      ];
-
-      for (const type of types) {
-
-        if (
-          window.MediaRecorder &&
-          MediaRecorder.isTypeSupported(type)
-        ) {
-          return type;
-        }
-      }
-
-      return "";
-    }
-
-
-    async function toggleMicrophone() {
-
-      if (isListening) {
-
-        stopRecording();
-
-        return;
-      }
-
-
-      if (
-        !navigator.mediaDevices ||
-        !navigator.mediaDevices.getUserMedia
-      ) {
-
-        setStatus(
-          "इस browser में microphone उपलब्ध नहीं है।"
-        );
-
-        return;
-      }
-
-
-      if (
-        !window.MediaRecorder
-      ) {
-
-        setStatus(
-          "इस browser में audio recording उपलब्ध नहीं है।"
-        );
-
-        return;
-      }
-
-
-      try {
-
-        microphoneStream =
-          await navigator.mediaDevices.getUserMedia({
-            audio: true
-          });
-
-
-        audioChunks = [];
-
-
-        const mimeType =
-          getSupportedAudioMimeType();
-
-
-        if (mimeType) {
-
-          mediaRecorder =
-            new MediaRecorder(
-              microphoneStream,
-              {
-                mimeType
-              }
-            );
-
-        } else {
-
-          mediaRecorder =
-            new MediaRecorder(
-              microphoneStream
-            );
-        }
-
-
-        mediaRecorder.ondataavailable =
-          function (event) {
-
-            if (
-              event.data &&
-              event.data.size > 0
-            ) {
-
-              audioChunks.push(
-                event.data
-              );
-            }
-          };
-
-
-        mediaRecorder.onstop =
-          async function () {
-
-            try {
-
-              await processRecordedAudio();
-
-            } catch (error) {
-
-              console.error(
-                "Audio processing error:",
-                error
-              );
-
-              setStatus(
-                "आवाज़ समझने में समस्या हुई।"
-              );
-
-            } finally {
-
-              if (microphoneStream) {
-
-                microphoneStream
-                  .getTracks()
-                  .forEach(
-                    track => track.stop()
-                  );
-
-                microphoneStream =
-                  null;
-              }
-            }
-          };
-
-
-        mediaRecorder.start();
-
-        isListening = true;
-
-        micButton.classList.add(
-          "active"
-        );
-
-        micButton.textContent =
-          "⏹️";
-
-        setStatus(
-          "🎤 बोलो... रिकॉर्डिंग चालू है।"
-        );
-
-
-      } catch (error) {
-
-        console.error(
-          "Microphone error:",
-          error
-        );
-
-        isListening = false;
-
-        micButton.classList.remove(
-          "active"
-        );
-
-        micButton.textContent =
-          "🎤";
-
-
-        if (
-          error &&
-          error.name ===
-            "NotAllowedError"
-        ) {
-
-          setStatus(
-            "Microphone permission Allow करो।"
-          );
-
-        } else {
-
-          setStatus(
-            "Microphone शुरू नहीं हो पाया।"
-          );
-        }
-      }
-    }
-
-
-    function stopRecording() {
-
-      if (
-        mediaRecorder &&
-        mediaRecorder.state !== "inactive"
-      ) {
-
-        mediaRecorder.stop();
-
-      } else {
-
-        isListening = false;
-
-        micButton.classList.remove(
-          "active"
-        );
-
-        micButton.textContent =
-          "🎤";
-      }
-    }
-
-
-    /* =========================
-       SEND AUDIO TO WORKER
-    ========================= */
-
-    async function processRecordedAudio() {
-
-      isListening = false;
-
-      micButton.classList.remove(
-        "active"
-      );
-
-      micButton.textContent =
-        "🎤";
-
-
-      if (
-        audioChunks.length === 0
-      ) {
-
-        setStatus(
-          "कोई आवाज रिकॉर्ड नहीं हुई।"
-        );
-
-        return;
-      }
-
-
-      setStatus(
-        "🎧 आवाज को समझ रहा हूँ..."
-      );
-
-
-      const mimeType =
-        (
-          mediaRecorder &&
-          mediaRecorder.mimeType
-        ) ||
-        "audio/webm";
-
-
-      const audioBlob =
-        new Blob(
-          audioChunks,
-          {
-            type: mimeType
-          }
-        );
-
-
-      audioChunks = [];
-
-
-      const formData =
-        new FormData();
-
-
-      let extension =
-        "webm";
-
-
-      if (
-        mimeType.includes("mp4")
-      ) {
-
-        extension =
-          "mp4";
-
-      } else if (
-        mimeType.includes("ogg")
-      ) {
-
-        extension =
-          "ogg";
-      }
-
-
-      formData.append(
-        "file",
-        audioBlob,
-        "voice." + extension
-      );
-
-
-      const response =
-        await fetch(
-          API_BASE +
-            "/api/transcribe",
-          {
-            method: "POST",
-            body: formData
-          }
-        );
-
-
-      const data =
-        await response.json()
-          .catch(() => ({}));
-
-
-      if (!response.ok) {
-
-        throw new Error(
-          data.error ||
-          "Transcription failed"
-        );
-      }
-
-
-      const transcript =
-        String(
-          data.text ||
-          data.transcript ||
-          ""
-        ).trim();
-
-
-      if (!transcript) {
-
-        setStatus(
-          "आवाज़ में कोई शब्द समझ नहीं आया।"
-        );
-
-        return;
-      }
-
-
-      input.value =
-        transcript;
-
-
-      autoResizeTextarea();
-
-
-      setStatus(
-        "✅ आवाज समझ ली गई।"
-      );
-
-
-      // आवाज को सीधे सवाल के रूप में भेजना
-      await sendMessage();
-    }
-
-
-    /* =========================
-       TEXTAREA AUTO RESIZE
-    ========================= */
-
-    function autoResizeTextarea() {
-
-      input.style.height =
-        "auto";
-
-      input.style.height =
-        Math.min(
-          input.scrollHeight,
-          150
-        ) + "px";
-    }
-
-
-    input.addEventListener(
-      "input",
-      autoResizeTextarea
+    console.error(
+      "Sarathi chat error:",
+      error
     );
 
 
-    /* =========================
-       ENTER TO SEND
-    ========================= */
+    let message =
+      "माफ़ करना, अभी जवाब देने में समस्या हुई।";
 
-    input.addEventListener(
-      "keydown",
-      function (event) {
 
-        if (
-          event.key === "Enter" &&
-          !event.shiftKey
-        ) {
+    if(error?.name === "AbortError"){
 
-          event.preventDefault();
+      message =
+        "सर्वर से जवाब आने में बहुत समय लग गया। इंटरनेट या Worker को जाँचो।";
 
-          sendMessage();
-        }
-      }
+    }else if(
+      error?.message
+    ){
+
+      /*
+        Debugging के लिए असली error भी दिखाएँ।
+      */
+
+      message =
+        "माफ़ करना, जवाब नहीं मिल पाया।\n\n" +
+        "तकनीकी जानकारी: " +
+        error.message;
+
+    }
+
+
+    addMessage(
+      "assistant",
+      message
     );
 
-        /* =========================
-       SEND MESSAGE
-    ========================= */
-
-    async function sendMessage(customText = null) {
-
-      const text =
-        String(
-          customText !== null
-            ? customText
-            : input.value
-        ).trim();
+    setStatus(
+      "⚠️ Chat request में समस्या हुई।"
+    );
 
 
-      if (!text) {
-        return;
-      }
+  }finally{
+
+    clearTimeout(timeout);
+
+    isSending = false;
+
+    sendBtn.disabled = false;
+
+  }
+
+}
 
 
-      input.value = "";
-      autoResizeTextarea();
+/* =========================================================
+   MICROPHONE / WHISPER
+========================================================= */
+
+async function startRecording(){
+
+  if(isListening){
+
+    stopRecording();
+
+    return;
+
+  }
 
 
-      addMessage(
-        "user",
-        text
-      );
+  if(
+    !navigator.mediaDevices ||
+    !navigator.mediaDevices.getUserMedia
+  ){
+
+    setStatus(
+      "इस ब्राउज़र में Microphone उपलब्ध नहीं है।"
+    );
+
+    return;
+
+  }
 
 
-      messages.push({
-        role: "user",
-        content: text
+  try{
+
+    microphoneStream =
+      await navigator.mediaDevices.getUserMedia({
+        audio:true
       });
 
 
-      showTyping();
+    audioChunks = [];
 
+
+    mediaRecorder =
+      new MediaRecorder(
+        microphoneStream
+      );
+
+
+    mediaRecorder.ondataavailable =
+      function(e){
+
+        if(e.data.size > 0){
+
+          audioChunks.push(
+            e.data
+          );
+
+        }
+
+      };
+
+
+    mediaRecorder.onstop =
+      async function(){
+
+        try{
+
+          const blob =
+            new Blob(
+              audioChunks,
+              {
+                type:
+                  mediaRecorder.mimeType ||
+                  "audio/webm"
+              }
+            );
+
+
+          setStatus(
+            "🎙️ आवाज को text में बदल रहा हूँ..."
+          );
+
+
+          const formData =
+            new FormData();
+
+          formData.append(
+            "file",
+            blob,
+            "voice.webm"
+          );
+
+
+          const response =
+            await fetch(
+              API_BASE + "/api/transcribe",
+              {
+                method:"POST",
+                body:formData
+              }
+            );
+
+
+          const result =
+            await readResponse(response);
+
+
+          if(!response.ok){
+
+            throw new Error(
+              result.data?.error ||
+              result.data?.message ||
+              result.raw ||
+              `HTTP ${response.status}`
+            );
+
+          }
+
+
+          const text =
+            result.data?.text ||
+            result.data?.transcript ||
+            "";
+
+
+          if(!text.trim()){
+
+            throw new Error(
+              "आवाज समझ में नहीं आई।"
+            );
+
+          }
+
+
+          input.value =
+            text.trim();
+
+          autoResize();
+
+          setStatus(
+            "🎙️ आवाज समझ ली गई।"
+          );
+
+
+          /*
+            Transcription के बाद message भेजें।
+          */
+
+          sendMessage();
+
+
+        }catch(error){
+
+          console.error(
+            "Transcription error:",
+            error
+          );
+
+          setStatus(
+            "🎙️ आवाज समझने में समस्या: " +
+            error.message
+          );
+
+        }
+
+      };
+
+
+    mediaRecorder.start();
+
+    isListening = true;
+
+    setStatus(
+      "🔴 सुन रहा हूँ... बोलना पूरा होने पर फिर 🎙️ दबाएँ।"
+    );
+
+
+  }catch(error){
+
+    console.error(error);
+
+    setStatus(
+      "Microphone permission नहीं मिली।"
+    );
+
+  }
+
+}
+
+
+function stopRecording(){
+
+  if(
+    mediaRecorder &&
+    mediaRecorder.state !== "inactive"
+  ){
+
+    mediaRecorder.stop();
+
+  }
+
+
+  if(microphoneStream){
+
+    microphoneStream
+      .getTracks()
+      .forEach(
+        track => track.stop()
+      );
+
+    microphoneStream = null;
+
+  }
+
+
+  isListening = false;
+
+}
+
+
+/* =========================================================
+   PHOTO
+========================================================= */
+
+document
+  .getElementById("photoInput")
+  .addEventListener(
+    "change",
+    handlePhoto
+  );
+
+
+async function handlePhoto(e){
+
+  const file =
+    e.target.files?.[0];
+
+  if(!file) return;
+
+
+  try{
+
+    setStatus(
+      "📷 फोटो तैयार कर रहा हूँ..."
+    );
+
+
+    const dataUrl =
+      await fileToDataURL(file);
+
+
+    const preview =
+      `<br><img class="photoPreview" src="${dataUrl}" alt="फोटो">`;
+
+
+    addMessage(
+      "user",
+      "📷 मैंने एक फोटो भेजी है।",
+      preview
+    );
+
+
+    showTyping();
+
+
+    const response =
+      await fetch(
+        API_BASE + "/api/vision",
+        {
+          method:"POST",
+
+          headers:{
+            "Content-Type":
+              "application/json"
+          },
+
+          body:JSON.stringify({
+            image:dataUrl,
+            prompt:
+              "इस फोटो को ध्यान से देखकर हिंदी में सरल और स्पष्ट तरीके से बताओ कि इसमें क्या दिखाई दे रहा है।"
+          })
+
+        }
+      );
+
+
+    const result =
+      await readResponse(response);
+
+
+    if(!response.ok){
+
+      throw new Error(
+        result.data?.error ||
+        result.data?.message ||
+        result.raw ||
+        `HTTP ${response.status}`
+      );
+
+    }
+
+
+    const reply =
+      extractReply(
+        result.data
+      ) ||
+      result.data?.text ||
+      "";
+
+
+    if(!reply){
+
+      throw new Error(
+        "फोटो का जवाब खाली मिला।"
+      );
+
+    }
+
+
+    const cleanReply =
+      cleanSarathiStars(reply);
+
+
+    hideTyping();
+
+    addMessage(
+      "assistant",
+      cleanReply
+    );
+
+
+    messages.push({
+      role:"user",
+      content:"मैंने एक फोटो भेजी है।"
+    });
+
+    messages.push({
+      role:"assistant",
+      content:cleanReply
+    });
+
+
+    setStatus(
+      "📷 फोटो का विश्लेषण पूरा हुआ।"
+    );
+
+
+  }catch(error){
+
+    hideTyping();
+
+    console.error(
+      "Vision error:",
+      error
+    );
+
+    addMessage(
+      "assistant",
+      "फोटो समझने में समस्या हुई।\n\nतकनीकी जानकारी: " +
+      error.message
+    );
+
+    setStatus(
+      "⚠️ Photo analysis में समस्या।"
+    );
+
+  }finally{
+
+    e.target.value = "";
+
+  }
+
+}
+
+
+/* =========================================================
+   VIDEO
+   सिर्फ पहला frame Worker को भेजा जाएगा।
+========================================================= */
+
+document
+  .getElementById("videoInput")
+  .addEventListener(
+    "change",
+    handleVideo
+  );
+
+
+async function handleVideo(e){
+
+  const file =
+    e.target.files?.[0];
+
+  if(!file) return;
+
+
+  try{
+
+    setStatus(
+      "🎬 वीडियो का पहला frame निकाल रहा हूँ..."
+    );
+
+
+    const frame =
+      await getVideoFrame(file);
+
+
+    addMessage(
+      "user",
+      "🎬 मैंने एक वीडियो भेजा है।"
+    );
+
+
+    showTyping();
+
+
+    const response =
+      await fetch(
+        API_BASE + "/api/vision",
+        {
+          method:"POST",
+
+          headers:{
+            "Content-Type":
+              "application/json"
+          },
+
+          body:JSON.stringify({
+            image:frame,
+            prompt:
+              "यह वीडियो के पहले frame की फोटो है। इसमें क्या दिखाई दे रहा है, हिंदी में सरल तरीके से बताओ।"
+          })
+
+        }
+      );
+
+
+    const result =
+      await readResponse(response);
+
+
+    if(!response.ok){
+
+      throw new Error(
+        result.data?.error ||
+        result.data?.message ||
+        result.raw ||
+        `HTTP ${response.status}`
+      );
+
+    }
+
+
+    const reply =
+      extractReply(
+        result.data
+      ) ||
+      result.data?.text ||
+      "";
+
+
+    if(!reply){
+
+      throw new Error(
+        "वीडियो का जवाब खाली मिला।"
+      );
+
+    }
+
+
+    const cleanReply =
+      cleanSarathiStars(reply);
+
+
+    hideTyping();
+
+    addMessage(
+      "assistant",
+      cleanReply
+    );
+
+
+    setStatus(
+      "🎬 वीडियो के पहले frame का विश्लेषण पूरा हुआ।"
+    );
+
+
+  }catch(error){
+
+    hideTyping();
+
+    console.error(
+      "Video error:",
+      error
+    );
+
+    addMessage(
+      "assistant",
+      "वीडियो समझने में समस्या हुई।\n\nतकनीकी जानकारी: " +
+      error.message
+    );
+
+    setStatus(
+      "⚠️ Video analysis में समस्या।"
+    );
+
+  }finally{
+
+    e.target.value = "";
+
+  }
+
+}
+
+
+/* =========================================================
+   FILE
+========================================================= */
+
+document
+  .getElementById("fileInput")
+  .addEventListener(
+    "change",
+    handleFile
+  );
+
+
+async function handleFile(e){
+
+  const file =
+    e.target.files?.[0];
+
+  if(!file) return;
+
+
+  try{
+
+    const allowed = [
+      "txt",
+      "csv",
+      "json",
+      "md"
+    ];
+
+
+    const ext =
+      file.name
+        .split(".")
+        .pop()
+        .toLowerCase();
+
+
+    if(!allowed.includes(ext)){
+
+      throw new Error(
+        "अभी TXT, CSV, JSON और MD फाइल ही supported हैं।"
+      );
+
+    }
+
+
+    const text =
+      await file.text();
+
+
+    if(!text.trim()){
+
+      throw new Error(
+        "फाइल खाली है।"
+      );
+
+    }
+
+
+    const display =
+      `📄 ${file.name} पढ़ रहा हूँ।`;
+
+
+    const prompt =
+      `
+मैंने "${file.name}" नाम की फाइल भेजी है।
+
+फाइल का content:
+
+--------------------
+
+${text.slice(0,30000)}
+
+--------------------
+
+इस फाइल को ध्यान से पढ़कर मेरे सवाल/निर्देश के अनुसार हिंदी में उत्तर दो।
+यदि फाइल में बहुत ज्यादा जानकारी हो तो केवल जरूरी जानकारी पर ध्यान दो।
+`;
+
+
+    await sendMessage(
+      prompt,
+      display
+    );
+
+
+  }catch(error){
+
+    console.error(
+      "File error:",
+      error
+    );
+
+    addMessage(
+      "assistant",
+      "फाइल पढ़ने में समस्या हुई।\n\n" +
+      error.message
+    );
+
+  }finally{
+
+    e.target.value = "";
+
+  }
+
+}
+
+
+/* =========================================================
+   FILE TO DATA URL
+========================================================= */
+
+function fileToDataURL(file){
+
+  return new Promise(
+    function(resolve,reject){
+
+      const reader =
+        new FileReader();
+
+      reader.onload =
+        ()=>resolve(
+          reader.result
+        );
+
+      reader.onerror =
+        reject;
+
+      reader.readAsDataURL(file);
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   VIDEO FRAME
+========================================================= */
+
+function getVideoFrame(file){
+
+  return new Promise(
+    function(resolve,reject){
+
+      const video =
+        document.createElement("video");
+
+      const url =
+        URL.createObjectURL(file);
+
+      video.src = url;
+
+      video.muted = true;
+
+      video.playsInline = true;
+
+      video.onloadeddata =
+        function(){
+
+          video.currentTime = 0.1;
+
+        };
+
+
+      video.onseeked =
+        function(){
+
+          try{
+
+            const canvas =
+              document.createElement(
+                "canvas"
+              );
+
+            canvas.width =
+              video.videoWidth;
+
+            canvas.height =
+              video.videoHeight;
+
+
+            const ctx =
+              canvas.getContext("2d");
+
+
+            ctx.drawImage(
+              video,
+              0,
+              0,
+              canvas.width,
+              canvas.height
+            );
+
+
+            const data =
+              canvas.toDataURL(
+                "image/jpeg",
+                0.85
+              );
+
+
+            URL.revokeObjectURL(
+              url
+            );
+
+
+            resolve(data);
+
+
+          }catch(error){
+
+            URL.revokeObjectURL(
+              url
+            );
+
+            reject(error);
+
+          }
+
+        };
+
+
+      video.onerror =
+        function(){
+
+          URL.revokeObjectURL(
+            url
+          );
+
+          reject(
+            new Error(
+              "वीडियो पढ़ा नहीं जा सका।"
+            )
+          );
+
+        };
+
+    }
+  );
+
+}
+
+
+/* =========================================================
+   STUDY
+========================================================= */
+
+function openStudy(){
+
+  window.location.href =
+    "/study.html";
+
+}
+
+
+/* =========================================================
+   CLEAR CHAT
+========================================================= */
+
+function clearChat(){
+
+  if(
+    !confirm(
+      "क्या नई चैट शुरू करनी है?"
+    )
+  ){
+
+    return;
+
+  }
+
+
+  messages = [];
+
+  chat.innerHTML = `
+    <div id="empty" class="empty">
+      <strong>हेलो 👋</strong>
+      मैं सारथी AI हूँ।<br>
+      अपना सवाल लिखो या माइक से बोलो।
+    </div>
+  `;
+
+
+  setStatus(
+    "नई चैट शुरू हो गई।"
+  );
+
+}
+
+
+/* =========================================================
+   WORKER CONNECTION CHECK
+========================================================= */
+
+async function checkWorker(){
+
+  try{
+
+    const response =
+      await fetch(
+        API_BASE + "/",
+        {
+          method:"GET",
+          cache:"no-store"
+        }
+      );
+
+
+    if(!response.ok){
+
+      throw new Error(
+        "HTTP " + response.status
+      );
+
+    }
+
+
+    const text =
+      await response.text();
+
+
+    if(
+      text.includes(
+        "Sarathi AI Worker is running"
+      )
+    ){
 
       setStatus(
-        useSearch
-          ? "🌐 Internet Search चल रहा है..."
-          : "सारथी सोच रहा है..."
+        "🟢 सारथी सर्वर तैयार है।"
       );
 
+    }else{
 
-      try {
-
-        const response =
-          await fetch(
-            API_BASE + "/api/chat",
-            {
-              method: "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json"
-              },
-
-              body: JSON.stringify({
-                messages:
-                  messages.slice(-20),
-                useSearch:
-                  useSearch
-              })
-            }
-          );
-
-
-        const data =
-          await response.json()
-            .catch(() => ({}));
-
-
-        if (!response.ok) {
-
-          throw new Error(
-            data.error ||
-            "Server error"
-          );
-        }
-
-
-        const reply =
-          String(
-            data.reply ||
-            data.content ||
-            data.message ||
-            ""
-          ).trim();
-
-
-        if (!reply) {
-
-          throw new Error(
-            "सारथी का जवाब खाली आया।"
-          );
-        }
-
-
-        hideTyping();
-
-
-        addMessage(
-          "assistant",
-          reply
-        );
-
-
-        messages.push({
-          role: "assistant",
-          content: reply
-        });
-
-
-        /*
-          IMPORTANT:
-          यहाँ speakText(reply) नहीं है।
-
-          इसलिए सारथी अपने-आप नहीं बोलेगा।
-          🔊 सुनें दबाने पर ही आवाज आएगी।
-        */
-
-
-        setStatus("");
-
-
-      } catch (error) {
-
-        console.error(
-          "Chat error:",
-          error
-        );
-
-
-        hideTyping();
-
-
-        const errorMessage =
-          error &&
-          error.message
-            ? error.message
-            : "कुछ समस्या हो गई।";
-
-
-        addMessage(
-          "assistant",
-          "माफ़ करना, अभी जवाब देने में समस्या हुई।\n\n" +
-          errorMessage
-        );
-
-
-        setStatus(
-          "❌ जवाब नहीं मिल पाया।"
-        );
-
-
-      } finally {
-
-        setTimeout(
-          () => setStatus(""),
-          2500
-        );
-      }
-    }
-
-
-    /* =========================
-       LOCAL DATE QUESTION
-    ========================= */
-
-    function getLocalDateAnswer(text) {
-
-      const normalized =
-        String(text || "")
-          .toLowerCase()
-          .trim();
-
-
-      const dateWords = [
-        "आज का दिन",
-        "आज कौन सा दिन",
-        "आज की तारीख",
-        "आज तारीख",
-        "आज क्या तारीख",
-        "आज कौन सा डेट",
-        "today",
-        "date today"
-      ];
-
-
-      const matched =
-        dateWords.some(
-          word =>
-            normalized.includes(word)
-        );
-
-
-      if (!matched) {
-        return null;
-      }
-
-
-      const now =
-        new Date();
-
-
-      const days = [
-        "रविवार",
-        "सोमवार",
-        "मंगलवार",
-        "बुधवार",
-        "गुरुवार",
-        "शुक्रवार",
-        "शनिवार"
-      ];
-
-
-      const months = [
-        "जनवरी",
-        "फ़रवरी",
-        "मार्च",
-        "अप्रैल",
-        "मई",
-        "जून",
-        "जुलाई",
-        "अगस्त",
-        "सितंबर",
-        "अक्टूबर",
-        "नवंबर",
-        "दिसंबर"
-      ];
-
-
-      return (
-        "आज " +
-        days[now.getDay()] +
-        ", " +
-        now.getDate() +
-        " " +
-        months[now.getMonth()] +
-        " " +
-        now.getFullYear() +
-        " है।"
-      );
-    }
-
-
-    /* =========================
-       PHOTO
-    ========================= */
-
-    document
-      .getElementById("photoInput")
-      .addEventListener(
-        "change",
-        async function (event) {
-
-          const file =
-            event.target.files &&
-            event.target.files[0];
-
-
-          if (!file) {
-            return;
-          }
-
-
-          await handlePhoto(file);
-
-
-          event.target.value =
-            "";
-        }
+      setStatus(
+        "🟢 सारथी सर्वर से connection है।"
       );
 
-
-    async function handlePhoto(file) {
-
-      try {
-
-        setStatus(
-          "📷 फोटो पढ़ रहा हूँ..."
-        );
-
-
-        const dataUrl =
-          await fileToDataURL(file);
-
-
-        const question =
-          input.value.trim() ||
-          "इस फोटो को ध्यान से देखकर बताओ इसमें क्या है।";
-
-
-        input.value = "";
-        autoResizeTextarea();
-
-
-        addMessage(
-          "user",
-          "📷 फोटो भेजी गई\n" +
-          question
-        );
-
-
-        showTyping();
-
-
-        const response =
-          await fetch(
-            API_BASE + "/api/vision",
-            {
-              method: "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json"
-              },
-
-              body: JSON.stringify({
-                image: dataUrl,
-                prompt: question
-              })
-            }
-          );
-
-
-        const data =
-          await response.json()
-            .catch(() => ({}));
-
-
-        if (!response.ok) {
-
-          throw new Error(
-            data.error ||
-            "Photo analysis failed"
-          );
-        }
-
-
-        const reply =
-          String(
-            data.reply ||
-            data.content ||
-            ""
-          ).trim();
-
-
-        hideTyping();
-
-
-        addMessage(
-          "assistant",
-          reply ||
-          "फोटो समझने में जवाब नहीं मिला।"
-        );
-
-
-        setStatus("");
-
-
-      } catch (error) {
-
-        hideTyping();
-
-        console.error(
-          "Photo error:",
-          error
-        );
-
-
-        addMessage(
-          "assistant",
-          "फोटो पढ़ने में समस्या हुई।\n\n" +
-          (
-            error.message ||
-            "Unknown error"
-          )
-        );
-
-
-        setStatus(
-          "❌ फोटो विश्लेषण असफल।"
-        );
-
-
-      } finally {
-
-        setTimeout(
-          () => setStatus(""),
-          2500
-        );
-      }
     }
 
 
-    function fileToDataURL(file) {
-
-      return new Promise(
-        (resolve, reject) => {
-
-          const reader =
-            new FileReader();
-
-
-          reader.onload =
-            () => resolve(
-              reader.result
-            );
-
-
-          reader.onerror =
-            () => reject(
-              new Error(
-                "File read failed"
-              )
-            );
-
-
-          reader.readAsDataURL(file);
-        }
-      );
-    }
-
-
-    /* =========================
-       VIDEO
-       First frame analysis
-    ========================= */
-
-    document
-      .getElementById("videoInput")
-      .addEventListener(
-        "change",
-        async function (event) {
-
-          const file =
-            event.target.files &&
-            event.target.files[0];
-
-
-          if (!file) {
-            return;
-          }
-
-
-          await handleVideo(file);
-
-
-          event.target.value =
-            "";
-        }
-      );
-
-
-    async function handleVideo(file) {
-
-      try {
-
-        setStatus(
-          "🎥 वीडियो का पहला फ्रेम पढ़ रहा हूँ..."
-        );
-
-
-        const frame =
-          await extractVideoFrame(file);
-
-
-        const question =
-          input.value.trim() ||
-          "इस वीडियो के दिखाई दे रहे दृश्य को देखकर बताओ इसमें क्या है।";
-
-
-        input.value = "";
-        autoResizeTextarea();
-
-
-        addMessage(
-          "user",
-          "🎥 वीडियो भेजी गई\n" +
-          question
-        );
-
-
-        showTyping();
-
-
-        const response =
-          await fetch(
-            API_BASE + "/api/vision",
-            {
-              method: "POST",
-
-              headers: {
-                "Content-Type":
-                  "application/json"
-              },
-
-              body: JSON.stringify({
-                image: frame,
-                prompt: question
-              })
-            }
-          );
-
-
-        const data =
-          await response.json()
-            .catch(() => ({}));
-
-
-        if (!response.ok) {
-
-          throw new Error(
-            data.error ||
-            "Video analysis failed"
-          );
-        }
-
-
-        const reply =
-          String(
-            data.reply ||
-            data.content ||
-            ""
-          ).trim();
-
-
-        hideTyping();
-
-
-        addMessage(
-          "assistant",
-          reply ||
-          "वीडियो का दृश्य समझने में जवाब नहीं मिला।"
-        );
-
-
-        setStatus("");
-
-
-      } catch (error) {
-
-        hideTyping();
-
-        console.error(
-          "Video error:",
-          error
-        );
-
-
-        addMessage(
-          "assistant",
-          "वीडियो पढ़ने में समस्या हुई।\n\n" +
-          (
-            error.message ||
-            "Unknown error"
-          )
-        );
-
-
-        setStatus(
-          "❌ वीडियो विश्लेषण असफल।"
-        );
-
-
-      } finally {
-
-        setTimeout(
-          () => setStatus(""),
-          2500
-        );
-      }
-    }
-
-
-    function extractVideoFrame(file) {
-
-      return new Promise(
-        (resolve, reject) => {
-
-          const video =
-            document.createElement(
-              "video"
-            );
-
-
-          const canvas =
-            document.createElement(
-              "canvas"
-            );
-
-
-          const url =
-            URL.createObjectURL(file);
-
-
-          video.src = url;
-
-          video.muted = true;
-
-          video.playsInline = true;
-
-
-          video.addEventListener(
-            "loadedmetadata",
-            function () {
-
-              video.currentTime =
-                Math.min(
-                  0.5,
-                  video.duration || 0
-                );
-            }
-          );
-
-
-          video.addEventListener(
-            "seeked",
-            function () {
-
-              try {
-
-                const maxWidth =
-                  1280;
-
-
-                let width =
-                  video.videoWidth;
-
-
-                let height =
-                  video.videoHeight;
-
-
-                if (
-                  width > maxWidth
-                ) {
-
-                  const ratio =
-                    maxWidth /
-                    width;
-
-                  width =
-                    maxWidth;
-
-                  height =
-                    Math.round(
-                      height * ratio
-                    );
-                }
-
-
-                canvas.width =
-                  width;
-
-                canvas.height =
-                  height;
-
-
-                const ctx =
-                  canvas.getContext(
-                    "2d"
-                  );
-
-
-                ctx.drawImage(
-                  video,
-                  0,
-                  0,
-                  width,
-                  height
-                );
-
-
-                const dataUrl =
-                  canvas.toDataURL(
-                    "image/jpeg",
-                    0.85
-                  );
-
-
-                URL.revokeObjectURL(
-                  url
-                );
-
-
-                resolve(
-                  dataUrl
-                );
-
-              } catch (error) {
-
-                URL.revokeObjectURL(
-                  url
-                );
-
-                reject(error);
-              }
-            }
-          );
-
-
-          video.addEventListener(
-            "error",
-            function () {
-
-              URL.revokeObjectURL(
-                url
-              );
-
-              reject(
-                new Error(
-                  "वीडियो पढ़ा नहीं जा सका।"
-                )
-              );
-            }
-          );
-        }
-      );
-    }
-
-
-    /* =========================
-       FILE
-       TXT / CSV / JSON / MD
-    ========================= */
-
-    document
-      .getElementById("fileInput")
-      .addEventListener(
-        "change",
-        async function (event) {
-
-          const file =
-            event.target.files &&
-            event.target.files[0];
-
-
-          if (!file) {
-            return;
-          }
-
-
-          selectedFile =
-            file;
-
-
-          attachmentText.textContent =
-            file.name;
-
-
-          attachmentPreview.classList.add(
-            "show"
-          );
-
-
-          await handleFile(file);
-
-
-          event.target.value =
-            "";
-        }
-      );
-
-
-    async function handleFile(file) {
-
-      try {
-
-        setStatus(
-          "📎 फाइल पढ़ रहा हूँ..."
-        );
-
-
-        const text =
-          await file.text();
-
-
-        const limitedText =
-          text.slice(
-            0,
-            30000
-          );
-
-
-        const prompt =
-          "मैंने एक फाइल भेजी है। " +
-          "उसकी सामग्री को ध्यान से पढ़कर " +
-          "मेरे सवाल का जवाब दो।\n\n" +
-          "फाइल का नाम: " +
-          file.name +
-          "\n\n" +
-          "फाइल की सामग्री:\n" +
-          limitedText;
-
-
-        removeAttachment();
-
-
-        await sendMessage(
-          prompt
-        );
-
-
-      } catch (error) {
-
-        console.error(
-          "File error:",
-          error
-        );
-
-
-        setStatus(
-          "❌ फाइल पढ़ने में समस्या हुई।"
-        );
-
-      } finally {
-
-        setTimeout(
-          () => setStatus(""),
-          2500
-        );
-      }
-    }
-
-
-    /* =========================
-       REMOVE FILE
-    ========================= */
-
-    function removeAttachment() {
-
-      selectedFile =
-        null;
-
-
-      attachmentText.textContent =
-        "फ़ाइल चुनी गई";
-
-
-      attachmentPreview.classList.remove(
-        "show"
-      );
-    }
-
-
-    /* =========================
-       STUDY PAGE
-    ========================= */
-
-    function openStudy() {
-
-      window.location.href =
-        "study.html";
-    }
-
-
-    /* =========================
-       INITIAL SETUP
-    ========================= */
-
-    // शुरुआत में आवाज बंद
-    voiceEnabled =
-      false;
-
-
-    voiceButton.classList.remove(
-      "active"
+  }catch(error){
+
+    console.error(
+      "Worker connection error:",
+      error
     );
 
 
-    // Browser speech voices load होने पर
-    // उन्हें तैयार रहने देते हैं।
-    if (
-      "speechSynthesis" in window
-    ) {
-
-      window.speechSynthesis
-        .getVoices();
-
-    }
-
-
-    /* =========================
-       GLOBAL ERROR HANDLER
-    ========================= */
-
-    window.addEventListener(
-      "error",
-      function (event) {
-
-        console.error(
-          "Sarathi error:",
-          event.error ||
-          event.message
-        );
-      }
+    setStatus(
+      "🟠 सर्वर से connection जाँच नहीं हो पाया। Chat फिर भी try कर सकते हो।"
     );
 
+  }
 
-    window.addEventListener(
-      "unhandledrejection",
-      function (event) {
+}
 
-        console.error(
-          "Unhandled promise:",
-          event.reason
-        );
-      }
+
+/* =========================================================
+   GLOBAL ERROR HANDLER
+========================================================= */
+
+window.addEventListener(
+  "error",
+  function(event){
+
+    console.error(
+      "Page error:",
+      event.error || event.message
     );
 
-  </script>
+  }
+);
+
+
+/* =========================================================
+   START
+========================================================= */
+
+window.addEventListener(
+  "load",
+  function(){
+
+    checkWorker();
+
+    input.focus();
+
+  }
+);
+
+</script>
 
 </body>
 </html>
