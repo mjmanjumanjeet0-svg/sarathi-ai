@@ -1,278 +1,969 @@
-// ==========================================================
-// CHAT
-// ==========================================================
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-async function sendMessage(
-  useSearch = false,
-  customText = null
-) {
+  <title>सारथी AI</title>
 
-  const text =
-    customText !== null
-      ? String(customText).trim()
-      : input.value.trim();
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family:
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+      background: #f5f7fb;
+      color: #172033;
+    }
+
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: #ffffff;
+      border-bottom: 1px solid #e5e7eb;
+    }
+
+    .header-inner {
+      max-width: 900px;
+      margin: auto;
+      padding: 13px 14px;
+
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .brand {
+      font-size: 21px;
+      font-weight: 800;
+    }
+
+    .study-btn {
+      border: 0;
+      border-radius: 10px;
+      padding: 9px 12px;
+      background: #eef2ff;
+      color: #3730a3;
+      font-weight: 750;
+      cursor: pointer;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: auto;
+      padding: 18px 14px 35px;
+    }
+
+    .hero,
+    .card {
+      background: #ffffff;
+      border-radius: 18px;
+      padding: 18px;
+      margin-bottom: 15px;
+
+      box-shadow:
+        0 5px 20px rgba(0, 0, 0, 0.05);
+    }
+
+    .hero h1 {
+      margin: 0 0 7px;
+      font-size: 26px;
+    }
+
+    .hero p {
+      margin: 0;
+      color: #667085;
+      line-height: 1.6;
+    }
+
+    textarea {
+      width: 100%;
+      min-height: 120px;
+      resize: vertical;
+
+      border: 1px solid #d7dce5;
+      border-radius: 13px;
+
+      padding: 13px;
+
+      font: inherit;
+      font-size: 16px;
+
+      outline: none;
+      background: #ffffff;
+    }
+
+    textarea:focus {
+      border-color: #6366f1;
+    }
+
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 9px;
+      margin-top: 11px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 12px;
+
+      padding: 11px 15px;
+
+      font-size: 15px;
+      font-weight: 750;
+
+      cursor: pointer;
+    }
+
+    .primary {
+      background: #4f46e5;
+      color: #ffffff;
+    }
+
+    .secondary {
+      background: #eef2ff;
+      color: #3730a3;
+    }
+
+    .search-on {
+      background: #dcfce7;
+      color: #166534;
+    }
+
+    .search-off {
+      background: #f1f5f9;
+      color: #475569;
+    }
+
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
+
+    .status {
+      min-height: 24px;
+      margin-top: 10px;
+
+      color: #667085;
+      font-size: 14px;
+      line-height: 1.5;
+    }
+
+    .messages {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+
+      max-height: 58vh;
+      overflow-y: auto;
+
+      padding: 2px;
+    }
+
+    .message {
+      max-width: 92%;
+
+      padding: 12px 14px;
+
+      border-radius: 15px;
+
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+
+      line-height: 1.7;
+    }
+
+    .user {
+      align-self: flex-end;
+
+      background: #4f46e5;
+      color: #ffffff;
+
+      border-bottom-right-radius: 5px;
+    }
+
+    .assistant {
+      align-self: flex-start;
+
+      background: #f8fafc;
+
+      border: 1px solid #e5e7eb;
+
+      border-bottom-left-radius: 5px;
+    }
+
+    .empty {
+      color: #667085;
+
+      text-align: center;
+
+      padding: 22px 8px;
+
+      line-height: 1.6;
+    }
+
+    .small {
+      color: #667085;
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 600px) {
+
+      .brand {
+        font-size: 19px;
+      }
+
+      .hero h1 {
+        font-size: 23px;
+      }
+
+      .buttons button {
+        flex: 1 1 auto;
+      }
+
+      .message {
+        max-width: 96%;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- =====================================================
+       HEADER
+  ====================================================== -->
+
+  <header class="header">
+
+    <div class="header-inner">
+
+      <div class="brand">
+        🤖 सारथी AI
+      </div>
+
+      <button
+        class="study-btn"
+        onclick="openStudy()"
+      >
+        📚 Study
+      </button>
+
+    </div>
+
+  </header>
 
 
-  if (!text) {
+  <!-- =====================================================
+       MAIN
+  ====================================================== -->
 
-    setStatus(
-      "कृपया पहले अपना सवाल लिखें।"
-    );
-
-    return;
-  }
+  <main class="container">
 
 
-  // ==========================================================
-  // LOCAL DATE
-  // तारीख के सवाल में Groq को request नहीं जाएगी
-  // ==========================================================
+    <!-- ===================================================
+         HERO
+    ==================================================== -->
 
-  const asksDateOnly =
-    /^(आज|आज की तारीख|आज का दिन|today|today's date|current date)\s*[?؟.!]*$/i.test(
+    <section class="hero">
+
+      <h1>
+        नमस्ते! मैं सारथी हूँ 👋
+      </h1>
+
+      <p>
+        सवाल पूछो, पढ़ाई में मदद लो और जरूरत पड़ने पर
+        Internet Search से ताज़ा जानकारी खोजो।
+      </p>
+
+    </section>
+
+
+    <!-- ===================================================
+         CHAT INPUT
+    ==================================================== -->
+
+    <section class="card">
+
+      <textarea
+        id="input"
+        placeholder="अपना सवाल लिखें..."
+        autocomplete="off"
+      ></textarea>
+
+
+      <div class="buttons">
+
+        <button
+          id="sendButton"
+          class="primary"
+          onclick="sendMessage(false)"
+        >
+          ➤ पूछें
+        </button>
+
+
+        <button
+          id="searchButton"
+          class="search-off"
+          onclick="toggleSearch()"
+          type="button"
+        >
+          🌐 Search OFF
+        </button>
+
+
+        <button
+          class="secondary"
+          onclick="sendMessage(true)"
+        >
+          🌐 अभी Search करें
+        </button>
+
+
+        <button
+          class="secondary"
+          onclick="clearChat()"
+        >
+          🗑 साफ करें
+        </button>
+
+      </div>
+
+
+      <div
+        id="status"
+        class="status"
+      ></div>
+
+    </section>
+
+
+    <!-- ===================================================
+         CHAT MESSAGES
+    ==================================================== -->
+
+    <section class="card">
+
+      <div
+        id="messages"
+        class="messages"
+      >
+
+        <div
+          id="emptyMessage"
+          class="empty"
+        >
+          अपना पहला सवाल लिखकर पूछें।
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ===================================================
+         STUDY
+    ==================================================== -->
+
+    <section class="card">
+
+      <strong>
+        📚 पढ़ाई
+      </strong>
+
+      <p class="small">
+        विषय के अनुसार सवाल पूछने और Quiz करने के लिए
+        Study पेज खोलें।
+      </p>
+
+      <button
+        class="primary"
+        onclick="openStudy()"
+      >
+        📚 Study खोलें
+      </button>
+
+    </section>
+
+
+  </main>
+
+
+  <!-- =====================================================
+       JAVASCRIPT
+  ====================================================== -->
+
+  <script>
+
+    // ======================================================
+    // API
+    // ======================================================
+
+    const API_BASE =
+      "https://sarathi-ai.mjmanjumanjeet0.workers.dev";
+
+
+    // ======================================================
+    // STATE
+    // ======================================================
+
+    let messages = [];
+
+    let lastAnswer = "";
+
+    let useSearch = false;
+
+
+    // ======================================================
+    // ELEMENTS
+    // ======================================================
+
+    const input =
+      document.getElementById("input");
+
+    const sendButton =
+      document.getElementById("sendButton");
+
+    const searchButton =
+      document.getElementById("searchButton");
+
+    const status =
+      document.getElementById("status");
+
+    const messagesBox =
+      document.getElementById("messages");
+
+
+    // ======================================================
+    // STATUS
+    // ======================================================
+
+    function setStatus(text) {
+
+      status.textContent =
+        text || "";
+
+    }
+
+
+    // ======================================================
+    // ADD MESSAGE
+    // ======================================================
+
+    function addMessage(
+      role,
       text
-    );
+    ) {
+
+      const empty =
+        document.getElementById(
+          "emptyMessage"
+        );
 
 
-  if (asksDateOnly) {
-
-    const localDate =
-      new Intl.DateTimeFormat("hi-IN", {
-        timeZone: "Asia/Kolkata",
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }).format(new Date());
+      if (empty) {
+        empty.remove();
+      }
 
 
-    addMessage(
-      "user",
+      const div =
+        document.createElement(
+          "div"
+        );
+
+
+      div.className =
+        "message " + role;
+
+
+      div.textContent =
+        String(text || "");
+
+
+      messagesBox.appendChild(
+        div
+      );
+
+
+      messagesBox.scrollTop =
+        messagesBox.scrollHeight;
+
+    }
+
+
+    // ======================================================
+    // SEARCH BUTTON
+    // ======================================================
+
+    function updateSearchButton() {
+
+      if (useSearch) {
+
+        searchButton.textContent =
+          "🌐 Search ON";
+
+        searchButton.className =
+          "search-on";
+
+      } else {
+
+        searchButton.textContent =
+          "🌐 Search OFF";
+
+        searchButton.className =
+          "search-off";
+
+      }
+
+    }
+
+
+    function toggleSearch() {
+
+      useSearch =
+        !useSearch;
+
+
+      updateSearchButton();
+
+
+      setStatus(
+        useSearch
+          ? "🌐 Internet Search ON है।"
+          : "Internet Search OFF है।"
+      );
+
+    }
+
+
+    // ======================================================
+    // STUDY PAGE
+    // ======================================================
+
+    function openStudy() {
+
+      window.location.href =
+        "study.html";
+
+    }
+
+
+    // ======================================================
+    // DATE QUESTION
+    // ======================================================
+
+    function isDateQuestion(
       text
-    );
+    ) {
+
+      return /^(आज|आज की तारीख|आज का दिन|today|today's date|current date)\s*[?؟.!]*$/i.test(
+        text
+      );
+
+    }
 
 
-    messages.push({
-      role: "user",
-      content: text
-    });
+    // ======================================================
+    // CHAT
+    // ======================================================
+
+    async function sendMessage(
+      searchNow = useSearch,
+      customText = null
+    ) {
+
+      const text =
+        customText !== null
+          ? String(
+              customText
+            ).trim()
+          : input.value.trim();
 
 
-    const dateAnswer =
-      `आज की तारीख है ${localDate}।`;
+      if (!text) {
+
+        setStatus(
+          "कृपया पहले अपना सवाल लिखें।"
+        );
+
+        input.focus();
+
+        return;
+      }
 
 
-    lastAnswer =
-      dateAnswer;
+      // ====================================================
+      // LOCAL DATE
+      // ====================================================
+
+      if (
+        isDateQuestion(
+          text
+        )
+      ) {
+
+        const localDate =
+          new Intl.DateTimeFormat(
+            "hi-IN",
+            {
+              timeZone:
+                "Asia/Kolkata",
+
+              weekday:
+                "long",
+
+              day:
+                "numeric",
+
+              month:
+                "long",
+
+              year:
+                "numeric"
+            }
+          ).format(
+            new Date()
+          );
 
 
-    addMessage(
-      "assistant",
-      dateAnswer
-    );
+        addMessage(
+          "user",
+          text
+        );
 
 
-    messages.push({
-      role: "assistant",
-      content: dateAnswer
-    });
+        messages.push({
+          role: "user",
+          content: text
+        });
 
 
-    input.value = "";
-
-    setStatus("");
-
-    return;
-  }
+        const dateAnswer =
+          `आज की तारीख है ${localDate}।`;
 
 
-  // ==========================================================
-  // NORMAL MESSAGE
-  // ==========================================================
-
-  addMessage(
-    "user",
-    text
-  );
+        lastAnswer =
+          dateAnswer;
 
 
-  messages.push({
-    role: "user",
-    content: text
-  });
+        addMessage(
+          "assistant",
+          dateAnswer
+        );
 
 
-  input.value = "";
+        messages.push({
+          role: "assistant",
+          content: dateAnswer
+        });
 
 
-  // ==========================================================
-  // STATUS
-  // ==========================================================
+        input.value = "";
 
-  setStatus(
-    useSearch
-      ? "🌐 Internet Search से जानकारी खोजी जा रही है..."
-      : "सारथी जवाब तैयार कर रहा है..."
-  );
+        setStatus("");
+
+        return;
+      }
 
 
-  sendButton.disabled = true;
+      // ====================================================
+      // USER MESSAGE
+      // ====================================================
 
-  searchButton.disabled = true;
+      addMessage(
+        "user",
+        text
+      );
 
 
-  // ==========================================================
-  // API REQUEST
-  // ==========================================================
+      messages.push({
+        role: "user",
+        content: text
+      });
 
-  try {
 
-    const response =
-      await fetch(
-        API_BASE + "/api/chat",
-        {
-          method: "POST",
+      input.value = "";
 
-          headers: {
-            "Content-Type": "application/json"
-          },
 
-          body: JSON.stringify({
-            message: text,
-            history: messages,
-            webSearch: Boolean(useSearch)
-          })
+      // ====================================================
+      // STATUS
+      // ====================================================
+
+      setStatus(
+        searchNow
+          ? "🌐 Internet Search से जानकारी खोजी जा रही है..."
+          : "सारथी जवाब तैयार कर रहा है..."
+      );
+
+
+      sendButton.disabled =
+        true;
+
+      searchButton.disabled =
+        true;
+
+
+      // ====================================================
+      // API REQUEST
+      // ====================================================
+
+      try {
+
+        const response =
+          await fetch(
+            API_BASE +
+              "/api/chat",
+            {
+              method:
+                "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json"
+              },
+
+              body:
+                JSON.stringify({
+                  message:
+                    text,
+
+                  history:
+                    messages,
+
+                  webSearch:
+                    Boolean(
+                      searchNow
+                    )
+                })
+            }
+          );
+
+
+        // ==================================================
+        // RESPONSE
+        // ==================================================
+
+        let data =
+          null;
+
+
+        try {
+
+          data =
+            await response.json();
+
+        } catch {
+
+          throw new Error(
+            "Server response पढ़ा नहीं जा सका।"
+          );
+
         }
-      );
 
 
-    // ========================================================
-    // RESPONSE JSON
-    // ========================================================
+        // ==================================================
+        // ERROR
+        // ==================================================
 
-    let data = null;
+        if (
+          !response.ok
+        ) {
+
+          throw new Error(
+            data?.answer ||
+            data?.error ||
+            data?.detail ||
+            "जवाब नहीं मिल पाया।"
+          );
+
+        }
 
 
-    try {
+        // ==================================================
+        // ANSWER
+        // ==================================================
 
-      data =
-        await response.json();
+        const reply =
+          data?.answer ||
+          "कोई जवाब नहीं मिला।";
 
-    } catch {
 
-      throw new Error(
-        "Server response पढ़ा नहीं जा सका।"
-      );
+        lastAnswer =
+          reply;
+
+
+        addMessage(
+          "assistant",
+          reply
+        );
+
+
+        messages.push({
+          role:
+            "assistant",
+
+          content:
+            reply
+        });
+
+
+        // ==================================================
+        // FINAL STATUS
+        // ==================================================
+
+        if (
+          data?.searchUsed === true
+        ) {
+
+          setStatus(
+            "✓ Internet Search से ताज़ा जानकारी खोजकर जवाब दिया गया"
+          );
+
+        } else if (
+          data?.selfCorrected === true
+        ) {
+
+          setStatus(
+            "✓ Self-check करके जवाब सुधारा गया"
+          );
+
+        } else if (
+          data?.selfChecked === true
+        ) {
+
+          setStatus(
+            "✓ Self-check करके जवाब जाँचा गया"
+          );
+
+        } else {
+
+          setStatus("");
+
+        }
+
+
+      } catch (
+        error
+      ) {
+
+        // ================================================
+        // ERROR
+        // ================================================
+
+        console.error(
+          "Chat error:",
+          error
+        );
+
+
+        addMessage(
+          "assistant",
+          "अभी जवाब नहीं मिल पाया। कृपया फिर से कोशिश करें।"
+        );
+
+
+        setStatus(
+          "त्रुटि: " +
+          (
+            error?.message ||
+            "Unknown error"
+          )
+        );
+
+
+      } finally {
+
+        // ================================================
+        // ENABLE
+        // ================================================
+
+        sendButton.disabled =
+          false;
+
+        searchButton.disabled =
+          false;
+
+        input.focus();
+
+      }
+
     }
 
 
-    // ========================================================
-    // API ERROR
-    // ========================================================
+    // ======================================================
+    // CLEAR CHAT
+    // ======================================================
 
-    if (!response.ok) {
+    function clearChat() {
 
-      throw new Error(
-        data?.answer ||
-        data?.error ||
-        data?.detail ||
-        "जवाब नहीं मिल पाया।"
-      );
-    }
+      messages = [];
+
+      lastAnswer = "";
 
 
-    // ========================================================
-    // ANSWER
-    // ========================================================
+      messagesBox.innerHTML = `
+        <div
+          id="emptyMessage"
+          class="empty"
+        >
+          अपना पहला सवाल लिखकर पूछें।
+        </div>
+      `;
 
-    const reply =
-      data?.answer ||
-      "कोई जवाब नहीं मिला।";
-
-
-    lastAnswer =
-      reply;
-
-
-    addMessage(
-      "assistant",
-      reply
-    );
-
-
-    messages.push({
-      role: "assistant",
-      content: reply
-    });
-
-
-    // ========================================================
-    // FINAL STATUS
-    // ========================================================
-
-    if (data?.searchUsed === true) {
-
-      setStatus(
-        "✓ Internet Search से ताज़ा जानकारी खोजकर जवाब दिया गया"
-      );
-
-    } else if (data?.selfCorrected === true) {
-
-      setStatus(
-        "✓ Self-check करके जवाब सुधारा गया"
-      );
-
-    } else if (data?.selfChecked === true) {
-
-      setStatus(
-        "✓ Self-check करके जवाब जाँचा गया"
-      );
-
-    } else {
 
       setStatus("");
+
+      input.value = "";
+
+      input.focus();
+
     }
 
 
-  } catch (error) {
+    // ======================================================
+    // ENTER KEY
+    // ======================================================
 
-    // ========================================================
-    // ERROR
-    // ========================================================
+    input.addEventListener(
+      "keydown",
+      function(event) {
 
-    console.error(
-      "Chat error:",
-      error
+        if (
+          event.key === "Enter" &&
+          !event.shiftKey
+        ) {
+
+          event.preventDefault();
+
+          sendMessage(
+            useSearch
+          );
+
+        }
+
+      }
     );
 
 
-    addMessage(
-      "assistant",
-      "अभी जवाब नहीं मिल पाया। कृपया फिर से कोशिश करें।"
-    );
+    // ======================================================
+    // START
+    // ======================================================
 
+    updateSearchButton();
 
-    setStatus(
-      "त्रुटि: " +
-      (
-        error?.message ||
-        "Unknown error"
-      )
-    );
+  </script>
 
-
-  } finally {
-
-    // ========================================================
-    // ENABLE BUTTONS
-    // ========================================================
-
-    sendButton.disabled = false;
-
-    searchButton.disabled = false;
-
-    input.focus();
-
-  }
-
-}
+</body>
+</html>
