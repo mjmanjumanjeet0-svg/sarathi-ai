@@ -1080,18 +1080,15 @@ async function sendMessage(customText=null,displayText=null){
 
           body:JSON.stringify({
 
-            /*
-              बहुत ज्यादा पुरानी history भेजने
-              से request भारी हो सकती है।
-            */
+  message: text,
 
-            messages:
-              messages.slice(-12),
+  history:
+    messages.slice(-12),
 
-            useSearch:
-              Boolean(useSearch)
+  webSearch:
+    Boolean(useSearch)
 
-          }),
+}),
 
           signal:
             controller.signal
