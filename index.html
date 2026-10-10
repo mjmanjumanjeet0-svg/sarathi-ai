@@ -1,2287 +1,1947 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
-<meta name="theme-color" content="#0f172a">
-<title>सारथी AI</title>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.9.0/mammoth.browser.min.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#101318">
+<meta name="description" content="Saarthi AI - Your multilingual AI assistant">
+<title>Saarthi AI</title>
 
 <style>
-*{
-  box-sizing:border-box;
-  -webkit-tap-highlight-color:transparent;
+:root {
+  --bg: #101318;
+  --panel: #191d24;
+  --panel2: #222833;
+  --text: #f4f6fb;
+  --muted: #a7afbd;
+  --accent: #10a37f;
+  --border: #303743;
+  --danger: #ff5d5d;
 }
 
-body{
-  margin:0;
-  font-family:system-ui,-apple-system,"Noto Sans Devanagari",sans-serif;
-  background:#f5f7fb;
-  color:#172033;
+* {
+  box-sizing: border-box;
 }
 
-.app{
-  max-width:900px;
-  margin:auto;
-  min-height:100vh;
-  display:flex;
-  flex-direction:column;
-  background:#fff;
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  height: 100dvh;
+  overflow: hidden;
 }
 
-header{
-  position:sticky;
-  top:0;
-  z-index:20;
-  background:#0f172a;
-  color:#fff;
-  padding:13px 15px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  box-shadow:0 2px 8px #0002;
+button,
+input,
+textarea,
+select {
+  font: inherit;
 }
 
-.brand{
-  display:flex;
-  align-items:center;
-  gap:10px;
+button {
+  cursor: pointer;
 }
 
-.logo{
-  width:42px;
-  height:42px;
-  border-radius:50%;
-  background:#fff;
-  color:#0f172a;
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:23px;
-  font-weight:800;
+.app {
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
 }
 
-.brand h1{
-  margin:0;
-  font-size:20px;
+.topbar {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg);
+  gap: 10px;
 }
 
-.brand small{
-  display:block;
-  color:#cbd5e1;
-  font-size:11px;
-  margin-top:2px;
+.top-left,
+.top-right,
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
-.headerBtns{
-  display:flex;
-  gap:7px;
+.brand {
+  font-size: 19px;
+  font-weight: 700;
 }
 
-.headerBtns button{
-  border:0;
-  background:#ffffff18;
-  color:#fff;
-  border-radius:9px;
-  padding:8px 10px;
-  font-size:17px;
-  cursor:pointer;
+.logo {
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--panel2);
+  font-size: 23px;
 }
 
-.status{
-  font-size:12px;
-  padding:7px 13px;
-  background:#f1f5f9;
-  color:#475569;
-  min-height:30px;
+.icon-btn {
+  min-width: 40px;
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 18px;
 }
 
-.chat{
-  flex:1;
-  padding:14px;
-  padding-bottom:160px;
-  overflow-y:auto;
+.icon-btn:hover {
+  background: var(--panel2);
 }
 
-.message{
-  display:flex;
-  margin:10px 0;
+.main {
+  flex: 1;
+  display: flex;
+  min-height: 0;
 }
 
-.message.user{
-  justify-content:flex-end;
+.sidebar {
+  width: 270px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 10px;
+  border-right: 1px solid var(--border);
+  background: var(--panel);
 }
 
-.bubble{
-  max-width:88%;
-  padding:11px 13px;
-  border-radius:15px;
-  line-height:1.55;
-  font-size:15px;
-  word-break:break-word;
-  overflow-wrap:anywhere;
+.sidebar button,
+.menu-item {
+  width: 100%;
+  padding: 12px;
+  text-align: left;
+  color: var(--text);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 10px;
 }
 
-.user .bubble{
-  background:#0f172a;
-  color:#fff;
-  border-bottom-right-radius:4px;
+.sidebar button:hover,
+.menu-item:hover {
+  background: var(--panel2);
 }
 
-.assistant .bubble{
-  background:#eef2f7;
-  color:#172033;
-  border-bottom-left-radius:4px;
+.history-title {
+  margin: 12px 4px 4px;
+  font-size: 12px;
+  color: var(--muted);
+  text-transform: uppercase;
 }
 
-.bubble pre{
-  background:#0b1220;
-  color:#e5e7eb;
-  padding:11px;
-  border-radius:9px;
-  overflow:auto;
-  white-space:pre-wrap;
+.history-list {
+  flex: 1;
+  overflow-y: auto;
 }
 
-.bubble code{
-  background:#dbe3ee;
-  padding:2px 5px;
-  border-radius:4px;
+.history-item {
+  margin-bottom: 6px;
+  overflow-wrap: anywhere;
 }
 
-.bubble pre code{
-  background:transparent;
-  padding:0;
+.chat-area {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
-.actions{
-  display:flex;
-  gap:6px;
-  margin-top:8px;
-  flex-wrap:wrap;
+.welcome {
+  margin: auto;
+  padding: 24px;
+  text-align: center;
+  max-width: 650px;
 }
 
-.actions button{
-  border:1px solid #cbd5e1;
-  background:#fff;
-  color:#334155;
-  border-radius:7px;
-  padding:5px 8px;
-  font-size:12px;
+.welcome h1 {
+  font-size: clamp(25px, 5vw, 38px);
+  margin-bottom: 12px;
 }
 
-.typing{
-  display:flex;
-  gap:4px;
-  padding:10px 12px;
+.welcome p {
+  color: var(--muted);
+  line-height: 1.6;
 }
 
-.dot{
-  width:7px;
-  height:7px;
-  background:#64748b;
-  border-radius:50%;
-  animation:b 1s infinite;
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px 14px;
 }
 
-.dot:nth-child(2){animation-delay:.15s}
-.dot:nth-child(3){animation-delay:.3s}
-
-@keyframes b{
-  0%,100%{opacity:.25}
-  50%{opacity:1}
+.message {
+  max-width: 850px;
+  margin: 0 auto 22px;
+  padding: 15px;
+  border-radius: 14px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
 }
 
-.composer{
-  position:fixed;
-  bottom:0;
-  left:0;
-  right:0;
-  z-index:30;
-  background:#fff;
-  border-top:1px solid #dbe1e8;
-  padding:9px;
+.message.user {
+  background: var(--panel2);
 }
 
-.composerInner{
-  max-width:900px;
-  margin:auto;
+.message.assistant {
+  background: var(--panel);
+  border: 1px solid var(--border);
 }
 
-.tools{
-  display:flex;
-  gap:6px;
-  margin-bottom:7px;
-  overflow-x:auto;
+.message-role {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 8px;
+  font-weight: bold;
 }
 
-.tool{
-  flex:0 0 auto;
-  border:1px solid #cbd5e1;
-  background:#fff;
-  border-radius:9px;
-  padding:7px 10px;
-  font-size:13px;
-  color:#334155;
+.message-content {
+  white-space: pre-wrap;
 }
 
-.tool.active{
-  background:#0f172a;
-  color:#fff;
-  border-color:#0f172a;
+.composer-wrap {
+  padding: 12px;
+  border-top: 1px solid var(--border);
 }
 
-.inputRow{
-  display:flex;
-  align-items:flex-end;
-  gap:7px;
+.composer {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 18px;
 }
 
-textarea{
-  flex:1;
-  resize:none;
-  min-height:45px;
-  max-height:130px;
-  border:1px solid #cbd5e1;
-  border-radius:13px;
-  padding:11px 12px;
-  outline:none;
-  font:inherit;
-  background:#f8fafc;
+.composer textarea {
+  flex: 1;
+  min-width: 0;
+  max-height: 160px;
+  resize: none;
+  border: 0;
+  outline: none;
+  padding: 10px 4px;
+  color: var(--text);
+  background: transparent;
 }
 
-textarea:focus{
-  border-color:#64748b;
-  background:#fff;
+.send-btn {
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--accent);
+  color: white;
+  font-size: 19px;
 }
 
-.send{
-  width:47px;
-  height:47px;
-  border:0;
-  border-radius:13px;
-  background:#0f172a;
-  color:#fff;
-  font-size:20px;
+.send-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
-.send:disabled{
-  opacity:.45;
+.small-note {
+  max-width: 900px;
+  margin: 8px auto 0;
+  color: var(--muted);
+  text-align: center;
+  font-size: 11px;
 }
 
-.fileLabel{
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  cursor:pointer;
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: none;
+  background: rgba(0, 0, 0, 0.6);
 }
 
-input[type=file]{
-  display:none;
+.overlay.open {
+  display: block;
 }
 
-.empty{
-  text-align:center;
-  color:#64748b;
-  padding:55px 20px;
+.drawer {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: min(320px, 88vw);
+  padding: 16px;
+  overflow-y: auto;
+  background: var(--panel);
+  border-right: 1px solid var(--border);
 }
 
-.empty strong{
-  display:block;
-  color:#0f172a;
-  font-size:22px;
-  margin-bottom:7px;
+.drawer h2 {
+  margin-top: 8px;
 }
 
-.photoPreview{
-  max-width:220px;
-  max-height:220px;
-  border-radius:10px;
-  margin-top:8px;
+.drawer label {
+  display: block;
+  margin: 18px 0 8px;
+  color: var(--muted);
+  font-size: 14px;
 }
 
-@media(min-width:901px){
-  .composer{
-    left:50%;
-    transform:translateX(-50%);
-    width:100%;
-    max-width:900px;
+.drawer select,
+.drawer input {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  background: var(--bg);
+}
+
+.drawer .menu-item {
+  margin-top: 8px;
+}
+
+.close-btn {
+  float: right;
+}
+
+.hidden {
+  display: none !important;
+}
+
+body.light {
+  --bg: #f7f8fa;
+  --panel: #ffffff;
+  --panel2: #e9edf2;
+  --text: #17202c;
+  --muted: #596575;
+  --border: #d7dce3;
+}
+
+.status {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 4px 0;
+}
+
+@media (max-width: 700px) {
+  .sidebar {
+    display: none;
+  }
+
+  .topbar {
+    padding: 8px;
+  }
+
+  .brand {
+    font-size: 16px;
+  }
+
+  .messages {
+    padding: 14px 8px;
+  }
+
+  .message {
+    padding: 12px;
+  }
+
+  .composer-wrap {
+    padding: 8px;
   }
 }
 </style>
 </head>
 
 <body>
-
 <div class="app">
 
-<header>
-  <div class="brand">
-    <div class="logo">स</div>
-    <div>
-      <h1>सारथी AI</h1>
-      <small>आपका हिंदी AI सहायक</small>
-    </div>
-  </div>
+  <header class="topbar">
+    <div class="top-left">
+      <button
+        class="icon-btn"
+        id="openSettings"
+        aria-label="Open settings"
+        title="Settings">☰</button>
 
-  <div class="headerBtns">
-    <button onclick="clearChat()" title="नई चैट">＋</button>
-  </div>
-</header>
-
-<div id="status" class="status">सारथी तैयार हो रहा है...</div>
-
-<main id="chat" class="chat">
-  <div id="empty" class="empty">
-    <strong>हेलो 👋</strong>
-    मैं सारथी AI हूँ।<br>
-    अपना सवाल लिखो या माइक से बोलो।
-  </div>
-</main>
-
-<div class="composer">
-  <div class="composerInner">
-
-    <div class="tools">
-
-      <button id="searchBtn" class="tool" onclick="toggleSearch()">
-        🌐 Search OFF
-      </button>
-
-      <button id="voiceBtn" class="tool" onclick="toggleVoice()">
-        🔊 आवाज OFF
-      </button>
-
-      <button class="tool" onclick="startRecording()">
-        🎙️ बोलें
-      </button>
-
-      <label class="tool fileLabel">
-        📷 फोटो
-        <input id="photoInput" type="file" accept="image/*">
-      </label>
-
-      <label class="tool fileLabel">
-        🎬 वीडियो
-        <input id="videoInput" type="file" accept="video/*">
-      </label>
-
-      <label class="tool fileLabel">
-  📄 फाइल
-  <input
-    id="fileInput"
-    type="file"
-    accept=".txt,.csv,.json,.md,.pdf,.docx,text/plain,text/csv,application/json,text/markdown,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-  >
-</label>
-
-      <button class="tool" onclick="openStudy()">
-        📚 Study
-      </button>
-
+      <div class="brand">
+        <div class="logo" aria-label="Peacock feather logo">🪶</div>
+        <span>Saarthi AI</span>
+      </div>
     </div>
 
-    <div class="inputRow">
+    <div class="top-right">
+      <button
+        class="icon-btn"
+        id="newChatBtn"
+        title="New chat"
+        aria-label="New chat">＋</button>
 
-      <textarea
-        id="input"
-        rows="1"
-        placeholder="सारथी से कुछ पूछें..."
-        autocomplete="off"
-      ></textarea>
-
-      <button id="sendBtn" class="send" onclick="sendMessage()">
-        ➤
-      </button>
-
+      <button
+        class="icon-btn"
+        id="openMenu"
+        title="Menu"
+        aria-label="Open menu">⋮</button>
     </div>
+  </header>
 
+  <div class="main">
+
+    <aside class="sidebar">
+      <button id="sidebarNewChat">＋ New chat</button>
+
+      <button id="sidebarSettings">⚙ Settings</button>
+
+      <div class="history-title">Chat history</div>
+
+      <div class="history-list" id="historyList"></div>
+
+      <div class="status" id="appStatus">Ready</div>
+    </aside>
+
+    <main class="chat-area">
+
+      <section class="welcome" id="welcomeScreen">
+        <h1 id="welcomeTitle">How can I help you today?</h1>
+
+        <p id="welcomeDescription">
+          Ask a question, upload a supported file, or use your voice.
+        </p>
+      </section>
+
+      <section
+        class="messages hidden"
+        id="messages"
+        aria-live="polite"></section>
+
+      <div class="composer-wrap">
+
+        <div class="composer">
+
+          <button
+            class="icon-btn"
+            id="attachBtn"
+            title="Attach a file"
+            aria-label="Attach a file">＋</button>
+
+          <input
+            type="file"
+            id="fileInput"
+            class="hidden"
+            accept="image/*,.pdf,.txt,.md,.docx">
+
+          <textarea
+            id="userInput"
+            rows="1"
+            placeholder="Message Saarthi AI..."
+            aria-label="Message Saarthi AI"></textarea>
+
+          <button
+            class="icon-btn"
+            id="micBtn"
+            title="Voice input"
+            aria-label="Voice input">🎙</button>
+
+          <button
+            class="send-btn"
+            id="sendBtn"
+            title="Send message"
+            aria-label="Send message">➤</button>
+
+        </div>
+
+        <div class="small-note">
+          Saarthi AI can make mistakes. Check important information.
+        </div>
+
+      </div>
+
+    </main>
   </div>
 </div>
 
+<div class="overlay" id="settingsOverlay">
+  <section class="drawer" role="dialog" aria-modal="true"
+    aria-labelledby="settingsTitle">
+
+    <button class="icon-btn close-btn"
+      id="closeSettings" aria-label="Close settings">✕</button>
+
+    <h2 id="settingsTitle">Settings</h2>
+
+    <label for="languageSelect">Default language</label>
+
+    <select id="languageSelect">
+      <option value="en">English</option>
+      <option value="hi">Hindi</option>
+      <option value="bho">Bhojpuri</option>
+      <option value="ur">Urdu</option>
+      <option value="bn">Bengali</option>
+      <option value="ta">Tamil</option>
+      <option value="te">Telugu</option>
+      <option value="mr">Marathi</option>
+      <option value="pa">Punjabi</option>
+      <option value="gu">Gujarati</option>
+      <option value="kn">Kannada</option>
+      <option value="ml">Malayalam</option>
+      <option value="or">Odia</option>
+      <option value="as">Assamese</option>
+    </select>
+
+    <button class="menu-item" id="saveLanguage">
+      Save default language
+    </button>
+
+    <label for="themeSelect">Appearance</label>
+
+    <select id="themeSelect">
+      <option value="dark">Dark</option>
+      <option value="light">Light</option>
+    </select>
+
+    <label for="voiceSelect">Voice replies</label>
+
+    <select id="voiceSelect">
+      <option value="on">On</option>
+      <option value="off">Off</option>
+    </select>
+
+    <button class="menu-item" id="saveSettings">
+      Save settings
+    </button>
+
+    <button class="menu-item" id="exportChats">
+      Export chat history
+    </button>
+
+    <button class="menu-item" id="deleteAllChats">
+      Delete all chat history
+    </button>
+
+    <p class="status">
+      Your preferences are stored in this browser on this device.
+    </p>
+
+  </section>
+</div>
+
+<div class="overlay" id="menuOverlay">
+  <section class="drawer" role="dialog" aria-modal="true"
+    aria-labelledby="menuTitle">
+
+    <button class="icon-btn close-btn"
+      id="closeMenu" aria-label="Close menu">✕</button>
+
+    <h2 id="menuTitle">Menu</h2>
+
+    <button class="menu-item" id="menuNewChat">New chat</button>
+    <button class="menu-item" id="menuHistory">Chat history</button>
+    <button class="menu-item" id="menuSettings">Settings</button>
+    <button class="menu-item" id="menuClearChat">Clear current chat</button>
+
+    <p class="status">Creator: Manjeet Kumar</p>
+
+  </section>
 </div>
 
 <script>
-
-/* =========================================================
-   CONFIG
-========================================================= */
-
-const API_BASE =
-  "https://sarathi-ai.mjmanjumanjeet0.workers.dev";
-
-
-/* =========================================================
-   STATE
-========================================================= */
-
-let messages = [];
-let useSearch = false;
-let voiceEnabled = false;
-
-let isSending = false;
-let isListening = false;
-
-let mediaRecorder = null;
-let audioChunks = [];
-let microphoneStream = null;
-
-
-/* =========================================================
-   ELEMENTS
-========================================================= */
-
-const chat = document.getElementById("chat");
-const input = document.getElementById("input");
-const sendBtn = document.getElementById("sendBtn");
-const statusBox = document.getElementById("status");
-const searchBtn = document.getElementById("searchBtn");
-const voiceBtn = document.getElementById("voiceBtn");
-const empty = document.getElementById("empty");
-
-
-/* =========================================================
-   STATUS
-========================================================= */
-
-function setStatus(text){
-  statusBox.textContent = text || "";
-}
-
-
-/* =========================================================
-   HTML ESCAPE
-========================================================= */
-
-function escapeHtml(value){
-  return String(value ?? "")
-    .replace(/&/g,"&amp;")
-    .replace(/</g,"&lt;")
-    .replace(/>/g,"&gt;")
-    .replace(/"/g,"&quot;")
-    .replace(/'/g,"&#039;");
-}
-
-
-/* =========================================================
-   SARATHI *** FIX
-========================================================= */
-
-function cleanSarathiStars(text){
-
-  let value = String(text ?? "");
-
-  /*
-    सारथी*** 
-    ***सारथी
-    ***सारथी***
-    जैसी समस्या हटाएँ।
-  */
-
-  value = value.replace(/(\bसारथी)\*+/g,"$1");
-  value = value.replace(/\*+(\bसारथी)/g,"$1");
-
-  /*
-    तीन या उससे ज्यादा लगातार * हटाएँ।
-    इससे *** जैसी खराब formatting नहीं दिखेगी।
-  */
-
-  value = value.replace(/\*{3,}/g,"");
-
-  return value;
-}
-
-
-/* =========================================================
-   SIMPLE MARKDOWN
-========================================================= */
-
-function renderMarkdown(text){
-
-  let value = cleanSarathiStars(text);
-
-  value = escapeHtml(value);
-
-  /*
-    Code blocks
-  */
-
-  const codeBlocks = [];
-
-  value = value.replace(
-    /```([\s\S]*?)```/g,
-    function(_, code){
-      const id = "___CODE_BLOCK_" + codeBlocks.length + "___";
-      codeBlocks.push(code);
-      return id;
-    }
-  );
-
-  /*
-    Inline code
-  */
-
-  value = value.replace(
-    /`([^`]+)`/g,
-    "<code>$1</code>"
-  );
-
-  /*
-    Bold
-  */
-
-  value = value.replace(
-    /\*\*([^*]+)\*\*/g,
-    "<strong>$1</strong>"
-  );
-
-  /*
-    Italic
-  */
-
-  value = value.replace(
-    /(^|[^\*])\*([^*\n]+)\*(?!\*)/g,
-    "$1<em>$2</em>"
-  );
-
-  /*
-    Headings
-  */
-
-  value = value.replace(
-    /^### (.*)$/gm,
-    "<strong>$1</strong>"
-  );
-
-  value = value.replace(
-    /^## (.*)$/gm,
-    "<strong>$1</strong>"
-  );
-
-  value = value.replace(
-    /^# (.*)$/gm,
-    "<strong>$1</strong>"
-  );
-
-  /*
-    Bullets
-  */
-
-  value = value.replace(
-    /^[•\-] (.*)$/gm,
-    "• $1"
-  );
-
-  /*
-    New lines
-  */
-
-  value = value.replace(/\n/g,"<br>");
-
-  /*
-    Restore code blocks
-  */
-
-  codeBlocks.forEach(function(code,index){
-
-    const safeCode = escapeHtml(code);
-
-    value = value.replace(
-      "___CODE_BLOCK_" + index + "___",
-      "<pre><code>" + safeCode + "</code></pre>"
-    );
-
-  });
-
-  return value;
-}
-
-
-/* =========================================================
-   ADD MESSAGE
-========================================================= */
-
-function addMessage(role,text,extra=""){
-
-  if(empty){
-    empty.style.display = "none";
-  }
-
-  const row = document.createElement("div");
-
-  row.className =
-    "message " + (role === "user" ? "user" : "assistant");
-
-  const bubble = document.createElement("div");
-
-  bubble.className = "bubble";
-
-  if(role === "assistant"){
-
-    bubble.innerHTML =
-      renderMarkdown(text) +
-      `
-      <div class="actions">
-
-        <button onclick="speakText(this)">
-          🔊 सुनें
-        </button>
-
-        <button onclick="copyText(this)">
-          📋 कॉपी
-        </button>
-
-      </div>
-      `;
-
-  }else{
-
-    bubble.innerHTML =
-      renderMarkdown(text) + extra;
-
-  }
-
-  row.appendChild(bubble);
-  chat.appendChild(row);
-
-  chat.scrollTop = chat.scrollHeight;
-
-  return row;
-}
-
-
-/* =========================================================
-   TYPING
-========================================================= */
-
-function showTyping(){
-
-  hideTyping();
-
-  const row = document.createElement("div");
-
-  row.className = "message assistant";
-  row.id = "typing";
-
-  row.innerHTML = `
-    <div class="bubble">
-      <div class="typing">
-        <span class="dot"></span>
-        <span class="dot"></span>
-        <span class="dot"></span>
-      </div>
-    </div>
-  `;
-
-  chat.appendChild(row);
-
-  chat.scrollTop = chat.scrollHeight;
-}
-
-
-function hideTyping(){
-
-  const old = document.getElementById("typing");
-
-  if(old){
-    old.remove();
-  }
-
-}
-
-
-/* =========================================================
-   COPY
-========================================================= */
-
-async function copyText(button){
-
-  const bubble = button.closest(".bubble");
-
-  if(!bubble) return;
-
-  const clone = bubble.cloneNode(true);
-
-  clone.querySelectorAll(".actions").forEach(
-    el => el.remove()
-  );
-
-  const text = clone.innerText.trim();
-
-  try{
-
-    await navigator.clipboard.writeText(text);
-
-    button.textContent = "✅ कॉपी";
-
-    setTimeout(()=>{
-      button.textContent = "📋 कॉपी";
-    },1200);
-
-  }catch{
-
-    setStatus("कॉपी नहीं हो सका।");
-
+"use strict";
+
+/* Part 1: App configuration and language preferences */
+
+const SAARTHI_CONFIG = {
+  workerUrl: "https://sarathi-ai.mjmanjumanjeet0.workers.dev",
+  chatEndpoint: "/api/chat",
+  visionEndpoint: "/api/vision",
+  transcribeEndpoint: "/api/transcribe",
+  defaultLanguage: "en",
+  maxStoredChats: 50
+};
+
+const STORAGE_KEYS = {
+  settings: "saarthi-ai-settings-v1",
+  chats: "saarthi-ai-conversations-v1",
+  currentChat: "saarthi-ai-current-chat-v1"
+};
+
+const LANGUAGE_NAMES = {
+  en: "English",
+  hi: "Hindi",
+  bho: "Bhojpuri",
+  ur: "Urdu",
+  bn: "Bengali",
+  ta: "Tamil",
+  te: "Telugu",
+  mr: "Marathi",
+  pa: "Punjabi",
+  gu: "Gujarati",
+  kn: "Kannada",
+  ml: "Malayalam",
+  or: "Odia",
+  as: "Assamese"
+};
+
+function readStoredJSON(key, fallback) {
+  try {
+    const value = localStorage.getItem(key);
+    return value ? JSON.parse(value) : fallback;
+  } catch (error) {
+    console.warn("Could not read local settings:", error);
+    return fallback;
   }
 }
 
-
-/* =========================================================
-   SPEAK
-========================================================= */
-
-function speakText(button){
-
-  const bubble = button.closest(".bubble");
-
-  if(!bubble) return;
-
-  const clone = bubble.cloneNode(true);
-
-  clone.querySelectorAll(".actions").forEach(
-    el => el.remove()
-  );
-
-  const text = clone.innerText.trim();
-
-  if(!text) return;
-
-  if(!("speechSynthesis" in window)){
-
-    setStatus(
-      "इस फोन के ब्राउज़र में आवाज़ चलाने की सुविधा उपलब्ध नहीं है।"
-    );
-
-    return;
+function saveStoredJSON(key, value) {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    return true;
+  } catch (error) {
+    console.error("Could not save local data:", error);
+    return false;
   }
+}
 
-  speechSynthesis.cancel();
+let settings = {
+  language: SAARTHI_CONFIG.defaultLanguage,
+  theme: "dark",
+  voiceReplies: true
+};
 
-  const speak = () => {
+settings = {
+  ...settings,
+  ...readStoredJSON(STORAGE_KEYS.settings, {})
+};
 
-    const utterance =
-      new SpeechSynthesisUtterance(text);
+if (!LANGUAGE_NAMES[settings.language]) {
+  settings.language = "en";
+}
 
-    utterance.lang = "hi-IN";
-    utterance.rate = 0.92;
-    utterance.pitch = 1;
-    utterance.volume = 1;
+function saveSettings() {
+  return saveStoredJSON(STORAGE_KEYS.settings, settings);
+}
 
-    const voices =
-      speechSynthesis.getVoices();
+function getLanguageName(code) {
+  return LANGUAGE_NAMES[code] || LANGUAGE_NAMES.en;
+}
 
-    const hindiVoice =
-      voices.find(v =>
-        /^hi(-|_)/i.test(v.lang)
-      ) ||
-      voices.find(v =>
-        /hindi/i.test(v.name)
-      );
+function applyTheme() {
+  document.body.classList.toggle(
+    "light",
+    settings.theme === "light"
+  );
+}
 
-    if(hindiVoice){
-      utterance.voice = hindiVoice;
-    }
+function applyLanguageSettings() {
+  document.documentElement.lang = settings.language || "en";
 
-    utterance.onstart = () => {
-      setStatus("🔊 जवाब पढ़ रहा हूँ...");
-    };
+  const input = document.getElementById("userInput");
 
-    utterance.onend = () => {
-      setStatus("तैयार है।");
-    };
-
-    utterance.onerror = (event) => {
-      console.error(
-        "Speech synthesis error:",
-        event
-      );
-
-      setStatus(
-        "⚠️ आवाज़ चलाने में समस्या हुई।"
-      );
-    };
-
-    speechSynthesis.speak(utterance);
+  const placeholders = {
+    en: "Message Saarthi AI...",
+    hi: "Saarthi AI को संदेश लिखें...",
+    bho: "Saarthi AI के संदेश लिखीं...",
+    ur: "Saarthi AI کو پیغام لکھیں",
+    bn: "Saarthi AI-কে বার্তা লিখুন",
+    ta: "Saarthi AI-க்கு செய்தி எழுதுங்கள்",
+    te: "Saarthi AIకి సందేశం రాయండి",
+    mr: "Saarthi AI ला संदेश लिहा",
+    pa: "Saarthi AI ਨੂੰ ਸੁਨੇਹਾ ਲਿਖੋ",
+    gu: "Saarthi AI ને સંદેશ લખો",
+    kn: "Saarthi AI ಗೆ ಸಂದೇಶ ಬರೆಯಿರಿ",
+    ml: "Saarthi AI-ക്ക് സന്ദേശം എഴുതുക",
+    or: "Saarthi AI କୁ ବାର୍ତ୍ତା ଲେଖନ୍ତୁ",
+    as: "Saarthi AI লৈ বাৰ্তা লিখক"
   };
 
-  const voices =
-    speechSynthesis.getVoices();
-
-  if(voices.length){
-
-    speak();
-
-  }else{
-
-    speechSynthesis.onvoiceschanged = () => {
-
-      speechSynthesis.onvoiceschanged = null;
-
-      speak();
-
-    };
-  }
+  input.placeholder =
+    placeholders[settings.language] || placeholders.en;
 }
 
-/* =========================================================
-   VOICE TOGGLE
-========================================================= */
-
-function toggleVoice(){
-
-  voiceEnabled = !voiceEnabled;
-
-  voiceBtn.textContent =
-    voiceEnabled
-      ? "🔊 आवाज ON"
-      : "🔊 आवाज OFF";
-
-  voiceBtn.classList.toggle(
-    "active",
-    voiceEnabled
-  );
-
-  setStatus(
-    voiceEnabled
-      ? "आवाज ON है। जवाब के नीचे 🔊 सुनें दबा सकते हो।"
-      : "आवाज OFF है।"
-  );
+function setStatus(message) {
+  document.getElementById("appStatus").textContent = message;
 }
 
-
-/* =========================================================
-   SEARCH
-========================================================= */
-
-function toggleSearch(){
-
-  useSearch = !useSearch;
-
-  searchBtn.textContent =
-    useSearch
-      ? "🌐 Search ON"
-      : "🌐 Search OFF";
-
-  searchBtn.classList.toggle(
-    "active",
-    useSearch
-  );
-
-  setStatus(
-    useSearch
-      ? "🌐 इंटरनेट Search ON है।"
-      : "Search OFF है।"
-  );
+function openOverlay(id) {
+  document.getElementById(id).classList.add("open");
 }
 
-
-/* =========================================================
-   TEXTAREA
-========================================================= */
-
-function autoResize(){
-
-  input.style.height = "auto";
-
-  input.style.height =
-    Math.min(input.scrollHeight,130) + "px";
+function closeOverlay(id) {
+  document.getElementById(id).classList.remove("open");
 }
 
-input.addEventListener(
-  "input",
-  autoResize
+document.getElementById("openSettings").addEventListener(
+  "click",
+  () => openOverlay("settingsOverlay")
 );
 
-input.addEventListener(
-  "keydown",
-  function(e){
+document.getElementById("sidebarSettings").addEventListener(
+  "click",
+  () => openOverlay("settingsOverlay")
+);
 
-    if(e.key === "Enter" && !e.shiftKey){
+document.getElementById("closeSettings").addEventListener(
+  "click",
+  () => closeOverlay("settingsOverlay")
+);
 
-      e.preventDefault();
+document.getElementById("openMenu").addEventListener(
+  "click",
+  () => openOverlay("menuOverlay")
+);
 
-      sendMessage();
+document.getElementById("closeMenu").addEventListener(
+  "click",
+  () => closeOverlay("menuOverlay")
+);
 
-    }
+document.getElementById("saveLanguage").addEventListener(
+  "click",
+  () => {
+    settings.language =
+      document.getElementById("languageSelect").value;
 
+    saveSettings();
+    applyLanguageSettings();
+
+    alert(
+      "Default language saved: " +
+      getLanguageName(settings.language)
+    );
   }
 );
 
-
-/* =========================================================
-   LOCAL DATE ANSWER
-========================================================= */
-
-function getLocalDateAnswer(text){
-
-  const q = String(text).trim().toLowerCase();
-
-  const patterns = [
-    "आज कौन सा दिन",
-    "आज कौन-सा दिन",
-    "आज का दिन",
-    "आज क्या दिन",
-    "आज कौन सा वार",
-    "आज कौन-सा वार",
-    "आज की तारीख",
-    "आज तारीख क्या है",
-    "आज की डेट"
-  ];
-
-  const matched =
-    patterns.some(p => q.includes(p));
-
-  if(!matched){
-    return null;
-  }
-
-  const now = new Date();
-
-  const day =
-    now.toLocaleDateString(
-      "hi-IN",
-      {weekday:"long"}
-    );
-
-  const date =
-    now.toLocaleDateString(
-      "hi-IN",
-      {
-        day:"numeric",
-        month:"long",
-        year:"numeric"
-      }
-    );
-
-  return `आज ${day} है और तारीख ${date} है।`;
-
-}
-
-
-/* =========================================================
-   READ JSON RESPONSE SAFELY
-========================================================= */
-
-async function readResponse(response){
-
-  const raw = await response.text();
-
-  let data = {};
-
-  try{
-
-    data =
-      raw
-        ? JSON.parse(raw)
-        : {};
-
-  }catch{
-
-    data = {};
-
-  }
-
-  return {
-    data,
-    raw
-  };
-
-}
-
-
-/* =========================================================
-   EXTRACT AI REPLY
-========================================================= */
-
-function extractReply(data){
-
-  const candidates = [
-    data?.answer,
-    data?.reply,
-    data?.content,
-    data?.message,
-    data?.output_text,
-    data?.result?.answer,
-    data?.result?.reply,
-    data?.result?.content
-  ];
-
-  for(const item of candidates){
-
-    if(
-      typeof item === "string" &&
-      item.trim()
-    ){
-      return item.trim();
-    }
-
-  }
-
-  return "";
-}
-
-
-/* =========================================================
-   SEND MESSAGE
-========================================================= */
-
-async function sendMessage(customText=null,displayText=null){
-
-  if(isSending){
-
-    return;
-
-  }
-
-  const text =
-    String(
-      customText !== null
-        ? customText
-        : input.value
-    ).trim();
-
-  if(!text){
-
-    return;
-
-  }
-
-  isSending = true;
-
-  sendBtn.disabled = true;
-
-  if(customText === null){
-
-    input.value = "";
-
-    autoResize();
-
-  }
-
-  const shownText =
-    displayText !== null
-      ? displayText
-      : text;
-
-  addMessage(
-    "user",
-    shownText
-  );
-
-  messages.push({
-    role:"user",
-    content:text
-  });
-
-  /*
-    Local date questions को Worker पर भेजने की जरूरत नहीं।
-  */
-
-  if(!useSearch){
-
-    const localAnswer =
-      getLocalDateAnswer(text);
-
-    if(localAnswer){
-
-      addMessage(
-        "assistant",
-        localAnswer
-      );
-
-      messages.push({
-        role:"assistant",
-        content:localAnswer
-      });
-
-      setStatus("तैयार है।");
-
-      isSending = false;
-
-      sendBtn.disabled = false;
-
-      return;
-    }
-
-  }
-
-
-  showTyping();
-
-  setStatus(
-    useSearch
-      ? "🌐 इंटरनेट से जानकारी खोज रहा हूँ..."
-      : "सारथी सोच रहा है..."
-  );
-
-
-  /*
-    60 सेकंड timeout
-  */
-
-  const controller =
-    new AbortController();
-
-  const timeout =
-    setTimeout(
-      ()=>controller.abort(),
-      60000
-    );
-
-
-  try{
-
-    const response =
-      await fetch(
-        API_BASE + "/api/chat",
-        {
-          method:"POST",
-
-          headers:{
-            "Content-Type":
-              "application/json"
-          },
-
-          body:JSON.stringify({
-
-  message: text,
-
-  history:
-    messages.slice(-12),
-
-  webSearch:
-    Boolean(useSearch)
-
-}),
-
-          signal:
-            controller.signal
-
-        }
-      );
-
-
-    const result =
-      await readResponse(response);
-
-    const data =
-      result.data;
-
-    const raw =
-      result.raw;
-
-
-    if(!response.ok){
-
-      const serverError =
-        data?.error ||
-        data?.message ||
-        raw ||
-        `HTTP ${response.status}`;
-
-      throw new Error(
-        `सर्वर त्रुटि (${response.status}): ${serverError}`
-      );
-
-    }
-
-
-    const reply =
-      extractReply(data);
-
-
-    if(!reply){
-
-      throw new Error(
-        "Worker ने खाली जवाब भेजा।"
-      );
-
-    }
-
-
-    /*
-      *** वाली समस्या यहाँ भी साफ होगी।
-    */
-
-    const cleanReply =
-      cleanSarathiStars(reply);
-
-
-    hideTyping();
-
-    addMessage(
-      "assistant",
-      cleanReply
-    );
-
-    messages.push({
-      role:"assistant",
-      content:cleanReply
-    });
-
-
-    setStatus(
-      useSearch
-        ? "🌐 Search के साथ जवाब दिया गया।"
-        : "तैयार है।"
-    );
-
-
-    /*
-      Auto voice सिर्फ तभी जब user ने ON किया हो।
-    */
-
-    if(
-      voiceEnabled &&
-      "speechSynthesis" in window
-    ){
-
-      const utterance =
-        new SpeechSynthesisUtterance(
-          cleanReply
-        );
-
-      utterance.lang = "hi-IN";
-      utterance.rate = 0.92;
-
-      speechSynthesis.cancel();
-
-      speechSynthesis.speak(
-        utterance
-      );
-
-    }
-
-
-  }catch(error){
-
-    hideTyping();
-
-    console.error(
-      "Sarathi chat error:",
-      error
-    );
-
-
-    let message =
-      "माफ़ करना, अभी जवाब देने में समस्या हुई।";
-
-
-    if(error?.name === "AbortError"){
-
-      message =
-        "सर्वर से जवाब आने में बहुत समय लग गया। इंटरनेट या Worker को जाँचो।";
-
-    }else if(
-      error?.message
-    ){
-
-      /*
-        Debugging के लिए असली error भी दिखाएँ।
-      */
-
-      message =
-        "माफ़ करना, जवाब नहीं मिल पाया।\n\n" +
-        "तकनीकी जानकारी: " +
-        error.message;
-
-    }
-
-
-    addMessage(
-      "assistant",
-      message
-    );
-
-    setStatus(
-      "⚠️ Chat request में समस्या हुई।"
-    );
-
-
-  }finally{
-
-    clearTimeout(timeout);
-
-    isSending = false;
-
-    sendBtn.disabled = false;
-
-  }
-
-}
-
-
-/* =========================================================
-   MICROPHONE / WHISPER
-========================================================= */
-
-async function startRecording(){
-
-  if(isListening){
-
-    stopRecording();
-
-    return;
-
-  }
-
-
-  if(
-    !navigator.mediaDevices ||
-    !navigator.mediaDevices.getUserMedia
-  ){
-
-    setStatus(
-      "इस ब्राउज़र में Microphone उपलब्ध नहीं है।"
-    );
-
-    return;
-
-  }
-
-
-  try{
-
-    microphoneStream =
-      await navigator.mediaDevices.getUserMedia({
-        audio:true
-      });
-
-
-    audioChunks = [];
-
-
-    mediaRecorder =
-      new MediaRecorder(
-        microphoneStream
-      );
-
-
-    mediaRecorder.ondataavailable =
-      function(e){
-
-        if(e.data.size > 0){
-
-          audioChunks.push(
-            e.data
-          );
-
-        }
-
-      };
-
-
-    mediaRecorder.onstop =
-      async function(){
-
-        try{
-
-          const blob =
-            new Blob(
-              audioChunks,
-              {
-                type:
-                  mediaRecorder.mimeType ||
-                  "audio/webm"
-              }
-            );
-
-
-          setStatus(
-            "🎙️ आवाज को text में बदल रहा हूँ..."
-          );
-
-
-          const formData =
-            new FormData();
-
-          formData.append(
-            "file",
-            blob,
-            "voice.webm"
-          );
-
-
-          const response =
-            await fetch(
-              API_BASE + "/api/transcribe",
-              {
-                method:"POST",
-                body:formData
-              }
-            );
-
-
-          const result =
-            await readResponse(response);
-
-
-          if(!response.ok){
-
-            throw new Error(
-              result.data?.error ||
-              result.data?.message ||
-              result.raw ||
-              `HTTP ${response.status}`
-            );
-
-          }
-
-
-          const text =
-            result.data?.text ||
-            result.data?.transcript ||
-            "";
-
-
-          if(!text.trim()){
-
-            throw new Error(
-              "आवाज समझ में नहीं आई।"
-            );
-
-          }
-
-
-          input.value =
-            text.trim();
-
-          autoResize();
-
-          setStatus(
-            "🎙️ आवाज समझ ली गई।"
-          );
-
-
-          /*
-            Transcription के बाद message भेजें।
-          */
-
-          sendMessage();
-
-
-        }catch(error){
-
-          console.error(
-            "Transcription error:",
-            error
-          );
-
-          setStatus(
-            "🎙️ आवाज समझने में समस्या: " +
-            error.message
-          );
-
-        }
-
-      };
-
-
-    mediaRecorder.start();
-
-    isListening = true;
-
-    setStatus(
-      "🔴 सुन रहा हूँ... बोलना पूरा होने पर फिर 🎙️ दबाएँ।"
-    );
-
-
-  }catch(error){
-
-    console.error(error);
-
-    setStatus(
-      "Microphone permission नहीं मिली।"
-    );
-
-  }
-
-}
-
-
-function stopRecording(){
-
-  if(
-    mediaRecorder &&
-    mediaRecorder.state !== "inactive"
-  ){
-
-    mediaRecorder.stop();
-
-  }
-
-
-  if(microphoneStream){
-
-    microphoneStream
-      .getTracks()
-      .forEach(
-        track => track.stop()
-      );
-
-    microphoneStream = null;
-
-  }
-
-
-  isListening = false;
-
-}
-
-
-/* =========================================================
-   PHOTO
-========================================================= */
-
-document
-  .getElementById("photoInput")
-  .addEventListener(
-    "change",
-    handlePhoto
-  );
-
-
-async function handlePhoto(e){
-
-  const file =
-    e.target.files?.[0];
-
-  if(!file) return;
-
-
-  try{
-
-    setStatus(
-      "📷 फोटो तैयार कर रहा हूँ..."
-    );
-
-
-    const dataUrl =
-      await fileToDataURL(file);
-
-
-    const preview =
-      `<br><img class="photoPreview" src="${dataUrl}" alt="फोटो">`;
-
-
-    addMessage(
-      "user",
-      "📷 मैंने एक फोटो भेजी है।",
-      preview
-    );
-
-
-    showTyping();
-
-
-    const response =
-      await fetch(
-        API_BASE + "/api/vision",
-        {
-          method:"POST",
-
-          headers:{
-            "Content-Type":
-              "application/json"
-          },
-
-          body:JSON.stringify({
-            image:dataUrl,
-            prompt:
-              "इस फोटो को ध्यान से देखकर हिंदी में सरल और स्पष्ट तरीके से बताओ कि इसमें क्या दिखाई दे रहा है।"
-          })
-
-        }
-      );
-
-
-    const result =
-      await readResponse(response);
-
-
-    if(!response.ok){
-
-      throw new Error(
-        result.data?.error ||
-        result.data?.message ||
-        result.raw ||
-        `HTTP ${response.status}`
-      );
-
-    }
-
-
-    const reply =
-      extractReply(
-        result.data
-      ) ||
-      result.data?.text ||
-      "";
-
-
-    if(!reply){
-
-      throw new Error(
-        "फोटो का जवाब खाली मिला।"
-      );
-
-    }
-
-
-    const cleanReply =
-      cleanSarathiStars(reply);
-
-
-    hideTyping();
-
-    addMessage(
-      "assistant",
-      cleanReply
-    );
-
-
-    messages.push({
-      role:"user",
-      content:"मैंने एक फोटो भेजी है।"
-    });
-
-    messages.push({
-      role:"assistant",
-      content:cleanReply
-    });
-
-
-    setStatus(
-      "📷 फोटो का विश्लेषण पूरा हुआ।"
-    );
-
-
-  }catch(error){
-
-    hideTyping();
-
-    console.error(
-      "Vision error:",
-      error
-    );
-
-    addMessage(
-      "assistant",
-      "फोटो समझने में समस्या हुई।\n\nतकनीकी जानकारी: " +
-      error.message
-    );
-
-    setStatus(
-      "⚠️ Photo analysis में समस्या।"
-    );
-
-  }finally{
-
-    e.target.value = "";
-
-  }
-
-}
-
-
-/* =========================================================
-   VIDEO
-   सिर्फ पहला frame Worker को भेजा जाएगा।
-========================================================= */
-
-document
-  .getElementById("videoInput")
-  .addEventListener(
-    "change",
-    handleVideo
-  );
-
-
-async function handleVideo(e){
-
-  const file =
-    e.target.files?.[0];
-
-  if(!file) return;
-
-
-  try{
-
-    setStatus(
-      "🎬 वीडियो का पहला frame निकाल रहा हूँ..."
-    );
-
-
-    const frame =
-      await getVideoFrame(file);
-
-
-    addMessage(
-      "user",
-      "🎬 मैंने एक वीडियो भेजा है।"
-    );
-
-
-    showTyping();
-
-
-    const response =
-      await fetch(
-        API_BASE + "/api/vision",
-        {
-          method:"POST",
-
-          headers:{
-            "Content-Type":
-              "application/json"
-          },
-
-          body:JSON.stringify({
-            image:frame,
-            prompt:
-              "यह वीडियो के पहले frame की फोटो है। इसमें क्या दिखाई दे रहा है, हिंदी में सरल तरीके से बताओ।"
-          })
-
-        }
-      );
-
-
-    const result =
-      await readResponse(response);
-
-
-    if(!response.ok){
-
-      throw new Error(
-        result.data?.error ||
-        result.data?.message ||
-        result.raw ||
-        `HTTP ${response.status}`
-      );
-
-    }
-
-
-    const reply =
-      extractReply(
-        result.data
-      ) ||
-      result.data?.text ||
-      "";
-
-
-    if(!reply){
-
-      throw new Error(
-        "वीडियो का जवाब खाली मिला।"
-      );
-
-    }
-
-
-    const cleanReply =
-      cleanSarathiStars(reply);
-
-
-    hideTyping();
-
-    addMessage(
-      "assistant",
-      cleanReply
-    );
-
-
-    setStatus(
-      "🎬 वीडियो के पहले frame का विश्लेषण पूरा हुआ।"
-    );
-
-
-  }catch(error){
-
-    hideTyping();
-
-    console.error(
-      "Video error:",
-      error
-    );
-
-    addMessage(
-      "assistant",
-      "वीडियो समझने में समस्या हुई।\n\nतकनीकी जानकारी: " +
-      error.message
-    );
-
-    setStatus(
-      "⚠️ Video analysis में समस्या।"
-    );
-
-  }finally{
-
-    e.target.value = "";
-
-  }
-
-}
-
-
-      
-/* =========================================================
-   FILE
-========================================================= */
-
-document
-  .getElementById("fileInput")
-  .addEventListener(
-    "change",
-    handleFile
-  );
-
-
-async function handleFile(e){
-
-  const file = e.target.files?.[0];
-
-  if(!file) return;
-
-  try{
-
-    const ext = file.name
-      .split(".")
-      .pop()
-      .toLowerCase();
-
-    const allowed = [
-      "txt",
-      "csv",
-      "json",
-      "md",
-      "pdf",
-      "docx"
-    ];
-
-    if(!allowed.includes(ext)){
-      throw new Error(
-        "TXT, CSV, JSON, MD, PDF और DOCX फाइल ही supported हैं।"
-      );
-    }
-
-    let text = "";
-
-    if(
-      ext === "txt" ||
-      ext === "csv" ||
-      ext === "json" ||
-      ext === "md"
-    ){
-
-      text = await file.text();
-
-    }
-
-    else if(ext === "pdf"){
-
-      if(!window.pdfjsLib){
-        throw new Error(
-          "PDF reader load नहीं हुआ। पेज को फिर से खोलें।"
-        );
-      }
-
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
-
-      const arrayBuffer =
-        await file.arrayBuffer();
-
-      const pdf =
-        await pdfjsLib.getDocument({
-          data: arrayBuffer
-        }).promise;
-
-      const pages = [];
-
-      for(
-        let pageNumber = 1;
-        pageNumber <= pdf.numPages;
-        pageNumber++
-      ){
-
-        const page =
-          await pdf.getPage(pageNumber);
-
-        const content =
-          await page.getTextContent();
-
-        const pageText =
-          content.items
-            .map(item =>
-              typeof item.str === "string"
-                ? item.str
-                : ""
-            )
-            .join(" ");
-
-        pages.push(
-          `पेज ${pageNumber}:\n${pageText}`
-        );
-      }
-
-      text = pages.join("\n\n");
-
-    }
-
-    else if(ext === "docx"){
-
-      if(!window.mammoth){
-        throw new Error(
-          "DOCX reader load नहीं हुआ। पेज को फिर से खोलें।"
-        );
-      }
-
-      const arrayBuffer =
-        await file.arrayBuffer();
-
-      const result =
-        await mammoth.extractRawText({
-          arrayBuffer
-        });
-
-      text = result.value || "";
-
-    }
-
-    if(!text.trim()){
-      throw new Error(
-        "फाइल में पढ़ने योग्य text नहीं मिला।"
-      );
-    }
-
-    const display =
-      `📄 ${file.name} पढ़ रहा हूँ।`;
-
-    const prompt = `
-मैंने "${file.name}" नाम की फाइल भेजी है।
-
-फाइल का content:
-
---------------------
-
-${text.slice(0,30000)}
-
---------------------
-
-इस फाइल को ध्यान से पढ़कर मेरे सवाल/निर्देश के अनुसार आसान हिंदी में उत्तर दो।
-
-फाइल में जो जानकारी उपलब्ध नहीं है उसे मत गढ़ो।
-यदि फाइल बहुत बड़ी है तो मेरे सवाल से संबंधित जानकारी पर ध्यान दो।
-`;
-
-    await sendMessage(
-      prompt,
-      display
-    );
-
-  }catch(error){
-
-    console.error(
-      "File error:",
-      error
-    );
-
-    addMessage(
-      "assistant",
-      "फाइल पढ़ने में समस्या हुई।\n\n" +
-      (error?.message || "अज्ञात समस्या")
-    );
-
-  }finally{
-
-    e.target.value = "";
-
-  }
-
-}
-
-function fileToDataURL(file){
-
-  return new Promise(
-    function(resolve,reject){
-
-      const reader =
-        new FileReader();
-
-      reader.onload =
-        ()=>resolve(
-          reader.result
-        );
-
-      reader.onerror =
-        reject;
-
-      reader.readAsDataURL(file);
-
-    }
-  );
-
-}
-
-
-/* =========================================================
-   VIDEO FRAME
-========================================================= */
-
-function getVideoFrame(file){
-
-  return new Promise(
-    function(resolve,reject){
-
-      const video =
-        document.createElement("video");
-
-      const url =
-        URL.createObjectURL(file);
-
-      video.src = url;
-
-      video.muted = true;
-
-      video.playsInline = true;
-
-      video.onloadeddata =
-        function(){
-
-          video.currentTime = 0.1;
-
-        };
-
-
-      video.onseeked =
-        function(){
-
-          try{
-
-            const canvas =
-              document.createElement(
-                "canvas"
-              );
-
-            canvas.width =
-              video.videoWidth;
-
-            canvas.height =
-              video.videoHeight;
-
-
-            const ctx =
-              canvas.getContext("2d");
-
-
-            ctx.drawImage(
-              video,
-              0,
-              0,
-              canvas.width,
-              canvas.height
-            );
-
-
-            const data =
-              canvas.toDataURL(
-                "image/jpeg",
-                0.85
-              );
-
-
-            URL.revokeObjectURL(
-              url
-            );
-
-
-            resolve(data);
-
-
-          }catch(error){
-
-            URL.revokeObjectURL(
-              url
-            );
-
-            reject(error);
-
-          }
-
-        };
-
-
-      video.onerror =
-        function(){
-
-          URL.revokeObjectURL(
-            url
-          );
-
-          reject(
-            new Error(
-              "वीडियो पढ़ा नहीं जा सका।"
-            )
-          );
-
-        };
-
-    }
-  );
-
-}
-
-
-/* =========================================================
-   STUDY
-========================================================= */
-
-function openStudy(){
-
-  window.location.href =
-    "/study.html";
-
-}
-
-
-/* =========================================================
-   CLEAR CHAT
-========================================================= */
-
-function clearChat(){
-
-  if(
-    !confirm(
-      "क्या नई चैट शुरू करनी है?"
-    )
-  ){
-
-    return;
-
-  }
-
-
-  messages = [];
-
-  chat.innerHTML = `
-    <div id="empty" class="empty">
-      <strong>हेलो 👋</strong>
-      मैं सारथी AI हूँ।<br>
-      अपना सवाल लिखो या माइक से बोलो।
-    </div>
-  `;
-
-
-  setStatus(
-    "नई चैट शुरू हो गई।"
-  );
-
-}
-
-
-/* =========================================================
-   WORKER CONNECTION CHECK
-========================================================= */
-
-async function checkWorker(){
-
-  try{
-
-    const response =
-      await fetch(
-        API_BASE + "/",
-        {
-          method:"GET",
-          cache:"no-store"
-        }
-      );
-
-
-    if(!response.ok){
-
-      throw new Error(
-        "HTTP " + response.status
-      );
-
-    }
-
-
-    const text =
-      await response.text();
-
-
-    if(
-      text.includes(
-        "Sarathi AI Worker is running"
-      )
-    ){
-
-      setStatus(
-        "🟢 सारथी सर्वर तैयार है।"
-      );
-
-    }else{
-
-      setStatus(
-        "🟢 सारथी सर्वर से connection है।"
-      );
-
-    }
-
-
-  }catch(error){
-
-    console.error(
-      "Worker connection error:",
-      error
-    );
-
-
-    setStatus(
-      "🟠 सर्वर से connection जाँच नहीं हो पाया। Chat फिर भी try कर सकते हो।"
-    );
-
-  }
-
-}
-
-
-/* =========================================================
-   GLOBAL ERROR HANDLER
-========================================================= */
-
-window.addEventListener(
-  "error",
-  function(event){
-
-    console.error(
-      "Page error:",
-      event.error || event.message
-    );
-
+document.getElementById("saveSettings").addEventListener(
+  "click",
+  () => {
+    settings.language =
+      document.getElementById("languageSelect").value;
+
+    settings.theme =
+      document.getElementById("themeSelect").value;
+
+    settings.voiceReplies =
+      document.getElementById("voiceSelect").value === "on";
+
+    saveSettings();
+    applyTheme();
+    applyLanguageSettings();
+    closeOverlay("settingsOverlay");
+
+    setStatus("Settings saved");
   }
 );
 
+document.getElementById("themeSelect").value = settings.theme;
 
-/* =========================================================
-   START
-========================================================= */
+document.getElementById("languageSelect").value = settings.language;
 
-window.addEventListener(
-  "load",
-  function(){
+document.getElementById("voiceSelect").value =
+  settings.voiceReplies ? "on" : "off";
 
-    checkWorker();
+applyTheme();
+applyLanguageSettings();
 
-    input.focus();
-
-  }
-);
-
+/*
+  More code is needed for chat history, messaging, attachments,
+  speech, language-switch confirmation, and API requests.
+  Do not upload this first part by itself as the finished app.
+*/
 </script>
 
 </body>
 </html>
+/* PART 2: Chat History and Conversation Management */
+
+let chats = readStoredJSON(STORAGE_KEYS.chats, []);
+
+if (!Array.isArray(chats)) {
+  chats = [];
+}
+
+let currentChatId =
+  localStorage.getItem(STORAGE_KEYS.currentChat) || null;
+
+function createChatId() {
+  return "chat-" +
+    Date.now() +
+    "-" +
+    Math.random().toString(36).slice(2, 9);
+}
+
+function createNewChat() {
+  const chat = {
+    id: createChatId(),
+    title: "New chat",
+    language: settings.language,
+    messages: [],
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+
+  chats.unshift(chat);
+  chats = chats.slice(0, SAARTHI_CONFIG.maxStoredChats);
+
+  currentChatId = chat.id;
+
+  saveStoredJSON(STORAGE_KEYS.chats, chats);
+
+  try {
+    localStorage.setItem(
+      STORAGE_KEYS.currentChat,
+      currentChatId
+    );
+  } catch (error) {
+    console.error("Could not save current chat:", error);
+  }
+
+  renderHistory();
+  renderMessages();
+
+  return chat;
+}
+
+function getCurrentChat() {
+  return chats.find(chat => chat.id === currentChatId) || null;
+}
+
+function saveChats() {
+  const saved = saveStoredJSON(STORAGE_KEYS.chats, chats);
+
+  try {
+    if (currentChatId) {
+      localStorage.setItem(
+        STORAGE_KEYS.currentChat,
+        currentChatId
+      );
+    }
+  } catch (error) {
+    console.error("Could not save current chat ID:", error);
+  }
+
+  return saved;
+}
+
+function renderHistory() {
+  const historyList = document.getElementById("historyList");
+  historyList.replaceChildren();
+
+  chats.forEach(chat => {
+    const button = document.createElement("button");
+
+    button.className = "history-item";
+    button.textContent = chat.title || "New chat";
+    button.title = chat.title || "New chat";
+
+    button.addEventListener("click", () => {
+      currentChatId = chat.id;
+
+      try {
+        localStorage.setItem(
+          STORAGE_KEYS.currentChat,
+          currentChatId
+        );
+      } catch (error) {
+        console.error(error);
+      }
+
+      renderHistory();
+      renderMessages();
+
+      closeOverlay("menuOverlay");
+    });
+
+    historyList.appendChild(button);
+  });
+}
+
+function renderMessages() {
+  const messagesElement = document.getElementById("messages");
+  const welcomeScreen = document.getElementById("welcomeScreen");
+
+  messagesElement.replaceChildren();
+
+  const chat = getCurrentChat();
+
+  if (!chat || chat.messages.length === 0) {
+    messagesElement.classList.add("hidden");
+    welcomeScreen.classList.remove("hidden");
+    return;
+  }
+
+  welcomeScreen.classList.add("hidden");
+  messagesElement.classList.remove("hidden");
+
+  chat.messages.forEach(message => {
+    const wrapper = document.createElement("article");
+
+    wrapper.className =
+      "message " +
+      (message.role === "user" ? "user" : "assistant");
+
+    const role = document.createElement("div");
+    role.className = "message-role";
+
+    role.textContent =
+      message.role === "user" ? "You" : "Saarthi AI";
+
+    const content = document.createElement("div");
+    content.className = "message-content";
+
+    // Use textContent to prevent messages being treated as HTML.
+    content.textContent = message.content || "";
+
+    wrapper.append(role, content);
+    messagesElement.appendChild(wrapper);
+  });
+
+  messagesElement.scrollTop = messagesElement.scrollHeight;
+}
+
+function addMessage(role, content) {
+  let chat = getCurrentChat();
+
+  if (!chat) {
+    chat = create
+    /* PART 3: Language Switching and Preference */
+
+const LANGUAGE_SWITCH_TEXT = {
+  en: {
+    ask: "Would you like to use this language for this conversation only, or make it your default language?",
+    current: "This conversation only",
+    default: "Set as my default language",
+    cancel: "Cancel",
+    saved: "Your language preference has been saved."
+  },
+  hi: {
+    ask: "क्या आप यह भाषा केवल इस बातचीत के लिए चाहते हैं या इसे अपनी डिफ़ॉल्ट भाषा बनाना चाहते हैं?",
+    current: "केवल इस बातचीत के लिए",
+    default: "डिफ़ॉल्ट भाषा बनाएं",
+    cancel: "रद्द करें",
+    saved: "आपकी भाषा की पसंद सेव हो गई है।"
+  },
+  bho: {
+    ask: "रउआ ई भाषा खाली एह बातचीत खातिर चाहत बानी कि हमेशा खातिर डिफ़ॉल्ट बनावे के बा?",
+    current: "खाली एह बातचीत खातिर",
+    default: "डिफ़ॉल्ट भाषा बनाईं",
+    cancel: "रद्द करीं",
+    saved: "रउआ के भाषा के पसंद सेव हो गइल।"
+  }
+};
+
+function getLanguageSwitchText(language) {
+  return LANGUAGE_SWITCH_TEXT[language] ||
+    LANGUAGE_SWITCH_TEXT.en;
+}
+
+function detectRequestedLanguage(text) {
+  const value = String(text).toLowerCase().trim();
+
+  const patterns = [
+    { code: "en", words: ["english", "in english", "speak english"] },
+    { code: "hi", words: ["hindi", "in hindi", "speak hindi", "हिंदी", "हिन्दी"] },
+    { code: "bho", words: ["bhojpuri", "in bhojpuri", "भोजपुरी"] },
+    { code: "ur", words: ["urdu", "in urdu", "اردو"] },
+    { code: "bn", words: ["bengali", "bangla", "in bengali", "বাংলা", "বাঙালি"] },
+    { code: "ta", words: ["tamil", "in tamil", "தமிழ்"] },
+    { code: "te", words: ["telugu", "in telugu", "తెలుగు"] },
+    { code: "mr", words: ["marathi", "in marathi", "मराठी"] },
+    { code: "pa", words: ["punjabi", "in punjabi", "ਪੰਜਾਬੀ"] },
+    { code: "gu", words: ["gujarati", "in gujarati", "ગુજરાતી"] },
+    { code: "kn", words: ["kannada", "in kannada", "ಕನ್ನಡ"] },
+    { code: "ml", words: ["malayalam", "in malayalam", "മലയാളം"] },
+    { code: "or", words: ["odia", "oriya", "in odia", "ଓଡ଼ିଆ"] },
+    { code: "as", words: ["assamese", "in assamese", "অসমীয়া"] }
+  ];
+
+  for (const item of patterns) {
+    if (item.words.some(word => value.includes(word))) {
+      return item.code;
+    }
+  }
+
+  return null;
+}
+
+let pendingLanguage = null;
+
+function requestLanguageChange(language) {
+  if (!LANGUAGE_NAMES[language]) {
+    return;
+  }
+
+  if (language === settings.language) {
+    return;
+  }
+
+  pendingLanguage = language;
+
+  const labels = getLanguageSwitchText(settings.language);
+
+  const useConversation = confirm(
+    labels.ask +
+    "\n\nOK = " + labels.current +
+    "\nCancel = " + labels.default
+  );
+
+  if (useConversation) {
+    const chat = getCurrentChat();
+
+    if (chat) {
+      chat.language = language;
+      chat.updatedAt = new Date().toISOString();
+      saveChats();
+    }
+
+    applyConversationLanguage(language);
+  } else {
+    const shouldSave = confirm(
+      "Save " + getLanguageName(language) +
+      " as your default language?"
+    );
+
+    if (shouldSave) {
+      settings.language = language;
+      saveSettings();
+      applyLanguageSettings();
+
+      const chat = getCurrentChat();
+
+      if (chat) {
+        chat.language = language;
+        saveChats();
+      }
+
+      applyConversationLanguage(language);
+    }
+  }
+
+  pendingLanguage = null;
+}
+
+function applyConversationLanguage(language) {
+  const chat = getCurrentChat();
+
+  if (chat) {
+    chat.language = language;
+    saveChats();
+  }
+
+  const message = {
+    en: "Language changed to English.",
+    hi: "भाषा हिंदी में बदल दी गई है।",
+    bho: "भाषा भोजपुरी में बदल दिहल गइल।"
+  };
+
+  addMessage(
+    "assistant",
+    message[language] ||
+      "Language changed to " + getLanguageName(language) + "."
+  );
+}
+
+/*
+  Integration note:
+  Call detectRequestedLanguage(userText) after the user submits
+  a message, and call requestLanguageChange(code) when a
+  language-change request is recognized.
+
+  This part does not itself send a request to the AI server.
+*/
+/* PART 4: AI Chat API */
+
+let isSending = false;
+
+async function requestSaarthiAI(userText, language) {
+  const response = await fetch(
+    SAARTHI_CONFIG.workerUrl +
+      SAARTHI_CONFIG.chatEndpoint,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: userText,
+        language: getLanguageName(language)
+      })
+    }
+  );
+
+  if (!response.ok) {
+    if (response.status === 429) {
+      throw new Error(
+        "Too many requests. Please wait and try again."
+      );
+    }
+
+    if (response.status === 503) {
+      throw new Error(
+        "The AI service is temporarily unavailable."
+      );
+    }
+
+    throw new Error(
+      "The AI request failed. Please try again."
+    );
+  }
+
+  const data = await response.json();
+
+  // Accept common response formats without exposing server details.
+  const answer =
+    data.reply ??
+    data.response ??
+    data.answer ??
+    data.message ??
+    data.choices?.[0]?.message?.content;
+
+  if (typeof answer !== "string" || !answer.trim()) {
+    throw new Error(
+      "The AI returned an empty or unsupported response."
+    );
+  }
+
+  return answer.trim();
+}
+
+async function sendMessage() {
+  if (isSending) return;
+
+  const input = document.getElementById("userInput");
+  const sendButton = document.getElementById("sendBtn");
+
+  const userText = input.value.trim();
+
+  if (!userText) return;
+
+  isSending = true;
+  sendButton.disabled = true;
+  input.disabled = true;
+
+  try {
+    let chat = getCurrentChat();
+
+    if (!chat) {
+      chat = createNewChat();
+    }
+
+    // Detect a possible language-switch request.
+    const requestedLanguage =
+      detectRequestedLanguage(userText);
+
+    if (
+      requestedLanguage &&
+      requestedLanguage !==
+        (chat.language || settings.language)
+    ) {
+      addMessage("user", userText);
+      input.value = "";
+
+      requestLanguageChange(requestedLanguage);
+      return;
+    }
+
+    const conversationLanguage =
+      chat.language || settings.language || "en";
+
+    addMessage("user", userText);
+    input.value = "";
+
+    setStatus("Saarthi AI is thinking...");
+
+    const answer = await requestSaarthiAI(
+      userText,
+      conversationLanguage
+    );
+
+    addMessage("assistant", answer);
+
+    setStatus("Ready");
+
+    if (settings.voiceReplies) {
+      speakAnswer(answer, conversationLanguage);
+    }
+  } catch (error) {
+    console.error("Chat request failed:", error);
+
+    addMessage(
+      "assistant",
+      "Sorry, I couldn't complete that request. " +
+      "Please check your connection and try again."
+    );
+
+    setStatus("Request failed");
+  } finally {
+    isSending = false;
+    sendButton.disabled = false;
+    input.disabled = false;
+    input.focus();
+  }
+}
+
+document.getElementById("sendBtn").addEventListener(
+  "click",
+  sendMessage
+);
+
+document.getElementById("userInput").addEventListener(
+  "keydown",
+  event => {
+    if (
+      event.key === "Enter"
+      /* PART 5: Voice Replies and Microphone */
+
+/**
+ * Convert language codes into speech-recognition locale codes.
+ */
+const SPEECH_LOCALES = {
+  en: "en-IN",
+  hi: "hi-IN",
+  bho: "hi-IN",
+  ur: "ur-IN",
+  bn: "bn-IN",
+  ta: "ta-IN",
+  te: "te-IN",
+  mr: "mr-IN",
+  pa: "pa-IN",
+  gu: "gu-IN",
+  kn: "kn-IN",
+  ml: "ml-IN",
+  or: "or-IN",
+  as: "as-IN"
+};
+
+/**
+ * Speak the AI's answer aloud.
+ */
+function speakAnswer(text, language) {
+  if (!settings.voiceReplies) return;
+
+  if (!("speechSynthesis" in window)) {
+    setStatus("Speech output is not supported by this browser.");
+    return;
+  }
+
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+
+  utterance.lang =
+    SPEECH_LOCALES[language] || "en-IN";
+
+  utterance.rate = 1;
+  utterance.pitch = 1;
+
+  utterance.onstart = () => {
+    setStatus("Speaking...");
+  };
+
+  utterance.onend = () => {
+    setStatus("Ready");
+  };
+
+  utterance.onerror = () => {
+    setStatus("Speech playback failed");
+  };
+
+  window.speechSynthesis.speak(utterance);
+}
+
+/**
+ * Stop current speech playback.
+ */
+function stopSpeaking() {
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
+
+  setStatus("Speech stopped");
+}
+
+/**
+ * Speech recognition setup.
+ */
+const SpeechRecognitionAPI =
+  window.SpeechRecognition ||
+  window.webkitSpeechRecognition;
+
+let recognition = null;
+let isListening = false;
+
+function startMicrophone() {
+  if (!SpeechRecognitionAPI) {
+    alert(
+      "Voice input is not supported in this browser. " +
+      "Please type your message instead."
+    );
+    return;
+  }
+
+  if (isListening && recognition) {
+    recognition.stop();
+    return;
+  }
+
+  recognition = new SpeechRecognitionAPI();
+
+  const chat = getCurrentChat();
+
+  const language =
+    chat?.language || settings.language || "en";
+
+  recognition.lang =
+    SPEECH_LOCALES[language] || "en-IN";
+
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  let finalTranscript = "";
+
+  recognition.onstart = () => {
+    isListening = true;
+
+    document.getElementById("micBtn").textContent = "⏹";
+
+    setStatus("Listening...");
+  };
+
+  recognition.onresult = event => {
+    let interimTranscript = "";
+
+    for (
+      let i = event.resultIndex;
+      i < event.results.length;
+      i++
+    ) {
+      const transcript = event.results[i][0].transcript;
+
+      if (event.results[i].isFinal) {
+        finalTranscript += transcript;
+      } else {
+        interimTranscript += transcript;
+      }
+    }
+
+    document.getElementById("userInput").value =
+      (finalTranscript + " " + interimTranscript).trim();
+  };
+
+  recognition.onerror = event => {
+    console.warn("Speech recognition error:", event.error);
+
+    if (event.error === "not-allowed") {
+      setStatus("Microphone permission was denied");
+    } else {
+      setStatus("Voice input failed. Please try typing.");
+    }
+  };
+
+  recognition.onend = () => {
+    isListening = false;
+
+    document.getElementById("micBtn").textContent = "🎙";
+
+    setStatus("Ready");
+
+    const input = document.getElementById("userInput");
+
+    if (finalTranscript.trim()) {
+      input.value = finalTranscript.trim();
+      input.focus();
+    }
+  };
+
+  try {
+    recognition.start();
+  } catch (error) {
+    console.error("Could not start microphone:", error);
+    isListening = false;
+    setStatus("Could not start microphone");
+  }
+}
+
+document.getElementById("micBtn").addEventListener(
+  "click",
+  startMicrophone
+);
+
+/**
+ * Stop speech playback when the user begins typing.
+ */
+document.getElementById("userInput").addEventListener(
+  "input",
+  () => {
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+  }
+);
+
+/**
+ * Stop listening when the page is hidden.
+ */
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && recognition && isListening) {
+    recognition.stop();
+  }
+});
+  /* PART 5: Voice Replies and Microphone */
+
+/**
+ * Convert language codes into speech-recognition locale codes.
+ */
+const SPEECH_LOCALES = {
+  en: "en-IN",
+  hi: "hi-IN",
+  bho: "hi-IN",
+  ur: "ur-IN",
+  bn: "bn-IN",
+  ta: "ta-IN",
+  te: "te-IN",
+  mr: "mr-IN",
+  pa: "pa-IN",
+  gu: "gu-IN",
+  kn: "kn-IN",
+  ml: "ml-IN",
+  or: "or-IN",
+  as: "as-IN"
+};
+
+/**
+ * Speak the AI's answer aloud.
+ */
+function speakAnswer(text, language) {
+  if (!settings.voiceReplies) return;
+
+  if (!("speechSynthesis" in window)) {
+    setStatus("Speech output is not supported by this browser.");
+    return;
+  }
+
+  window.speechSynthesis.cancel();
+
+  const utterance = new SpeechSynthesisUtterance(text);
+
+  utterance.lang =
+    SPEECH_LOCALES[language] || "en-IN";
+
+  utterance.rate = 1;
+  utterance.pitch = 1;
+
+  utterance.onstart = () => {
+    setStatus("Speaking...");
+  };
+
+  utterance.onend = () => {
+    setStatus("Ready");
+  };
+
+  utterance.onerror = () => {
+    setStatus("Speech playback failed");
+  };
+
+  window.speechSynthesis.speak(utterance);
+}
+
+/**
+ * Stop current speech playback.
+ */
+function stopSpeaking() {
+  if ("speechSynthesis" in window) {
+    window.speechSynthesis.cancel();
+  }
+
+  setStatus("Speech stopped");
+}
+
+/**
+ * Speech recognition setup.
+ */
+const SpeechRecognitionAPI =
+  window.SpeechRecognition ||
+  window.webkitSpeechRecognition;
+
+let recognition = null;
+let isListening = false;
+
+function startMicrophone() {
+  if (!SpeechRecognitionAPI) {
+    alert(
+      "Voice input is not supported in this browser. " +
+      "Please type your message instead."
+    );
+    return;
+  }
+
+  if (isListening && recognition) {
+    recognition.stop();
+    return;
+  }
+
+  recognition = new SpeechRecognitionAPI();
+
+  const chat = getCurrentChat();
+
+  const language =
+    chat?.language || settings.language || "en";
+
+  recognition.lang =
+    SPEECH_LOCALES[language] || "en-IN";
+
+  recognition.continuous = false;
+  recognition.interimResults = true;
+  recognition.maxAlternatives = 1;
+
+  let finalTranscript = "";
+
+  recognition.onstart = () => {
+    isListening = true;
+
+    document.getElementById("micBtn").textContent = "⏹";
+
+    setStatus("Listening...");
+  };
+
+  recognition.onresult = event => {
+    let interimTranscript = "";
+
+    for (
+      let i = event.resultIndex;
+      i < event.results.length;
+      i++
+    ) {
+      const transcript = event.results[i][0].transcript;
+
+      if (event.results[i].isFinal) {
+        finalTranscript += transcript;
+      } else {
+        interimTranscript += transcript;
+      }
+    }
+
+    document.getElementById("userInput").value =
+      (finalTranscript + " " + interimTranscript).trim();
+  };
+
+  recognition.onerror = event => {
+    console.warn("Speech recognition error:", event.error);
+
+    if (event.error === "not-allowed") {
+      setStatus("Microphone permission was denied");
+    } else {
+      setStatus("Voice input failed. Please try typing.");
+    }
+  };
+
+  recognition.onend = () => {
+    isListening = false;
+
+    document.getElementById("micBtn").textContent = "🎙";
+
+    setStatus("Ready");
+
+    const input = document.getElementById("userInput");
+
+    if (finalTranscript.trim()) {
+      input.value = finalTranscript.trim();
+      input.focus();
+    }
+  };
+
+  try {
+    recognition.start();
+  } catch (error) {
+    console.error("Could not start microphone:", error);
+    isListening = false;
+    setStatus("Could not start microphone");
+  }
+}
+
+document.getElementById("micBtn").addEventListener(
+  "click",
+  startMicrophone
+);
+
+/**
+ * Stop speech playback when the user begins typing.
+ */
+document.getElementById("userInput").addEventListener(
+  "input",
+  () => {
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
+  }
+);
+
+/**
+ * Stop listening when the page is hidden.
+ */
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden && recognition && isListening) {
+    recognition.stop();
+  }
+});
+  /* PART 6: File Attachment and Image Upload */
+
+let selectedFile = null;
+
+const fileInput = document.getElementById("fileInput");
+const attachBtn = document.getElementById("attachBtn");
+const userInput = document.getElementById("userInput");
+
+attachBtn.addEventListener("click", () => {
+  fileInput.click();
+});
+
+fileInput.addEventListener("change", () => {
+  const file = fileInput.files?.[0];
+
+  if (!file) return;
+
+  // Limit browser-side selection to 10 MB.
+  // The server must independently enforce its own limits.
+  const maxBytes = 10 * 1024 * 1024;
+
+  if (file.size > maxBytes) {
+    alert("The selected file is larger than 10 MB.");
+    fileInput.value = "";
+    return;
+  }
+
+  selectedFile = file;
+
+  const previousName = document.getElementById("selectedFileName");
+
+  if (previousName) {
+    previousName.remove();
+  }
+
+  const label = document.createElement("div");
+  label.id = "selectedFileName";
+  label.className = "status";
+  label.textContent = "Attached: " + file.name;
+
+  document.querySelector(".composer-wrap").prepend(label);
+});
+
+function clearSelectedFile() {
+  selectedFile = null;
+  fileInput.value = "";
+
+  const label = document.getElementById("selectedFileName");
+
+  if (label) {
+    label.remove();
+  }
+}
+
+function fileToBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = reader.result;
+
+      if (typeof result !== "string") {
+        reject(new Error("Could not read the selected file."));
+        return;
+      }
+
+      const commaIndex = result.indexOf(",");
+
+      if (commaIndex === -1) {
+        reject(new Error("Invalid file encoding."));
+        return;
+      }
+
+      resolve(result.slice(commaIndex + 1));
+    };
+
+    reader.onerror = () => {
+      reject(new Error("Failed to read the selected file."));
+    };
+
+    reader.readAsDataURL(file);
+  });
+}
+
+async function requestImageAnswer(file, question, language) {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Please select an image file.");
+  }
+
+  const base64 = await fileToBase64(file);
+
+  const response = await fetch(
+    SAARTHI_CONFIG.workerUrl +
+      SAARTHI_CONFIG.visionEndpoint,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        image: base64,
+        mimeType: file.type,
+        question: question ||
+          "Describe this image in " +
+          getLanguageName(language) + ".",
+        language: getLanguageName(language)
+      })
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(
+      "The image request failed. Please try again."
+    );
+  }
+
+  const data = await response.json();
+
+  const answer =
+    data.reply ??
+    data.response ??
+    data.answer ??
+    data.choices?.[0]?.message?.content;
+
+  if (typeof answer !== "string" || !answer.trim()) {
+    throw new Error("The AI returned no image answer.");
+  }
+
+  return answer.trim();
+}
+
+async function requestTextFileContents(file) {
+  const name = file.name.toLowerCase();
+
+  if (
+    name.endsWith(".txt") ||
+    name.endsWith(".md")
+  ) {
+    return await file.text();
+  }
+
+  throw new Error(
+    "Only TXT and MD text files are supported by this reader. " +
+    "PDF and DOCX require their document readers to be integrated."
+  );
+}
+  /* PART 7: Send Messages With Attachments */
+
+async function sendMessageWithAttachment() {
+  if (isSending) return;
+
+  const input = document.getElementById("userInput");
+  const sendButton = document.getElementById("sendBtn");
+
+  const question = input.value.trim();
+  const file = selectedFile;
+
+  if (!question && !file) return;
+
+  isSending = true;
+  sendButton.disabled = true;
+  input.disabled = true;
+
+  try {
+    let chat = getCurrentChat();
+
+    if (!chat) {
+      chat = createNewChat();
+    }
+
+    const language = chat.language || settings.language;
+
+    let answer;
+
+    if (file && file.type.startsWith("image/")) {
+      addMessage(
+        "user",
+        (question || "Please describe this image.") +
+        "\n[Attached image: " + file.name + "]"
+      );
+
+      setStatus("Analyzing image...");
+
+      answer = await requestImageAnswer(
+        file,
+        question,
+        language
+      );
+    } else if (file) {
+      const name = file.name.toLowerCase();
+
+      if (
+        name.endsWith(".txt") ||
+        name.endsWith(".md")
+      ) {
+        const contents = await requestTextFileContents(file);
+
+        addMessage(
+          "user",
+          (question || "Please review this file.") +
+          "\n[Attached file: " + file.name + "]"
+        );
+
+        setStatus("Reading document...");
+
+        answer = await requestSaarthiAI(
+          "User question: " +
+          (question || "Summarize this document.") +
+          "\n\nDocument contents:\n" +
+          contents,
+          language
+        );
+      } else {
+        throw new Error(
+          "This file type is not yet connected. " +
+          "Please use an image, TXT, or MD file."
+        );
+      }
+    } else {
+      addMessage("user", question);
+
+      setStatus("Saarthi AI is thinking...");
+
+      answer = await requestSaarthiAI(
+        question,
+        language
+      );
+    }
+
+    addMessage("assistant", answer);
+
+    input.value = "";
+    clearSelectedFile();
+
+    setStatus("Ready");
+
+    if (settings.voiceReplies) {
+      speakAnswer(answer, language);
+    }
+  } catch (error) {
+    console.error("Message submission failed:", error);
+
+    addMessage(
+      "assistant",
+      "Sorry, I couldn't process that message or file. " +
+      "Please check the file type and try again."
+    );
+
+    setStatus("Request failed");
+  } finally {
+    isSending = false;
+    sendButton.disabled = false;
+    input.disabled = false;
+    input.focus();
+  }
+}
+
+/*
+  Integration requirement:
+  When the final app is assembled, the Send button must call
+  sendMessageWithAttachment(), not sendMessage().
+*/
+  /* PART 8: Settings, Privacy and Data Management */
+
+function updateVoicePreference(enabled) {
+  settings.voiceReplies = Boolean(enabled);
+  saveSettings();
+
+  if (!settings.voiceReplies) {
+    stopSpeaking();
+  }
+}
+
+function updateTheme(theme) {
+  if (theme !== "light" && theme !== "dark") {
+    return;
+  }
+
+  settings.theme = theme;
+  saveSettings();
+  applyTheme();
+}
+
+function updateDefaultLanguage(language) {
+  if (!LANGUAGE_NAMES[language]) {
+    return false;
+  }
+
+  settings.language = language;
+
+  const saved = saveSettings();
+
+  applyLanguageSettings();
+
+  return saved;
+}
+
+function exportChatHistory() {
+  const json = JSON.stringify(chats, null, 2);
+
+  const blob = new Blob([json], {
+    type: "application/json"
+  });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.download = "saarthi-ai-chat-history.json";
+
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+
+  setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 1000);
+}
+
+function deleteLocalChatHistory() {
+  if (
+    !confirm(
+      "Delete all chat history saved in this browser? " +
+      "This action cannot be undone."
+    )
+  ) {
+    return false;
+  }
+
+  chats = [];
+  currentChatId = null;
+
+  try {
+    localStorage.removeItem(STORAGE_KEYS.chats);
+    localStorage.removeItem(STORAGE_KEYS.currentChat);
+  } catch (error) {
+    console.error("Could not clear local history:", error);
+    return false;
+  }
+
+  createNewChat();
+  setStatus("Local chat history cleared");
+
+  return true;
+}
+
+/*
+ * Privacy notes:
+ *
+ * 1. This code manages local browser storage only.
+ * 2. It does not delete server-side records.
+ * 3. It does not guarantee that the browser, device, or network
+ *    has no copies of the data.
+ * 4. Server-side deletion must be implemented separately.
+ * 5. API secrets must never be placed in this HTML file.
+ */
+  
