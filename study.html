@@ -2,13 +2,10 @@
 <html lang="hi">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
 
-  <meta
-    name="viewport"
-    content="width=device-width, initial-scale=1.0"
-  >
-
-  <title>सारथी AI - Study</title>
+  <title>सारथी AI — Study</title>
 
   <style>
     * {
@@ -17,90 +14,65 @@
 
     body {
       margin: 0;
-      font-family:
-        system-ui,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
-
+      font-family: system-ui, sans-serif;
       background: #f5f7fb;
       color: #172033;
     }
 
-    .header {
-      background: #ffffff;
-      border-bottom: 1px solid #e5e7eb;
-      padding: 14px 16px;
-
+    header {
       position: sticky;
       top: 0;
-      z-index: 10;
+      z-index: 5;
+      background: #fff;
+      border-bottom: 1px solid #e5e7eb;
+      padding: 14px;
+    }
+
+    .header-inner,
+    main {
+      width: min(900px, 100%);
+      margin: auto;
     }
 
     .header-inner {
-      max-width: 900px;
-      margin: auto;
-
       display: flex;
-      align-items: center;
       justify-content: space-between;
+      align-items: center;
       gap: 10px;
     }
 
     .brand {
-      font-size: 21px;
+      font-size: 20px;
       font-weight: 800;
     }
 
-    .back-btn {
-      border: 0;
-      background: #eef2ff;
-      color: #3730a3;
-      padding: 9px 13px;
-      border-radius: 10px;
-      cursor: pointer;
-      font-weight: 700;
-    }
-
-    .container {
-      max-width: 900px;
-      margin: auto;
+    main {
       padding: 18px 14px 40px;
-    }
-
-    .hero {
-      background: white;
-      border-radius: 18px;
-      padding: 20px;
-      margin-bottom: 16px;
-      box-shadow:
-        0 5px 20px rgba(0,0,0,.05);
-    }
-
-    .hero h1 {
-      margin: 0 0 8px;
-      font-size: 25px;
-    }
-
-    .hero p {
-      margin: 0;
-      color: #667085;
-      line-height: 1.6;
     }
 
     .card {
       background: white;
-      border-radius: 18px;
+      border-radius: 16px;
       padding: 18px;
       margin-bottom: 16px;
-      box-shadow:
-        0 5px 20px rgba(0,0,0,.05);
+      box-shadow: 0 4px 18px rgba(0, 0, 0, .05);
     }
 
-    .card h2 {
-      margin-top: 0;
+    h1 {
+      font-size: 24px;
+    }
+
+    h2 {
       font-size: 19px;
+      margin-top: 0;
+    }
+
+    p {
+      line-height: 1.7;
+    }
+
+    .muted {
+      color: #667085;
     }
 
     label {
@@ -111,25 +83,46 @@
 
     select,
     textarea,
-    input {
-      width: 100%;
-      border: 1px solid #d7dce5;
-      border-radius: 12px;
-      padding: 12px;
-      font-size: 16px;
-      outline: none;
-      background: white;
+    button {
+      font: inherit;
     }
 
-    select:focus,
-    textarea:focus,
-    input:focus {
-      border-color: #6366f1;
+    select,
+    textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #d7dce5;
+      border-radius: 10px;
+      background: #fff;
+      color: #172033;
     }
 
     textarea {
       min-height: 130px;
       resize: vertical;
+    }
+
+    button {
+      border: 0;
+      border-radius: 10px;
+      padding: 11px 15px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
+    .primary {
+      background: #4f46e5;
+      color: #fff;
+    }
+
+    .secondary {
+      background: #eef2ff;
+      color: #3730a3;
     }
 
     .buttons {
@@ -139,62 +132,22 @@
       margin-top: 14px;
     }
 
-    button {
-      border: 0;
-      border-radius: 12px;
-      padding: 12px 16px;
-      font-size: 15px;
-      font-weight: 750;
-      cursor: pointer;
-    }
-
-    .primary {
-      background: #4f46e5;
-      color: white;
-    }
-
-    .secondary {
-      background: #eef2ff;
-      color: #3730a3;
-    }
-
-    .success {
-      background: #e8f7ee;
-      color: #187a45;
-    }
-
-    .danger {
-      background: #feecec;
-      color: #b42318;
-    }
-
-    button:disabled {
-      opacity: .55;
-      cursor: not-allowed;
-    }
-
     .status {
       min-height: 24px;
       margin-top: 12px;
-      color: #667085;
-      font-size: 14px;
+      color: #475467;
+      overflow-wrap: anywhere;
     }
 
     .answer {
       background: #f8fafc;
       border: 1px solid #e5e7eb;
-      border-radius: 14px;
-      padding: 15px;
-      line-height: 1.75;
+      border-radius: 12px;
+      padding: 14px;
+      line-height: 1.8;
       white-space: pre-wrap;
+      overflow-wrap: anywhere;
       min-height: 70px;
-    }
-
-    .quiz-question {
-      font-size: 19px;
-      font-weight: 750;
-      line-height: 1.6;
-      margin-bottom: 14px;
     }
 
     .quiz-options {
@@ -203,15 +156,10 @@
     }
 
     .option {
-      text-align: left;
       width: 100%;
+      text-align: left;
       background: #f8fafc;
-      border: 1px solid #dfe3ea;
-      color: #172033;
-    }
-
-    .option:hover {
-      background: #eef2ff;
+      border: 1px solid #d7dce5;
     }
 
     .option.correct {
@@ -224,1054 +172,386 @@
       border-color: #ef4444;
     }
 
-    .score {
-      font-size: 18px;
-      font-weight: 800;
-      margin-bottom: 12px;
-    }
-
-    .small {
-      font-size: 13px;
-      color: #667085;
-      line-height: 1.6;
-    }
-
     .hidden {
       display: none;
     }
 
-    @media (max-width: 600px) {
-      .hero h1 {
-        font-size: 22px;
-      }
-
+    @media (max-width: 480px) {
       .buttons button {
         flex: 1;
+      }
+
+      h1 {
+        font-size: 22px;
       }
     }
   </style>
 </head>
 
 <body>
-
-  <!-- =====================================================
-       HEADER
-  ====================================================== -->
-
-  <header class="header">
-
+  <header>
     <div class="header-inner">
-
-      <div class="brand">
-        📚 सारथी AI Study
-      </div>
-
-      <button
-        class="back-btn"
-        onclick="goHome()"
-      >
+      <div class="brand">📚 सारथी AI Study</div>
+      <button class="secondary" id="homeBtn" type="button">
         ← मुख्य पेज
       </button>
-
     </div>
-
   </header>
 
-
-  <!-- =====================================================
-       MAIN
-  ====================================================== -->
-
-  <main class="container">
-
-
-    <!-- HERO -->
-
-    <section class="hero">
-
-      <h1>
-        पढ़ाई में सारथी AI
-      </h1>
-
-      <p>
-        विषय चुनो, अपना सवाल लिखो और AI से
-        आसान हिंदी में समझो।
+  <main>
+    <section class="card">
+      <h1>पढ़ाई में सारथी AI</h1>
+      <p class="muted">
+        अपना विषय चुनो, प्रश्न लिखो और सरल हिंदी में उत्तर प्राप्त करो।
       </p>
-
     </section>
-
-
-    <!-- ===================================================
-         AI STUDY
-    ==================================================== -->
 
     <section class="card">
+      <h2>🤖 AI से पढ़ाई</h2>
 
-      <h2>
-        🤖 AI से पढ़ाई
-      </h2>
+      <form id="studyForm">
+        <label for="subject">विषय चुनें</label>
 
-      <label for="subject">
-        विषय
-      </label>
+        <select id="subject">
+          <option>सामान्य अध्ययन</option>
+          <option>दर्शनशास्त्र</option>
+          <option>इतिहास</option>
+          <option>होम साइंस</option>
+          <option>राजनीति विज्ञान</option>
+          <option>मनोविज्ञान</option>
+          <option>हिंदी</option>
+          <option>अंग्रेज़ी</option>
+          <option>विज्ञान</option>
+          <option>गणित</option>
+        </select>
 
-      <select id="subject">
+        <label for="question">अपना प्रश्न लिखें</label>
 
-        <option value="सामान्य अध्ययन">
-          सामान्य अध्ययन
-        </option>
+        <textarea
+          id="question"
+          maxlength="8000"
+          required
+          placeholder="उदाहरण: दर्शनशास्त्र क्या है? परीक्षा के लिए समझाइए।"
+        ></textarea>
 
-        <option value="दर्शनशास्त्र">
-          दर्शनशास्त्र
-        </option>
+        <div class="buttons">
+          <button class="primary" id="askBtn" type="submit">
+            🤖 उत्तर बताओ
+          </button>
 
-        <option value="इतिहास">
-          इतिहास
-        </option>
+          <button class="secondary" id="clearBtn" type="button">
+            साफ करें
+          </button>
+        </div>
+      </form>
 
-        <option value="होम साइंस">
-          होम साइंस
-        </option>
-
-        <option value="राजनीति विज्ञान">
-          राजनीति विज्ञान
-        </option>
-
-        <option value="मनोविज्ञान">
-          मनोविज्ञान
-        </option>
-
-        <option value="हिंदी">
-          हिंदी
-        </option>
-
-        <option value="अंग्रेज़ी">
-          अंग्रेज़ी
-        </option>
-
-        <option value="विज्ञान">
-          विज्ञान
-        </option>
-
-        <option value="गणित">
-          गणित
-        </option>
-
-      </select>
-
-
-      <label for="question">
-        अपना प्रश्न
-      </label>
-
-      <textarea
-        id="question"
-        placeholder="उदाहरण: दर्शनशास्त्र क्या है? परीक्षा के लिए समझाइए।"
-      ></textarea>
-
-
-      <div class="buttons">
-
-        <button
-          class="primary"
-          id="askBtn"
-          onclick="askAI()"
-        >
-          🤖 उत्तर बताओ
-        </button>
-
-        <button
-          class="secondary"
-          onclick="clearQuestion()"
-        >
-          साफ करें
-        </button>
-
-      </div>
-
-
-      <div
-        class="status"
-        id="status"
-      ></div>
-
+      <div id="status" class="status" role="status" aria-live="polite"></div>
     </section>
-
-
-    <!-- ===================================================
-         ANSWER
-    ==================================================== -->
-
-    <section
-      class="card"
-      id="answerCard"
-    >
-
-      <h2>
-        📝 उत्तर
-      </h2>
-
-      <div
-        class="answer"
-        id="answer"
-      >
-        अपना प्रश्न पूछने के बाद उत्तर यहाँ दिखाई देगा।
-      </div>
-
-    </section>
-
-
-    <!-- ===================================================
-         QUIZ
-    ==================================================== -->
 
     <section class="card">
+      <h2>📝 उत्तर</h2>
 
-      <h2>
-        🧠 Quiz
-      </h2>
+      <div id="answer" class="answer" aria-live="polite">प्रश्न पूछने के बाद उत्तर यहाँ दिखाई देगा।</div>
+    </section>
 
-      <p class="small">
-        विषय चुनकर अभ्यास प्रश्न शुरू करो।
-      </p>
+    <section class="card">
+      <h2>🧠 Quiz अभ्यास</h2>
 
-
-      <label for="quizSubject">
-        Quiz विषय
-      </label>
+      <label for="quizSubject">विषय चुनें</label>
 
       <select id="quizSubject">
-
-        <option value="सामान्य अध्ययन">
-          सामान्य अध्ययन
-        </option>
-
-        <option value="इतिहास">
-          इतिहास
-        </option>
-
-        <option value="दर्शनशास्त्र">
-          दर्शनशास्त्र
-        </option>
-
-        <option value="होम साइंस">
-          होम साइंस
-        </option>
-
-        <option value="विज्ञान">
-          विज्ञान
-        </option>
-
-        <option value="गणित">
-          गणित
-        </option>
-
+        <option>सामान्य अध्ययन</option>
+        <option>इतिहास</option>
+        <option>दर्शनशास्त्र</option>
+        <option>होम साइंस</option>
+        <option>विज्ञान</option>
+        <option>गणित</option>
       </select>
 
-
       <div class="buttons">
-
-        <button
-          class="success"
-          onclick="startQuiz()"
-        >
+        <button class="primary" id="startQuizBtn" type="button">
           ▶ Quiz शुरू करें
         </button>
-
       </div>
-
     </section>
 
+    <section class="card hidden" id="quizCard">
+      <h2 id="quizTitle">प्रश्न</h2>
+      <p id="score">अंक: 0</p>
 
-    <!-- ===================================================
-         QUIZ AREA
-    ==================================================== -->
-
-    <section
-      class="card hidden"
-      id="quizCard"
-    >
-
-      <div
-        class="score"
-        id="score"
-      >
-        अंक: 0
-      </div>
-
-      <div
-        class="quiz-question"
-        id="quizQuestion"
-      ></div>
-
-      <div
-        class="quiz-options"
-        id="quizOptions"
-      ></div>
-
-      <div
-        class="status"
-        id="quizStatus"
-      ></div>
+      <div id="quizOptions" class="quiz-options"></div>
+      <div id="quizStatus" class="status" aria-live="polite"></div>
 
       <div class="buttons">
-
-        <button
-          class="primary"
-          id="nextBtn"
-          onclick="nextQuestion()"
-          disabled
-        >
+        <button class="primary" id="nextBtn" type="button" disabled>
           अगला प्रश्न →
         </button>
-
       </div>
-
     </section>
-
-
   </main>
 
-
   <script>
+    "use strict";
 
-    // =======================================================
-    // WORKER URL
-    // =======================================================
-
+    // केवल अपने Cloudflare Worker का URL इस्तेमाल करें।
+    // API Key इस HTML में कभी न डालें।
     const API_BASE =
       "https://sarathi-ai.mjmanjumanjeet0.workers.dev";
 
+    const $ = id => document.getElementById(id);
 
-    // =======================================================
-    // HOME
-    // =======================================================
+    $("homeBtn").addEventListener("click", () => {
+      window.location.href = "./index.html";
+    });
 
-    function goHome() {
+    $("clearBtn").addEventListener("click", () => {
+      $("question").value = "";
+      $("answer").textContent =
+        "प्रश्न पूछने के बाद उत्तर यहाँ दिखाई देगा।";
+      $("status").textContent = "";
+    });
 
-      window.location.href =
-        "index.html";
+    $("studyForm").addEventListener("submit", async event => {
+      event.preventDefault();
 
-    }
-
-
-    // =======================================================
-    // AI STUDY
-    // =======================================================
-
-    async function askAI() {
-
-      const subject =
-        document
-          .getElementById(
-            "subject"
-          )
-          .value;
-
-      const question =
-        document
-          .getElementById(
-            "question"
-          )
-          .value
-          .trim();
-
-      const answer =
-        document
-          .getElementById(
-            "answer"
-          );
-
-      const status =
-        document
-          .getElementById(
-            "status"
-          );
-
-      const button =
-        document
-          .getElementById(
-            "askBtn"
-          );
-
+      const question = $("question").value.trim();
+      const subject = $("subject").value;
 
       if (!question) {
-
-        status.textContent =
-          "कृपया पहले प्रश्न लिखें।";
-
+        $("status").textContent = "कृपया अपना प्रश्न लिखें।";
         return;
-
       }
 
+      const prompt =
+        "विषय: " + subject +
+        "\nप्रश्न: " + question +
+        "\nसरल हिंदी में सटीक उत्तर दो।" +
+        " परीक्षा के प्रश्न में जरूरत के अनुसार भूमिका, मुख्य बिंदु और निष्कर्ष दो।" +
+        " यदि किसी तथ्य के बारे में निश्चित नहीं हो, तो स्पष्ट बताओ।";
 
-      button.disabled =
-        true;
+      const button = $("askBtn");
+      const controller = new AbortController();
 
-      status.textContent =
-        "🤖 सारथी उत्तर तैयार कर रहा है...";
+      button.disabled = true;
+      $("status").textContent = "सारथी उत्तर तैयार कर रहा है...";
+      $("answer").textContent = "कृपया प्रतीक्षा करें...";
 
-      answer.textContent =
-        "कृपया प्रतीक्षा करें...";
-
-
-      const prompt = `
-विषय: ${subject}
-
-प्रश्न:
-${question}
-
-इस प्रश्न का उत्तर सरल हिंदी में दो।
-
-यदि यह परीक्षा का प्रश्न है तो:
-- भूमिका
-- मुख्य बिंदु
-- आवश्यक उदाहरण
-- निष्कर्ष
-
-के साथ उत्तर दो।
-
-उत्तर प्रश्न के अनुसार ही रखो।
-`;
-
+      const timeout = setTimeout(() => controller.abort(), 45000);
 
       try {
+        const response = await fetch(API_BASE + "/api/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            message: prompt,
+            history: []
+          }),
+          signal: controller.signal,
+          credentials: "omit",
+          cache: "no-store",
+          redirect: "error"
+        });
 
-        const response =
-          await fetch(
-            API_BASE +
-              "/api/chat",
-            {
-              method:
-                "POST",
+        let data;
 
-              headers: {
-                "Content-Type":
-                  "application/json",
-              },
-
-              body:
-                JSON.stringify({
-
-                  message:
-                    prompt,
-
-                  history: [
-                    {
-                      role:
-                        "user",
-
-                      content:
-                        prompt,
-                    },
-                  ],
-
-                  webSearch:
-                    false,
-
-                }),
-
-            }
-          );
-
-
-        const data =
-          await response.json();
-
+        try {
+          data = await response.json();
+        } catch {
+          throw new Error("सर्वर से सही उत्तर नहीं मिला।");
+        }
 
         if (!response.ok) {
-
           throw new Error(
-            data?.error ||
-            "उत्तर नहीं मिला।"
+            typeof data.error === "string"
+              ? data.error.slice(0, 250)
+              : "AI अनुरोध पूरा नहीं हुआ।"
           );
-
         }
 
+        if (typeof data.answer !== "string" || !data.answer.trim()) {
+          throw new Error("AI ने खाली उत्तर दिया।");
+        }
 
-        answer.textContent =
-          data?.answer ||
-          "कोई उत्तर नहीं मिला।";
-
-
-        status.textContent =
-          data?.selfChecked
-            ? "✓ उत्तर जाँचकर दिया गया"
-            : "✓ उत्तर तैयार है";
-
+        // textContent से उत्तर HTML/JavaScript की तरह execute नहीं होगा।
+        $("answer").textContent = data.answer;
+        $("status").textContent = "उत्तर तैयार है।";
 
       } catch (error) {
+        $("answer").textContent = "अभी उत्तर नहीं मिल पाया।";
 
-        console.error(
-          error
-        );
-
-
-        answer.textContent =
-          "अभी उत्तर नहीं मिल पाया।";
-
-
-        status.textContent =
-          "त्रुटि: " +
-          (
-            error?.message ||
-            "Unknown error"
-          );
+        $("status").textContent =
+          error.name === "AbortError"
+            ? "समय अधिक लग गया। कृपया फिर प्रयास करें।"
+            : (error.message || "नेटवर्क या सर्वर में समस्या है।");
 
       } finally {
-
-        button.disabled =
-          false;
-
+        clearTimeout(timeout);
+        button.disabled = false;
       }
-
-    }
-
-
-    // =======================================================
-    // CLEAR
-    // =======================================================
-
-    function clearQuestion() {
-
-      document
-        .getElementById(
-          "question"
-        )
-        .value = "";
-
-      document
-        .getElementById(
-          "answer"
-        )
-        .textContent =
-        "अपना प्रश्न पूछने के बाद उत्तर यहाँ दिखाई देगा।";
-
-      document
-        .getElementById(
-          "status"
-        )
-        .textContent = "";
-
-    }
-
-
-    // =======================================================
-    // QUIZ DATA
-    // =======================================================
+    });
 
     const quizData = {
-
       "सामान्य अध्ययन": [
-
         {
           q: "भारत की राजधानी क्या है?",
-          options: [
-            "मुंबई",
-            "नई दिल्ली",
-            "कोलकाता",
-            "चेन्नई"
-          ],
+          options: ["मुंबई", "नई दिल्ली", "कोलकाता", "चेन्नई"],
           answer: 1
         },
-
         {
           q: "भारत का राष्ट्रीय पशु कौन है?",
-          options: [
-            "शेर",
-            "हाथी",
-            "बाघ",
-            "हिरण"
-          ],
+          options: ["शेर", "हाथी", "बाघ", "हिरण"],
           answer: 2
-        },
-
+        }
       ],
-
 
       "इतिहास": [
-
         {
-          q: "भारत को स्वतंत्रता कब मिली?",
-          options: [
-            "1945",
-            "1946",
-            "1947",
-            "1950"
-          ],
+          q: "भारत स्वतंत्र कब हुआ?",
+          options: ["1945", "1946", "1947", "1950"],
           answer: 2
         },
-
         {
           q: "मुगल साम्राज्य की स्थापना किसने की?",
-          options: [
-            "अकबर",
-            "बाबर",
-            "हुमायूँ",
-            "शाहजहाँ"
-          ],
+          options: ["अकबर", "बाबर", "हुमायूँ", "शाहजहाँ"],
           answer: 1
-        },
-
+        }
       ],
-
 
       "दर्शनशास्त्र": [
-
-        {
-          q: "दर्शन शब्द का सामान्य अर्थ क्या है?",
-          options: [
-            "ज्ञान के प्रति प्रेम",
-            "केवल विज्ञान",
-            "केवल धर्म",
-            "केवल इतिहास"
-          ],
-          answer: 0
-        },
-
         {
           q: "सुकरात किस क्षेत्र से संबंधित थे?",
-          options: [
-            "दर्शन",
-            "भौतिकी",
-            "जीवविज्ञान",
-            "अर्थशास्त्र"
-          ],
+          options: ["दर्शन", "भौतिकी", "जीवविज्ञान", "अर्थशास्त्र"],
           answer: 0
-        },
-
+        }
       ],
 
-"होम साइंस": [
-
-  {
-    q: "संतुलित आहार में क्या शामिल होता है?",
-    options: [
-      "केवल कार्बोहाइड्रेट",
-      "केवल प्रोटीन",
-      "सभी आवश्यक पोषक तत्व",
-      "केवल वसा"
-    ],
-    answer: 2
-  },
-
-  {
-    q: "प्रोटीन का मुख्य कार्य क्या है?",
-    options: [
-      "शरीर की वृद्धि और ऊतकों की मरम्मत",
-      "केवल शरीर को ठंडा करना",
-      "केवल स्वाद बढ़ाना",
-      "केवल पानी की कमी पूरी करना"
-    ],
-    answer: 0
-  },
-
-],
-      "विज्ञान": [
-
+      "होम साइंस": [
         {
-          q: "पौधे प्रकाश संश्लेषण में मुख्य रूप से किस गैस का उपयोग करते हैं?",
+          q: "संतुलित आहार में क्या शामिल होता है?",
           options: [
-            "ऑक्सीजन",
-            "नाइट्रोजन",
-            "कार्बन डाइऑक्साइड",
-            "हाइड्रोजन"
+            "केवल कार्बोहाइड्रेट",
+            "केवल प्रोटीन",
+            "सभी आवश्यक पोषक तत्व",
+            "केवल वसा"
           ],
           answer: 2
-        },
+        }
+      ],
 
+      "विज्ञान": [
         {
           q: "जल का रासायनिक सूत्र क्या है?",
-          options: [
-            "CO₂",
-            "H₂O",
-            "O₂",
-            "NaCl"
-          ],
+          options: ["CO₂", "H₂O", "O₂", "NaCl"],
           answer: 1
-        },
-
+        }
       ],
-
 
       "गणित": [
-
-        {
-          q: "25 × 16 कितना है?",
-          options: [
-            "300",
-            "350",
-            "400",
-            "450"
-          ],
-          answer: 2
-        },
-
         {
           q: "100 का 25% कितना है?",
-          options: [
-            "10",
-            "20",
-            "25",
-            "50"
-          ],
+          options: ["10", "20", "25", "50"],
           answer: 2
-        },
-
-      ],
-
+        }
+      ]
     };
 
+    let questions = [];
+    let questionIndex = 0;
+    let score = 0;
+    let answered = false;
 
-    // =======================================================
-    // QUIZ STATE
-    // =======================================================
+    $("startQuizBtn").addEventListener("click", () => {
+      questions = quizData[$("quizSubject").value] || [];
+      questionIndex = 0;
+      score = 0;
 
-    let currentQuiz =
-      [];
+      $("quizCard").classList.remove("hidden");
 
-    let currentIndex =
-      0;
-
-    let scoreValue =
-      0;
-
-    let selectedAnswer =
-      false;
-
-
-    // =======================================================
-    // START QUIZ
-    // =======================================================
-
-    function startQuiz() {
-
-      const subject =
-        document
-          .getElementById(
-            "quizSubject"
-          )
-          .value;
-
-
-      currentQuiz =
-        quizData[
-          subject
-        ] || [];
-
-
-      currentIndex =
-        0;
-
-      scoreValue =
-        0;
-
-      selectedAnswer =
-        false;
-
-
-      document
-        .getElementById(
-          "quizCard"
-        )
-        .classList
-        .remove(
-          "hidden"
-        );
-
-
-      document
-        .getElementById(
-          "score"
-        )
-        .textContent =
-        "अंक: 0";
-
+      if (!questions.length) {
+        $("quizTitle").textContent = "प्रश्न उपलब्ध नहीं हैं";
+        $("quizOptions").replaceChildren();
+        $("quizStatus").textContent = "दूसरा विषय चुनें।";
+        $("score").textContent = "अंक: 0";
+        $("nextBtn").disabled = true;
+        return;
+      }
 
       showQuestion();
-
-    }
-
-
-    // =======================================================
-    // SHOW QUESTION
-    // =======================================================
+      $("quizCard").scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+      });
+    });
 
     function showQuestion() {
+      answered = false;
 
-      if (
-        currentIndex >=
-        currentQuiz.length
-      ) {
-
-        finishQuiz();
-
+      if (questionIndex >= questions.length) {
+        $("quizTitle").textContent = "Quiz पूरा हो गया!";
+        $("quizOptions").replaceChildren();
+        $("quizStatus").textContent =
+          "तुम्हारा स्कोर: " + score + " / " + questions.length;
+        $("nextBtn").disabled = true;
         return;
-
       }
 
+      const item = questions[questionIndex];
 
-      selectedAnswer =
-        false;
+      $("quizTitle").textContent =
+        (questionIndex + 1) + ". " + item.q;
 
+      $("score").textContent = "अंक: " + score;
+      $("quizStatus").textContent = "";
+      $("nextBtn").disabled = true;
+      $("quizOptions").replaceChildren();
 
-      const item =
-        currentQuiz[
-          currentIndex
-        ];
+      item.options.forEach((text, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "option";
+        button.textContent = text;
+        button.addEventListener("click", () => chooseAnswer(index));
 
-
-      document
-        .getElementById(
-          "quizQuestion"
-        )
-        .textContent =
-        `${currentIndex + 1}. ${item.q}`;
-
-
-      const options =
-        document
-          .getElementById(
-            "quizOptions"
-          );
-
-
-      options.innerHTML =
-        "";
-
-
-      item.options
-        .forEach(
-          (
-            option,
-            index
-          ) => {
-
-            const button =
-              document
-                .createElement(
-                  "button"
-                );
-
-
-            button.className =
-              "option";
-
-
-            button.textContent =
-              option;
-
-
-            button.onclick =
-              () =>
-                selectAnswer(
-                  index,
-                  button
-                );
-
-
-            options.appendChild(
-              button
-            );
-
-          }
-        );
-
-
-      document
-        .getElementById(
-          "nextBtn"
-        )
-        .disabled =
-        true;
-
-
-      document
-        .getElementById(
-          "quizStatus"
-        )
-        .textContent =
-        "";
-
+        $("quizOptions").appendChild(button);
+      });
     }
 
+    function chooseAnswer(index) {
+      if (answered) return;
 
-    // =======================================================
-    // SELECT ANSWER
-    // =======================================================
+      answered = true;
 
-    function selectAnswer(
-      index,
-      button
-    ) {
+      const item = questions[questionIndex];
+      const buttons = $("quizOptions").querySelectorAll("button");
 
-      if (
-        selectedAnswer
-      ) {
+      buttons.forEach((button, i) => {
+        button.disabled = true;
 
-        return;
-
-      }
-
-
-      selectedAnswer =
-        true;
-
-
-      const item =
-        currentQuiz[
-          currentIndex
-        ];
-
-
-      const buttons =
-        document
-          .querySelectorAll(
-            ".option"
-          );
-
-
-      buttons.forEach(
-        (
-          btn,
-          i
-        ) => {
-
-          btn.disabled =
-            true;
-
-
-          if (
-            i ===
-            item.answer
-          ) {
-
-            btn.classList
-              .add(
-                "correct"
-              );
-
-          }
-
+        if (i === item.answer) {
+          button.classList.add("correct");
         }
-      );
+      });
 
-
-      if (
-        index ===
-        item.answer
-      ) {
-
-        scoreValue++;
-
-        button.classList
-          .add(
-            "correct"
-          );
-
-
-        document
-          .getElementById(
-            "quizStatus"
-          )
-          .textContent =
-          "✓ सही उत्तर!";
-
+      if (index === item.answer) {
+        score++;
+        $("quizStatus").textContent = "✓ सही उत्तर!";
       } else {
-
-        button.classList
-          .add(
-            "wrong"
-          );
-
-
-        document
-          .getElementById(
-            "quizStatus"
-          )
-          .textContent =
-          "✗ गलत उत्तर। सही उत्तर हरे रंग में है।";
-
+        buttons[index].classList.add("wrong");
+        $("quizStatus").textContent =
+          "गलत उत्तर। सही उत्तर हरे रंग में है।";
       }
 
-
-      document
-        .getElementById(
-          "score"
-        )
-        .textContent =
-        `अंक: ${scoreValue}`;
-
-
-      document
-        .getElementById(
-          "nextBtn"
-        )
-        .disabled =
-        false;
-
+      $("score").textContent = "अंक: " + score;
+      $("nextBtn").disabled = false;
     }
 
-
-    // =======================================================
-    // NEXT
-    // =======================================================
-
-    function nextQuestion() {
-
-      currentIndex++;
-
+    $("nextBtn").addEventListener("click", () => {
+      if (!answered) return;
+      questionIndex++;
       showQuestion();
-
-    }
-
-
-    // =======================================================
-    // FINISH
-    // =======================================================
-
-    function finishQuiz() {
-
-      const total =
-        currentQuiz.length;
-
-
-      document
-        .getElementById(
-          "quizQuestion"
-        )
-        .textContent =
-        "🎉 Quiz पूरा हो गया!";
-
-
-      document
-        .getElementById(
-          "quizOptions"
-        )
-        .innerHTML =
-        `<div class="answer">
-          तुम्हारा स्कोर: ${scoreValue} / ${total}
-        </div>`;
-
-
-      document
-        .getElementById(
-          "quizStatus"
-        )
-        .textContent =
-        "फिर से अभ्यास करने के लिए Quiz शुरू करें।";
-
-
-      document
-        .getElementById(
-          "nextBtn"
-        )
-        .disabled =
-        true;
-
-    }
-
+    });
   </script>
-
 </body>
 </html>
