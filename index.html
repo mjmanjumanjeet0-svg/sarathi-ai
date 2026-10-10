@@ -1,1224 +1,379 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#101827">
-  <title>Saarthi AI Assistant</title>
-
-  <style>
-    :root {
-      --bg: #101827;
-      --panel: #182235;
-      --panel2: #202d43;
-      --text: #f3f6fc;
-      --muted: #aab6ca;
-      --accent: #7c83ff;
-      --border: #334158;
-      --user: #343b72;
-      --assistant: #202d43;
-      --danger: #ff7777;
-    }
-
-    body.light {
-      --bg: #f3f5fa;
-      --panel: #ffffff;
-      --panel2: #edf0f7;
-      --text: #172033;
-      --muted: #59657a;
-      --accent: #525bd5;
-      --border: #d7dce8;
-      --user: #e2e5ff;
-      --assistant: #ffffff;
-      --danger: #c93636;
-    }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    body {
-      margin: 0;
-      font-family: Arial, Helvetica, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      height: 100dvh;
-      overflow: hidden;
-    }
-
-    button, input, textarea, select {
-      font: inherit;
-    }
-
-    button {
-      cursor: pointer;
-    }
-
-    .app {
-      display: flex;
-      height: 100dvh;
-      width: 100%;
-    }
-
-    .sidebar {
-      width: 265px;
-      flex-shrink: 0;
-      background: var(--panel);
-      border-right: 1px solid var(--border);
-      padding: 16px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      overflow-y: auto;
-    }
-
-    .brand {
-      font-size: 22px;
-      font-weight: 800;
-      margin: 5px 0 12px;
-    }
-
-    .brand small {
-      display: block;
-      color: var(--muted);
-      font-size: 12px;
-      font-weight: normal;
-      margin-top: 5px;
-    }
-
-    .btn {
-      border: 1px solid var(--border);
-      border-radius: 11px;
-      padding: 11px 12px;
-      background: var(--panel2);
-      color: var(--text);
-      text-align: left;
-    }
-
-    .btn.primary {
-      background: var(--accent);
-      color: white;
-      border-color: transparent;
-      text-align: center;
-      font-weight: bold;
-    }
-
-    .btn:hover {
-      filter: brightness(1.08);
-    }
-
-    .section-title {
-      color: var(--muted);
-      font-size: 12px;
-      margin-top: 12px;
-    }
-
-    .history-list {
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
-    }
-
-    .history-item {
-      display: flex;
-      gap: 5px;
-      align-items: center;
-    }
-
-    .history-open {
-      flex: 1;
-      min-width: 0;
-      overflow: hidden;
-      white-space: nowrap;
-      text-overflow: ellipsis;
-    }
-
-    .delete-chat {
-      color: var(--danger);
-      padding: 8px;
-      border: 0;
-      background: transparent;
-    }
-
-    .creator {
-      margin-top: auto;
-      color: var(--muted);
-      font-size: 12px;
-      line-height: 1.6;
-      border-top: 1px solid var(--border);
-      padding-top: 12px;
-    }
-
-    .main {
-      min-width: 0;
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      height: 100%;
-    }
-
-    .topbar {
-      min-height: 62px;
-      padding: 12px 18px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 10px;
-      background: var(--panel);
-      border-bottom: 1px solid var(--border);
-    }
-
-    .top-title {
-      font-weight: bold;
-    }
-
-    .top-actions {
-      display: flex;
-      gap: 8px;
-      align-items: center;
-    }
-
-    .icon-btn {
-      border: 1px solid var(--border);
-      background: var(--panel2);
-      color: var(--text);
-      border-radius: 10px;
-      padding: 9px 11px;
-    }
-
-    .messages {
-      flex: 1;
-      overflow-y: auto;
-      padding: 22px 16px;
-      scroll-behavior: smooth;
-    }
-
-    .welcome {
-      max-width: 700px;
-      margin: 10vh auto 0;
-      text-align: center;
-    }
-
-    .welcome .logo {
-      font-size: 50px;
-    }
-
-    .welcome h1 {
-      font-size: clamp(25px, 5vw, 38px);
-      margin: 12px 0;
-    }
-
-    .welcome p {
-      color: var(--muted);
-      line-height: 1.6;
-    }
-
-    .message {
-      display: flex;
-      gap: 10px;
-      max-width: 850px;
-      margin: 0 auto 20px;
-      align-items: flex-start;
-    }
-
-    .avatar {
-      width: 34px;
-      height: 34px;
-      flex-shrink: 0;
-      display: grid;
-      place-items: center;
-      background: var(--panel2);
-      border: 1px solid var(--border);
-      border-radius: 50%;
-    }
-
-    .bubble {
-      min-width: 0;
-      max-width: 100%;
-      background: var(--assistant);
-      border: 1px solid var(--border);
-      border-radius: 5px 15px 15px 15px;
-      padding: 13px 15px;
-      line-height: 1.65;
-      overflow-wrap: anywhere;
-      white-space: pre-wrap;
-    }
-
-    .message.user .bubble {
-      background: var(--user);
-      border-radius: 15px 5px 15px 15px;
-    }
-
-    .message.user {
-      flex-direction: row-reverse;
-    }
-
-    .message-content {
-      min-width: 0;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .message.user .message-content {
-      align-items: flex-end;
-    }
-
-    .message-image {
-      max-width: min(300px, 100%);
-      max-height: 280px;
-      display: block;
-      border-radius: 10px;
-      margin-bottom: 8px;
-    }
-
-    .message-tools {
-      display: flex;
-      gap: 6px;
-    }
-
-    .message-tools button {
-      color: var(--muted);
-      border: 1px solid var(--border);
-      background: var(--panel);
-      border-radius: 8px;
-      padding: 5px 9px;
-      font-size: 12px;
-    }
-
-    .composer-area {
-      padding: 12px 16px 8px;
-      background: var(--bg);
-    }
-
-    .composer {
-      max-width: 850px;
-      margin: 0 auto;
-      padding: 10px;
-      border: 1px solid var(--border);
-      background: var(--panel);
-      border-radius: 16px;
-    }
-
-    .composer textarea {
-      width: 100%;
-      resize: none;
-      min-height: 45px;
-      max-height: 150px;
-      border: 0;
-      outline: none;
-      color: var(--text);
-      background: transparent;
-      padding: 8px;
-      line-height: 1.5;
-    }
-
-    .composer-bottom {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 8px;
-      flex-wrap: wrap;
-    }
-
-    .composer-tools {
-      display: flex;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-
-    .send-btn {
-      border: 0;
-      border-radius: 10px;
-      background: var(--accent);
-      color: white;
-      padding: 10px 15px;
-      font-weight: bold;
-    }
-
-    .send-btn:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .file-label {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border: 1px solid var(--border);
-      background: var(--panel2);
-      color: var(--text);
-      border-radius: 9px;
-      padding: 9px 11px;
-      cursor: pointer;
-    }
-
-    #fileInput {
-      display: none;
-    }
-
-    .attachment-preview {
-      display: none;
-      margin: 4px 8px 10px;
-      color: var(--muted);
-      font-size: 13px;
-      overflow-wrap: anywhere;
-    }
-
-    .notice {
-      max-width: 850px;
-      margin: 8px auto 0;
-      color: var(--muted);
-      text-align: center;
-      font-size: 11px;
-      line-height: 1.5;
-    }
-
-    .status {
-      font-size: 12px;
-      color: var(--muted);
-    }
-
-    .status.error {
-      color: var(--danger);
-    }
-
-    .settings-panel {
-      display: none;
-      position: fixed;
-      z-index: 20;
-      top: 75px;
-      right: 16px;
-      width: min(340px, calc(100vw - 32px));
-      padding: 18px;
-      background: var(--panel);
-      border: 1px solid var(--border);
-      border-radius: 15px;
-      box-shadow: 0 12px 40px #0003;
-    }
-
-    .settings-panel.open {
-      display: block;
-    }
-
-    .settings-panel h3 {
-      margin-top: 0;
-    }
-
-    .setting-row {
-      display: flex;
-      flex-direction: column;
-      gap: 7px;
-      margin: 15px 0;
-    }
-
-    .setting-row select {
-      padding: 10px;
-      border-radius: 9px;
-      background: var(--panel2);
-      color: var(--text);
-      border: 1px solid var(--border);
-    }
-
-    .setting-row label {
-      font-size: 13px;
-      color: var(--muted);
-    }
-
-    .typing {
-      color: var(--muted);
-      font-style: italic;
-    }
-
-    @media (max-width: 720px) {
-      .sidebar {
-        display: none;
-      }
-
-      .topbar {
-        padding: 10px 12px;
-      }
-
-      .messages {
-        padding: 16px 10px;
-      }
-
-      .composer-area {
-        padding: 8px;
-      }
-
-      .message {
-        gap: 7px;
-      }
-
-      .bubble {
-        padding: 11px;
-      }
-
-      .welcome {
-        margin-top: 8vh;
-      }
-
-      .top-title {
-        font-size: 14px;
-      }
-
-      .creator {
-        display: none;
-      }
-    }
-  </style>
-</head>
-
-<body>
-  <div class="app">
-
-    <aside class="sidebar">
-      <div class="brand">
-        🪶 Saarthi AI
-        <small>Your multilingual AI assistant</small>
-      </div>
-
-      <button class="btn primary" id="newChatBtn">＋ New Chat</button>
-      <button class="btn" id="sidebarSettingsBtn">⚙ Settings</button>
-      <button class="btn" id="themeBtn">🌙 Toggle Theme</button>
-
-      <div class="section-title">RECENT CHATS</div>
-      <div class="history-list" id="historyList"></div>
-
-      <div class="creator">
-        🪶 Saarthi AI Assistant<br>
-        Creator: Manjeet Kumar
-      </div>
-    </aside>
-
-    <main class="main">
-      <header class="topbar">
-        <div class="top-title">🪶 Saarthi AI Assistant</div>
-        <div class="top-actions">
-          <button class="icon-btn" id="mobileNewChatBtn" title="New chat">＋</button>
-          <button class="icon-btn" id="mobileThemeBtn" title="Change theme">☀️</button>
-          <button class="icon-btn" id="settingsBtn" title="Settings">⚙️</button>
-        </div>
-      </header>
-
-      <section class="messages" id="messages">
-        <div class="welcome" id="welcome">
-          <div class="logo">🪶</div>
-          <h1>नमस्ते! मैं सारथी हूँ।</h1>
-          <p>
-            मुझसे हिंदी, English या अपनी पसंद की भाषा में सवाल पूछें।
-            आप लिखकर, बोलकर या फोटो भेजकर सवाल पूछ सकते हैं।
-          </p>
-        </div>
-      </section>
-
-      <div class="composer-area">
-        <div class="composer">
-          <div class="attachment-preview" id="attachmentPreview"></div>
-
-          <textarea
-            id="messageInput"
-            rows="1"
-            placeholder="यहाँ अपना सवाल लिखें..."
-            aria-label="Write your message"
-          ></textarea>
-
-          <div class="composer-bottom">
-            <div class="composer-tools">
-              <label class="file-label" for="fileInput" title="Attach an image or text file">📎 Attach</label>
-              <input
-                id="fileInput"
-                type="file"
-                accept="image/*,.txt,.md"
-              >
-
-              <button class="icon-btn" id="micBtn" title="Speak your question">🎙️</button>
-              <button class="icon-btn" id="stopVoiceBtn" title="Stop speaking">🔇</button>
-            </div>
-
-            <button class="send-btn" id="sendBtn">Send ➤</button>
-          </div>
-
-          <div class="status" id="status" role="status"></div>
-        </div>
-
-        <div class="notice">
-          AI के जवाब में गलती हो सकती है। जरूरी जानकारी की जाँच करें।
-          आपकी चैट इस ब्राउज़र में सेव हो सकती है।
-        </div>
-      </div>
-    </main>
-  </div>
-
-  <section class="settings-panel" id="settingsPanel">
-    <h3>⚙ Settings</h3>
-
-    <div class="setting-row">
-      <label for="languageSelect">Response language</label>
-      <select id="languageSelect">
-        <option value="Hindi">हिंदी (Hindi)</option>
-        <option value="English">English</option>
-        <option value="Bhojpuri">भोजपुरी (Bhojpuri)</option>
-        <option value="Urdu">اردو (Urdu)</option>
-        <option value="Maithili">मैथिली (Maithili)</option>
-        <option value="Bengali">বাংলা (Bengali)</option>
-        <option value="Tamil">தமிழ் (Tamil)</option>
-        <option value="Telugu">తెలుగు (Telugu)</option>
-        <option value="Marathi">मराठी (Marathi)</option>
-        <option value="Gujarati">ગુજરાતી (Gujarati)</option>
-        <option value="Punjabi">ਪੰਜਾਬੀ (Punjabi)</option>
-      </select>
-    </div>
-
-    <div class="setting-row">
-      <label for="voiceSelect">Voice output</label>
-      <select id="voiceSelect">
-        <option value="on">On</option>
-        <option value="off">Off</option>
-      </select>
-    </div>
-
-    <button class="btn primary" id="saveSettingsBtn">Save Settings</button>
-    <button class="btn" id="closeSettingsBtn" style="margin-top:8px;width:100%">Close</button>
-  </section>
-
-  <script>
-    "use strict";
-
-    // Your Cloudflare Worker endpoint.
-    const API_BASE = "https://sarathi-ai.mjmanjumanjeet0.workers.dev";
-
-    const STORAGE_CHATS = "saarthi-ai-chats-v1";
-    const STORAGE_SETTINGS = "saarthi-ai-settings-v1";
-
-    const elements = {
-      messages: document.getElementById("messages"),
-      welcome: document.getElementById("welcome"),
-      input: document.getElementById("messageInput"),
-      send: document.getElementById("sendBtn"),
-      file: document.getElementById("fileInput"),
-      preview: document.getElementById("attachmentPreview"),
-      status: document.getElementById("status"),
-      history: document.getElementById("historyList"),
-      settings: document.getElementById("settingsPanel"),
-      language: document.getElementById("languageSelect"),
-      voice: document.getElementById("voiceSelect")
-    };
-
-    let chats = loadChats();
-    let currentChatId = null;
-    let selectedFile = null;
-    let isSending = false;
-    let recognition = null;
-
-    const settings = loadSettings();
-
-    elements.language.value = settings.language;
-    elements.voice.value = settings.voice;
-
-    if (settings.theme === "light") {
-      document.body.classList.add("light");
-    }
-
-    function createId() {
-      return Date.now().toString(36) +
-        Math.random().toString(36).slice(2, 9);
-    }
-
-    function loadChats() {
-      try {
-        const saved = JSON.parse(localStorage.getItem(STORAGE_CHATS) || "[]");
-        return Array.isArray(saved) ? saved : [];
-      } catch (error) {
-        return [];
-      }
-    }
-
-    function loadSettings() {
-      const defaults = {
-        language: "Hindi",
-        voice: "on",
-        theme: "dark"
-      };
-
-      try {
-        return {
-          ...defaults,
-          ...JSON.parse(localStorage.getItem(STORAGE_SETTINGS) || "{}")
-        };
-      } catch (error) {
-        return defaults;
-      }
-    }
-
-    function saveChats() {
-      try {
-        localStorage.setItem(STORAGE_CHATS, JSON.stringify(chats));
-      } catch (error) {
-        setStatus("चैट सेव नहीं हो पाई। ब्राउज़र की स्टोरेज भर सकती है।", true);
-      }
-    }
-
-    function saveSettings() {
-      settings.language = elements.language.value;
-      settings.voice = elements.voice.value;
-      settings.theme = document.body.classList.contains("light")
-        ? "light"
-        : "dark";
-
-      try {
-        localStorage.setItem(STORAGE_SETTINGS, JSON.stringify(settings));
-      } catch (error) {
-        // The assistant can still work if settings cannot be saved.
-      }
-    }
-
-    function setStatus(message, isError = false) {
-      elements.status.textContent = message || "";
-      elements.status.classList.toggle("error", isError);
-    }
-
-    function getCurrentChat() {
-      return chats.find(chat => chat.id === currentChatId) || null;
-    }
-
-    function ensureChat() {
-      let chat = getCurrentChat();
-
-      if (!chat) {
-        chat = {
-          id: createId(),
-          title: "New Chat",
-          messages: [],
-          updatedAt: Date.now()
-        };
-
-        chats.unshift(chat);
-        currentChatId = chat.id;
-        saveChats();
-        renderHistory();
-      }
-
-      return chat;
-    }
-
-    function createNewChat() {
-      currentChatId = null;
-      selectedFile = null;
-      elements.input.value = "";
-      elements.file.value = "";
-      updateAttachmentPreview();
-      setStatus("");
-      renderMessages();
-      renderHistory();
-      elements.input.focus();
-    }
-
-    function escapeHtml(value) {
-      return String(value).replace(/[&<>"']/g, character => {
-        const entities = {
-          "&": "&amp;",
-          "<": "&lt;",
-          ">": "&gt;",
-          '"': "&quot;",
-          "'": "&#39;"
-        };
-
-        return entities[character];
-      });
-    }
-
-    function renderMessages() {
-      elements.messages.innerHTML = "";
-
-      const chat = getCurrentChat();
-
-      if (!chat || chat.messages.length === 0) {
-        const welcome = document.createElement("div");
-        welcome.className = "welcome";
-        welcome.innerHTML = `
-          <div class="logo">🪶</div>
-          <h1>नमस्ते! मैं सारथी हूँ।</h1>
-          <p>
-            मुझसे हिंदी, English या अपनी पसंद की भाषा में सवाल पूछें।
-            आप लिखकर, बोलकर या फोटो भेजकर सवाल पूछ सकते हैं।
-          </p>
-        `;
-
-        elements.messages.appendChild(welcome);
-        return;
-      }
-
-      chat.messages.forEach(message => {
-        const row = document.createElement("div");
-        row.className = "message " +
-          (message.role === "user" ? "user" : "assistant");
-
-        const avatar = document.createElement("div");
-        avatar.className = "avatar";
-        avatar.textContent = message.role === "user" ? "👤" : "🪶";
-
-        const content = document.createElement("div");
-        content.className = "message-content";
-
-        const bubble = document.createElement("div");
-        bubble.className = "bubble";
-
-        if (message.image) {
-          const image = document.createElement("img");
-          image.className = "message-image";
-          image.src = message.image;
-          image.alt = "Attached image";
-          bubble.appendChild(image);
-        }
-
-        if (message.text) {
-          const text = document.createElement("div");
-          text.textContent = message.text;
-          bubble.appendChild(text);
-        }
-
-        content.appendChild(bubble);
-
-        if (message.role === "assistant" && message.text) {
-          const tools = document.createElement("div");
-          tools.className = "message-tools";
-
-          const speakButton = document.createElement("button");
-          speakButton.textContent = "🔊 Listen";
-          speakButton.addEventListener("click", () => speakText(message.text));
-
-          const copyButton = document.createElement("button");
-          copyButton.textContent = "📋 Copy";
-          copyButton.addEventListener("click", async () => {
-            try {
-              await navigator.clipboard.writeText(message.text);
-              setStatus("जवाब कॉपी हो गया।");
-            } catch (error) {
-              setStatus("कॉपी नहीं हुआ। जवाब को दबाकर कॉपी करें।", true);
-            }
-          });
-
-          tools.append(speakButton, copyButton);
-          content.appendChild(tools);
-        }
-
-        row.append(avatar, content);
-        elements.messages.appendChild(row);
-      });
-
-      elements.messages.scrollTop = elements.messages.scrollHeight;
-    }
-
-    function renderHistory() {
-      elements.history.innerHTML = "";
-
-      chats
-        .slice()
-        .sort((a, b) => b.updatedAt - a.updatedAt)
-        .forEach(chat => {
-          const row = document.createElement("div");
-          row.className = "history-item";
-
-          const openButton = document.createElement("button");
-          openButton.className = "btn history-open";
-          openButton.textContent = chat.title || "New Chat";
-          openButton.title = chat.title || "New Chat";
-
-          openButton.addEventListener("click", () => {
-            currentChatId = chat.id;
-            selectedFile = null;
-            elements.input.value = "";
-            elements.file.value = "";
-            updateAttachmentPreview();
-            renderMessages();
-            renderHistory();
-            setStatus("");
-          });
-
-          const deleteButton = document.createElement("button");
-          deleteButton.className = "delete-chat";
-          deleteButton.textContent = "×";
-          deleteButton.title = "Delete chat";
-
-          deleteButton.addEventListener("click", () => {
-            const confirmed = confirm("क्या इस चैट को डिलीट करना चाहते हैं?");
-            if (!confirmed) return;
-
-            chats = chats.filter(item => item.id !== chat.id);
-
-            if (currentChatId === chat.id) {
-              currentChatId = null;
-            }
-
-            saveChats();
-            renderHistory();
-            renderMessages();
-          });
-
-          row.append(openButton, deleteButton);
-          elements.history.appendChild(row);
-        });
-    }
-
-    function addMessage(role, text, image = null) {
-      const chat = ensureChat();
-
-      const message = {
-        role,
-        text: String(text || ""),
-        image,
-        createdAt: Date.now()
-      };
-
-      chat.messages.push(message);
-
-      if (chat.messages.filter(item => item.role === "user").length === 1) {
-        chat.title = (text || "Image question").slice(0, 36);
-      }
-
-      chat.updatedAt = Date.now();
-
-      saveChats();
-      renderMessages();
-      renderHistory();
-
-      return message;
-    }
-
-    function updateAttachmentPreview() {
-      if (!selectedFile) {
-        elements.preview.style.display = "none";
-        elements.preview.textContent = "";
-        return;
-      }
-
-      elements.preview.style.display = "block";
-      elements.preview.textContent =
-        "Attached: " + selectedFile.name +
-        " — इसे हटाने के लिए Attach के पास × दबाएँ।";
-    }
-
-    function clearAttachment() {
-      selectedFile = null;
-      elements.file.value = "";
-      updateAttachmentPreview();
-    }
-
-    function readFileAsDataUrl(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-
-        reader.onload = () => resolve(String(reader.result));
-        reader.onerror = () => reject(new Error("फाइल पढ़ी नहीं जा सकी।"));
-
-        reader.readAsDataURL(file);
-      });
-    }
-
-    function readFileAsText(file) {
-      return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-
-        reader.onload = () => resolve(String(reader.result || ""));
-        reader.onerror = () => reject(new Error("फाइल पढ़ी नहीं जा सकी।"));
-
-        reader.readAsText(file);
-      });
-    }
-
-    elements.file.addEventListener("change", () => {
-      const file = elements.file.files && elements.file.files[0];
-
-      if (!file) {
-        selectedFile = null;
-        updateAttachmentPreview();
-        return;
-      }
-
-      const isImage = file.type.startsWith("image/");
-      const isText = /\.(txt|md)$/i.test(file.name);
-
-      if (!isImage && !isText) {
-        setStatus("कृपया फोटो, TXT या MD फाइल चुनें।", true);
-        clearAttachment();
-        return;
-      }
-
-      if (file.size > 8 * 1024 * 1024) {
-        setStatus("फाइल 8 MB से छोटी रखें।", true);
-        clearAttachment();
-        return;
-      }
-
-      selectedFile = file;
-      updateAttachmentPreview();
-      setStatus("");
-    });
-
-    elements.preview.addEventListener("click", event => {
-      if (event.target === elements.preview) {
-        clearAttachment();
-      }
-    });
-
-    async function sendMessage() {
-      if (isSending) return;
-
-      const text = elements.input.value.trim();
-      const file = selectedFile;
-
-      if (!text && !file) {
-        setStatus("पहले अपना सवाल लिखें या कोई फाइल जोड़ें।", true);
-        return;
-      }
-
-      isSending = true;
-      elements.send.disabled = true;
-      setStatus("सारथी जवाब तैयार कर रहा है...");
-
-      elements.input.value = "";
-      clearAttachment();
-
-      try {
-        let fileText = "";
-        let imageData = null;
-
-        if (file) {
-          if (file.type.startsWith("image/")) {
-            imageData = await readFileAsDataUrl(file);
-          } else {
-            fileText = await readFileAsText(file);
-
-            if (fileText.length > 20000) {
-              fileText = fileText.slice(0, 20000);
-              setStatus("TXT/MD फाइल का पहला 20,000 अक्षर पढ़ा जाएगा।");
-            }
+const CHAT_MODEL = "openai/gpt-oss-20b";
+
+const SYSTEM_PROMPT = `
+You are Saarthi AI, a helpful, careful, multilingual assistant.
+
+LANGUAGE:
+- Reply in the language requested by the user.
+- If the user writes in Hindi and does not request another language,
+  reply in clear, natural Hindi.
+- Use simple, readable wording.
+- Preserve the user's intended meaning.
+
+ANSWER QUALITY:
+- Answer the actual question directly.
+- Explain difficult topics step by step when helpful.
+- Do not invent facts, statistics, quotations, sources, links, or laws.
+- Never claim you searched the internet or checked a source unless
+  an actual search or source-checking tool was used.
+- If information is uncertain, outdated, or incomplete, say so clearly.
+- Distinguish verified information from estimates and opinions.
+- Correct mistakes when reliable evidence shows an earlier answer was wrong.
+- Do not pretend that every answer has been independently verified.
+
+FORMATTING:
+- Use clean, readable text.
+- Avoid decorative asterisks and unnecessary Markdown symbols.
+- Use short paragraphs and numbered steps when helpful.
+- Use headings only when they improve readability.
+- Use Markdown formatting only when useful.
+- Put programming code in proper code blocks.
+- Do not wrap the entire answer in asterisks.
+
+SAFETY:
+- Follow applicable safety requirements.
+- Do not provide instructions that facilitate serious harm, violence,
+  fraud, cyber abuse, or illegal activity.
+- Offer safe alternatives when refusing unsafe requests.
+- For medical concerns, provide general information and recommend
+  professional care when appropriate.
+- For legal questions, ask for the relevant country or state if needed.
+  Explain uncertainty and do not pretend to be a lawyer.
+- For emergencies, prioritize immediate safety and appropriate help.
+- Protect private and confidential information.
+
+RELIABILITY:
+- If the question depends on current events, current prices, recent
+  government notices, or changing laws, explain that current verification
+  may be needed when live search is unavailable.
+- Never invent citations.
+- If you cannot confidently answer, explain what is missing.
+- Be respectful, calm, honest, and useful.
+`;
+
+function corsHeaders(origin, env) {
+  const configured = (env.ALLOWED_ORIGINS || "")
+    .split(",")
+    .map(value => value.trim())
+    .filter(Boolean);
+
+  const allowedOrigin = configured.includes(origin)
+    ? origin
+    : configured.length === 0
+      ? "*"
+      : "null";
+
+  return {
+    "Access-Control-Allow-Origin": allowedOrigin,
+    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Max-Age": "86400",
+    "Vary": "Origin"
+  };
+}
+
+function jsonResponse(data, status, cors) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      ...cors,
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Content-Type-Options": "nosniff"
+    }
+  });
+}
+
+function cleanText(value, maxLength = 20000) {
+  if (typeof value !== "string") {
+    return "";
+  }
+
+  return value.trim().slice(0, maxLength);
+}
+
+async function callGroq(env, messages, options = {}) {
+  if (!env.GROQ_API_KEY) {
+    throw new Error("GROQ_API_KEY is not configured.");
+  }
+
+  const model = options.model || CHAT_MODEL;
+
+  const response = await fetch(
+    "https://api.groq.com/openai/v1/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${env.GROQ_API_KEY}`,
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        model,
+        messages,
+        temperature: 0.2,
+        max_tokens: 1800
+      })
+    }
+  );
+
+  const raw = await response.text();
+
+  let data;
+
+  try {
+    data = JSON.parse(raw);
+  } catch {
+    throw new Error("The AI provider returned an invalid response.");
+  }
+
+  if (!response.ok) {
+    console.error("Groq API error status:", response.status);
+
+    const providerMessage =
+      data?.error?.message || "AI provider request failed.";
+
+    throw new Error(
+      `AI provider error (${response.status}): ${providerMessage}`
+    );
+  }
+
+  const answer = data?.choices?.[0]?.message?.content;
+
+  if (typeof answer !== "string" || !answer.trim()) {
+    throw new Error("The AI provider returned an empty answer.");
+  }
+
+  return answer.trim();
+}
+
+function makeSystemMessage(language) {
+  const safeLanguage = cleanText(language, 40) || "Hindi";
+
+  return {
+    role: "system",
+    content:
+      SYSTEM_PROMPT +
+      "\n\nPreferred response language: " +
+      safeLanguage +
+      "."
+  };
+}
+
+function isValidImageDataUrl(value) {
+  if (typeof value !== "string") return false;
+
+  // Accept common browser-generated image data URLs.
+  return /^data:image\/(png|jpeg|jpg|webp|gif);base64,[A-Za-z0-9+/=\r\n]+$/i
+    .test(value);
+}
+
+function extractBase64(dataUrl) {
+  const commaIndex = dataUrl.indexOf(",");
+
+  if (commaIndex < 0) {
+    throw new Error("Invalid image data URL.");
+  }
+
+  return dataUrl.slice(commaIndex + 1).replace(/\s/g, "");
+}
+
+function getImageMimeType(dataUrl) {
+  const match = dataUrl.match(/^data:(image\/[a-z0-9.+-]+);base64,/i);
+  return match ? match[1].toLowerCase() : "image/jpeg";
+}
+
+async function handleChat(request, env, cors) {
+  let body;
+
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse(
+      { error: "Request body must be valid JSON." },
+      400,
+      cors
+    );
+  }
+
+  const message = cleanText(body.message, 20000);
+  const language = cleanText(body.language, 40) || "Hindi";
+
+  if (!message) {
+    return jsonResponse(
+      { error: "Please provide a message." },
+      400,
+      cors
+    );
+  }
+
+  const messages = [
+    makeSystemMessage(language),
+    {
+      role: "user",
+      content: message
+    }
+  ];
+
+  try {
+    const answer = await callGroq(env, messages);
+
+    return jsonResponse(
+      {
+        answer,
+        reply: answer,
+        verified: false,
+        verificationNote:
+          "This answer was generated by AI. Live web verification was not performed."
+      },
+      200,
+      cors
+    );
+  } catch (error) {
+    console.error("Chat error:", error.message);
+
+    const status = error.message.includes("not configured") ? 503 : 502;
+
+    return jsonResponse(
+      {
+        error: "Unable to generate an answer right now.",
+        details: error.message
+      },
+      status,
+      cors
+    );
+  }
+}
+
+async function handleVision(request, env, cors) {
+  let body;
+
+  try {
+    body = await request.json();
+  } catch {
+    return jsonResponse(
+      { error: "Request body must be valid JSON." },
+      400,
+      cors
+    );
+  }
+
+  const image = body.image;
+  const question =
+    cleanText(body.question, 5000) ||
+    "Describe this image and answer any question visible in it.";
+
+  const language = cleanText(body.language, 40) || "Hindi";
+
+  if (!isValidImageDataUrl(image)) {
+    return jsonResponse(
+      {
+        error:
+          "Invalid image. Send a supported image as a base64 data URL."
+      },
+      400,
+      cors
+    );
+  }
+
+  // Keep request sizes reasonable.
+  if (image.length > 8 * 1024 * 1024) {
+    return jsonResponse(
+      { error: "Image is too large. Please use a smaller image." },
+      413,
+      cors
+    );
+  }
+
+  const mimeType = getImageMimeType(image);
+  const base64 = extractBase64(image);
+
+  // Configure this secret to a currently supported Groq vision model.
+  const visionModel =
+    env.GROQ_VISION_MODEL ||
+    "meta-llama/llama-4-scout-17b-16e-instruct";
+
+  const messages = [
+    makeSystemMessage(language),
+    {
+      role: "user",
+      content: [
+        {
+          type: "text",
+          text: question
+        },
+        {
+          type: "image_url",
+          image_url: {
+            url: `data:${mimeType};base64,${base64}`
           }
         }
-
-        const userText = text || (imageData ? "इस फोटो को देखकर जवाब दें।" : "इस फाइल का सारांश दें।");
-
-        const displayText = fileText
-          ? userText + "\n\nफाइल का टेक्स्ट:\n" + fileText
-          : userText;
-
-        addMessage("user", displayText, imageData);
-
-        let endpoint = API_BASE + "/api/chat";
-        let payload = {
-          message: displayText,
-          language: elements.language.value
-        };
-
-        if (imageData) {
-          endpoint = API_BASE + "/api/vision";
-          payload = {
-            image: imageData,
-            mimeType: file.type || "image/jpeg",
-            question: userText,
-            language: elements.language.value
-          };
-        }
-
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify(payload)
-        });
-
-        let data;
-
-        try {
-          data = await response.json();
-        } catch (error) {
-          throw new Error("Worker से सही JSON जवाब नहीं मिला।");
-        }
-
-        if (!response.ok) {
-          const serverMessage =
-            data.error || data.message || ("HTTP " + response.status);
-
-          throw new Error(serverMessage);
-        }
-
-        const answer =
-          data.reply ||
-          data.answer ||
-          data.response ||
-          data.message ||
-          (data.choices &&
-            data.choices[0] &&
-            data.choices[0].message &&
-            data.choices[0].message.content);
-
-        if (typeof answer !== "string" || !answer.trim()) {
-          throw new Error("AI ने खाली या गलत फॉर्मेट में जवाब दिया।");
-        }
-
-        addMessage("assistant", answer.trim());
-        setStatus("जवाब तैयार है।");
-
-        if (settings.voice === "on") {
-          speakText(answer.trim());
-        }
-      } catch (error) {
-        console.error("Saarthi request error:", error);
-
-        const message = error && error.message
-          ? error.message
-          : "कनेक्शन में समस्या हुई।";
-
-        setStatus("समस्या: " + message, true);
-
-        addMessage(
-          "assistant",
-          "माफ़ कीजिए, अभी जवाब नहीं मिल पाया।\n\n" +
-          "संभावित कारण:\n" +
-          "• इंटरनेट कनेक्शन की समस्या\n" +
-          "• Cloudflare Worker का पता या API सेटअप गलत\n" +
-          "• Worker में API Key या मॉडल की समस्या\n\n" +
-          "तकनीकी संदेश: " + message
-        );
-      } finally {
-        isSending = false;
-        elements.send.disabled = false;
-        elements.input.focus();
-      }
+      ]
     }
+  ];
 
-    elements.send.addEventListener("click", sendMessage);
-
-    elements.input.addEventListener("keydown", event => {
-      if (event.key === "Enter" && !event.shiftKey) {
-        event.preventDefault();
-        sendMessage();
-      }
+  try {
+    const answer = await callGroq(env, messages, {
+      model: visionModel
     });
 
-    elements.input.addEventListener("input", () => {
-      elements.input.style.height = "auto";
-      elements.input.style.height =
-        Math.min(elements.input.scrollHeight, 150) + "px";
-    });
+    return jsonResponse(
+      {
+        answer,
+        reply: answer,
+        verified: false,
+        verificationNote:
+          "The image was analyzed by AI. External facts were not independently verified."
+      },
+      200,
+      cors
+    );
+  } catch (error) {
+    console.error("Vision error:", error.message);
 
-    function toggleTheme() {
-      document.body.classList.toggle("light");
-      saveSettings();
+    return jsonResponse(
+      {
+        error: "Unable to analyze the image right now.",
+        details: error.message
+      },
+      502,
+      cors
+    );
+  }
+}
+
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const origin = request.headers.get("Origin") || "";
+    const cors = corsHeaders(origin, env);
+
+    if (request.method === "OPTIONS") {
+      return new Response(null, {
+        status: 204,
+        headers: cors
+      });
     }
 
-    document.getElementById("themeBtn").addEventListener("click", toggleTheme);
-    document.getElementById("mobileThemeBtn").addEventListener("click", toggleTheme);
-
-    document.getElementById("newChatBtn").addEventListener("click", createNewChat);
-    document.getElementById("mobileNewChatBtn").addEventListener("click", createNewChat);
-
-    function openSettings() {
-      elements.settings.classList.toggle("open");
+    if (request.method !== "POST") {
+      return jsonResponse(
+        { error: "Method not allowed. Use POST." },
+        405,
+        cors
+      );
     }
 
-    document.getElementById("settingsBtn").addEventListener("click", openSettings);
-    document.getElementById("sidebarSettingsBtn").addEventListener("click", openSettings);
-
-    document.getElementById("closeSettingsBtn").addEventListener("click", () => {
-      elements.settings.classList.remove("open");
-    });
-
-    document.getElementById("saveSettingsBtn").addEventListener("click", () => {
-      saveSettings();
-      elements.settings.classList.remove("open");
-      setStatus("सेटिंग सेव हो गई।");
-    });
-
-    function speakText(text) {
-      if (!("speechSynthesis" in window)) {
-        setStatus("इस ब्राउज़र में आवाज़ की सुविधा उपलब्ध नहीं है।", true);
-        return;
-      }
-
-      window.speechSynthesis.cancel();
-
-      const utterance = new SpeechSynthesisUtterance(text);
-      const languageMap = {
-        Hindi: "hi-IN",
-        English: "en-IN",
-        Bhojpuri: "hi-IN",
-        Urdu: "ur-PK",
-        Maithili: "hi-IN",
-        Bengali: "bn-IN",
-        Tamil: "ta-IN",
-        Telugu: "te-IN",
-        Marathi: "mr-IN",
-        Gujarati: "gu-IN",
-        Punjabi: "pa-IN"
-      };
-
-      utterance.lang = languageMap[elements.language.value] || "hi-IN";
-      utterance.rate = 1;
-      utterance.pitch = 1;
-
-      window.speechSynthesis.speak(utterance);
+    if (url.pathname === "/api/chat") {
+      return handleChat(request, env, cors);
     }
 
-    document.getElementById("stopVoiceBtn").addEventListener("click", () => {
-      if ("speechSynthesis" in window) {
-        window.speechSynthesis.cancel();
-      }
-      setStatus("आवाज़ रोक दी गई।");
-    });
-
-    function setupSpeechRecognition() {
-      const SpeechRecognition =
-        window.SpeechRecognition || window.webkitSpeechRecognition;
-
-      if (!SpeechRecognition) {
-        setStatus("इस ब्राउज़र में voice input उपलब्ध नहीं है।", true);
-        return;
-      }
-
-      if (recognition) {
-        recognition.stop();
-      }
-
-      recognition = new SpeechRecognition();
-      recognition.lang = "hi-IN";
-      recognition.interimResults = false;
-      recognition.continuous = false;
-
-      recognition.onstart = () => {
-        setStatus("सुन रहा हूँ... अब बोलिए।");
-      };
-
-      recognition.onresult = event => {
-        const transcript = event.results[0][0].transcript;
-        elements.input.value =
-          (elements.input.value ? elements.input.value + " " : "") +
-          transcript;
-
-        elements.input.dispatchEvent(new Event("input"));
-        setStatus("आपकी आवाज़ टेक्स्ट में बदल गई।");
-      };
-
-      recognition.onerror = event => {
-        setStatus("आवाज़ पहचानने में समस्या: " + event.error, true);
-      };
-
-      recognition.onend = () => {
-        if (elements.status.textContent === "सुन रहा हूँ... अब बोलिए।") {
-          setStatus("");
-        }
-      };
-
-      recognition.start();
+    if (url.pathname === "/api/vision") {
+      return handleVision(request, env, cors);
     }
 
-    document.getElementById("micBtn").addEventListener("click", setupSpeechRecognition);
-
-    renderHistory();
-    renderMessages();
-  </script>
-</body>
-</html>
+    return jsonResponse(
+      { error: "Endpoint not found." },
+      404,
+      cors
+    );
+  }
+};
