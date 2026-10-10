@@ -4,13 +4,11 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
-
-  <title>सारथी AI — Study</title>
+  <meta name="description" content="सारथी AI से पढ़ाई करें और Quiz अभ्यास करें।">
+  <title>सारथी AI Study</title>
 
   <style>
-    * {
-      box-sizing: border-box;
-    }
+    * { box-sizing: border-box; }
 
     body {
       margin: 0;
@@ -23,13 +21,12 @@
       position: sticky;
       top: 0;
       z-index: 5;
+      padding: 14px;
       background: #fff;
       border-bottom: 1px solid #e5e7eb;
-      padding: 14px;
     }
 
-    .header-inner,
-    main {
+    .header-inner, main {
       width: min(900px, 100%);
       margin: auto;
     }
@@ -38,42 +35,25 @@
       display: flex;
       justify-content: space-between;
       align-items: center;
-      gap: 10px;
+      gap: 12px;
     }
 
-    .brand {
-      font-size: 20px;
-      font-weight: 800;
-    }
+    .brand { font-size: 20px; font-weight: 800; }
 
-    main {
-      padding: 18px 14px 40px;
-    }
+    main { padding: 18px 14px 40px; }
 
     .card {
-      background: white;
-      border-radius: 16px;
       padding: 18px;
       margin-bottom: 16px;
-      box-shadow: 0 4px 18px rgba(0, 0, 0, .05);
+      background: #fff;
+      border-radius: 16px;
+      box-shadow: 0 4px 18px #1720330b;
     }
 
-    h1 {
-      font-size: 24px;
-    }
-
-    h2 {
-      font-size: 19px;
-      margin-top: 0;
-    }
-
-    p {
-      line-height: 1.7;
-    }
-
-    .muted {
-      color: #667085;
-    }
+    h1 { font-size: 24px; }
+    h2 { margin-top: 0; font-size: 19px; }
+    p { line-height: 1.6; }
+    .muted { color: #667085; }
 
     label {
       display: block;
@@ -81,14 +61,9 @@
       font-weight: 700;
     }
 
-    select,
-    textarea,
-    button {
-      font: inherit;
-    }
+    select, textarea, button { font: inherit; }
 
-    select,
-    textarea {
+    select, textarea {
       width: 100%;
       padding: 12px;
       border: 1px solid #d7dce5;
@@ -97,33 +72,20 @@
       color: #172033;
     }
 
-    textarea {
-      min-height: 130px;
-      resize: vertical;
-    }
+    textarea { min-height: 130px; resize: vertical; }
 
     button {
+      padding: 11px 15px;
       border: 0;
       border-radius: 10px;
-      padding: 11px 15px;
       font-weight: 700;
       cursor: pointer;
     }
 
-    button:disabled {
-      opacity: .55;
-      cursor: not-allowed;
-    }
+    button:disabled { opacity: .55; cursor: not-allowed; }
 
-    .primary {
-      background: #4f46e5;
-      color: #fff;
-    }
-
-    .secondary {
-      background: #eef2ff;
-      color: #3730a3;
-    }
+    .primary { color: #fff; background: #4f46e5; }
+    .secondary { color: #3730a3; background: #eef2ff; }
 
     .buttons {
       display: flex;
@@ -140,20 +102,18 @@
     }
 
     .answer {
-      background: #f8fafc;
+      min-height: 70px;
+      padding: 14px;
       border: 1px solid #e5e7eb;
       border-radius: 12px;
-      padding: 14px;
+      background: #f8fafc;
       line-height: 1.8;
       white-space: pre-wrap;
       overflow-wrap: anywhere;
-      min-height: 70px;
     }
 
-    .quiz-options {
-      display: grid;
-      gap: 10px;
-    }
+    .hidden { display: none; }
+    .quiz-options { display: grid; gap: 10px; }
 
     .option {
       width: 100%;
@@ -162,28 +122,12 @@
       border: 1px solid #d7dce5;
     }
 
-    .option.correct {
-      background: #dcfce7;
-      border-color: #22c55e;
-    }
-
-    .option.wrong {
-      background: #fee2e2;
-      border-color: #ef4444;
-    }
-
-    .hidden {
-      display: none;
-    }
+    .option.correct { background: #dcfce7; }
+    .option.wrong { background: #fee2e2; }
 
     @media (max-width: 480px) {
-      .buttons button {
-        flex: 1;
-      }
-
-      h1 {
-        font-size: 22px;
-      }
+      .buttons button { flex: 1; }
+      h1 { font-size: 22px; }
     }
   </style>
 </head>
@@ -202,7 +146,7 @@
     <section class="card">
       <h1>पढ़ाई में सारथी AI</h1>
       <p class="muted">
-        अपना विषय चुनो, प्रश्न लिखो और सरल हिंदी में उत्तर प्राप्त करो।
+        विषय चुनो, सवाल लिखो और आसान हिंदी में उत्तर प्राप्त करो।
       </p>
     </section>
 
@@ -210,8 +154,7 @@
       <h2>🤖 AI से पढ़ाई</h2>
 
       <form id="studyForm">
-        <label for="subject">विषय चुनें</label>
-
+        <label for="subject">विषय</label>
         <select id="subject">
           <option>सामान्य अध्ययन</option>
           <option>दर्शनशास्त्र</option>
@@ -225,40 +168,37 @@
           <option>गणित</option>
         </select>
 
-        <label for="question">अपना प्रश्न लिखें</label>
-
+        <label for="question">अपना प्रश्न</label>
         <textarea
           id="question"
           maxlength="8000"
           required
-          placeholder="उदाहरण: दर्शनशास्त्र क्या है? परीक्षा के लिए समझाइए।"
+          placeholder="अपना सवाल यहाँ लिखें।"
         ></textarea>
 
         <div class="buttons">
           <button class="primary" id="askBtn" type="submit">
-            🤖 उत्तर बताओ
+            उत्तर बताओ
           </button>
-
           <button class="secondary" id="clearBtn" type="button">
             साफ करें
           </button>
         </div>
       </form>
 
-      <div id="status" class="status" role="status" aria-live="polite"></div>
+      <div class="status" id="status" role="status" aria-live="polite"></div>
     </section>
 
     <section class="card">
       <h2>📝 उत्तर</h2>
-
-      <div id="answer" class="answer" aria-live="polite">प्रश्न पूछने के बाद उत्तर यहाँ दिखाई देगा।</div>
+      <div class="answer" id="answer" aria-live="polite">
+        तुम्हारा उत्तर यहाँ दिखाई देगा।
+      </div>
     </section>
 
     <section class="card">
-      <h2>🧠 Quiz अभ्यास</h2>
-
-      <label for="quizSubject">विषय चुनें</label>
-
+      <h2>🧠 Quiz</h2>
+      <label for="quizSubject">Quiz विषय</label>
       <select id="quizSubject">
         <option>सामान्य अध्ययन</option>
         <option>इतिहास</option>
@@ -270,7 +210,7 @@
 
       <div class="buttons">
         <button class="primary" id="startQuizBtn" type="button">
-          ▶ Quiz शुरू करें
+          Quiz शुरू करें
         </button>
       </div>
     </section>
@@ -278,13 +218,11 @@
     <section class="card hidden" id="quizCard">
       <h2 id="quizTitle">प्रश्न</h2>
       <p id="score">अंक: 0</p>
-
       <div id="quizOptions" class="quiz-options"></div>
       <div id="quizStatus" class="status" aria-live="polite"></div>
-
       <div class="buttons">
         <button class="primary" id="nextBtn" type="button" disabled>
-          अगला प्रश्न →
+          अगला प्रश्न
         </button>
       </div>
     </section>
@@ -293,26 +231,30 @@
   <script>
     "use strict";
 
-    // केवल अपने Cloudflare Worker का URL इस्तेमाल करें।
-    // API Key इस HTML में कभी न डालें।
-    const API_BASE =
-      "https://sarathi-ai.mjmanjumanjeet0.workers.dev";
+    const API_BASE = "https://sarathi-ai.mjmanjumanjeet0.workers.dev";
+    const MAX_QUESTION_LENGTH = 8000;
+    const REQUEST_TIMEOUT_MS = 50000;
 
     const $ = id => document.getElementById(id);
+    let activeController = null;
 
     $("homeBtn").addEventListener("click", () => {
-      window.location.href = "./index.html";
+      window.location.assign("./index.html");
     });
 
     $("clearBtn").addEventListener("click", () => {
+      if (activeController) activeController.abort();
+
       $("question").value = "";
-      $("answer").textContent =
-        "प्रश्न पूछने के बाद उत्तर यहाँ दिखाई देगा।";
+      $("answer").textContent = "तुम्हारा उत्तर यहाँ दिखाई देगा।";
       $("status").textContent = "";
+      $("askBtn").disabled = false;
     });
 
     $("studyForm").addEventListener("submit", async event => {
       event.preventDefault();
+
+      if (activeController) return;
 
       const question = $("question").value.trim();
       const subject = $("subject").value;
@@ -322,32 +264,35 @@
         return;
       }
 
+      if (question.length > MAX_QUESTION_LENGTH) {
+        $("status").textContent = "प्रश्न बहुत लंबा है। कृपया छोटा करें।";
+        return;
+      }
+
       const prompt =
-        "विषय: " + subject +
-        "\nप्रश्न: " + question +
-        "\nसरल हिंदी में सटीक उत्तर दो।" +
-        " परीक्षा के प्रश्न में जरूरत के अनुसार भूमिका, मुख्य बिंदु और निष्कर्ष दो।" +
-        " यदि किसी तथ्य के बारे में निश्चित नहीं हो, तो स्पष्ट बताओ।";
+        "विषय: " + subject + "\n\n" +
+        "प्रश्न: " + question + "\n\n" +
+        "सरल हिंदी में सही उत्तर दो। परीक्षा के प्रश्न में जरूरत के अनुसार " +
+        "भूमिका, मुख्य बिंदु, उदाहरण और निष्कर्ष शामिल करो। " +
+        "अनिश्चित जानकारी को तथ्य की तरह प्रस्तुत मत करो।";
 
-      const button = $("askBtn");
       const controller = new AbortController();
+      activeController = controller;
 
-      button.disabled = true;
+      $("askBtn").disabled = true;
       $("status").textContent = "सारथी उत्तर तैयार कर रहा है...";
       $("answer").textContent = "कृपया प्रतीक्षा करें...";
 
-      const timeout = setTimeout(() => controller.abort(), 45000);
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        REQUEST_TIMEOUT_MS
+      );
 
       try {
         const response = await fetch(API_BASE + "/api/chat", {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            message: prompt,
-            history: []
-          }),
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: prompt, history: [] }),
           signal: controller.signal,
           credentials: "omit",
           cache: "no-store",
@@ -363,18 +308,24 @@
         }
 
         if (!response.ok) {
-          throw new Error(
-            typeof data.error === "string"
-              ? data.error.slice(0, 250)
-              : "AI अनुरोध पूरा नहीं हुआ।"
-          );
+          // Only display a controlled message, not arbitrary server text.
+          const messages = {
+            400: "प्रश्न की जाँच करें और फिर प्रयास करें।",
+            403: "इस वेबसाइट को API उपयोग करने की अनुमति नहीं है।",
+            413: "अनुरोध बहुत बड़ा है।",
+            429: "बहुत सारे अनुरोध हो गए हैं। थोड़ी देर बाद प्रयास करें।",
+            502: "AI सेवा अभी उत्तर नहीं दे रही है।",
+            503: "AI सेवा अभी कॉन्फ़िगर नहीं है।",
+            504: "अनुरोध में समय अधिक लग गया।"
+          };
+
+          throw new Error(messages[response.status] || "अनुरोध पूरा नहीं हुआ।");
         }
 
-        if (typeof data.answer !== "string" || !data.answer.trim()) {
+        if (!data || typeof data.answer !== "string" || !data.answer.trim()) {
           throw new Error("AI ने खाली उत्तर दिया।");
         }
 
-        // textContent से उत्तर HTML/JavaScript की तरह execute नहीं होगा।
         $("answer").textContent = data.answer;
         $("status").textContent = "उत्तर तैयार है।";
 
@@ -383,12 +334,13 @@
 
         $("status").textContent =
           error.name === "AbortError"
-            ? "समय अधिक लग गया। कृपया फिर प्रयास करें।"
-            : (error.message || "नेटवर्क या सर्वर में समस्या है।");
+            ? "अनुरोध रद्द हुआ या समय अधिक लग गया।"
+            : (error.message || "नेटवर्क या सर्वर की समस्या है।");
 
       } finally {
-        clearTimeout(timeout);
-        button.disabled = false;
+        clearTimeout(timeoutId);
+        activeController = null;
+        $("askBtn").disabled = false;
       }
     });
 
@@ -405,7 +357,6 @@
           answer: 2
         }
       ],
-
       "इतिहास": [
         {
           q: "भारत स्वतंत्र कब हुआ?",
@@ -418,7 +369,6 @@
           answer: 1
         }
       ],
-
       "दर्शनशास्त्र": [
         {
           q: "सुकरात किस क्षेत्र से संबंधित थे?",
@@ -426,7 +376,6 @@
           answer: 0
         }
       ],
-
       "होम साइंस": [
         {
           q: "संतुलित आहार में क्या शामिल होता है?",
@@ -439,7 +388,6 @@
           answer: 2
         }
       ],
-
       "विज्ञान": [
         {
           q: "जल का रासायनिक सूत्र क्या है?",
@@ -447,7 +395,6 @@
           answer: 1
         }
       ],
-
       "गणित": [
         {
           q: "100 का 25% कितना है?",
@@ -479,10 +426,7 @@
       }
 
       showQuestion();
-      $("quizCard").scrollIntoView({
-        behavior: "smooth",
-        block: "start"
-      });
+      $("quizCard").scrollIntoView({ behavior: "smooth", block: "start" });
     });
 
     function showQuestion() {
@@ -499,9 +443,7 @@
 
       const item = questions[questionIndex];
 
-      $("quizTitle").textContent =
-        (questionIndex + 1) + ". " + item.q;
-
+      $("quizTitle").textContent = (questionIndex + 1) + ". " + item.q;
       $("score").textContent = "अंक: " + score;
       $("quizStatus").textContent = "";
       $("nextBtn").disabled = true;
@@ -513,14 +455,12 @@
         button.className = "option";
         button.textContent = text;
         button.addEventListener("click", () => chooseAnswer(index));
-
         $("quizOptions").appendChild(button);
       });
     }
 
     function chooseAnswer(index) {
       if (answered) return;
-
       answered = true;
 
       const item = questions[questionIndex];
@@ -536,11 +476,11 @@
 
       if (index === item.answer) {
         score++;
-        $("quizStatus").textContent = "✓ सही उत्तर!";
+        $("quizStatus").textContent = "सही उत्तर!";
       } else {
         buttons[index].classList.add("wrong");
         $("quizStatus").textContent =
-          "गलत उत्तर। सही उत्तर हरे रंग में है।";
+          "गलत उत्तर। हरे रंग में सही उत्तर दिखाया गया है।";
       }
 
       $("score").textContent = "अंक: " + score;
