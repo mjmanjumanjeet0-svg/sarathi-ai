@@ -1,144 +1,123 @@
 /**
- * SAARTHI AI — SECURE CLOUDFLARE WORKER
+ * SAARTHI AI — CLOUDFLARE WORKER
  *
- * Required Cloudflare Secret:
- * GROQ_API_KEY
+ * Required secret:
+ *   GROQ_API_KEY
  *
- * Optional Worker variable:
- * ALLOWED_ORIGINS
+ * Required variable:
+ *   ALLOWED_ORIGINS
  *
  * Routes:
- * GET  /
- * GET  /api/health
- * POST /api/chat
- * POST /api/vision
- * POST /api/transcribe
+ *   GET  /
+ *   GET  /api/health
+ *   POST /api/chat
+ *   POST /api/vision
+ *   POST /api/transcribe
  */
+
+const GROQ_API = "https://api.groq.com/openai/v1";
 
 const CHAT_MODEL = "openai/gpt-oss-20b";
 const VISION_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct";
 const TRANSCRIBE_MODEL = "whisper-large-v3-turbo";
 
-const GROQ_API = "https://api.groq.com/openai/v1";
-
-const MAX_BODY_SIZE = 1_000_000;
-const MAX_MESSAGE_LENGTH = 12_000;
+const MAX_JSON_BYTES = 1_000_000;
+const MAX_MESSAGE_LENGTH = 8_000;
 const MAX_HISTORY_ITEMS = 12;
+const MAX_HISTORY_ITEM_LENGTH = 4_000;
+const MAX_IMAGE_LENGTH = 850_000;
+const MAX_AUDIO_BYTES = 7_500_000;
 
 const SYSTEM_PROMPT = `
-You are Saarthi AI, a helpful, honest, and safety-conscious AI assistant.
+You are Saarthi AI, a helpful, honest and safety-conscious assistant.
 
 LANGUAGE:
 - Reply in the language used by the user.
-- When the user writes Hindi, reply in simple, natural Hindi.
+- When the user writes Hindi, use simple, natural Hindi.
 - Explain technical instructions step by step.
 
 ACCURACY:
-- Never invent facts, sources, or search results.
-- If you are unsure, clearly say so.
-- Do not claim to have searched the live web unless a search tool was actually used.
-- If information may be outdated, explain that limitation.
-
-STYLE:
-- Use clear headings and readable paragraphs when helpful.
-- Avoid unnecessary decorative separator lines.
-- Keep simple questions concise and complex questions detailed.
+- Never invent facts, sources or search results.
+- Clearly state uncertainty.
+- Never claim to have searched the live web unless a search tool was used.
 
 PRIVACY:
-- Never ask the user to reveal passwords, OTPs, API keys, or secret credentials.
+- Never ask for passwords, OTPs or API keys.
 - Do not request unnecessary personal information.
-- Do not claim that data is deleted from systems you do not control.
+- Do not claim that external services have deleted data.
 
 SAFETY:
 - Give careful, responsible answers.
-- For medical, legal, financial, and other high-impact topics, explain limitations.
+- Explain limitations on high-impact topics.
 - Never pretend to be a licensed professional.
 
-Be useful, respectful, and transparent.
+Be useful, respectful and transparent.
 `;
 
-function getAllowedOrigins(env) {
-  return (env.ALLOWED_ORIGINS || "")
+function allowedOrigins(env) {
+  return String(env.ALLOWED_ORIGINS || "")
     .split(",")
-    .map(origin => origin.trim())
+    .map(value => value.trim())
     .filter(Boolean);
 }
 
-function corsHeaders(request, env) {
-  const headers = {
-    "Vary": "Origin",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
-    "Access-Control-Max-Age": "86400",
+function originAllowed(request, env) {
+  const origin = request.headers.get("Origin");
+
+  // Non-browser clients may omit Origin.
+  // This is not authentication; public requests still need abuse controls.
+  if (!origin) return true;
+
+  try {
+    const parsed = new URL(origin);
+
+    if (parsed.origin !== origin) return false;
+
+    return allowedOrigins(env).includes(origin);
+  } catch {
+    return false;
+  }
+}
+
+function baseHeaders() {
+  return {
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "no-referrer",
-    "Cache-Control": "no-store"
+    "Cache-Control": "no-store",
+    "Vary": "Origin"
+  };
+}
+
+function jsonResponse(request, env, data, status = 200) {
+  const headers = {
+    ...baseHeaders(),
+    "Content-Type": "application/json; charset=utf-8"
   };
 
   const origin = request.headers.get("Origin");
 
-  if (!origin) {
-    return headers;
-  }
-
-  let sameOrigin = false;
-
-  try {
-    sameOrigin = new URL(request.url).origin === origin;
-  } catch {
-    sameOrigin = false;
-  }
-
-  const allowedOrigins = getAllowedOrigins(env);
-
-  if (sameOrigin || allowedOrigins.includes(origin)) {
+  if (origin && originAllowed(request, env)) {
     headers["Access-Control-Allow-Origin"] = origin;
   }
 
-  return headers;
-}
-
-function jsonResponse(request, env, data, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
-    headers: {
-      ...corsHeaders(request, env),
-      "Content-Type": "application/json; charset=utf-8"
-    }
+    headers
   });
 }
 
-function cleanText(value, maxLength = MAX_MESSAGE_LENGTH) {
-  if (typeof value !== "string") {
-    return "";
-  }
-
-  return value.trim().slice(0, maxLength);
+function errorResponse(request, env, message, status) {
+  return jsonResponse(request, env, { error: message }, status);
 }
 
-function safeHistory(history) {
-  if (!Array.isArray(history)) {
-    return [];
-  }
-
-  return history
-    .slice(-MAX_HISTORY_ITEMS)
-    .filter(item =>
-      item &&
-      typeof item === "object" &&
-      ["user", "assistant"].includes(item.role) &&
-      typeof item.content === "string"
-    )
-    .map(item => ({
-      role: item.role,
-      content: item.content.slice(0, 4000)
-    }));
+function methodNotAllowed(request, env) {
+  return errorResponse(request, env, "Method not allowed.", 405);
 }
 
 async function readJson(request) {
-  const contentType = request.headers.get("Content-Type") || "";
+  const type = request.headers.get("Content-Type") || "";
 
-  if (!contentType.toLowerCase().includes("application/json")) {
+  if (!type.toLowerCase().includes("application/json")) {
     return {
       ok: false,
       status: 415,
@@ -146,11 +125,13 @@ async function readJson(request) {
     };
   }
 
-  const contentLength = Number(
-    request.headers.get("Content-Length") || "0"
-  );
+  const declaredLength = request.headers.get("Content-Length");
 
-  if (contentLength > MAX_BODY_SIZE) {
+  if (
+    declaredLength !== null &&
+    (!/^\d+$/.test(declaredLength) ||
+      Number(declaredLength) > MAX_JSON_BYTES)
+  ) {
     return {
       ok: false,
       status: 413,
@@ -158,10 +139,52 @@ async function readJson(request) {
     };
   }
 
-  let raw;
+  let text;
 
   try {
-    raw = await request.text();
+    // The streaming read prevents buffering an unlimited request body.
+    const reader = request.body?.getReader();
+
+    if (!reader) {
+      return {
+        ok: false,
+        status: 400,
+        error: "Request body is missing."
+      };
+    }
+
+    const chunks = [];
+    let total = 0;
+
+    while (true) {
+      const { done, value } = await reader.read();
+
+      if (done) break;
+
+      total += value.byteLength;
+
+      if (total > MAX_JSON_BYTES) {
+        await reader.cancel();
+
+        return {
+          ok: false,
+          status: 413,
+          error: "Request is too large."
+        };
+      }
+
+      chunks.push(value);
+    }
+
+    const merged = new Uint8Array(total);
+    let offset = 0;
+
+    for (const chunk of chunks) {
+      merged.set(chunk, offset);
+      offset += chunk.byteLength;
+    }
+
+    text = new TextDecoder("utf-8", { fatal: true }).decode(merged);
   } catch {
     return {
       ok: false,
@@ -170,18 +193,10 @@ async function readJson(request) {
     };
   }
 
-  if (new TextEncoder().encode(raw).byteLength > MAX_BODY_SIZE) {
-    return {
-      ok: false,
-      status: 413,
-      error: "Request is too large."
-    };
-  }
-
   try {
     return {
       ok: true,
-      data: JSON.parse(raw)
+      data: JSON.parse(text)
     };
   } catch {
     return {
@@ -192,147 +207,143 @@ async function readJson(request) {
   }
 }
 
+function cleanText(value, maxLength = MAX_MESSAGE_LENGTH) {
+  if (typeof value !== "string") return "";
+  return value.trim().slice(0, maxLength);
+}
+
+function safeHistory(history) {
+  if (!Array.isArray(history)) return [];
+
+  return history
+    .slice(-MAX_HISTORY_ITEMS)
+    .filter(item =>
+      item &&
+      typeof item === "object" &&
+      !Array.isArray(item) &&
+      ["user", "assistant"].includes(item.role) &&
+      typeof item.content === "string"
+    )
+    .map(item => ({
+      role: item.role,
+      content: item.content.slice(0, MAX_HISTORY_ITEM_LENGTH)
+    }));
+}
+
 async function callGroq(env, endpoint, payload) {
   if (!env.GROQ_API_KEY) {
     return {
       ok: false,
       status: 503,
-      error: "AI service is not configured. Add GROQ_API_KEY in Cloudflare Secrets."
+      error: "AI सेवा कॉन्फ़िगर नहीं है।"
     };
   }
 
   let response;
 
   try {
-    response = await fetch(`${GROQ_API}${endpoint}`, {
+    response = await fetch(GROQ_API + endpoint, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${env.GROQ_API_KEY}`,
+        "Authorization": "Bearer " + env.GROQ_API_KEY,
         "Content-Type": "application/json"
       },
       body: JSON.stringify(payload),
-      signal: AbortSignal.timeout(45000)
+      signal: AbortSignal.timeout(45_000)
     });
   } catch {
     return {
       ok: false,
       status: 502,
-      error: "AI service could not be reached. Please try again."
-    };
-  }
-
-  let result;
-
-  try {
-    result = await response.json();
-  } catch {
-    return {
-      ok: false,
-      status: 502,
-      error: "AI service returned an invalid response."
+      error: "AI सेवा से संपर्क नहीं हो पाया।"
     };
   }
 
   if (!response.ok) {
-    // Do not expose provider response bodies, credentials, or internal details.
+    // Do not return provider response bodies or internal details.
     return {
       ok: false,
       status: response.status === 429 ? 429 : 502,
       error: response.status === 429
-        ? "AI service rate limit reached. Please wait and try again."
-        : "AI service request failed. Please try again later."
+        ? "AI सेवा की सीमा पूरी हुई। थोड़ी देर बाद प्रयास करें।"
+        : "AI अनुरोध पूरा नहीं हुआ। बाद में प्रयास करें।"
     };
   }
 
-  return {
-    ok: true,
-    data: result
-  };
+  let data;
+
+  try {
+    data = await response.json();
+  } catch {
+    return {
+      ok: false,
+      status: 502,
+      error: "AI सेवा से अमान्य उत्तर मिला।"
+    };
+  }
+
+  return { ok: true, data };
 }
 
-function validateImageData(value) {
-  if (typeof value !== "string") {
-    return null;
-  }
+function validImage(value) {
+  if (typeof value !== "string") return false;
+  if (value.length > MAX_IMAGE_LENGTH) return false;
 
-  // Accept only base64 data URLs for common image formats.
-  const match = value.match(
-    /^data:(image\/(?:jpeg|jpg|png|webp|gif));base64,([A-Za-z0-9+/=\r\n]+)$/i
-  );
-
-  if (!match) {
-    return null;
-  }
-
-  if (value.length > 850_000) {
-    return null;
-  }
-
-  return value;
+  return /^data:image\/(?:jpeg|jpg|png|webp|gif);base64,[A-Za-z0-9+/=\r\n]+$/i
+    .test(value);
 }
 
 async function handleChat(request, env) {
   const parsed = await readJson(request);
 
   if (!parsed.ok) {
-    return jsonResponse(
-      request,
-      env,
-      { error: parsed.error },
-      parsed.status
+    return errorResponse(
+      request, env, parsed.error, parsed.status
     );
   }
 
-  const body = parsed.data || {};
+  const body = parsed.data;
+
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return errorResponse(request, env, "Invalid request.", 400);
+  }
 
   const message = cleanText(
     body.message ?? body.prompt ?? body.question
   );
 
   if (!message) {
-    return jsonResponse(
-      request,
-      env,
-      { error: "Please enter a message." },
-      400
+    return errorResponse(
+      request, env, "कृपया अपना प्रश्न लिखें।", 400
     );
   }
 
-  const history = safeHistory(body.history);
-
-  // The current user message is added exactly once.
-  const messages = [
-    { role: "system", content: SYSTEM_PROMPT },
-    ...history.filter(item =>
-      item.content !== message || item.role !== "user"
-    ),
-    { role: "user", content: message }
-  ];
+  const history = safeHistory(body.history).filter(item =>
+    item.role !== "user" || item.content !== message
+  );
 
   const result = await callGroq(env, "/chat/completions", {
     model: CHAT_MODEL,
-    messages,
+    messages: [
+      { role: "system", content: SYSTEM_PROMPT },
+      ...history,
+      { role: "user", content: message }
+    ],
     temperature: 0.5,
     max_tokens: 1800
   });
 
   if (!result.ok) {
-    return jsonResponse(
-      request,
-      env,
-      { error: result.error },
-      result.status
+    return errorResponse(
+      request, env, result.error, result.status
     );
   }
 
   const answer = result.data?.choices?.[0]?.message?.content;
 
   if (typeof answer !== "string" || !answer.trim()) {
-    return jsonResponse(
-      request,
-      env,
-      { error: "AI returned an empty response. Please try again." },
-      502
+    return errorResponse(
+      request, env, "AI से उत्तर नहीं मिला।", 502
     );
   }
 
@@ -347,55 +358,44 @@ async function handleVision(request, env) {
   const parsed = await readJson(request);
 
   if (!parsed.ok) {
-    return jsonResponse(
-      request,
-      env,
-      { error: parsed.error },
-      parsed.status
+    return errorResponse(
+      request, env, parsed.error, parsed.status
     );
   }
 
-  const body = parsed.data || {};
+  const body = parsed.data;
 
-  const prompt = cleanText(
-    body.prompt || body.message || "इस तस्वीर को ध्यान से समझाओ।",
-    4000
-  );
+  if (!body || typeof body !== "object" || Array.isArray(body)) {
+    return errorResponse(request, env, "Invalid request.", 400);
+  }
 
-  const image = validateImageData(
-    body.image || body.imageData || body.imageUrl
-  );
+  const image = body.image ?? body.imageData ?? body.imageUrl;
 
-  if (!image) {
-    return jsonResponse(
+  if (!validImage(image)) {
+    return errorResponse(
       request,
       env,
-      {
-        error: "Valid image data URL required. Supported formats: JPEG, PNG, WebP, GIF."
-      },
+      "JPEG, PNG, WebP या GIF की मान्य base64 data URL भेजें।",
       400
     );
   }
 
+  const prompt = cleanText(
+    body.prompt || body.message || "इस तस्वीर को समझाओ।",
+    4000
+  );
+
   const result = await callGroq(env, "/chat/completions", {
     model: VISION_MODEL,
     messages: [
-      {
-        role: "system",
-        content: SYSTEM_PROMPT
-      },
+      { role: "system", content: SYSTEM_PROMPT },
       {
         role: "user",
         content: [
-          {
-            type: "text",
-            text: prompt
-          },
+          { type: "text", text: prompt },
           {
             type: "image_url",
-            image_url: {
-              url: image
-            }
+            image_url: { url: image }
           }
         ]
       }
@@ -405,22 +405,16 @@ async function handleVision(request, env) {
   });
 
   if (!result.ok) {
-    return jsonResponse(
-      request,
-      env,
-      { error: result.error },
-      result.status
+    return errorResponse(
+      request, env, result.error, result.status
     );
   }
 
   const answer = result.data?.choices?.[0]?.message?.content;
 
   if (typeof answer !== "string" || !answer.trim()) {
-    return jsonResponse(
-      request,
-      env,
-      { error: "AI could not describe this image." },
-      502
+    return errorResponse(
+      request, env, "तस्वीर का उत्तर नहीं मिल पाया।", 502
     );
   }
 
@@ -432,35 +426,31 @@ async function handleVision(request, env) {
 
 async function handleTranscription(request, env) {
   if (!env.GROQ_API_KEY) {
-    return jsonResponse(
-      request,
-      env,
-      { error: "AI service is not configured." },
-      503
+    return errorResponse(
+      request, env, "AI सेवा कॉन्फ़िगर नहीं है।", 503
     );
   }
 
-  const contentType = request.headers.get("Content-Type") || "";
+  const type = request.headers.get("Content-Type") || "";
 
-  if (!contentType.toLowerCase().startsWith("multipart/form-data")) {
-    return jsonResponse(
+  if (!type.toLowerCase().startsWith("multipart/form-data;")) {
+    return errorResponse(
       request,
       env,
-      { error: "Send audio using multipart/form-data with an audio file." },
+      "Audio को multipart/form-data में file नाम से भेजें।",
       415
     );
   }
 
-  const contentLength = Number(
-    request.headers.get("Content-Length") || "0"
-  );
+  const declaredLength = request.headers.get("Content-Length");
 
-  if (contentLength > 8_000_000) {
-    return jsonResponse(
-      request,
-      env,
-      { error: "Audio file is too large. Maximum request size is 8 MB." },
-      413
+  if (
+    declaredLength !== null &&
+    (!/^\d+$/.test(declaredLength) ||
+      Number(declaredLength) > MAX_AUDIO_BYTES + 500_000)
+  ) {
+    return errorResponse(
+      request, env, "ऑडियो अनुरोध बहुत बड़ा है।", 413
     );
   }
 
@@ -469,31 +459,26 @@ async function handleTranscription(request, env) {
   try {
     form = await request.formData();
   } catch {
-    return jsonResponse(
-      request,
-      env,
-      { error: "Could not read the audio upload." },
-      400
+    return errorResponse(
+      request, env, "ऑडियो फ़ाइल पढ़ी नहीं जा सकी।", 400
     );
   }
 
   const file = form.get("file");
 
-  if (!file || typeof file === "string" || typeof file.arrayBuffer !== "function") {
-    return jsonResponse(
-      request,
-      env,
-      { error: "Please attach an audio file in the 'file' field." },
-      400
+  if (
+    !file ||
+    typeof file === "string" ||
+    typeof file.arrayBuffer !== "function"
+  ) {
+    return errorResponse(
+      request, env, "ऑडियो फ़ाइल नहीं मिली।", 400
     );
   }
 
-  if (file.size <= 0 || file.size > 7_500_000) {
-    return jsonResponse(
-      request,
-      env,
-      { error: "Audio file must be smaller than 7.5 MB." },
-      413
+  if (file.size < 1 || file.size > MAX_AUDIO_BYTES) {
+    return errorResponse(
+      request, env, "ऑडियो फ़ाइल की सीमा 7.5 MB है।", 413
     );
   }
 
@@ -506,32 +491,27 @@ async function handleTranscription(request, env) {
   let response;
 
   try {
-    response = await fetch(`${GROQ_API}/audio/transcriptions`, {
+    response = await fetch(GROQ_API + "/audio/transcriptions", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${env.GROQ_API_KEY}`
+        "Authorization": "Bearer " + env.GROQ_API_KEY
       },
       body: upload,
-      signal: AbortSignal.timeout(45000)
+      signal: AbortSignal.timeout(45_000)
     });
   } catch {
-    return jsonResponse(
-      request,
-      env,
-      { error: "Audio transcription service could not be reached." },
-      502
+    return errorResponse(
+      request, env, "ऑडियो सेवा से संपर्क नहीं हो पाया।", 502
     );
   }
 
   if (!response.ok) {
-    return jsonResponse(
+    return errorResponse(
       request,
       env,
-      {
-        error: response.status === 429
-          ? "Audio service rate limit reached. Try again later."
-          : "Audio transcription failed. Please try another file."
-      },
+      response.status === 429
+        ? "ऑडियो सेवा की सीमा पूरी हुई।"
+        : "ऑडियो को टेक्स्ट में बदलना विफल रहा।",
       response.status === 429 ? 429 : 502
     );
   }
@@ -541,26 +521,20 @@ async function handleTranscription(request, env) {
   try {
     data = await response.json();
   } catch {
-    return jsonResponse(
-      request,
-      env,
-      { error: "Audio service returned an invalid response." },
-      502
+    return errorResponse(
+      request, env, "ऑडियो सेवा से अमान्य उत्तर मिला।", 502
     );
   }
 
   if (typeof data.text !== "string") {
-    return jsonResponse(
-      request,
-      env,
-      { error: "No transcript was returned." },
-      502
+    return errorResponse(
+      request, env, "ऑडियो का टेक्स्ट नहीं मिला।", 502
     );
   }
 
   return jsonResponse(request, env, {
     success: true,
-    text: data.text.trim()
+    text: data.text.slice(0, 50_000)
   });
 }
 
@@ -568,16 +542,25 @@ export default {
   async fetch(request, env) {
     const url = new URL(request.url);
     const path = url.pathname.replace(/\/+$/, "") || "/";
+    const origin = request.headers.get("Origin");
 
-    // CORS preflight.
+    const headers = {
+      ...baseHeaders(),
+      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+      "Access-Control-Allow-Headers": "Content-Type",
+      "Access-Control-Max-Age": "86400"
+    };
+
+    if (origin && originAllowed(request, env)) {
+      headers["Access-Control-Allow-Origin"] = origin;
+    }
+
     if (request.method === "OPTIONS") {
-      const headers = corsHeaders(request, env);
-
-      if (
-        request.headers.get("Origin") &&
-        !headers["Access-Control-Allow-Origin"]
-      ) {
-        return new Response(null, { status: 403, headers });
+      if (origin && !originAllowed(request, env)) {
+        return new Response(null, {
+          status: 403,
+          headers
+        });
       }
 
       return new Response(null, {
@@ -586,20 +569,10 @@ export default {
       });
     }
 
-    // Reject cross-origin browser requests from unapproved sites.
-    const origin = request.headers.get("Origin");
-
-    if (origin) {
-      const headers = corsHeaders(request, env);
-
-      if (!headers["Access-Control-Allow-Origin"]) {
-        return jsonResponse(
-          request,
-          env,
-          { error: "Origin is not allowed." },
-          403
-        );
-      }
+    if (origin && !originAllowed(request, env)) {
+      return errorResponse(
+        request, env, "यह वेबसाइट अनुमति प्राप्त नहीं है।", 403
+      );
     }
 
     if (request.method === "GET" && path === "/") {
@@ -624,12 +597,7 @@ export default {
     }
 
     if (request.method !== "POST") {
-      return jsonResponse(
-        request,
-        env,
-        { error: "Method not allowed." },
-        405
-      );
+      return methodNotAllowed(request, env);
     }
 
     try {
@@ -645,19 +613,12 @@ export default {
         return await handleTranscription(request, env);
       }
 
-      return jsonResponse(
-        request,
-        env,
-        { error: "Endpoint not found." },
-        404
+      return errorResponse(
+        request, env, "Endpoint नहीं मिला।", 404
       );
     } catch {
-      // Keep internal exception details out of public responses.
-      return jsonResponse(
-        request,
-        env,
-        { error: "Unexpected server error. Please try again." },
-        500
+      return errorResponse(
+        request, env, "सर्वर में समस्या हुई। बाद में प्रयास करें।", 500
       );
     }
   }
