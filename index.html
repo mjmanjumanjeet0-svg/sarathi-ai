@@ -4,10 +4,21 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
+  <meta name="theme-color" content="#101318">
 
-  <title>सारथी AI Study</title>
+  <title>Saarthi AI</title>
 
   <style>
+    :root {
+      --bg: #101318;
+      --panel: #191d24;
+      --panel2: #222833;
+      --text: #f4f6fb;
+      --muted: #a7afbd;
+      --accent: #10a37f;
+      --border: #303743;
+    }
+
     * {
       box-sizing: border-box;
     }
@@ -15,98 +26,15 @@
     body {
       margin: 0;
       font-family: system-ui, sans-serif;
-      background: #f5f7fb;
-      color: #172033;
+      background: var(--bg);
+      color: var(--text);
     }
 
-    header {
-      position: sticky;
-      top: 0;
-      z-index: 5;
-      padding: 14px;
-      background: #fff;
-      border-bottom: 1px solid #e5e7eb;
-    }
-
-    .header-inner,
-    main {
-      width: min(900px, 100%);
-      margin: auto;
-    }
-
-    .header-inner {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-    }
-
-    .brand {
-      font-size: 20px;
-      font-weight: 800;
-    }
-
-    main {
-      padding: 18px 14px 40px;
-    }
-
-    .card {
-      padding: 18px;
-      margin-bottom: 16px;
-      background: #fff;
-      border-radius: 16px;
-      box-shadow: 0 4px 18px #1720330b;
-    }
-
-    h1 {
-      font-size: 24px;
-    }
-
-    h2 {
-      margin-top: 0;
-      font-size: 19px;
-    }
-
-    p {
-      line-height: 1.6;
-    }
-
-    .muted {
-      color: #667085;
-    }
-
-    label {
-      display: block;
-      margin: 12px 0 7px;
-      font-weight: 700;
-    }
-
-    select,
-    textarea,
-    button {
+    button, textarea, input {
       font: inherit;
     }
 
-    select,
-    textarea {
-      width: 100%;
-      padding: 12px;
-      border: 1px solid #d7dce5;
-      border-radius: 10px;
-      background: #fff;
-      color: #172033;
-    }
-
-    textarea {
-      min-height: 130px;
-      resize: vertical;
-    }
-
     button {
-      padding: 11px 15px;
-      border: 0;
-      border-radius: 10px;
-      font-weight: 700;
       cursor: pointer;
     }
 
@@ -115,429 +43,727 @@
       cursor: not-allowed;
     }
 
-    .primary {
-      color: #fff;
-      background: #4f46e5;
+    .app {
+      display: flex;
+      min-height: 100dvh;
     }
 
-    .secondary {
-      color: #3730a3;
-      background: #eef2ff;
+    .sidebar {
+      width: 255px;
+      flex-shrink: 0;
+      background: #15191f;
+      border-right: 1px solid var(--border);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
     }
 
-    .buttons {
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 5px 2px 18px;
+      font-size: 20px;
+      font-weight: 800;
+    }
+
+    .logo {
+      width: 38px;
+      height: 38px;
+      display: grid;
+      place-items: center;
+      border: 1px solid #3a665b;
+      border-radius: 50%;
+      background: #20352f;
+      font-size: 23px;
+    }
+
+    .side-btn {
+      width: 100%;
+      padding: 12px;
+      color: var(--text);
+      background: transparent;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      text-align: left;
+    }
+
+    .side-btn:hover {
+      background: var(--panel2);
+    }
+
+    .sidebar-note {
+      margin-top: auto;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    .main {
+      flex: 1;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      min-height: 100dvh;
+    }
+
+    .topbar {
+      height: 62px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+    }
+
+    .top-title {
+      font-size: 16px;
+      font-weight: 700;
+    }
+
+    .top-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .small-btn {
+      padding: 8px 11px;
+      color: var(--text);
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+    }
+
+    .chat {
+      width: min(850px, 100%);
+      margin: 0 auto;
+      padding: 24px 18px 18px;
+      flex: 1;
+    }
+
+    .welcome {
+      padding: 44px 12px 30px;
+      text-align: center;
+    }
+
+    .welcome-logo {
+      width: 70px;
+      height: 70px;
+      display: grid;
+      place-items: center;
+      margin: 0 auto 18px;
+      background: #20352f;
+      border: 1px solid #3a665b;
+      border-radius: 50%;
+      font-size: 39px;
+    }
+
+    .welcome h1 {
+      margin: 0 0 10px;
+      font-size: clamp(25px, 5vw, 34px);
+    }
+
+    .welcome p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .messages {
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .message {
+      display: flex;
+      gap: 11px;
+      align-items: flex-start;
+    }
+
+    .avatar {
+      width: 34px;
+      height: 34px;
+      flex-shrink: 0;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--panel2);
+      border: 1px solid var(--border);
+    }
+
+    .message.user .avatar {
+      background: #253044;
+    }
+
+    .message-body {
+      min-width: 0;
+      flex: 1;
+      padding: 7px 0;
+      line-height: 1.8;
+      overflow-wrap: anywhere;
+      white-space: pre-wrap;
+    }
+
+    .message-name {
+      margin-bottom: 4px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .composer-wrap {
+      position: sticky;
+      bottom: 0;
+      padding: 12px 16px 10px;
+      background: linear-gradient(transparent, var(--bg) 18%);
+    }
+
+    .composer {
+      width: min(850px, 100%);
+      margin: auto;
+      padding: 12px;
+      background: var(--panel);
+      border: 1px solid #424956;
+      border-radius: 17px;
+      box-shadow: 0 8px 30px #0003;
+    }
+
+    .composer textarea {
+      display: block;
+      width: 100%;
+      min-height: 65px;
+      max-height: 180px;
+      padding: 8px 6px;
+      resize: vertical;
+      color: var(--text);
+      background: transparent;
+      border: 0;
+      outline: none;
+      line-height: 1.6;
+    }
+
+    .composer textarea::placeholder {
+      color: var(--muted);
+    }
+
+    .composer-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding-top: 8px;
+      border-top: 1px solid var(--border);
+    }
+
+    .tools {
       display: flex;
       flex-wrap: wrap;
-      gap: 10px;
-      margin-top: 14px;
+      gap: 7px;
+    }
+
+    .tool-btn {
+      padding: 8px 10px;
+      color: var(--text);
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      font-size: 13px;
+    }
+
+    .tool-btn:hover {
+      border-color: var(--accent);
+    }
+
+    .send-btn {
+      min-width: 44px;
+      padding: 10px 15px;
+      color: #fff;
+      background: var(--accent);
+      border: 0;
+      border-radius: 10px;
+      font-weight: 800;
     }
 
     .status {
-      min-height: 24px;
-      margin-top: 12px;
-      color: #475467;
+      width: min(850px, 100%);
+      min-height: 22px;
+      margin: 0 auto;
+      padding: 0 18px;
+      color: var(--muted);
+      font-size: 12px;
       overflow-wrap: anywhere;
     }
 
-    .answer {
-      min-height: 70px;
-      padding: 14px;
-      border: 1px solid #e5e7eb;
-      border-radius: 12px;
-      background: #f8fafc;
-      line-height: 1.8;
-      white-space: pre-wrap;
-      overflow-wrap: anywhere;
+    .disclaimer {
+      width: min(850px, 100%);
+      margin: 0 auto;
+      padding: 8px 18px 12px;
+      color: var(--muted);
+      text-align: center;
+      font-size: 11px;
+      line-height: 1.6;
     }
 
-    .hidden {
+    .file-label {
+      display: inline-flex;
+      align-items: center;
+    }
+
+    .file-label input {
       display: none;
     }
 
-    .quiz-options {
-      display: grid;
-      gap: 10px;
+    .mobile-brand {
+      display: none;
     }
 
-    .option {
-      width: 100%;
-      text-align: left;
-      background: #f8fafc;
-      border: 1px solid #d7dce5;
-    }
+    @media (max-width: 760px) {
+      .sidebar {
+        display: none;
+      }
 
-    .option.correct {
-      background: #dcfce7;
-    }
+      .topbar {
+        height: 56px;
+        padding: 0 12px;
+      }
 
-    .option.wrong {
-      background: #fee2e2;
-    }
+      .mobile-brand {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 800;
+      }
 
-    @media (max-width: 480px) {
-      .buttons button {
-        flex: 1;
+      .mobile-brand .logo {
+        width: 32px;
+        height: 32px;
+        font-size: 19px;
+      }
+
+      .top-title {
+        display: none;
+      }
+
+      .chat {
+        padding: 12px 12px 8px;
+      }
+
+      .welcome {
+        padding: 32px 8px 25px;
+      }
+
+      .composer-wrap {
+        padding: 8px;
+      }
+
+      .composer {
+        padding: 9px;
+      }
+
+      .tool-btn {
+        padding: 8px;
+      }
+
+      .status, .disclaimer {
+        padding-left: 10px;
+        padding-right: 10px;
       }
     }
   </style>
 </head>
 
 <body>
-  <header>
-    <div class="header-inner">
-      <div class="brand">📚 सारथी AI Study</div>
-      <button class="secondary" id="homeBtn" type="button">
-        ← मुख्य पेज
-      </button>
-    </div>
-  </header>
+  <div class="app">
 
-  <main>
-    <section class="card">
-      <h1>पढ़ाई में सारथी AI</h1>
-      <p class="muted">
-        विषय चुनो, सवाल लिखो और आसान हिंदी में उत्तर प्राप्त करो।
-      </p>
-    </section>
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo" aria-label="Peacock feather logo">🪶</div>
+        <span>Saarthi AI</span>
+      </div>
 
-    <section class="card">
-      <h2>🤖 AI से पढ़ाई</h2>
+      <button class="side-btn" id="newChatBtn">＋ नई बातचीत</button>
+      <button class="side-btn" id="studyBtn">📚 पढ़ाई और Quiz</button>
+      <button class="side-btn" id="searchBtn">🌐 इंटरनेट खोज</button>
+      <button class="side-btn" id="selfCheckBtn">✅ उत्तर जाँच</button>
 
-      <form id="studyForm">
-        <label for="subject">विषय</label>
-        <select id="subject">
-          <option>सामान्य अध्ययन</option>
-          <option>दर्शनशास्त्र</option>
-          <option>इतिहास</option>
-          <option>होम साइंस</option>
-          <option>राजनीति विज्ञान</option>
-          <option>मनोविज्ञान</option>
-          <option>हिंदी</option>
-          <option>अंग्रेज़ी</option>
-          <option>विज्ञान</option>
-          <option>गणित</option>
-        </select>
+      <div class="sidebar-note">
+        सारथी AI तुम्हारी पढ़ाई, सवालों और रोज़मर्रा के कामों में मदद के लिए है।
+        महत्वपूर्ण जानकारी को दूसरी विश्वसनीय जगह से भी जाँचें।
+      </div>
+    </aside>
 
-        <label for="question">अपना प्रश्न</label>
-        <textarea
-          id="question"
-          maxlength="8000"
-          required
-          placeholder="अपना सवाल यहाँ लिखें।"
-        ></textarea>
+    <main class="main">
+      <header class="topbar">
+        <div class="mobile-brand">
+          <div class="logo">🪶</div>
+          <span>Saarthi AI</span>
+        </div>
 
-        <div class="buttons">
-          <button class="primary" id="askBtn" type="submit">
-            उत्तर बताओ
-          </button>
+        <div class="top-title">तुम्हारा AI सहायक</div>
 
-          <button class="secondary" id="clearBtn" type="button">
-            साफ करें
+        <div class="top-actions">
+          <button class="small-btn" id="topNewChatBtn" type="button">
+            ＋ नई चैट
           </button>
         </div>
-      </form>
+      </header>
+
+      <section class="chat" id="chat">
+        <div class="welcome" id="welcome">
+          <div class="welcome-logo">🪶</div>
+          <h1>नमस्ते! मैं सारथी हूँ।</h1>
+          <p>
+            बताओ, आज मैं तुम्हारी क्या मदद करूँ?<br>
+            पढ़ाई, सवाल-जवाब और नए विचारों के लिए अपना प्रश्न लिखो।
+          </p>
+        </div>
+
+        <div class="messages" id="messages" aria-live="polite"></div>
+      </section>
 
       <div class="status" id="status" role="status" aria-live="polite"></div>
-    </section>
 
-    <section class="card">
-      <h2>📝 उत्तर</h2>
-      <div class="answer" id="answer" aria-live="polite">
-        तुम्हारा उत्तर यहाँ दिखाई देगा।
+      <section class="composer-wrap">
+        <form class="composer" id="chatForm">
+          <textarea
+            id="messageInput"
+            maxlength="12000"
+            placeholder="सारथी से कुछ भी पूछो..."
+            aria-label="अपना संदेश लिखें"
+            required
+          ></textarea>
+
+          <div class="composer-actions">
+            <div class="tools">
+              <button class="tool-btn" id="micBtn" type="button">🎤 आवाज़</button>
+
+              <label class="tool-btn file-label">
+                📷 फोटो
+                <input id="imageInput" type="file" accept="image/*">
+              </label>
+
+              <label class="tool-btn file-label">
+                📎 फ़ाइल
+                <input id="fileInput" type="file" accept=".txt,.pdf,.doc,.docx,.jpg,.jpeg,.png">
+              </label>
+
+              <button class="tool-btn" id="voiceBtn" type="button">🔊 पढ़कर सुनाओ</button>
+            </div>
+
+            <button class="send-btn" id="sendBtn" type="submit" aria-label="संदेश भेजें">
+              ➤
+            </button>
+          </div>
+        </form>
+      </section>
+
+      <div class="disclaimer">
+        AI के उत्तरों में गलती हो सकती है। जरूरी जानकारी की पुष्टि अवश्य करें।
       </div>
-    </section>
-
-    <section class="card">
-      <h2>🧠 Quiz</h2>
-
-      <label for="quizSubject">Quiz विषय</label>
-      <select id="quizSubject">
-        <option>सामान्य अध्ययन</option>
-        <option>इतिहास</option>
-        <option>दर्शनशास्त्र</option>
-        <option>होम साइंस</option>
-        <option>विज्ञान</option>
-        <option>गणित</option>
-      </select>
-
-      <div class="buttons">
-        <button class="primary" id="startQuizBtn" type="button">
-          Quiz शुरू करें
-        </button>
-      </div>
-    </section>
-
-    <section class="card hidden" id="quizCard">
-      <h2 id="quizTitle">प्रश्न</h2>
-      <p id="score">अंक: 0</p>
-      <div id="quizOptions" class="quiz-options"></div>
-      <div id="quizStatus" class="status" aria-live="polite"></div>
-      <div class="buttons">
-        <button class="primary" id="nextBtn" type="button" disabled>
-          अगला प्रश्न
-        </button>
-      </div>
-    </section>
-  </main>
+    </main>
+  </div>
 
   <script>
     "use strict";
 
-    // API key कभी इस फाइल में न रखें।
     const API_BASE = "https://sarathi-ai.mjmanjumanjeet0.workers.dev";
-    const MAX_QUESTION_LENGTH = 8000;
-    const REQUEST_TIMEOUT_MS = 50000;
-
     const $ = (id) => document.getElementById(id);
 
-    $("homeBtn").addEventListener("click", () => {
-      window.location.assign("./index.html");
-    });
+    const input = $("messageInput");
+    const messages = $("messages");
+    const statusBox = $("status");
 
-    $("clearBtn").addEventListener("click", () => {
-      $("question").value = "";
-      $("answer").textContent = "तुम्हारा उत्तर यहाँ दिखाई देगा।";
-      $("status").textContent = "";
-    });
+    let conversationHistory = [];
+    let lastAssistantAnswer = "";
+    let isBusy = false;
 
-    $("studyForm").addEventListener("submit", async (event) => {
+    function setStatus(message) {
+      statusBox.textContent = message;
+    }
+
+    function addMessage(role, text) {
+      $("welcome").style.display = "none";
+
+      const row = document.createElement("div");
+      row.className = "message " + (role === "user" ? "user" : "assistant");
+
+      const avatar = document.createElement("div");
+      avatar.className = "avatar";
+      avatar.textContent = role === "user" ? "👤" : "🪶";
+
+      const body = document.createElement("div");
+      body.className = "message-body";
+
+      const name = document.createElement("div");
+      name.className = "message-name";
+      name.textContent = role === "user" ? "तुम" : "सारथी AI";
+
+      const content = document.createElement("div");
+      content.textContent = text;
+
+      body.append(name, content);
+      row.append(avatar, body);
+      messages.appendChild(row);
+
+      row.scrollIntoView({ behavior: "smooth", block: "end" });
+      return content;
+    }
+
+    function setBusy(value) {
+      isBusy = value;
+      $("sendBtn").disabled = value;
+      input.disabled = value;
+      $("sendBtn").textContent = value ? "…" : "➤";
+    }
+
+    async function askAI(message) {
+      const response = await fetch(API_BASE + "/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "omit",
+        cache: "no-store",
+        redirect: "error",
+        body: JSON.stringify({
+          message,
+          history: conversationHistory.slice(-10)
+        })
+      });
+
+      let data;
+      try {
+        data = await response.json();
+      } catch {
+        throw new Error("सर्वर से सही जवाब नहीं मिला।");
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          typeof data.error === "string"
+            ? data.error.slice(0, 250)
+            : "सर्वर अनुरोध पूरा नहीं कर सका।"
+        );
+      }
+
+      if (typeof data.answer !== "string" || !data.answer.trim()) {
+        throw new Error("सारथी को खाली जवाब मिला।");
+      }
+
+      return data.answer.trim();
+    }
+
+    async function sendMessage(textOverride) {
+      if (isBusy) return;
+
+      const text = (textOverride ?? input.value).trim();
+      if (!text) {
+        setStatus("पहले अपना सवाल लिखो।");
+        return;
+      }
+
+      if (text.length > 12000) {
+        setStatus("संदेश बहुत लंबा है। कृपया छोटा करें।");
+        return;
+      }
+
+      addMessage("user", text);
+      input.value = "";
+      setBusy(true);
+      setStatus("सारथी जवाब तैयार कर रहा है...");
+
+      const answerNode = addMessage("assistant", "सोच रहा हूँ...");
+      try {
+        const answer = await askAI(text);
+        answerNode.textContent = answer;
+        lastAssistantAnswer = answer;
+
+        conversationHistory.push(
+          { role: "user", content: text },
+          { role: "assistant", content: answer }
+        );
+        conversationHistory = conversationHistory.slice(-10);
+
+        setStatus("जवाब तैयार है।");
+      } catch (error) {
+        answerNode.textContent = "अभी जवाब नहीं मिल पाया।";
+        setStatus(error.message || "नेटवर्क या सर्वर की समस्या है।");
+      } finally {
+        setBusy(false);
+        input.focus();
+      }
+    }
+
+    $("chatForm").addEventListener("submit", (event) => {
       event.preventDefault();
+      sendMessage();
+    });
 
-      const question = $("question").value.trim();
-      const subject = $("subject").value;
+    input.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !event.shiftKey) {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
 
-      if (!question) {
-        $("status").textContent = "कृपया अपना प्रश्न लिखें।";
+    function newChat() {
+      if (isBusy) return;
+
+      conversationHistory = [];
+      lastAssistantAnswer = "";
+      messages.replaceChildren();
+      $("welcome").style.display = "";
+      input.value = "";
+      setStatus("नई बातचीत शुरू हो गई।");
+      input.focus();
+    }
+
+    $("newChatBtn").addEventListener("click", newChat);
+    $("topNewChatBtn").addEventListener("click", newChat);
+
+    $("studyBtn").addEventListener("click", () => {
+      window.location.assign("./study.html");
+    });
+
+    $("searchBtn").addEventListener("click", () => {
+      input.value = "इस विषय पर इंटरनेट से जानकारी खोजने में मदद करो: ";
+      input.focus();
+      setStatus("विषय लिखकर भेजो। यह बटन अपने आप लाइव इंटरनेट खोज नहीं करता।");
+    });
+
+    $("selfCheckBtn").addEventListener("click", () => {
+      if (!lastAssistantAnswer) {
+        setStatus("पहले सारथी से कोई सवाल पूछो।");
         return;
       }
 
-      if (question.length > MAX_QUESTION_LENGTH) {
-        $("status").textContent = "प्रश्न बहुत लंबा है। कृपया छोटा करें।";
+      input.value =
+        "अपने पिछले उत्तर की दोबारा जाँच करो। संभावित गलतियाँ, अनिश्चित तथ्य " +
+        "और सुधार स्पष्ट रूप से बताओ:\n\n" + lastAssistantAnswer;
+      input.focus();
+    });
+
+    // आवाज़ से लिखना: ब्राउज़र समर्थन पर निर्भर।
+    let recognition = null;
+    let isListening = false;
+
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    if (SpeechRecognition) {
+      recognition = new SpeechRecognition();
+      recognition.lang = "hi-IN";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        input.value = (input.value + " " + transcript).trim();
+        setStatus("आवाज़ लिख दी गई है। भेजने से पहले जाँच लो।");
+      };
+
+      recognition.onerror = () => {
+        setStatus("आवाज़ पहचान नहीं हो सकी। माइक्रोफोन की अनुमति जाँचो।");
+      };
+
+      recognition.onend = () => {
+        isListening = false;
+        $("micBtn").textContent = "🎤 आवाज़";
+      };
+    }
+
+    $("micBtn").addEventListener("click", () => {
+      if (!recognition) {
+        setStatus("इस ब्राउज़र में आवाज़ लिखने की सुविधा उपलब्ध नहीं है।");
         return;
       }
 
-      const button = $("askBtn");
-      button.disabled = true;
-      $("status").textContent = "सारथी उत्तर तैयार कर रहा है...";
-      $("answer").textContent = "कृपया प्रतीक्षा करें...";
-
-      const prompt =
-        "विषय: " + subject + "\n\n" +
-        "प्रश्न: " + question + "\n\n" +
-        "सरल हिंदी में सही उत्तर दो। परीक्षा के प्रश्न में जरूरत के अनुसार " +
-        "भूमिका, मुख्य बिंदु, उदाहरण और निष्कर्ष शामिल करो। " +
-        "अनिश्चित जानकारी को तथ्य की तरह प्रस्तुत मत करो।";
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(
-        () => controller.abort(),
-        REQUEST_TIMEOUT_MS
-      );
+      if (isListening) {
+        recognition.stop();
+        return;
+      }
 
       try {
-        const response = await fetch(API_BASE + "/api/chat", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json"
-          },
-          body: JSON.stringify({
-            message: prompt,
-            history: []
-          }),
-          signal: controller.signal,
-          credentials: "omit",
-          cache: "no-store",
-          redirect: "error"
-        });
+        isListening = true;
+        $("micBtn").textContent = "⏹ रोकें";
+        recognition.start();
+        setStatus("सुन रहा हूँ... अब बोलो।");
+      } catch {
+        isListening = false;
+        $("micBtn").textContent = "🎤 आवाज़";
+        setStatus("माइक्रोफोन शुरू नहीं हो पाया।");
+      }
+    });
 
-        let data;
+    // आखिरी AI जवाब को ब्राउज़र की आवाज़ में पढ़ना।
+    $("voiceBtn").addEventListener("click", () => {
+      if (!lastAssistantAnswer) {
+        setStatus("पहले सारथी से कोई सवाल पूछो।");
+        return;
+      }
 
+      if (!("speechSynthesis" in window)) {
+        setStatus("इस ब्राउज़र में पढ़कर सुनाने की सुविधा नहीं है।");
+        return;
+      }
+
+      window.speechSynthesis.cancel();
+
+      const utterance = new SpeechSynthesisUtterance(lastAssistantAnswer);
+      utterance.lang = "hi-IN";
+      utterance.rate = 1;
+
+      window.speechSynthesis.speak(utterance);
+      setStatus("जवाब पढ़कर सुनाया जा रहा है।");
+    });
+
+    // फोटो चुनने पर अभी केवल नाम दिखेगा; Vision API से विश्लेषण नहीं होगा।
+    $("imageInput").addEventListener("change", () => {
+      const file = $("imageInput").files[0];
+      if (!file) return;
+
+      if (!file.type.startsWith("image/")) {
+        setStatus("कृपया सही फोटो चुनें।");
+        $("imageInput").value = "";
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        setStatus("फोटो 5 MB से छोटी होनी चाहिए।");
+        $("imageInput").value = "";
+        return;
+      }
+
+      setStatus("फोटो चुनी गई: " + file.name + "। अभी फोटो विश्लेषण API जोड़ी नहीं गई है।");
+    });
+
+    // फ़ाइल चुनने पर केवल TXT को सुरक्षित रूप से पढ़ा जाता है।
+    $("fileInput").addEventListener("change", async () => {
+      const file = $("fileInput").files[0];
+      if (!file) return;
+
+      if (file.size > 2 * 1024 * 1024) {
+        setStatus("फ़ाइल 2 MB से छोटी होनी चाहिए।");
+        $("fileInput").value = "";
+        return;
+      }
+
+      if (file.type === "text/plain" || file.name.toLowerCase().endsWith(".txt")) {
         try {
-          data = await response.json();
+          const content = await file.text();
+          input.value =
+            "इस फ़ाइल की सामग्री के बारे में मदद करो:\n\n" +
+            content.slice(0, 10000);
+          setStatus("TXT फ़ाइल पढ़ ली गई। भेजने से पहले प्रश्न जाँच लो।");
         } catch {
-          throw new Error("सर्वर से सही उत्तर नहीं मिला।");
+          setStatus("TXT फ़ाइल पढ़ी नहीं जा सकी।");
         }
-
-        if (!response.ok) {
-          throw new Error(
-            typeof data.error === "string"
-              ? data.error.slice(0, 300)
-              : "अनुरोध पूरा नहीं हुआ।"
-          );
-        }
-
-        if (typeof data.answer !== "string" || !data.answer.trim()) {
-          throw new Error("AI ने खाली उत्तर दिया। दोबारा प्रयास करें।");
-        }
-
-        // textContent HTML/JavaScript को executable नहीं बनाता।
-        $("answer").textContent = data.answer;
-        $("status").textContent = "उत्तर तैयार है।";
-
-      } catch (error) {
-        $("answer").textContent = "अभी उत्तर नहीं मिल पाया।";
-
-        $("status").textContent =
-          error.name === "AbortError"
-            ? "अनुरोध में समय लग गया। कृपया दोबारा प्रयास करें।"
-            : (error.message || "नेटवर्क या सर्वर की समस्या है।");
-
-      } finally {
-        clearTimeout(timeoutId);
-        button.disabled = false;
-      }
-    });
-
-    const quizData = {
-      "सामान्य अध्ययन": [
-        {
-          q: "भारत की राजधानी क्या है?",
-          options: ["मुंबई", "नई दिल्ली", "कोलकाता", "चेन्नई"],
-          answer: 1
-        },
-        {
-          q: "भारत का राष्ट्रीय पशु कौन है?",
-          options: ["शेर", "हाथी", "बाघ", "हिरण"],
-          answer: 2
-        }
-      ],
-      "इतिहास": [
-        {
-          q: "भारत स्वतंत्र कब हुआ?",
-          options: ["1945", "1946", "1947", "1950"],
-          answer: 2
-        },
-        {
-          q: "मुगल साम्राज्य की स्थापना किसने की?",
-          options: ["अकबर", "बाबर", "हुमायूँ", "शाहजहाँ"],
-          answer: 1
-        }
-      ],
-      "दर्शनशास्त्र": [
-        {
-          q: "सुकरात किस क्षेत्र से संबंधित थे?",
-          options: ["दर्शन", "भौतिकी", "जीवविज्ञान", "अर्थशास्त्र"],
-          answer: 0
-        }
-      ],
-      "होम साइंस": [
-        {
-          q: "संतुलित आहार में क्या शामिल होता है?",
-          options: [
-            "केवल कार्बोहाइड्रेट",
-            "केवल प्रोटीन",
-            "सभी आवश्यक पोषक तत्व",
-            "केवल वसा"
-          ],
-          answer: 2
-        }
-      ],
-      "विज्ञान": [
-        {
-          q: "जल का रासायनिक सूत्र क्या है?",
-          options: ["CO₂", "H₂O", "O₂", "NaCl"],
-          answer: 1
-        }
-      ],
-      "गणित": [
-        {
-          q: "100 का 25% कितना है?",
-          options: ["10", "20", "25", "50"],
-          answer: 2
-        }
-      ]
-    };
-
-    let questions = [];
-    let questionIndex = 0;
-    let score = 0;
-    let answered = false;
-
-    $("startQuizBtn").addEventListener("click", () => {
-      questions = quizData[$("quizSubject").value] || [];
-      questionIndex = 0;
-      score = 0;
-
-      $("quizCard").classList.remove("hidden");
-
-      if (!questions.length) {
-        $("quizTitle").textContent = "प्रश्न उपलब्ध नहीं हैं";
-        $("quizOptions").replaceChildren();
-        $("quizStatus").textContent = "कृपया दूसरा विषय चुनें।";
-        $("score").textContent = "अंक: 0";
-        $("nextBtn").disabled = true;
-        return;
-      }
-
-      showQuestion();
-      $("quizCard").scrollIntoView({ behavior: "smooth", block: "start" });
-    });
-
-    function showQuestion() {
-      answered = false;
-
-      if (questionIndex >= questions.length) {
-        $("quizTitle").textContent = "Quiz पूरा हो गया!";
-        $("quizOptions").replaceChildren();
-        $("quizStatus").textContent =
-          "तुम्हारा स्कोर: " + score + " / " + questions.length;
-        $("nextBtn").disabled = true;
-        return;
-      }
-
-      const item = questions[questionIndex];
-
-      $("quizTitle").textContent =
-        (questionIndex + 1) + ". " + item.q;
-
-      $("score").textContent = "अंक: " + score;
-      $("quizStatus").textContent = "";
-      $("nextBtn").disabled = true;
-      $("quizOptions").replaceChildren();
-
-      item.options.forEach((text, index) => {
-        const button = document.createElement("button");
-        button.type = "button";
-        button.className = "option";
-        button.textContent = text;
-
-        button.addEventListener("click", () => chooseAnswer(index));
-        $("quizOptions").appendChild(button);
-      });
-    }
-
-    function chooseAnswer(index) {
-      if (answered) return;
-      answered = true;
-
-      const item = questions[questionIndex];
-      const buttons = $("quizOptions").querySelectorAll("button");
-
-      buttons.forEach((button, i) => {
-        button.disabled = true;
-
-        if (i === item.answer) {
-          button.classList.add("correct");
-        }
-      });
-
-      if (index === item.answer) {
-        score++;
-        $("quizStatus").textContent = "सही उत्तर!";
       } else {
-        buttons[index].classList.add("wrong");
-        $("quizStatus").textContent =
-          "गलत उत्तर। हरे रंग में सही उत्तर दिखाया गया है।";
+        setStatus("यह फ़ाइल चुनी गई: " + file.name + "। PDF/DOCX पढ़ने की सुविधा अभी नहीं जोड़ी गई है।");
       }
-
-      $("score").textContent = "अंक: " + score;
-      $("nextBtn").disabled = false;
-    }
-
-    $("nextBtn").addEventListener("click", () => {
-      if (!answered) return;
-      questionIndex++;
-      showQuestion();
     });
   </script>
 </body>
