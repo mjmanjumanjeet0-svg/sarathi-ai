@@ -1,422 +1,886 @@
-<script>
-"use strict";
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="strict-origin-when-cross-origin">
 
-/* =========================================
-   SARATHI AI — SAFER CHAT CLIENT
-========================================= */
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com;
+      style-src 'self' 'unsafe-inline';
+      connect-src 'self' https://sarathi-ai.mjmanjumanjeet0.workers.dev https://challenges.cloudflare.com;
+      frame-src https://challenges.cloudflare.com;
+      img-src 'self' data:;
+      font-src 'self';
+      object-src 'none';
+      base-uri 'self';
+      form-action 'self';
+      upgrade-insecure-requests;
+    "
+  >
 
-const API_BASE =
-  "https://sarathi-ai.mjmanjumanjeet0.workers.dev";
+  <title>Saarthi AI — आपका डिजिटल साथी</title>
 
-const MAX_MESSAGE_LENGTH = 4000;
-const MAX_HISTORY_ITEMS = 6;
-const MAX_HISTORY_CHARS = 1500;
-const REQUEST_TIMEOUT_MS = 30000;
+  <meta
+    name="description"
+    content="Saarthi AI आपका हिंदी AI सहायक है। अपना सवाल लिखें और जवाब पाएँ।"
+  >
 
-let messages = [];
-let isSending = false;
-let turnstileToken = "";
-let turnstileWidgetId = null;
-
-/* Elements */
-const chat = document.getElementById("chat");
-const input = document.getElementById("input");
-const sendBtn = document.getElementById("sendBtn");
-const statusBox = document.getElementById("status");
-
-/* Status */
-function setStatus(text) {
-  if (statusBox) statusBox.textContent = text;
-}
-
-/* Escape HTML */
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
-
-/* Clean malformed stars */
-function cleanSarathiStars(text) {
-  return String(text ?? "")
-    .replace(/(\bसारथी)\*+/g, "$1")
-    .replace(/\*+(\bसारथी)/g, "$1")
-    .replace(/\*{3,}/g, "");
-}
-
-/* Safe basic Markdown */
-function renderMarkdown(text) {
-  let value = escapeHtml(cleanSarathiStars(text));
-
-  const codeBlocks = [];
-
-  value = value.replace(/```([\s\S]*?)```/g, (_, code) => {
-    const marker = `___CODE_BLOCK_${codeBlocks.length}___`;
-    codeBlocks.push(code);
-    return marker;
-  });
-
-  value = value.replace(/`([^`\n]+)`/g, "<code>$1</code>");
-  value = value.replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>");
-  value = value.replace(/\n/g, "<br>");
-
-  codeBlocks.forEach((code, index) => {
-    value = value.replace(
-      `___CODE_BLOCK_${index}___`,
-      "<pre><code>" + code + "</code></pre>"
-    );
-  });
-
-  return value;
-}
-
-/* Remove loading animation */
-function hideTyping() {
-  document.getElementById("typing")?.remove();
-}
-
-/* Loading animation */
-function showTyping() {
-  hideTyping();
-
-  const row = document.createElement("div");
-  row.className = "message assistant";
-  row.id = "typing";
-
-  const bubble = document.createElement("div");
-  bubble.className = "bubble";
-  bubble.textContent = "सारथी जवाब तैयार कर रहा है…";
-
-  row.appendChild(bubble);
-  chat.appendChild(row);
-  chat.scrollTop = chat.scrollHeight;
-}
-
-/* Add message safely */
-function addMessage(role, text) {
-  document.getElementById("empty")?.remove();
-
-  const row = document.createElement("div");
-  row.className =
-    "message " + (role === "user" ? "user" : "assistant");
-
-  const bubble = document.createElement("div");
-  bubble.className = "bubble";
-  bubble.innerHTML = renderMarkdown(text);
-
-  row.appendChild(bubble);
-  chat.appendChild(row);
-  chat.scrollTop = chat.scrollHeight;
-
-  return row;
-}
-
-/* Extract answer */
-function extractReply(data) {
-  const candidates = [
-    data?.answer,
-    data?.reply,
-    data?.content,
-    data?.output_text,
-    data?.result?.answer,
-    data?.result?.reply
-  ];
-
-  for (const item of candidates) {
-    if (typeof item === "string" && item.trim()) {
-      return item.trim();
+  <style>
+    :root {
+      color-scheme: light;
+      --primary: #3157d5;
+      --primary-dark: #2443ad;
+      --background: #f4f6fb;
+      --surface: #ffffff;
+      --text: #172033;
+      --muted: #647089;
+      --border: #e0e5ef;
+      --user-bubble: #3157d5;
+      --assistant-bubble: #eef2fa;
+      --danger: #b42318;
     }
-  }
 
-  return "";
-}
+    * {
+      box-sizing: border-box;
+    }
 
-/* Read JSON safely */
-async function readResponse(response) {
-  const raw = await response.text();
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--background);
+      color: var(--text);
+      font-family:
+        system-ui, -apple-system, BlinkMacSystemFont,
+        "Noto Sans Devanagari", "Nirmala UI", sans-serif;
+    }
 
-  let data = {};
+    button,
+    input,
+    textarea {
+      font: inherit;
+    }
 
-  try {
-    data = raw ? JSON.parse(raw) : {};
-  } catch {
-    data = {};
-  }
+    button {
+      cursor: pointer;
+    }
 
-  return { data, raw };
-}
+    button:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
 
-/* Prepare short, bounded history */
-function prepareHistory() {
-  return messages
-    .slice(-MAX_HISTORY_ITEMS)
-    .map(item => ({
-      role: item.role === "assistant" ? "assistant" : "user",
-      content: String(item.content ?? "").slice(0, MAX_HISTORY_CHARS)
-    }));
-}
+    .app {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
+      max-width: 900px;
+      height: 100vh;
+      height: 100dvh;
+      min-height: 480px;
+      margin: 0 auto;
+      background: var(--surface);
+      box-shadow: 0 0 30px rgb(23 32 51 / 5%);
+    }
 
-/* Get Turnstile token */
-function getTurnstileToken() {
-  if (!turnstileToken) {
-    throw new Error(
-      "सुरक्षा जाँच पूरी नहीं हुई। कृपया Turnstile जाँच पूरी करें।"
-    );
-  }
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 15px 18px;
+      border-bottom: 1px solid var(--border);
+    }
 
-  return turnstileToken;
-}
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+      min-width: 0;
+    }
 
-/* Send chat message */
-async function sendMessage() {
-  if (isSending) return;
+    .logo {
+      display: grid;
+      place-items: center;
+      width: 45px;
+      height: 45px;
+      flex-shrink: 0;
+      border-radius: 15px;
+      background: var(--primary);
+      color: white;
+      font-size: 24px;
+      font-weight: 800;
+    }
 
-  const text = String(input.value ?? "").trim();
+    .brand h1 {
+      margin: 0;
+      font-size: 19px;
+    }
 
-  if (!text) return;
+    .subtitle {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+    }
 
-  if (text.length > MAX_MESSAGE_LENGTH) {
-    setStatus("संदेश बहुत लंबा है। कृपया 4000 अक्षरों के भीतर रखें।");
-    return;
-  }
+    .header-actions {
+      display: flex;
+      gap: 7px;
+    }
 
-  let token;
+    .small-btn {
+      padding: 9px 11px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: white;
+      color: var(--text);
+      font-size: 13px;
+    }
 
-  try {
-    token = getTurnstileToken();
-  } catch (error) {
-    setStatus(error.message);
-    return;
-  }
+    .status {
+      padding: 8px 16px;
+      color: var(--muted);
+      background: #fafbfe;
+      border-bottom: 1px solid var(--border);
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
 
-  isSending = true;
-  sendBtn.disabled = true;
-  input.disabled = true;
+    .status.error {
+      color: var(--danger);
+    }
 
-  input.value = "";
+    .chat {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      padding: 22px 16px;
+      overscroll-behavior: contain;
+    }
 
-  addMessage("user", text);
+    .empty {
+      max-width: 420px;
+      margin: 10vh auto 0;
+      padding: 25px 18px;
+      text-align: center;
+      color: var(--muted);
+      line-height: 1.9;
+    }
 
-  const history = prepareHistory();
+    .empty strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--text);
+      font-size: 25px;
+    }
 
-  messages.push({
-    role: "user",
-    content: text
-  });
+    .message {
+      display: flex;
+      margin: 13px 0;
+    }
 
-  showTyping();
-  setStatus("सारथी से सुरक्षित कनेक्शन बनाया जा रहा है…");
+    .message.user {
+      justify-content: flex-end;
+    }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(
-    () => controller.abort(),
-    REQUEST_TIMEOUT_MS
-  );
+    .message.assistant {
+      justify-content: flex-start;
+    }
 
-  try {
-    const response = await fetch(API_BASE + "/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        message: text,
-        history,
-        turnstileToken: token
-      }),
-      signal: controller.signal,
-      cache: "no-store",
-      credentials: "omit"
-    });
+    .bubble {
+      max-width: min(85%, 650px);
+      padding: 12px 15px;
+      border-radius: 16px;
+      overflow-wrap: anywhere;
+      line-height: 1.75;
+      font-size: 15px;
+    }
 
-    const result = await readResponse(response);
+    .user .bubble {
+      color: white;
+      background: var(--user-bubble);
+      border-bottom-right-radius: 5px;
+      white-space: pre-wrap;
+    }
 
-    if (!response.ok) {
-      /*
-       * Do not show raw server response.
-       * Keep private technical details out of the chat.
-       */
-      if (response.status === 403) {
-        throw new Error("सुरक्षा जाँच असफल हुई। दोबारा प्रयास करें।");
+    .assistant .bubble {
+      color: var(--text);
+      background: var(--assistant-bubble);
+      border-bottom-left-radius: 5px;
+    }
+
+    .bubble strong {
+      font-weight: 750;
+    }
+
+    .bubble code {
+      padding: 2px 5px;
+      border-radius: 5px;
+      background: rgb(0 0 0 / 7%);
+      font-family: monospace;
+      overflow-wrap: anywhere;
+    }
+
+    .bubble pre {
+      max-width: 100%;
+      overflow-x: auto;
+      padding: 10px;
+      border-radius: 9px;
+      background: #e0e5ef;
+      white-space: pre-wrap;
+    }
+
+    .bubble pre code {
+      padding: 0;
+      background: transparent;
+    }
+
+    .composer-area {
+      padding: 12px 14px 15px;
+      border-top: 1px solid var(--border);
+      background: white;
+    }
+
+    .security-box {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 10px;
+      min-height: 0;
+    }
+
+    .composer {
+      display: flex;
+      align-items: flex-end;
+      gap: 9px;
+      padding: 8px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: white;
+    }
+
+    .composer textarea {
+      flex: 1;
+      min-width: 0;
+      max-height: 140px;
+      min-height: 44px;
+      padding: 10px 8px;
+      resize: vertical;
+      border: 0;
+      outline: none;
+      color: var(--text);
+      background: transparent;
+    }
+
+    .send-btn {
+      min-height: 44px;
+      padding: 0 17px;
+      border: 0;
+      border-radius: 12px;
+      background: var(--primary);
+      color: white;
+      font-weight: 700;
+    }
+
+    .send-btn:hover:not(:disabled) {
+      background: var(--primary-dark);
+    }
+
+    .hint {
+      margin: 9px 3px 0;
+      text-align: center;
+      color: var(--muted);
+      font-size: 11px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 520px) {
+      .header {
+        padding: 11px;
       }
 
-      if (response.status === 429) {
-        throw new Error("बहुत अधिक अनुरोध हुए हैं। थोड़ी देर बाद प्रयास करें।");
+      .brand h1 {
+        font-size: 17px;
       }
 
-      if (response.status === 503) {
-        throw new Error("AI सेवा अभी उपलब्ध नहीं है। बाद में प्रयास करें।");
+      .logo {
+        width: 40px;
+        height: 40px;
       }
 
-      throw new Error("सर्वर से जवाब नहीं मिल पाया। कृपया बाद में प्रयास करें।");
+      .small-btn {
+        padding: 8px;
+        font-size: 12px;
+      }
+
+      .chat {
+        padding: 15px 11px;
+      }
+
+      .bubble {
+        max-width: 92%;
+        font-size: 14px;
+      }
+
+      .composer-area {
+        padding: 9px;
+      }
+
+      .send-btn {
+        padding: 0 13px;
+      }
+    }
+  </style>
+
+  <script
+    src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit"
+    async
+    defer
+  ></script>
+</head>
+
+<body>
+  <main class="app">
+    <header class="header">
+      <div class="brand">
+        <div class="logo" aria-hidden="true">S</div>
+
+        <div>
+          <h1>Saarthi AI</h1>
+          <div class="subtitle">आपका डिजिटल साथी</div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button class="small-btn" id="studyBtn" type="button">
+          पढ़ाई
+        </button>
+
+        <button class="small-btn" id="clearBtn" type="button">
+          नई चैट
+        </button>
+      </div>
+    </header>
+
+    <div
+      id="status"
+      class="status"
+      role="status"
+      aria-live="polite"
+    >
+      सुरक्षा जाँच लोड हो रही है…
+    </div>
+
+    <section
+      id="chat"
+      class="chat"
+      aria-label="सारथी AI चैट"
+      aria-live="polite"
+    >
+      <div id="empty" class="empty">
+        <strong>नमस्ते! 👋</strong>
+        मैं सारथी AI हूँ।<br>
+        अपना सवाल नीचे लिखें।
+      </div>
+    </section>
+
+    <footer class="composer-area">
+      <div class="security-box">
+        <div id="turnstile-widget"></div>
+      </div>
+
+      <form id="chatForm" class="composer">
+        <textarea
+          id="input"
+          name="message"
+          placeholder="अपना सवाल यहाँ लिखें…"
+          aria-label="अपना सवाल लिखें"
+          maxlength="4000"
+          rows="1"
+          required
+        ></textarea>
+
+        <button
+          id="sendBtn"
+          class="send-btn"
+          type="submit"
+        >
+          भेजें
+        </button>
+      </form>
+
+      <p class="hint">
+        जवाब AI द्वारा तैयार किए जाते हैं। जरूरी जानकारी की जाँच करें।
+        <br>
+        इस चैट का इतिहास पेज बंद करने पर मिट जाएगा।
+      </p>
+    </footer>
+  </main>
+
+  <script>
+    "use strict";
+
+    const API_BASE =
+      "https://sarathi-ai.mjmanjumanjeet0.workers.dev";
+
+    const MAX_MESSAGE_LENGTH = 4000;
+    const MAX_HISTORY_ITEMS = 6;
+    const MAX_HISTORY_CHARS = 1500;
+    const REQUEST_TIMEOUT_MS = 30000;
+
+    const TURNSTILE_SITE_KEY =
+      "PASTE_YOUR_PUBLIC_TURNSTILE_SITE_KEY_HERE";
+
+    let messages = [];
+    let isSending = false;
+    let turnstileToken = "";
+    let turnstileWidgetId = null;
+
+    const chat = document.getElementById("chat");
+    const input = document.getElementById("input");
+    const sendBtn = document.getElementById("sendBtn");
+    const statusBox = document.getElementById("status");
+    const chatForm = document.getElementById("chatForm");
+
+    function setStatus(message, isError = false) {
+      statusBox.textContent = message;
+      statusBox.classList.toggle("error", isError);
     }
 
-    const reply = extractReply(result.data);
-
-    if (!reply) {
-      throw new Error("सर्वर से खाली जवाब मिला।");
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
     }
 
-    const cleanReply = cleanSarathiStars(reply);
-
-    hideTyping();
-    addMessage("assistant", cleanReply);
-
-    messages.push({
-      role: "assistant",
-      content: cleanReply
-    });
-
-    /* Keep local memory bounded */
-    messages = messages.slice(-MAX_HISTORY_ITEMS);
-
-    setStatus("सारथी तैयार है।");
-
-  } catch (error) {
-    hideTyping();
-
-    if (error.name === "AbortError") {
-      setStatus("जवाब आने में समय लगा। कृपया दोबारा प्रयास करें।");
-      addMessage("assistant", "अभी जवाब नहीं मिल पाया। कृपया दोबारा प्रयास करें।");
-    } else {
-      setStatus(error.message || "कनेक्शन में समस्या हुई।");
-      addMessage("assistant", error.message || "कनेक्शन में समस्या हुई।");
+    function cleanSarathiStars(text) {
+      return String(text ?? "")
+        .replace(/(\bसारथी)\*+/g, "$1")
+        .replace(/\*+(\bसारथी)/g, "$1")
+        .replace(/\*{3,}/g, "");
     }
-
-  } finally {
-    clearTimeout(timeout);
 
     /*
-     * Turnstile tokens are single-use.
-     * Reset after each request so a fresh token is required.
-     */
-    turnstileToken = "";
+      Basic Markdown only.
+      All text is HTML-escaped before formatting.
+    */
+    function renderMarkdown(text) {
+      let value = escapeHtml(cleanSarathiStars(text));
+      const codeBlocks = [];
 
-    if (
-      window.turnstile &&
-      turnstileWidgetId !== null
-    ) {
+      value = value.replace(/```([\s\S]*?)```/g, (_, code) => {
+        const marker = `SARATHICODEBLOCK${codeBlocks.length}END`;
+        codeBlocks.push(code);
+        return marker;
+      });
+
+      value = value.replace(
+        /`([^`\n]+)`/g,
+        "<code>$1</code>"
+      );
+
+      value = value.replace(
+        /\*\*([^*]+)\*\*/g,
+        "<strong>$1</strong>"
+      );
+
+      value = value.replace(/\n/g, "<br>");
+
+      codeBlocks.forEach((code, index) => {
+        const marker = `SARATHICODEBLOCK${index}END`;
+        const safeCode = code.replace(/\n/g, "\n");
+
+        value = value.replace(
+          marker,
+          "<pre><code>" + safeCode + "</code></pre>"
+        );
+      });
+
+      return value;
+    }
+
+    function hideTyping() {
+      document.getElementById("typing")?.remove();
+    }
+
+    function showTyping() {
+      hideTyping();
+
+      const row = document.createElement("div");
+      row.id = "typing";
+      row.className = "message assistant";
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+      bubble.textContent = "सारथी जवाब तैयार कर रहा है…";
+
+      row.appendChild(bubble);
+      chat.appendChild(row);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function addMessage(role, text) {
+      document.getElementById("empty")?.remove();
+
+      const row = document.createElement("div");
+      row.className =
+        "message " + (role === "user" ? "user" : "assistant");
+
+      const bubble = document.createElement("div");
+      bubble.className = "bubble";
+
+      if (role === "user") {
+        /*
+          User messages are plain text, never interpreted as HTML.
+        */
+        bubble.textContent = String(text ?? "");
+      } else {
+        bubble.innerHTML = renderMarkdown(text);
+      }
+
+      row.appendChild(bubble);
+      chat.appendChild(row);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    function extractReply(data) {
+      const candidates = [
+        data?.answer,
+        data?.reply,
+        data?.content,
+        data?.output_text,
+        data?.result?.answer,
+        data?.result?.reply
+      ];
+
+      for (const item of candidates) {
+        if (typeof item === "string" && item.trim()) {
+          return item.trim();
+        }
+      }
+
+      return "";
+    }
+
+    async function readResponse(response) {
+      const raw = await response.text();
+
       try {
-        window.turnstile.reset(turnstileWidgetId);
+        return raw ? JSON.parse(raw) : {};
       } catch {
-        /* Widget may not be ready yet. */
+        return {};
       }
     }
 
-    isSending = false;
-    sendBtn.disabled = false;
-    input.disabled = false;
-    input.focus();
-  }
-}
+    function prepareHistory() {
+      return messages
+        .slice(-MAX_HISTORY_ITEMS)
+        .map(item => ({
+          role: item.role,
+          content: String(item.content ?? "")
+            .slice(0, MAX_HISTORY_CHARS)
+        }));
+    }
 
-/* Turnstile callbacks */
-function onSarathiTurnstileSuccess(token) {
-  turnstileToken = String(token || "");
-  setStatus("सुरक्षा जाँच पूरी हुई। सारथी तैयार है।");
-}
+    function getTurnstileToken() {
+      if (!turnstileToken) {
+        throw new Error(
+          "पहले Cloudflare सुरक्षा जाँच पूरी करें।"
+        );
+      }
 
-function onSarathiTurnstileExpired() {
-  turnstileToken = "";
-  setStatus("सुरक्षा टोकन समाप्त हुआ। दोबारा जाँच करें।");
-}
+      return turnstileToken;
+    }
 
-function onSarathiTurnstileError() {
-  turnstileToken = "";
-  setStatus("सुरक्षा जाँच लोड नहीं हुई। इंटरनेट कनेक्शन जाँचें।");
-}
+    async function sendMessage() {
+      if (isSending) return;
 
-/*
- * IMPORTANT:
- * Turnstile must be rendered using your real public Site Key.
- * Do not place the Turnstile secret or Groq API key in HTML.
- */
-function initializeTurnstile() {
-  if (!window.turnstile) {
-    setStatus("सुरक्षा जाँच लोड हो रही है…");
-    return;
-  }
+      const text = input.value.trim();
 
-  const container = document.getElementById("turnstile-widget");
+      if (!text) return;
 
-  if (!container) {
-    setStatus("सुरक्षा जाँच का स्थान नहीं मिला।");
-    return;
-  }
+      if (text.length > MAX_MESSAGE_LENGTH) {
+        setStatus("संदेश 4000 अक्षरों से छोटा रखें।", true);
+        return;
+      }
 
-  if (turnstileWidgetId !== null) return;
+      let token;
 
-  const siteKey = "PASTE_YOUR_PUBLIC_TURNSTILE_SITE_KEY_HERE";
+      try {
+        token = getTurnstileToken();
+      } catch (error) {
+        setStatus(error.message, true);
+        return;
+      }
 
-  if (
-    !siteKey ||
-    siteKey === "PASTE_YOUR_PUBLIC_TURNSTILE_SITE_KEY_HERE"
-  ) {
-    setStatus("Turnstile की सार्वजनिक Site Key डालना बाकी है।");
-    return;
-  }
+      isSending = true;
+      sendBtn.disabled = true;
+      input.disabled = true;
 
-  turnstileWidgetId = window.turnstile.render(container, {
-    sitekey: siteKey,
-    callback: onSarathiTurnstileSuccess,
-    "expired-callback": onSarathiTurnstileExpired,
-    "error-callback": onSarathiTurnstileError,
-    theme: "light"
-  });
-}
+      input.value = "";
+      addMessage("user", text);
 
-/* Clear chat */
-function clearChat() {
-  if (!confirm("क्या नई चैट शुरू करनी है?")) return;
+      const history = prepareHistory();
 
-  messages = [];
-  hideTyping();
+      messages.push({
+        role: "user",
+        content: text
+      });
 
-  chat.innerHTML = `
-    <div id="empty" class="empty">
-      <strong>हेलो 👋</strong>
-      मैं सारथी AI हूँ।<br>
-      अपना सवाल लिखो।
-    </div>
-  `;
+      showTyping();
+      setStatus("सारथी से सुरक्षित कनेक्शन बनाया जा रहा है…");
 
-  setStatus("नई चैट शुरू हो गई।");
-}
+      const controller = new AbortController();
 
-/* Disable unsupported features safely */
-function startRecording() {
-  setStatus("आवाज़ वाला फीचर सुरक्षित API तैयार होने तक बंद है।");
-}
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        REQUEST_TIMEOUT_MS
+      );
 
-function toggleSearch() {
-  setStatus("वेब Search को चालू करने के लिए Worker में सुरक्षित Search सुविधा जोड़नी होगी।");
-}
+      try {
+        const response = await fetch(API_BASE + "/api/chat", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            message: text,
+            history,
+            turnstileToken: token
+          }),
+          signal: controller.signal,
+          cache: "no-store",
+          credentials: "omit",
+          redirect: "error"
+        });
 
-function toggleVoice() {
-  setStatus("आवाज़ में जवाब पढ़ने के लिए नीचे ब्राउज़र की आवाज़ सुविधा जोड़ी जा सकती है।");
-}
+        const data = await readResponse(response);
 
-function openStudy() {
-  window.location.href = "/study.html";
-}
+        if (!response.ok) {
+          if (response.status === 403) {
+            throw new Error(
+              "सुरक्षा जाँच असफल हुई। दोबारा जाँच करें।"
+            );
+          }
 
-/* Enter sends message; Shift+Enter adds a line */
-input.addEventListener("keydown", event => {
-  if (event.key === "Enter" && !event.shiftKey) {
-    event.preventDefault();
-    sendMessage();
-  }
-});
+          if (response.status === 429) {
+            throw new Error(
+              "बहुत अधिक अनुरोध हुए हैं। थोड़ी देर बाद प्रयास करें।"
+            );
+          }
 
-/* Startup */
-window.addEventListener("load", () => {
-  initializeTurnstile();
-  input.focus();
-});
+          if (response.status === 503) {
+            throw new Error(
+              "AI सेवा अभी उपलब्ध नहीं है। बाद में प्रयास करें।"
+            );
+          }
 
-/* Turnstile script may load after the page */
-window.addEventListener("pageshow", initializeTurnstile);
-</script>
+          throw new Error(
+            "सर्वर से जवाब नहीं मिला। कृपया बाद में प्रयास करें।"
+          );
+        }
+
+        const reply = extractReply(data);
+
+        if (!reply) {
+          throw new Error("सर्वर से खाली जवाब मिला।");
+        }
+
+        const cleanReply = cleanSarathiStars(reply);
+
+        hideTyping();
+        addMessage("assistant", cleanReply);
+
+        messages.push({
+          role: "assistant",
+          content: cleanReply
+        });
+
+        messages = messages.slice(-MAX_HISTORY_ITEMS);
+
+        setStatus("सारथी तैयार है।");
+
+      } catch (error) {
+        hideTyping();
+
+        if (error.name === "AbortError") {
+          setStatus(
+            "जवाब आने में समय लगा। दोबारा प्रयास करें।",
+            true
+          );
+
+          addMessage(
+            "assistant",
+            "अभी जवाब नहीं मिल पाया। कृपया दोबारा प्रयास करें।"
+          );
+        } else {
+          const message =
+            error instanceof TypeError
+              ? "कनेक्शन में समस्या है। इंटरनेट और Worker की सेटिंग जाँचें।"
+              : error.message || "कनेक्शन में समस्या हुई।";
+
+          setStatus(message, true);
+          addMessage("assistant", message);
+        }
+
+      } finally {
+        clearTimeout(timeoutId);
+
+        /*
+          Turnstile tokens are single-use.
+          Require a fresh token after each request.
+        */
+        turnstileToken = "";
+
+        if (
+          window.turnstile &&
+          turnstileWidgetId !== null
+        ) {
+          try {
+            window.turnstile.reset(turnstileWidgetId);
+          } catch {
+            /* Widget may still be loading. */
+          }
+        }
+
+        isSending = false;
+        sendBtn.disabled = false;
+        input.disabled = false;
+        input.focus();
+      }
+    }
+
+    function onTurnstileSuccess(token) {
+      turnstileToken = String(token || "");
+      setStatus("सुरक्षा जाँच पूरी हुई। सारथी तैयार है।");
+    }
+
+    function onTurnstileExpired() {
+      turnstileToken = "";
+      setStatus("सुरक्षा टोकन समाप्त हुआ। दोबारा जाँच करें।", true);
+    }
+
+    function onTurnstileError() {
+      turnstileToken = "";
+      setStatus("सुरक्षा जाँच लोड नहीं हुई। इंटरनेट जाँचें।", true);
+    }
+
+    function initializeTurnstile() {
+      if (turnstileWidgetId !== null) return;
+
+      if (
+        !TURNSTILE_SITE_KEY ||
+        TURNSTILE_SITE_KEY ===
+          "PASTE_YOUR_PUBLIC_TURNSTILE_SITE_KEY_HERE"
+      ) {
+        setStatus(
+          "Cloudflare Turnstile की Public Site Key डालना बाकी है।",
+          true
+        );
+        return;
+      }
+
+      if (!window.turnstile) {
+        setStatus("सुरक्षा जाँच लोड हो रही है…");
+        return;
+      }
+
+      const container =
+        document.getElementById("turnstile-widget");
+
+      if (!container) {
+        setStatus("सुरक्षा जाँच का स्थान नहीं मिला।", true);
+        return;
+      }
+
+      try {
+        turnstileWidgetId = window.turnstile.render(container, {
+          sitekey: TURNSTILE_SITE_KEY,
+          callback: onTurnstileSuccess,
+          "expired-callback": onTurnstileExpired,
+          "error-callback": onTurnstileError,
+          theme: "light"
+        });
+      } catch {
+        setStatus("सुरक्षा जाँच शुरू नहीं हो सकी।", true);
+      }
+    }
+
+    function clearChat() {
+      if (isSending) {
+        setStatus(
+          "जवाब आने तक प्रतीक्षा करें, फिर नई चैट शुरू करें।"
+        );
+        return;
+      }
+
+      if (!confirm("क्या नई चैट शुरू करनी है?")) return;
+
+      messages = [];
+      hideTyping();
+
+      chat.replaceChildren();
+
+      const empty = document.createElement("div");
+      empty.id = "empty";
+      empty.className = "empty";
+
+      const title = document.createElement("strong");
+      title.textContent = "नमस्ते! 👋";
+
+      empty.appendChild(title);
+      empty.appendChild(
+        document.createTextNode(
+          "मैं सारथी AI हूँ। अपना सवाल नीचे लिखें।"
+        )
+      );
+
+      chat.appendChild(empty);
+      setStatus("नई चैट शुरू हो गई।");
+      input.focus();
+    }
+
+    chatForm.addEventListener("submit", event => {
+      event.preventDefault();
+      sendMessage();
+    });
+
+    document
+      .getElementById("clearBtn")
+      .addEventListener("click", clearChat);
+
+    document
+      .getElementById("studyBtn")
+      .addEventListener("click", () => {
+        window.location.href = "/study.html";
+      });
+
+    /*
+      Wait until the DOM is ready, then initialize Turnstile.
+    */
+    window.addEventListener("load", initializeTurnstile);
+    window.addEventListener("pageshow", initializeTurnstile);
+
+    /*
+      Do not repeatedly render the widget.
+      If the Turnstile script arrives late, retry briefly.
+    */
+    let turnstileRetries = 0;
+
+    const turnstileTimer = setInterval(() => {
+      if (turnstileWidgetId !== null || turnstileRetries >= 15) {
+        clearInterval(turnstileTimer);
+        return;
+      }
+
+      turnstileRetries++;
+      initializeTurnstile();
+    }, 1000);
+  </script>
+</body>
+</html>
