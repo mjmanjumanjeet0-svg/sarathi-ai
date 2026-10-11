@@ -1,313 +1,649 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta charset="UTF-8">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1, viewport-fit=cover"
+  >
+  <meta name="theme-color" content="#020617">
+  <meta
+    name="description"
+    content="सारथी AI — आपका हिन्दी AI सहायक"
+  >
+
   <title>सारथी AI – आपका हिन्दी AI सहायक</title>
+
   <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
+    :root {
+      color-scheme: dark;
+      --bg: #020617;
+      --panel: #0f172a;
+      --message: #1e293b;
+      --border: #334155;
+      --blue: #2563eb;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     body {
-      font-family: 'Segoe UI', system-ui, sans-serif;
-      background: #020617;
-      color: #e2e8f0;
+      font-family: system-ui, "Noto Sans Devanagari", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
       height: 100dvh;
       display: flex;
       flex-direction: column;
       overflow: hidden;
     }
 
-    /* Header */
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
     .header {
+      flex-shrink: 0;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 12px 16px;
-      background: linear-gradient(180deg, #0f172a 0%, #020617 100%);
+      gap: 8px;
+      padding: 10px 12px;
+      background: var(--panel);
       border-bottom: 1px solid #1e293b;
     }
-    .header-left, .header-right {
+
+    .header-group {
       display: flex;
-      gap: 12px;
-    }
-    .icon-btn {
-      width: 42px; height: 42px;
-      border-radius: 50%;
-      background: linear-gradient(145deg, #1e3a8a, #0f172a);
-      border: 1px solid #3b82f6;
-      color: #93c5fd;
-      font-size: 18px;
-      display: flex; align-items: center; justify-content: center;
-      cursor: pointer;
-      box-shadow: 0 0 12px rgba(59,130,246,0.4);
-    }
-    .icon-btn small {
-      display: block;
-      font-size: 9px;
-      margin-top: 2px;
-      color: #93c5fd;
+      gap: 8px;
     }
 
-    /* Logo Area */
+    .icon-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: #172554;
+      border: 1px solid #3b82f6;
+      color: #bfdbfe;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 19px;
+    }
+
     .logo-area {
       flex: 1;
+      min-height: 130px;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: center;
-      padding: 20px;
-      position: relative;
+      padding: 12px;
       overflow: hidden;
     }
+
+    .logo-area.hidden {
+      display: none;
+    }
+
     .peacock {
-      width: 180px;
-      height: auto;
-      filter: drop-shadow(0 0 20px rgba(59,130,246,0.6));
+      width: 125px;
+      max-height: 145px;
+      filter: drop-shadow(0 0 16px #3b82f666);
       animation: float 4s ease-in-out infinite;
     }
+
     @keyframes float {
-      0%,100% { transform: translateY(0); }
-      50% { transform: translateY(-8px); }
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-6px); }
     }
+
     .title {
-      font-size: 42px;
+      font-size: clamp(30px, 9vw, 42px);
       font-weight: 800;
-      background: linear-gradient(90deg, #60a5fa, #a78bfa, #f472b6);
+      background: linear-gradient(
+        90deg,
+        #60a5fa,
+        #a78bfa,
+        #f472b6
+      );
       -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      margin-top: 8px;
-      letter-spacing: 1px;
-    }
-    .subtitle {
-      font-size: 15px;
-      color: #94a3b8;
+      background-clip: text;
+      color: transparent;
       margin-top: 4px;
     }
 
-    /* Chat Area */
+    .subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 4px;
+      text-align: center;
+    }
+
+    #status {
+      font-size: 12px;
+      color: var(--muted);
+      text-align: center;
+      margin-top: 8px;
+    }
+
     #chat {
       flex: 1;
+      min-height: 0;
       overflow-y: auto;
-      padding: 16px;
+      overscroll-behavior: contain;
+      padding: 14px;
       display: flex;
       flex-direction: column;
       gap: 12px;
       scroll-behavior: smooth;
     }
+
     .msg {
-      max-width: 85%;
-      padding: 12px 16px;
-      border-radius: 18px;
-      line-height: 1.5;
+      max-width: 88%;
+      padding: 12px 15px;
+      border-radius: 17px;
       font-size: 15px;
+      line-height: 1.65;
       white-space: pre-wrap;
+      overflow-wrap: anywhere;
     }
+
     .user {
       align-self: flex-end;
       background: linear-gradient(135deg, #2563eb, #1d4ed8);
-      color: white;
+      color: #fff;
       border-bottom-right-radius: 4px;
     }
+
     .bot {
       align-self: flex-start;
-      background: #1e293b;
-      border: 1px solid #334155;
+      background: var(--message);
+      border: 1px solid var(--border);
       border-bottom-left-radius: 4px;
     }
+
     .typing {
       align-self: flex-start;
-      background: #1e293b;
-      padding: 12px 18px;
-      border-radius: 18px;
-      color: #94a3b8;
+      background: var(--message);
+      color: var(--muted);
+      padding: 10px 15px;
+      border-radius: 16px;
     }
 
-    /* Input Bar */
     .input-bar {
-      padding: 12px 16px 20px;
-      background: #0f172a;
+      flex-shrink: 0;
+      padding: 10px 12px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom));
+      background: var(--panel);
       border-top: 1px solid #1e293b;
     }
+
     .input-wrapper {
       display: flex;
       align-items: center;
-      gap: 10px;
-      background: #1e293b;
-      border-radius: 30px;
-      padding: 6px 8px;
-      border: 1px solid #334155;
-      box-shadow: 0 0 20px rgba(59,130,246,0.15);
+      gap: 7px;
+      padding: 6px;
+      border-radius: 28px;
+      background: var(--message);
+      border: 1px solid var(--border);
     }
-    .plus-btn, .mic-btn, .send-btn {
-      width: 42px; height: 42px;
-      border-radius: 50%;
+
+    .input-btn {
+      flex-shrink: 0;
+      width: 40px;
+      height: 40px;
       border: none;
-      display: flex; align-items: center; justify-content: center;
-      font-size: 20px;
-      cursor: pointer;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 19px;
     }
-    .plus-btn {
-      background: linear-gradient(145deg, #3b82f6, #1d4ed8);
-      color: white;
-    }
-    .mic-btn {
-      background: transparent;
-      color: #94a3b8;
-    }
+
+    .plus-btn,
     .send-btn {
       background: linear-gradient(145deg, #3b82f6, #1d4ed8);
       color: white;
     }
+
+    .mic-btn {
+      background: transparent;
+      color: #bfdbfe;
+    }
+
     #input {
+      min-width: 0;
       flex: 1;
+      padding: 10px 3px;
+      color: white;
       background: transparent;
       border: none;
-      color: white;
-      font-size: 15px;
-      padding: 10px 4px;
       outline: none;
+      font-size: 15px;
     }
-    #input::placeholder { color: #64748b; }
 
-    /* Empty state hide when chat starts */
-    .logo-area.hidden { display: none; }
+    #input::placeholder {
+      color: #94a3b8;
+    }
+
+    .notice {
+      text-align: center;
+      color: #64748b;
+      font-size: 11px;
+      padding: 5px 8px 0;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *,
+      *::before,
+      *::after {
+        animation: none !important;
+        scroll-behavior: auto !important;
+      }
+    }
   </style>
 </head>
-<body>
-  <!-- Header -->
-  <div class="header">
-    <div class="header-left">
-      <button class="icon-btn" onclick="alert('सेटिंग्स जल्द आ रही हैं')">⚙️</button>
-      <button class="icon-btn" onclick="clearChat()">🕐</button>
-    </div>
-    <div class="header-right">
-      <button class="icon-btn" onclick="alert('मेनू')">☰</button>
-      <button class="icon-btn" onclick="newChat()">💬</button>
-    </div>
-  </div>
 
-  <!-- Logo / Welcome -->
-  <div class="logo-area" id="logoArea">
-    <!-- Peacock feather SVG (simplified) -->
-    <svg class="peacock" viewBox="0 0 200 200" fill="none">
+<body>
+  <header class="header">
+    <div class="header-group">
+      <button class="icon-btn" id="settingsBtn"
+        aria-label="सेटिंग्स" title="सेटिंग्स">⚙️</button>
+
+      <button class="icon-btn" id="clearBtn"
+        aria-label="चैट साफ करें" title="चैट साफ करें">🕐</button>
+    </div>
+
+    <div class="header-group">
+      <button class="icon-btn" id="menuBtn"
+        aria-label="मेनू" title="मेनू">☰</button>
+
+      <button class="icon-btn" id="newBtn"
+        aria-label="नई चैट" title="नई चैट">💬</button>
+    </div>
+  </header>
+
+  <section class="logo-area" id="logoArea">
+    <svg
+      class="peacock"
+      viewBox="0 0 200 200"
+      fill="none"
+      aria-label="सारथी का प्रतीक"
+      role="img"
+    >
       <defs>
-        <linearGradient id="g1" x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id="g1"
+          x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stop-color="#3b82f6"/>
           <stop offset="50%" stop-color="#8b5cf6"/>
           <stop offset="100%" stop-color="#ec4899"/>
         </linearGradient>
       </defs>
-      <path d="M100 20 C140 40 160 80 150 120 C140 160 100 180 60 150 C30 120 40 60 100 20" fill="url(#g1)" opacity="0.9"/>
+
+      <path
+        d="M100 20 C140 40 160 80 150 120
+           C140 160 100 180 60 150
+           C30 120 40 60 100 20"
+        fill="url(#g1)"
+      />
+
       <circle cx="110" cy="90" r="18" fill="#1e3a8a"/>
       <circle cx="110" cy="90" r="10" fill="#60a5fa"/>
       <circle cx="110" cy="90" r="5" fill="#fbbf24"/>
     </svg>
+
     <div class="title">सारथी AI</div>
     <div class="subtitle">आपका हिन्दी AI सहायक</div>
-  </div>
+    <div id="status" role="status">चैट शुरू करने के लिए तैयार</div>
+  </section>
 
-  <!-- Chat messages -->
-  <div id="chat"></div>
+  <main id="chat" aria-live="polite" aria-label="चैट संदेश"></main>
 
-  <!-- Input -->
-  <div class="input-bar">
+  <footer class="input-bar">
     <div class="input-wrapper">
-      <button class="plus-btn" onclick="alert('अटैचमेंट जल्द')">+</button>
-      <input id="input" type="text" placeholder="सारथी से कुछ पूछें..." autocomplete="off" />
-      <button class="mic-btn" onclick="startVoice()">🎤</button>
-      <button class="send-btn" onclick="sendMessage()">➤</button>
+      <button class="input-btn plus-btn" id="attachBtn"
+        aria-label="अटैचमेंट">+</button>
+
+      <input
+        id="input"
+        type="text"
+        placeholder="सारथी से कुछ पूछें..."
+        autocomplete="off"
+        maxlength="4000"
+        aria-label="अपना संदेश लिखें"
+      >
+
+      <button class="input-btn mic-btn" id="micBtn"
+        aria-label="आवाज से बोलें">🎤</button>
+
+      <button class="input-btn send-btn" id="sendBtn"
+        aria-label="संदेश भेजें">➤</button>
     </div>
-  </div>
+
+    <div class="notice">
+      AI के उत्तर गलत भी हो सकते हैं। जरूरी जानकारी जाँच लें।
+    </div>
+  </footer>
 
   <script>
-    let messages = [];
-    const chatEl = document.getElementById('chat');
-    const logoArea = document.getElementById('logoArea');
-    const input = document.getElementById('input');
+    "use strict";
 
-    input.addEventListener('keypress', e => {
-      if (e.key === 'Enter') sendMessage();
-    });
+    // अपना मौजूदा Cloudflare Worker URL यहाँ रखें।
+    const API_BASE =
+      "https://sarathi-ai.mjmanjumanjeet0.workers.dev";
+
+    const CHAT_ENDPOINT = API_BASE + "/api/chat";
+    const MAX_HISTORY = 6;
+    const MAX_MESSAGE_LENGTH = 4000;
+    const REQUEST_TIMEOUT = 30000;
+
+    let messages = [];
+    let isSending = false;
+    let recognition = null;
+
+    const chatEl = document.getElementById("chat");
+    const logoArea = document.getElementById("logoArea");
+    const input = document.getElementById("input");
+    const sendBtn = document.getElementById("sendBtn");
+    const micBtn = document.getElementById("micBtn");
+    const statusEl = document.getElementById("status");
+
+    function setStatus(text) {
+      statusEl.textContent = text;
+    }
+
+    function scrollToBottom() {
+      chatEl.scrollTop = chatEl.scrollHeight;
+    }
 
     function addMessage(role, text) {
-      const div = document.createElement('div');
-      div.className = `msg ${role}`;
-      div.textContent = text;
+      const div = document.createElement("div");
+      div.className = "msg " + role;
+
+      // सुरक्षा: AI के उत्तर को HTML की तरह नहीं चलाते।
+      div.textContent = String(text);
+
       chatEl.appendChild(div);
-      chatEl.scrollTop = chatEl.scrollHeight;
-      logoArea.classList.add('hidden');
+      logoArea.classList.add("hidden");
+      scrollToBottom();
     }
 
     function showTyping() {
-      const div = document.createElement('div');
-      div.className = 'typing';
-      div.id = 'typing';
-      div.textContent = 'सारथी सोच रहा है...';
+      const div = document.createElement("div");
+      div.className = "typing";
+      div.id = "typing";
+      div.textContent = "सारथी सोच रहा है...";
       chatEl.appendChild(div);
-      chatEl.scrollTop = chatEl.scrollHeight;
+      scrollToBottom();
     }
 
     function removeTyping() {
-      const t = document.getElementById('typing');
-      if (t) t.remove();
+      const typing = document.getElementById("typing");
+      if (typing) typing.remove();
+    }
+
+    function setBusy(busy) {
+      isSending = busy;
+      sendBtn.disabled = busy;
+      input.disabled = busy;
+      sendBtn.textContent = busy ? "…" : "➤";
+
+      if (!busy) input.focus();
     }
 
     async function sendMessage() {
+      if (isSending) return;
+
       const text = input.value.trim();
+
       if (!text) return;
 
-      input.value = '';
-      addMessage('user', text);
-      messages.push({ role: 'user', content: text });
+      if (text.length > MAX_MESSAGE_LENGTH) {
+        addMessage("bot", "संदेश बहुत लंबा है। कृपया छोटा संदेश भेजें।");
+        return;
+      }
 
+      input.value = "";
+      addMessage("user", text);
+
+      // पुराने संदेश भेजें; वर्तमान संदेश अलग से message में जाएगा।
+      const history = messages.slice(-MAX_HISTORY).map(item => ({
+        role: item.role,
+        content: item.content
+      }));
+
+      // वर्तमान संदेश इतिहास में जोड़ें ताकि अगली बारी में संदर्भ रहे।
+      messages.push({ role: "user", content: text });
+
+      // ब्राउज़र में अनावश्यक रूप से बहुत बड़ा इतिहास न रखें।
+      messages = messages.slice(-MAX_HISTORY);
+
+      setBusy(true);
+      setStatus("सारथी जवाब तैयार कर रहा है...");
       showTyping();
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(
+        () => controller.abort(),
+        REQUEST_TIMEOUT
+      );
+
       try {
-        const res = await fetch('/api/chat', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ messages })
+        const response = await fetch(CHAT_ENDPOINT, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            message: text,
+            history: history
+          }),
+          signal: controller.signal,
+          cache: "no-store",
+          credentials: "omit"
         });
 
-        const data = await res.json();
-        removeTyping();
+        const raw = await response.text();
+        let data;
 
-        if (data.reply) {
-          addMessage('bot', data.reply);
-          messages.push({ role: 'assistant', content: data.reply });
-        } else {
-          addMessage('bot', data.error || 'कुछ गड़बड़ हो गई');
+        try {
+          data = JSON.parse(raw);
+        } catch {
+          throw new Error(
+            "सर्वर से सही JSON उत्तर नहीं मिला। Worker का जवाब जाँचें।"
+          );
         }
-      } catch (err) {
+
+        if (!response.ok) {
+          if (response.status === 429) {
+            throw new Error(
+              "बहुत जल्दी-जल्दी संदेश भेजे गए। थोड़ी देर बाद कोशिश करें।"
+            );
+          }
+
+          if (response.status === 503) {
+            throw new Error(
+              data.error || "AI सेवा अभी उपलब्ध नहीं है।"
+            );
+          }
+
+          throw new Error(
+            data.error || ("सर्वर त्रुटि: " + response.status)
+          );
+        }
+
+        const reply =
+          typeof data.reply === "string" ? data.reply :
+          typeof data.message === "string" ? data.message :
+          "";
+
+        if (!reply.trim()) {
+          throw new Error("AI से खाली उत्तर मिला।");
+        }
+
+        addMessage("bot", reply);
+
+        messages.push({
+          role: "assistant",
+          content: reply
+        });
+
+        messages = messages.slice(-MAX_HISTORY);
+        setStatus("जवाब मिल गया");
+
+      } catch (error) {
+        let message = "नेटवर्क समस्या। कनेक्शन जाँचकर दोबारा कोशिश करें।";
+
+        if (error.name === "AbortError") {
+          message = "जवाब आने में अधिक समय लगा। दोबारा कोशिश करें।";
+        } else if (error.message) {
+          message = error.message;
+        }
+
+        addMessage("bot", message);
+        setStatus("अनुरोध पूरा नहीं हुआ");
+
+      } finally {
+        clearTimeout(timeoutId);
         removeTyping();
-        addMessage('bot', 'नेटवर्क समस्या। दोबारा कोशिश करें।');
+        setBusy(false);
       }
     }
 
     function newChat() {
+      if (isSending) return;
+
       messages = [];
-      chatEl.innerHTML = '';
-      logoArea.classList.remove('hidden');
+      chatEl.replaceChildren();
+      logoArea.classList.remove("hidden");
+      setStatus("नई चैट शुरू करें");
+      input.value = "";
+      input.focus();
     }
 
     function clearChat() {
-      if (confirm('पूरा चैट इतिहास मिटा दें?')) newChat();
-    }
-
-    // Voice (Web Speech API)
-    function startVoice() {
-      if (!('webkitSpeechRecognition' in window)) {
-        alert('आपके ब्राउज़र में वॉइस सपोर्ट नहीं है');
+      if (isSending) {
+        alert("पहले मौजूदा जवाब पूरा होने दें।");
         return;
       }
-      const recognition = new webkitSpeechRecognition();
-      recognition.lang = 'hi-IN';
-      recognition.interimResults = false;
-      recognition.onresult = e => {
-        input.value = e.results[0][0].transcript;
-        sendMessage();
-      };
-      recognition.start();
+
+      if (confirm("पूरा चैट इतिहास मिटा दें?")) {
+        newChat();
+      }
     }
+
+    function startVoice() {
+      const SpeechRecognition =
+        window.SpeechRecognition ||
+        window.webkitSpeechRecognition;
+
+      if (!SpeechRecognition) {
+        alert(
+          "इस ब्राउज़र में वॉइस सुविधा उपलब्ध नहीं है। " +
+          "Chrome में HTTPS वेबसाइट पर कोशिश करें।"
+        );
+        return;
+      }
+
+      if (recognition) {
+        try {
+          recognition.stop();
+        } catch {}
+      }
+
+      recognition = new SpeechRecognition();
+      recognition.lang = "hi-IN";
+      recognition.interimResults = false;
+      recognition.maxAlternatives = 1;
+
+      recognition.onstart = () => {
+        setStatus("सुन रहा हूँ...");
+        micBtn.disabled = true;
+      };
+
+      recognition.onresult = event => {
+        const transcript =
+          event.results[0][0].transcript.trim();
+
+        if (transcript) {
+          input.value = transcript;
+          sendMessage();
+        }
+      };
+
+      recognition.onerror = () => {
+        setStatus("आवाज पहचानने में समस्या हुई");
+      };
+
+      recognition.onend = () => {
+        micBtn.disabled = false;
+
+        if (!isSending) {
+          setStatus("चैट शुरू करने के लिए तैयार");
+        }
+      };
+
+      try {
+        recognition.start();
+      } catch {
+        micBtn.disabled = false;
+        alert("वॉइस सुविधा शुरू नहीं हो सकी। फिर कोशिश करें।");
+      }
+    }
+
+    document.getElementById("sendBtn")
+      .addEventListener("click", sendMessage);
+
+    input.addEventListener("keydown", event => {
+      if (event.key === "Enter" && !event.isComposing) {
+        event.preventDefault();
+        sendMessage();
+      }
+    });
+
+    document.getElementById("newBtn")
+      .addEventListener("click", newChat);
+
+    document.getElementById("clearBtn")
+      .addEventListener("click", clearChat);
+
+    document.getElementById("micBtn")
+      .addEventListener("click", startVoice);
+
+    document.getElementById("settingsBtn")
+      .addEventListener("click", () => {
+        alert("सेटिंग्स जल्द उपलब्ध होंगी।");
+      });
+
+    document.getElementById("menuBtn")
+      .addEventListener("click", () => {
+        alert("मेनू जल्द उपलब्ध होगा।");
+      });
+
+    document.getElementById("attachBtn")
+      .addEventListener("click", () => {
+        alert(
+          "फोटो और फाइल अपलोड अभी सक्रिय नहीं हैं। " +
+          "सुरक्षित Worker API तैयार होने के बाद इन्हें जोड़ा जाएगा।"
+        );
+      });
   </script>
 </body>
 </html>
