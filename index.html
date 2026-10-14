@@ -1,22 +1,133 @@
-स
-सारथी AIआपका AI सहायक
-＋ नई बातचीत
-आपकी बातचीत
-बातचीत साफ़ करें
-आपकी चैट इसी ब्राउज़र में सेव रहती है।
-बनाया गया आपके लिए ❤️
-☰
-ससारथी AI
-AI सहायक
-स
-नमस्ते! मैं सारथी हूँ
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0f172a">
+    <title>सारथी AI — आपका AI सहायक</title>
+    <link rel="stylesheet" href="style.css">
+</head>
 
-आज मैं आपकी
-क्या मदद करूँ?
-पढ़ाई, लेखन, कोडिंग और रोज़मर्रा के सवालों में हिंदी में मदद पाएँ।
+<body>
+    <div class="app">
+        <aside class="sidebar" id="sidebar">
+            <div class="brand">
+                <span class="logo">स</span>
+                <div>
+                    <h2>सारथी AI</h2>
+                    <p>आपका AI सहायक</p>
+                </div>
+            </div>
 
-📚 पढ़ाई में मददकिसी विषय का आसान उत्तर समझाएँ 💻 कोडिंग में मददकोड समझें और त्रुटियाँ सुधारें ✍️ कुछ लिखवाएँपत्र, नोट्स या आवेदन तैयार करें 💡 कोई सवाल पूछेंकिसी विषय को आसान भाषा में जानें
-सारथी से कुछ भी पूछें...
+            <button id="newChat" class="new-chat">＋ नई बातचीत</button>
 
- ➤
-सारथी AI कभी-कभी गलत उत्तर दे सकता है। ज़रूरी जानकारी जाँच लें।
+            <h3>आपकी बातचीत</h3>
+            <div id="chatHistory" class="chat-history"></div>
+
+            <button id="clearChats" class="clear-button">
+                बातचीत साफ़ करें
+            </button>
+
+            <p class="sidebar-note">
+                आपकी चैट इसी ब्राउज़र में सेव रहती है।
+            </p>
+
+            <p class="made">बनाया गया आपके लिए ❤️</p>
+        </aside>
+
+        <main class="main">
+            <header class="topbar">
+                <button id="menuButton" class="menu-button">☰</button>
+
+                <div class="brand">
+                    <span class="logo small-logo">स</span>
+                    <div>
+                        <h2>सारथी AI</h2>
+                        <p>AI सहायक</p>
+                    </div>
+                </div>
+            </header>
+
+            <section class="conversation" id="conversation">
+                <div id="welcome" class="welcome">
+                    <div class="welcome-logo">स</div>
+
+                    <p class="hello">नमस्ते! मैं सारथी हूँ</p>
+
+                    <h1>
+                        आज मैं आपकी<br>
+                        <span>क्या मदद करूँ?</span>
+                    </h1>
+
+                    <p class="intro">
+                        पढ़ाई, लेखन, कोडिंग और रोज़मर्रा के सवालों में
+                        हिंदी में मदद पाएँ।
+                    </p>
+
+                    <div class="cards">
+                        <button class="card"
+                            data-prompt="मुझे पढ़ाई में मदद करो और विषय को आसान हिंदी में समझाओ।">
+                            <span class="emoji">📚</span>
+                            <span>
+                                <strong>पढ़ाई में मदद</strong>
+                                <small>किसी विषय का आसान उत्तर समझाएँ</small>
+                            </span>
+                        </button>
+
+                        <button class="card"
+                            data-prompt="मेरे कोड को समझाओ और उसकी गलतियाँ सुधारने में मदद करो।">
+                            <span class="emoji">💻</span>
+                            <span>
+                                <strong>कोडिंग में मदद</strong>
+                                <small>कोड समझें और त्रुटियाँ सुधारें</small>
+                            </span>
+                        </button>
+
+                        <button class="card"
+                            data-prompt="मेरे लिए एक पत्र, नोट्स या आवेदन तैयार करो।">
+                            <span class="emoji">✍️</span>
+                            <span>
+                                <strong>कुछ लिखवाएँ</strong>
+                                <small>पत्र, नोट्स या आवेदन तैयार करें</small>
+                            </span>
+                        </button>
+
+                        <button class="card"
+                            data-prompt="मेरे सवाल का आसान हिंदी में उत्तर दो।">
+                            <span class="emoji">💡</span>
+                            <span>
+                                <strong>कोई सवाल पूछें</strong>
+                                <small>किसी विषय को आसान भाषा में जानें</small>
+                            </span>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="messages" class="messages"></div>
+            </section>
+
+            <footer class="footer">
+                <form id="chatForm" class="input-box">
+                    <textarea
+                        id="promptInput"
+                        placeholder="सारथी से कुछ भी पूछें..."
+                        rows="1"
+                        aria-label="अपना सवाल लिखें"></textarea>
+
+                    <button type="submit" id="sendButton"
+                        aria-label="सवाल भेजें">➤</button>
+                </form>
+
+                <p class="disclaimer">
+                    सारथी AI कभी-कभी गलत उत्तर दे सकता है।
+                    ज़रूरी जानकारी जाँच लें।
+                </p>
+            </footer>
+        </main>
+    </div>
+
+    <div id="overlay" class="overlay"></div>
+
+    <script src="app.js"></script>
+</body>
+ </html>
