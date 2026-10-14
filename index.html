@@ -1,133 +1,234 @@
 <!DOCTYPE html>
 <html lang="hi">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#0f172a">
-    <title>सारथी AI — आपका AI सहायक</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#061538">
+
+  <title>सारथी AI — आपका AI सहायक</title>
+
+  <link rel="stylesheet" href="style.css">
 </head>
 
 <body>
-    <div class="app">
-        <aside class="sidebar" id="sidebar">
-            <div class="brand">
-                <span class="logo">स</span>
-                <div>
-                    <h2>सारथी AI</h2>
-                    <p>आपका AI सहायक</p>
-                </div>
-            </div>
 
-            <button id="newChat" class="new-chat">＋ नई बातचीत</button>
+<div class="app">
 
-            <h3>आपकी बातचीत</h3>
-            <div id="chatHistory" class="chat-history"></div>
+  <!-- बाईं तरफ का मेनू -->
+  <aside class="sidebar" id="sidebar">
 
-            <button id="clearChats" class="clear-button">
-                बातचीत साफ़ करें
-            </button>
-
-            <p class="sidebar-note">
-                आपकी चैट इसी ब्राउज़र में सेव रहती है।
-            </p>
-
-            <p class="made">बनाया गया आपके लिए ❤️</p>
-        </aside>
-
-        <main class="main">
-            <header class="topbar">
-                <button id="menuButton" class="menu-button">☰</button>
-
-                <div class="brand">
-                    <span class="logo small-logo">स</span>
-                    <div>
-                        <h2>सारथी AI</h2>
-                        <p>AI सहायक</p>
-                    </div>
-                </div>
-            </header>
-
-            <section class="conversation" id="conversation">
-                <div id="welcome" class="welcome">
-                    <div class="welcome-logo">स</div>
-
-                    <p class="hello">नमस्ते! मैं सारथी हूँ</p>
-
-                    <h1>
-                        आज मैं आपकी<br>
-                        <span>क्या मदद करूँ?</span>
-                    </h1>
-
-                    <p class="intro">
-                        पढ़ाई, लेखन, कोडिंग और रोज़मर्रा के सवालों में
-                        हिंदी में मदद पाएँ।
-                    </p>
-
-                    <div class="cards">
-                        <button class="card"
-                            data-prompt="मुझे पढ़ाई में मदद करो और विषय को आसान हिंदी में समझाओ।">
-                            <span class="emoji">📚</span>
-                            <span>
-                                <strong>पढ़ाई में मदद</strong>
-                                <small>किसी विषय का आसान उत्तर समझाएँ</small>
-                            </span>
-                        </button>
-
-                        <button class="card"
-                            data-prompt="मेरे कोड को समझाओ और उसकी गलतियाँ सुधारने में मदद करो।">
-                            <span class="emoji">💻</span>
-                            <span>
-                                <strong>कोडिंग में मदद</strong>
-                                <small>कोड समझें और त्रुटियाँ सुधारें</small>
-                            </span>
-                        </button>
-
-                        <button class="card"
-                            data-prompt="मेरे लिए एक पत्र, नोट्स या आवेदन तैयार करो।">
-                            <span class="emoji">✍️</span>
-                            <span>
-                                <strong>कुछ लिखवाएँ</strong>
-                                <small>पत्र, नोट्स या आवेदन तैयार करें</small>
-                            </span>
-                        </button>
-
-                        <button class="card"
-                            data-prompt="मेरे सवाल का आसान हिंदी में उत्तर दो।">
-                            <span class="emoji">💡</span>
-                            <span>
-                                <strong>कोई सवाल पूछें</strong>
-                                <small>किसी विषय को आसान भाषा में जानें</small>
-                            </span>
-                        </button>
-                    </div>
-                </div>
-
-                <div id="messages" class="messages"></div>
-            </section>
-
-            <footer class="footer">
-                <form id="chatForm" class="input-box">
-                    <textarea
-                        id="promptInput"
-                        placeholder="सारथी से कुछ भी पूछें..."
-                        rows="1"
-                        aria-label="अपना सवाल लिखें"></textarea>
-
-                    <button type="submit" id="sendButton"
-                        aria-label="सवाल भेजें">➤</button>
-                </form>
-
-                <p class="disclaimer">
-                    सारथी AI कभी-कभी गलत उत्तर दे सकता है।
-                    ज़रूरी जानकारी जाँच लें।
-                </p>
-            </footer>
-        </main>
+    <div class="brand">
+      <div class="brand-icon">🦚</div>
+      <div>
+        <h2>सारथी AI</h2>
+        <p>आपका AI सहायक</p>
+      </div>
     </div>
 
-    <div id="overlay" class="overlay"></div>
+    <button class="new-chat" id="newChat">
+      ＋ नई चैट
+    </button>
 
-    <script src="app.js"></script>
+    <h3 class="history-title">आपकी चैट</h3>
+
+    <div id="chatHistory" class="chat-history"></div>
+
+    <button class="clear-history" id="clearHistory">
+      🗑 बातचीत साफ करें
+    </button>
+
+    <p class="sidebar-note">
+      आपकी बातचीत इसी ब्राउज़र में सेव होती है।
+    </p>
+
+  </aside>
+
+
+  <!-- मुख्य चैट -->
+  <main class="main">
+
+    <!-- ऊपर का बार -->
+    <header class="topbar">
+
+      <button class="icon-button" id="menuButton"
+        aria-label="मेनू">☰</button>
+
+      <div class="top-brand">
+        <div class="mini-logo">🦚</div>
+
+        <div>
+          <strong>सारथी AI</strong>
+          <small>AI सहायक</small>
+        </div>
+      </div>
+
+      <div class="top-actions">
+
+        <button class="icon-button" id="plusButton"
+          aria-label="नए विकल्प">＋</button>
+
+        <button class="icon-button" id="historyButton"
+          aria-label="इतिहास">◷</button>
+
+        <button class="icon-button" id="moreButton"
+          aria-label="और विकल्प">•••</button>
+
+      </div>
+
+    </header>
+
+
+    <!-- तीन डॉट वाला मेनू -->
+    <div class="popup-menu" id="popupMenu">
+
+      <button data-action="share">↗ शेयर</button>
+      <button data-action="pin">📌 पिन</button>
+      <button data-action="find">⌕ फाइंड</button>
+
+      <hr>
+
+      <button data-action="add-chat">⊕ चैट ऐड</button>
+      <button data-action="home">⌂ होम</button>
+      <button data-action="project">▱ ऐड टू प्रोजेक्ट</button>
+
+      <hr>
+
+      <button data-action="all">▦ सभी ऑप्शन</button>
+
+    </div>
+
+
+    <!-- चैट का हिस्सा -->
+    <section class="chat-area" id="chatArea">
+
+      <div class="welcome" id="welcome">
+
+        <div class="welcome-logo">🦚</div>
+
+        <h1>नमस्ते! मैं सारथी हूँ</h1>
+
+        <h2>आज मैं आपकी क्या मदद करूँ?</h2>
+
+        <p>
+          पढ़ाई, लेखन, कोडिंग और रोजमर्रा के सवालों में
+          हिंदी में मदद पाएँ।
+        </p>
+
+        <div class="suggestions">
+
+          <button class="suggestion"
+            data-prompt="मुझे पढ़ाई में मदद करो">
+            📚 <strong>पढ़ाई में मदद</strong>
+            <span>प्रश्नों के आसान उत्तर पाएँ</span>
+          </button>
+
+          <button class="suggestion"
+            data-prompt="मुझे कोडिंग में मदद करो">
+            💻 <strong>कोडिंग में मदद</strong>
+            <span>कोड समझें और गलतियाँ सुधारें</span>
+          </button>
+
+          <button class="suggestion"
+            data-prompt="मेरे लिए एक आवेदन पत्र लिखो">
+            ✍️ <strong>कुछ लिखवाएँ</strong>
+            <span>पत्र, नोट्स और आवेदन तैयार करें</span>
+          </button>
+
+          <button class="suggestion"
+            data-prompt="मुझे किसी विषय की जानकारी दो">
+            🌐 <strong>कोई सवाल पूछें</strong>
+            <span>किसी विषय को आसान भाषा में समझें</span>
+          </button>
+
+        </div>
+      </div>
+
+
+      <!-- बातचीत के संदेश -->
+      <div id="messages" class="messages"></div>
+
+      <div id="status" class="status" aria-live="polite"></div>
+
+    </section>
+
+
+    <!-- नीचे इनपुट -->
+    <footer class="composer-area">
+
+      <form id="chatForm" class="composer">
+
+        <button type="button" id="micButton"
+          class="mic-button" aria-label="आवाज से बोलें">
+          🎙
+        </button>
+
+        <textarea
+          id="messageInput"
+          placeholder="सारथी से कुछ भी पूछें..."
+          rows="1"
+          aria-label="अपना सवाल लिखें"
+        ></textarea>
+
+        <button type="button" id="emojiButton"
+          class="small-button" aria-label="इमोजी">☺</button>
+
+        <button type="submit" id="sendButton"
+          class="send-button" aria-label="संदेश भेजें">
+          ➤
+        </button>
+
+      </form>
+
+      <div class="bottom-tools">
+
+        <button id="attachButton" title="फाइल जोड़ें">＋</button>
+        <button id="bottomMic" title="आवाज से बोलें">🎙</button>
+        <button id="settingsButton" title="सेटिंग">⚙</button>
+
+        <input type="file" id="fileInput" hidden
+          accept="image/*,.txt,.pdf,.doc,.docx,.csv">
+
+      </div>
+
+      <p class="disclaimer">
+        सारथी AI कभी-कभी गलत उत्तर दे सकता है। जरूरी जानकारी जाँच लें।
+      </p>
+
+    </footer>
+
+  </main>
+
+</div>
+
+
+<!-- सेटिंग विंडो -->
+<div class="modal-backdrop" id="settingsModal">
+
+  <div class="modal">
+
+    <button class="modal-close" id="closeSettings">×</button>
+
+    <h2>⚙ सारथी AI सेटिंग</h2>
+
+    <label for="workerUrl">AI सर्वर का URL</label>
+
+    <input id="workerUrl" type="url"
+      placeholder="https://आपका-worker.workers.dev">
+
+    <button id="saveSettings" class="primary-button">
+      सेटिंग सेव करें
+    </button>
+
+    <p>
+      API Key यहाँ मत डालना। उसे Cloudflare Worker में सुरक्षित रखें।
+    </p>
+
+  </div>
+
+</div>
+
+
+<script src="app.js"></script>
+
 </body>
- </html>
+</html>
