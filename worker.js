@@ -281,7 +281,7 @@ export default {
           },
           body: JSON.stringify({
             // यह मॉडल फोटो समझने के लिए सक्षम होना चाहिए।
-            model: "meta-llama/llama-4-scout-17b-16e-instruct",
+            model: "openai/gpt-oss-20b",
             messages: [systemMessage, ...messages],
             temperature: 0.7,
             max_tokens: 2048
