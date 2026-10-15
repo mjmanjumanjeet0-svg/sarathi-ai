@@ -1,119 +1,23 @@
-<!DOCTYPE html>
-<html lang="hi">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#07152e">
-  <meta name="description" content="सारथी AI — आपका AI सहायक">
-  <title>सारथी AI — आपका AI सहायक</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <div class="app">
+🦚
+सारथी AI
+आपका AI सहायक
+＋ नई चैट
+पुरानी चैट
+⚙️ सेटिंग्स
+निर्माता: Manjeet Kumar
+Sarathi AI · 1.1
+☰
+सारथी AI निर्माता: Manjeet Kumar
+＋⋮
+↗ चैट शेयर करें📌 चैट पिन करें ⌕ चैट में खोजें✎ चैट का नाम बदलें 📁 प्रोजेक्ट में जोड़ें⌂ होम 🗑️ चैट हटाएँ⚙️ सेटिंग्स
+🦚
+नमस्ते! मैं सारथी हूँ।
+बताइए, आज मैं आपकी क्या सहायता कर सकता हूँ?
 
-    <aside class="sidebar" id="sidebar">
-      <div class="brand">
-        <div class="brand-logo">🦚</div>
-        <div>
-          <h2>सारथी AI</h2>
-          <small>आपका AI सहायक</small>
-        </div>
-      </div>
+📘 अंग्रेजी सीखें 🎓 पढ़ाई में मदद 💡 नए आइडिया 💻 कोडिंग सीखें
+🌐 इंटरनेट खोज: बंदलाइव खोज के लिए Worker में वेब-सर्च सपोर्ट जरूरी है।
+＋ 🎙️ 
+सारथी से कुछ पूछिए...
 
-      <button class="new-chat" id="newChatBtn">＋ नई चैट</button>
-
-      <h3 class="history-heading">पुरानी चैट</h3>
-      <div id="historyList" class="history-list"></div>
-
-      <div class="sidebar-bottom">
-        <button class="menu-item" id="settingsBtn">⚙️ सेटिंग्स</button>
-        <div class="version">Sarathi AI · 1.0</div>
-      </div>
-    </aside>
-
-    <main class="main">
-      <header class="topbar">
-        <button class="icon-btn" id="menuBtn" aria-label="मेन्यू">☰</button>
-        <div class="top-title">सारथी AI</div>
-        <div class="top-actions">
-          <button class="icon-btn" id="topNewBtn" title="नई चैट">＋</button>
-          <button class="icon-btn" id="moreBtn" title="अन्य विकल्प">⋮</button>
-        </div>
-      </header>
-
-      <div class="dropdown hidden" id="moreMenu">
-        <button data-action="share">↗ चैट शेयर करें</button>
-        <button data-action="pin">📌 चैट पिन करें</button>
-        <button data-action="find">⌕ चैट में खोजें</button>
-        <button data-action="rename">✎ चैट का नाम बदलें</button>
-        <button data-action="project">📁 प्रोजेक्ट में जोड़ें</button>
-        <button data-action="home">⌂ होम</button>
-        <button data-action="delete">🗑️ चैट हटाएँ</button>
-        <button data-action="settings">⚙️ सेटिंग्स</button>
-      </div>
-
-      <section class="chat-area" id="chatArea">
-        <div class="welcome" id="welcome">
-          <div class="welcome-logo">🦚</div>
-          <h1>नमस्ते! मैं सारथी हूँ।</h1>
-          <p>बताइए, आज मैं आपकी क्या सहायता कर सकता हूँ?</p>
-
-          <div class="suggestions">
-            <button data-prompt="मुझे अंग्रेजी सीखने में मदद करो।">📘 अंग्रेजी सीखें</button>
-            <button data-prompt="मुझे पढ़ाई में मदद करो।">🎓 पढ़ाई में मदद</button>
-            <button data-prompt="मुझे एक अच्छा आइडिया बताओ।">💡 नए आइडिया</button>
-            <button data-prompt="मुझे कोडिंग सिखाओ।">💻 कोडिंग सीखें</button>
-          </div>
-        </div>
-
-        <div class="messages" id="messages"></div>
-      </section>
-
-      <div class="composer-wrap">
-        <div class="status" id="status" aria-live="polite"></div>
-        <form class="composer" id="chatForm">
-          <button type="button" class="icon-btn mic-btn" id="micBtn" title="आवाज से बोलें">🎙️</button>
-          <textarea id="messageInput" rows="1"
-            placeholder="सारथी से कुछ पूछिए..."
-            aria-label="अपना संदेश लिखें"></textarea>
-          <button type="submit" class="send-btn" id="sendBtn" title="भेजें">➤</button>
-        </form>
-        <p class="disclaimer">सारथी AI कभी-कभी गलत उत्तर दे सकता है। जरूरी जानकारी जाँच लें।</p>
-      </div>
-    </main>
-  </div>
-
-  <dialog id="settingsDialog">
-    <form method="dialog" class="dialog-inner" id="settingsForm">
-      <h2>⚙️ सारथी AI सेटिंग्स</h2>
-      <label for="workerUrl">Cloudflare Worker URL</label>
-      <input id="workerUrl" type="url"
-        placeholder="https://your-worker.workers.dev"
-        autocomplete="url">
-      <p class="hint">यहाँ Worker का मूल URL डालें। अंत में /api/chat न जोड़ें।</p>
-
-      <label for="assistantName">सहायक का नाम</label>
-      <input id="assistantName" type="text" value="सारथी">
-
-      <div class="dialog-actions">
-        <button type="button" class="secondary-btn" id="cancelSettings">रद्द करें</button>
-        <button type="button" class="primary-btn" id="saveSettings">सेव करें</button>
-      </div>
-    </form>
-  </dialog>
-
-  <dialog id="findDialog">
-    <form method="dialog" class="dialog-inner">
-      <h2>चैट में खोजें</h2>
-      <input id="findInput" type="search" placeholder="शब्द लिखें...">
-      <div class="dialog-actions">
-        <button class="secondary-btn">बंद करें</button>
-        <button type="button" class="primary-btn" id="findNext">खोजें</button>
-      </div>
-      <p id="findResult" class="hint"></p>
-    </form>
-  </dialog>
-
-  <script src="app.js"></script>
-</body>
-</html>
+ ➤
+सारथी AI कभी-कभी गलत उत्तर दे सकता है। जरूरी जानकारी जाँच लें।
