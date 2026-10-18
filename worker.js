@@ -2,118 +2,262 @@ const INDIA_TIME_ZONE = "Asia/Kolkata";
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "openai/gpt-oss-20b";
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+function jsonResponse(data, status = 200) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      ...CORS_HEADERS,
+      "Content-Type": "application/json; charset=UTF-8",
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
+function cleanText(value) {
+  return String(value || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;|&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#(\d+);/g, (_, n) =>
+      String.fromCodePoint(Number(n))
+    )
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) =>
+      String.fromCodePoint(parseInt(n, 16))
+    )
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function getIndiaDateTime() {
+  const now = new Date();
+
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: INDIA_TIME_ZONE,
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(now);
+
+  const result = {};
+  for (const part of parts) {
+    result[part.type] = part.value;
+  }
+
+  const weekday = new Intl.DateTimeFormat("hi-IN", {
+    timeZone: INDIA_TIME_ZONE,
+    weekday: "long",
+  }).format(now);
+
+  return {
+    date: `${result.day}-${result.month}-${result.year}`,
+    weekday,
+    time: `${result.hour}:${result.minute}`,
+  };
+}
+
+function isDateQuestion(text) {
+  return /आज की तारीख|आज कौन.?सा दिन|आज कौन सा दिन|आज का दिन|आज डेट|आज की डेट|आज तारीख|वर्तमान तारीख|current date|today.?s date|what day is it today/i
+    .test(text);
+}
+
+function isValidHttpUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:";
+  } catch {
+    return false;
+  }
+}
+
+function decodeSearchUrl(value) {
+  try {
+    const url = new URL(value, "https://html.duckduckgo.com");
+
+    if (
+      url.hostname.endsWith("duckduckgo.com") &&
+      url.pathname === "/l/"
+    ) {
+      const destination = url.searchParams.get("uddg");
+
+      if (destination && isValidHttpUrl(destination)) {
+        return destination;
+      }
+    }
+
+    return isValidHttpUrl(url.href) ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+async function searchInternet(query) {
+  const searchUrl =
+    "https://html.duckduckgo.com/html/?q=" +
+    encodeURIComponent(query);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 9000);
+
+  try {
+    const response = await fetch(searchUrl, {
+      method: "GET",
+      headers: {
+        "User-Agent":
+          "Mozilla/5.0 (compatible; SarathiAI/1.0)",
+        "Accept": "text/html",
+      },
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      return {
+        results: [],
+        warning: `इंटरनेट खोज सेवा ने HTTP ${response.status} दिया।`,
+      };
+    }
+
+    const html = await response.text();
+
+    /*
+     * प्रत्येक result__a लिंक को अलग से ढूँढ़ते हैं।
+     * खोज सेवा का HTML बदलने पर भी असफलता को छिपाते नहीं हैं।
+     */
+    const anchorRegex =
+      /<a\b[^>]*class=["'][^"']*\bresult__a\b[^"']*["'][^>]*>[\s\S]*?<\/a>/gi;
+
+    const anchors = [...html.matchAll(anchorRegex)];
+    const results = [];
+
+    for (let i = 0; i < anchors.length && results.length < 5; i++) {
+      const match = anchors[i];
+      const anchorHtml = match[0];
+
+      const hrefMatch = anchorHtml.match(
+        /\bhref=["']([^"']+)["']/i
+      );
+
+      const title = cleanText(anchorHtml);
+
+      if (!hrefMatch || !title) continue;
+
+      const link = decodeSearchUrl(
+        hrefMatch[1].replace(/&amp;/g, "&")
+      );
+
+      if (!link) continue;
+
+      const nextIndex =
+        i + 1 < anchors.length
+          ? anchors[i + 1].index
+          : Math.min(html.length, match.index + 5000);
+
+      const section = html.slice(
+        match.index,
+        Math.max(match.index + anchorHtml.length, nextIndex)
+      );
+
+      const snippetMatch = section.match(
+        /<a\b[^>]*class=["'][^"']*\bresult__snippet\b[^"']*["'][^>]*>([\s\S]*?)<\/a>|<div\b[^>]*class=["'][^"']*\bresult__snippet\b[^"']*["'][^>]*>([\s\S]*?)<\/div>/i
+      );
+
+      const snippet = cleanText(
+        snippetMatch?.[1] || snippetMatch?.[2] || ""
+      );
+
+      results.push({
+        title,
+        url: link,
+        snippet,
+      });
+    }
+
+    if (results.length === 0) {
+      return {
+        results: [],
+        warning:
+          "इंटरनेट खोज का प्रयास हुआ, लेकिन पढ़ने योग्य परिणाम नहीं मिले।",
+      };
+    }
+
+    return {
+      results,
+      warning: "",
+    };
+  } catch (error) {
+    return {
+      results: [],
+      warning:
+        error?.name === "AbortError"
+          ? "इंटरनेट खोज में समय समाप्त हो गया।"
+          : "इंटरनेट खोज अभी उपलब्ध नहीं है।",
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function buildSearchContext(results) {
+  if (!results.length) return "";
+
+  return (
+    "\n\nइंटरनेट खोज से मिले परिणाम:\n" +
+    results
+      .map(
+        (item, index) =>
+          `${index + 1}. ${item.title}\n` +
+          `लिंक: ${item.url}\n` +
+          `जानकारी: ${item.snippet || "स्निपेट उपलब्ध नहीं है।"}`
+      )
+      .join("\n\n") +
+    "\n\nनियम: परिणामों के आधार पर उत्तर दो। " +
+    "अगर परिणाम पर्याप्त नहीं हैं, तो स्पष्ट बताओ। " +
+    "अपनी ओर से वर्तमान कीमत, तारीख, समाचार या तथ्य मत गढ़ो।"
+  );
+}
+
 export default {
   async fetch(request, env) {
     const url = new URL(request.url);
 
-    // CORS: वेबसाइट को Worker से जुड़ने दें
-    const corsHeaders = {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-      "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    };
-
-    const jsonResponse = (data, status = 200) =>
-      new Response(JSON.stringify(data), {
-        status,
-        headers: {
-          ...corsHeaders,
-          "Content-Type": "application/json; charset=utf-8",
-          "Cache-Control": "no-store",
-        },
-      });
-
     if (request.method === "OPTIONS") {
       return new Response(null, {
         status: 204,
-        headers: corsHeaders,
+        headers: CORS_HEADERS,
       });
     }
 
-    // भारत की तारीख, दिन और समय
-    const getIndiaDateTime = () => {
-      const now = new Date();
-
-      const parts = new Intl.DateTimeFormat("en-CA", {
-        timeZone: INDIA_TIME_ZONE,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      }).formatToParts(now);
-
-      const values = {};
-      for (const part of parts) {
-        if (part.type !== "literal") values[part.type] = part.value;
-      }
-
-      const dateISO =
-        `${values.year}-${values.month}-${values.day}`;
-
-      const dateHindi = new Intl.DateTimeFormat("hi-IN", {
-        timeZone: INDIA_TIME_ZONE,
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      }).format(now);
-
-      const weekdayHindi = new Intl.DateTimeFormat("hi-IN", {
-        timeZone: INDIA_TIME_ZONE,
-        weekday: "long",
-      }).format(now);
-
-      const timeHindi = new Intl.DateTimeFormat("hi-IN", {
-        timeZone: INDIA_TIME_ZONE,
-        hour: "numeric",
-        minute: "2-digit",
-        second: "2-digit",
-        hour12: true,
-      }).format(now);
-
-      return {
-        dateISO,
-        dateHindi,
-        weekdayHindi,
-        timeHindi,
-      };
-    };
-
-    const india = getIndiaDateTime();
-
-    // Worker की स्थिति जाँचने के लिए
     if (request.method === "GET" && url.pathname === "/") {
+      const dateTime = getIndiaDateTime();
+
       return jsonResponse({
         success: true,
-        name: "Sarathi AI",
-        status: "running",
-        date: india.dateHindi,
-        weekday: india.weekdayHindi,
-        time: india.timeHindi,
-        timezone: INDIA_TIME_ZONE,
+        message: "Sarathi AI Worker is running",
+        ...dateTime,
         groqSecretAvailable: Boolean(env.GROQ_API_KEY),
         searchProvider: "DuckDuckGo HTML",
-        message: "Sarathi AI Worker is running",
       });
     }
 
-    if (url.pathname !== "/api/chat") {
-      return jsonResponse({
-        success: false,
-        error: "यह API रास्ता उपलब्ध नहीं है।",
-      }, 404);
-    }
-
-    if (request.method !== "POST") {
-      return jsonResponse({
-        success: false,
-        error: "इस API के लिए POST अनुरोध भेजें।",
-      }, 405);
-    }
-
-    if (!env.GROQ_API_KEY) {
-      return jsonResponse({
-        success: false,
-        error: "Cloudflare में GROQ_API_KEY Secret सेट नहीं है।",
-      }, 500);
+    if (request.method !== "POST" || url.pathname !== "/api/chat") {
+      return jsonResponse(
+        {
+          success: false,
+          error: "यह API रास्ता उपलब्ध नहीं है।",
+        },
+        404
+      );
     }
 
     let body;
@@ -121,48 +265,49 @@ export default {
     try {
       body = await request.json();
     } catch {
-      return jsonResponse({
-        success: false,
-        error: "अनुरोध का JSON सही नहीं है।",
-      }, 400);
+      return jsonResponse(
+        {
+          success: false,
+          error: "अनुरोध का JSON सही नहीं है।",
+        },
+        400
+      );
     }
 
     const messages = Array.isArray(body.messages)
       ? body.messages
       : [];
 
-    const lastUserMessage = [...messages]
+    const userMessage = [...messages]
       .reverse()
-      .find((message) => message && message.role === "user");
+      .find((message) => message?.role === "user");
 
-    const question =
-      typeof lastUserMessage?.content === "string"
-        ? lastUserMessage.content.trim()
+    const userText =
+      typeof userMessage?.content === "string"
+        ? userMessage.content.trim()
         : "";
 
-    if (!question) {
-      return jsonResponse({
-        success: false,
-        error: "कृपया अपना सवाल लिखें।",
-      }, 400);
+    if (!userText) {
+      return jsonResponse(
+        {
+          success: false,
+          error: "पहले अपना सवाल लिखें।",
+        },
+        400
+      );
     }
 
-    // तारीख और दिन वाले सवालों का उत्तर सीधे दें।
-    const dateQuestion =
-      /(आज.*(कौन|कवन|क्या).*(दिन|तारीख|डेट)|आज.*(तारीख|डेट)|आज कौन सा दिन|आज कवन सा दिन|आज की तारीख|what day is it|what is today's date|today's date)/i
-        .test(question);
+    const dateTime = getIndiaDateTime();
 
-    if (dateQuestion) {
-      const reply =
-        `भारत में आज ${india.dateHindi} है और दिन ${india.weekdayHindi} है। ` +
-        `अभी भारतीय समय ${india.timeHindi} है।`;
-
+    // तारीख और दिन के सवाल का उत्तर बिना Groq API के भी दे सकते हैं।
+    if (isDateQuestion(userText)) {
       return jsonResponse({
         success: true,
-        reply,
-        date: india.dateHindi,
-        weekday: india.weekdayHindi,
-        time: india.timeHindi,
+        reply:
+          `आज की तारीख ${dateTime.date} है। ` +
+          `आज ${dateTime.weekday} है। ` +
+          `भारतीय समय अभी ${dateTime.time} है।`,
+        ...dateTime,
         webSearch: false,
         searchAttempted: false,
         searchWarning: "",
@@ -170,143 +315,75 @@ export default {
       });
     }
 
-    // इंटरनेट सर्च का प्रयास
-    const webSearchRequested =
+    if (!env.GROQ_API_KEY) {
+      return jsonResponse(
+        {
+          success: false,
+          error:
+            "Cloudflare Worker में GROQ_API_KEY Secret उपलब्ध नहीं है।",
+        },
+        500
+      );
+    }
+
+    const wantsSearch =
       body.webSearch === true || body.internet === true;
 
     let searchResults = [];
     let searchWarning = "";
     let searchAttempted = false;
 
-    const cleanText = (value) =>
-      String(value || "")
-        .replace(/<script[\s\S]*?<\/script>/gi, " ")
-        .replace(/<style[\s\S]*?<\/style>/gi, " ")
-        .replace(/<[^>]*>/g, " ")
-        .replace(/&amp;/g, "&")
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;|&apos;/g, "'")
-        .replace(/&lt;/g, "<")
-        .replace(/&gt;/g, ">")
-        .replace(/&#(\d+);/g, (_, n) =>
-          String.fromCodePoint(Number(n))
-        )
-        .replace(/&#x([0-9a-f]+);/gi, (_, n) =>
-          String.fromCodePoint(parseInt(n, 16))
-        )
-        .replace(/\s+/g, " ")
-        .trim();
-
-    if (webSearchRequested) {
+    if (wantsSearch) {
       searchAttempted = true;
 
-      try {
-        const searchUrl =
-          "https://html.duckduckgo.com/html/?q=" +
-          encodeURIComponent(question);
+      const search = await searchInternet(userText);
 
-        const searchResponse = await fetch(searchUrl, {
-          headers: {
-            "User-Agent":
-              "Mozilla/5.0 (compatible; SarathiAI/1.0)",
-            "Accept": "text/html",
-          },
-          signal: AbortSignal.timeout(8000),
-        });
-
-        if (!searchResponse.ok) {
-          throw new Error(
-            `सर्च सेवा ने HTTP ${searchResponse.status} दिया।`
-          );
-        }
-
-        const html = await searchResponse.text();
-
-        // DuckDuckGo के अलग-अलग result blocks निकालने की कोशिश
-        const blocks = html.match(
-          /<div[^>]*class="[^"]*result[^"]*"[\s\S]*?(?=<div[^>]*class="[^"]*result[^"]*"|<\/body>)/gi
-        ) || [];
-
-        for (const block of blocks) {
-          const linkMatch = block.match(
-            /<a[^>]*class="[^"]*result__a[^"]*"[^>]*href="([^"]+)"[^>]*>([\s\S]*?)<\/a>/i
-          );
-
-          const snippetMatch = block.match(
-            /<a[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/a>|<div[^>]*class="[^"]*result__snippet[^"]*"[^>]*>([\s\S]*?)<\/div>/i
-          );
-
-          if (!linkMatch) continue;
-
-          let resultUrl = linkMatch[1]
-            .replace(/&amp;/g, "&");
-
-          // DuckDuckGo redirect URL को मूल URL में बदलने की कोशिश
-          try {
-            const parsedUrl = new URL(resultUrl, "https://duckduckgo.com");
-            const redirectedUrl = parsedUrl.searchParams.get("uddg");
-            if (redirectedUrl) {
-              resultUrl = decodeURIComponent(redirectedUrl);
-            }
-          } catch {
-            continue;
-          }
-
-          if (!/^https?:\/\//i.test(resultUrl)) continue;
-
-          const title = cleanText(linkMatch[2]);
-          const snippet = cleanText(
-            snippetMatch?.[1] || snippetMatch?.[2] || ""
-          );
-
-          if (title) {
-            searchResults.push({
-              title,
-              url: resultUrl,
-              snippet,
-            });
-          }
-
-          if (searchResults.length >= 5) break;
-        }
-
-        if (searchResults.length === 0) {
-          searchWarning =
-            "इंटरनेट सर्च का प्रयास हुआ, लेकिन पढ़ने योग्य परिणाम नहीं मिले।";
-        }
-      } catch (error) {
-        searchWarning =
-          "इंटरनेट सर्च अभी सफल नहीं हुई। नेटवर्क या सर्च सेवा की समस्या हो सकती है।";
-      }
+      searchResults = search.results;
+      searchWarning = search.warning;
     }
 
-    // AI को वर्तमान तारीख और उपलब्ध खोज परिणाम दें
-    const searchContext = searchResults.length
-      ? "\n\nइंटरनेट खोज से मिले परिणाम (केवल उपलब्ध सामग्री पर भरोसा करें):\n" +
-        searchResults.map((result, index) =>
-          `${index + 1}. ${result.title}\nURL: ${result.url}\nविवरण: ${result.snippet}`
-        ).join("\n\n")
-      : "";
-
     const systemPrompt = `
-तुम सारथी AI हो, एक सहायक जो उपयोगकर्ता से सरल, विनम्र हिंदी में बात करता है।
-
-आज भारत में तारीख: ${india.dateHindi}
-आज सप्ताह का दिन: ${india.weekdayHindi}
-भारतीय समय: ${india.timeHindi}
-समय क्षेत्र: Asia/Kolkata
+तुम सारथी AI हो, एक मददगार हिंदी AI सहायक।
 
 नियम:
-1. उपयोगकर्ता की भाषा में जवाब दो। यदि वह हिंदी में पूछे तो सरल हिंदी में जवाब दो।
-2. तथ्य न गढ़ो। जानकारी निश्चित न हो तो साफ बताओ।
-3. यदि इंटरनेट खोज के परिणाम दिए गए हैं, तो उन्हीं से संबंधित निष्कर्ष निकालो।
-4. खोज परिणामों में उत्तर न हो तो स्पष्ट कहो कि उपलब्ध परिणामों से पुष्टि नहीं हो सकी।
-5. किसी लिंक को खोले बिना यह दावा मत करो कि उसका पूरा पेज पढ़ लिया है।
-6. तारीख या सप्ताह के दिन के लिए ऊपर दी गई तारीख और दिन का ही उपयोग करो।
-7. वर्तमान कीमत, मौसम या ताज़ा खबर की जानकारी उपलब्ध न हो तो उसे वर्तमान सत्य बताकर पेश मत करो।
-8. जवाब स्पष्ट, उपयोगी और जरूरत के अनुसार संक्षिप्त रखो।
-${searchContext}
+1. उपयोगकर्ता की भाषा में सरल और स्पष्ट उत्तर दो।
+2. वर्तमान जानकारी उपलब्ध न हो तो अनुमान को तथ्य की तरह मत बताओ।
+3. इंटरनेट खोज के परिणाम मिले हों तो उन्हीं के आधार पर उत्तर दो।
+4. स्रोतों से पुष्टि न होने पर स्पष्ट बताओ कि पुष्टि नहीं हो सकी।
+5. कीमत, समाचार, सरकारी सूचना और समय-संवेदनशील जानकारी में सावधानी रखो।
+6. उपयोगकर्ता को भ्रमित करने वाले नकली लिंक या स्रोत मत बनाओ।
+7. सामान्य सवालों का सीधा जवाब दो।
+8. यदि खोज परिणाम नहीं मिले, तो यह दावा मत करो कि लाइव जानकारी सत्यापित कर ली गई।
+9. वर्तमान तारीख भारतीय समय के अनुसार ${dateTime.date} है।
 `;
+
+    const searchContext = buildSearchContext(searchResults);
+
+    const safeMessages = messages
+      .filter(
+        (message) =>
+          message &&
+          ["user", "assistant"].includes(message.role) &&
+          typeof message.content === "string"
+      )
+      .slice(-20)
+      .map((message) => ({
+        role: message.role,
+        content: message.content.slice(0, 12000),
+      }));
+
+    // केवल वर्तमान user message में खोज संदर्भ जोड़ें।
+    if (searchContext) {
+      for (let i = safeMessages.length - 1; i >= 0; i--) {
+        if (safeMessages[i].role === "user") {
+          safeMessages[i] = {
+            ...safeMessages[i],
+            content: safeMessages[i].content + searchContext,
+          };
+          break;
+        }
+      }
+    }
 
     let groqResponse;
 
@@ -320,79 +397,79 @@ ${searchContext}
         body: JSON.stringify({
           model: GROQ_MODEL,
           messages: [
-            { role: "system", content: systemPrompt },
-            ...messages.filter((message) =>
-              message &&
-              ["user", "assistant"].includes(message.role) &&
-              typeof message.content === "string"
-            ).slice(-20),
+            {
+              role: "system",
+              content: systemPrompt,
+            },
+            ...safeMessages,
           ],
           temperature: 0.3,
           max_tokens: 1200,
         }),
-        signal: AbortSignal.timeout(25000),
       });
     } catch {
-      return jsonResponse({
-        success: false,
-        error: "AI सेवा से संपर्क नहीं हो सका। थोड़ी देर बाद फिर कोशिश करें।",
-        date: india.dateHindi,
-        weekday: india.weekdayHindi,
-        time: india.timeHindi,
-      }, 502);
+      return jsonResponse(
+        {
+          success: false,
+          error: "AI सेवा से संपर्क नहीं हो सका।",
+          searchAttempted,
+          searchWarning,
+        },
+        502
+      );
     }
 
     if (!groqResponse.ok) {
-      const status = groqResponse.status;
+      const errorText = await groqResponse.text();
 
-      return jsonResponse({
-        success: false,
-        error:
-          status === 401 || status === 403
-            ? "Groq API key सही नहीं है या स्वीकार नहीं की गई।"
-            : status === 429
-            ? "Groq की अनुरोध सीमा पूरी हो गई है। कुछ देर बाद फिर कोशिश करें।"
-            : `AI सेवा में समस्या है (HTTP ${status})।`,
-        date: india.dateHindi,
-        weekday: india.weekdayHindi,
-        time: india.timeHindi,
-      }, 502);
+      return jsonResponse(
+        {
+          success: false,
+          error: `AI सेवा ने HTTP ${groqResponse.status} दिया।`,
+          details: errorText.slice(0, 500),
+          searchAttempted,
+          searchWarning,
+        },
+        502
+      );
     }
 
-    let groqData;
+    let payload;
 
     try {
-      groqData = await groqResponse.json();
+      payload = await groqResponse.json();
     } catch {
-      return jsonResponse({
-        success: false,
-        error: "AI सेवा से सही जवाब नहीं मिला।",
-      }, 502);
+      return jsonResponse(
+        {
+          success: false,
+          error: "AI सेवा का उत्तर पढ़ा नहीं जा सका।",
+        },
+        502
+      );
     }
 
-    const reply =
-      groqData?.choices?.[0]?.message?.content;
+    const reply = payload?.choices?.[0]?.message?.content;
 
     if (typeof reply !== "string" || !reply.trim()) {
-      return jsonResponse({
-        success: false,
-        error: "AI सेवा ने खाली जवाब दिया।",
-      }, 502);
+      return jsonResponse(
+        {
+          success: false,
+          error: "AI सेवा से खाली उत्तर मिला।",
+        },
+        502
+      );
     }
 
     return jsonResponse({
       success: true,
       reply: reply.trim(),
-      date: india.dateHindi,
-      weekday: india.weekdayHindi,
-      time: india.timeHindi,
+      ...dateTime,
       webSearch: searchResults.length > 0,
       searchAttempted,
       searchWarning,
-      sources: searchResults.map((result) => ({
-        title: result.title,
-        url: result.url,
-        snippet: result.snippet,
+      sources: searchResults.map((item) => ({
+        title: item.title,
+        url: item.url,
       })),
     });
   },
