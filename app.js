@@ -280,12 +280,15 @@ function renderHistory() {
     button.textContent = (chat.pinned ? "📌 " : "") + chat.title;
 
     button.addEventListener("click", () => {
-      state.activeId = chat.id;
-      saveChats();
-      renderHistory();
-      renderMessages();
-      showWelcome();
-    });
+  state.activeId = chat.id;
+  saveChats();
+  renderHistory();
+  renderMessages();
+  showWelcome();
+
+  closeSidebar();
+  closeMoreMenu();
+});
 
     const deleteButton = document.createElement("button");
     deleteButton.type = "button";
@@ -729,10 +732,14 @@ function handleSettingsSubmit(event) {
 function handleNewChat() {
   createChat();
 
+  closeSidebar();
+  closeMoreMenu();
+
   const input = $("messageInput");
 
   if (input) {
     input.value = "";
+    input.style.height = "";
     input.focus();
   }
 
