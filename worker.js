@@ -107,8 +107,7 @@ async function searchInternet(query) {
     "https://html.duckduckgo.com/html/?q=" +
     encodeURIComponent(query);
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 9000);
+  const timeout = setTimeout(() => controller.abort(), 15000);
 
   try {
     const response = await fetch(searchUrl, {
