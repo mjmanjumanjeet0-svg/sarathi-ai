@@ -583,7 +583,33 @@ async function sendMessage(text) {
     }
 
     addMessage("assistant", answer.trim());
-    setStatus("");
+
+if (state.webEnabled) {
+  if (data.searchWarning) {
+    setStatus("🌐 इंटरनेट खोज: " + data.searchWarning);
+  } else if (data.sources && data.sources.length > 0) {
+    const sourceText = data.sources
+      .map((source, index) =>
+        `${index + 1}. ${source.title}\n${source.url}`
+      )
+      .join("\n\n");
+
+    addMessage(
+      "assistant",
+      "🌐 इंटरनेट से मिले स्रोत:\n\n" + sourceText
+    );
+
+    setStatus("इंटरनेट खोज सफल हुई।");
+  } else {
+    setStatus(
+      data.searchAttempted
+        ? "खोज हुई, लेकिन कोई स्रोत नहीं मिला।"
+        : "इस सवाल के लिए इंटरनेट खोज नहीं हुई।"
+    );
+  }
+} else {
+  setStatus("");
+}
   } catch (error) {
     const errorText = error && error.message
       ? error.message
