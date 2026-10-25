@@ -1092,16 +1092,21 @@ function toggleWebSearch() {
 
   if (button) {
     button.classList.toggle("active", state.webEnabled);
+
     button.setAttribute(
       "aria-pressed",
       String(state.webEnabled)
     );
+
+    button.textContent = state.webEnabled
+      ? "🌐 इंटरनेट खोज: चालू"
+      : "🌐 इंटरनेट खोज: बंद";
   }
 
   setStatus(
     state.webEnabled
-      ? "वेब खोज चालू है। इसके लिए Worker में खोज सुविधा होनी चाहिए।"
-      : "वेब खोज बंद है।"
+      ? "इंटरनेट खोज चालू है।"
+      : "इंटरनेट खोज बंद है।"
   );
 }
 
