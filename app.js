@@ -746,30 +746,64 @@ function handleNewChat() {
 function toggleSidebar() {
   const sidebar = $("sidebar");
 
-  if (!sidebar) return;
+  if (!sidebar) {
+    console.error("Sarathi AI: sidebar नहीं मिला");
+    return;
+  }
 
-  sidebar.classList.toggle("open");
-  sidebar.classList.toggle("visible");
+  const isOpen = sidebar.classList.contains("open");
+
+  sidebar.classList.toggle("open", !isOpen);
+
+  const button = $("menuBtn");
+
+  if (button) {
+    button.setAttribute("aria-expanded", String(!isOpen));
+  }
+}
+
+function closeSidebar() {
+  const sidebar = $("sidebar");
+
+  if (sidebar) {
+    sidebar.classList.remove("open");
+    sidebar.classList.remove("visible");
+  }
+
+  const button = $("menuBtn");
+
+  if (button) {
+    button.setAttribute("aria-expanded", "false");
+  }
 }
 
 function closeMoreMenu() {
   const menu = $("moreMenu");
 
-  if (menu) {
-    menu.hidden = true;
-    menu.classList.remove("open");
-  }
+  if (!menu) return;
+
+  menu.classList.add("hidden");
+  menu.classList.remove("open");
+  menu.setAttribute("aria-hidden", "true");
 }
 
 function toggleMoreMenu() {
   const menu = $("moreMenu");
 
-  if (!menu) return;
+  if (!menu) {
+    console.error("Sarathi AI: moreMenu नहीं मिला");
+    return;
+  }
 
-  const isHidden = menu.hidden;
+  const isClosed = menu.classList.contains("hidden");
 
-  menu.hidden = !isHidden;
-  menu.classList.toggle("open", isHidden);
+  if (isClosed) {
+    menu.classList.remove("hidden");
+    menu.classList.add("open");
+    menu.setAttribute("aria-hidden", "false");
+  } else {
+    closeMoreMenu();
+  }
 }
 
 /* ========================================
