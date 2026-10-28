@@ -222,6 +222,40 @@ async function searchDuckDuckGoHtml(query) {
   }
 }
 
+async function searchBingRss(query) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const endpoint = "https://www.bing.com/search?format=rss&q=" + encodeURIComponent(query.slice(0, 600));
+    const response = await fetch(endpoint, {
+      headers: { "Accept": "application/rss+xml, application/xml, text/xml" },
+      signal: controller.signal,
+    });
+    if (!response.ok) return { results: [], warning: "वैकल्पिक खोज सेवा उपलब्ध नहीं है।" };
+    const xml = await response.text();
+    const items = xml.match(/<item[\\s>][\\s\\S]*?<\\/item>/gi) || [];
+    const results = [];
+    for (const item of items) {
+      if (results.length >= 5) break;
+      const getTag = (tag) => {
+        const m = item.match(new RegExp("<" + tag + "[^>]*>([\\s\\S]*?)<\\/" + tag + ">", "i"));
+        return m ? m[1].replace(/<!\\[CDATA\\[|\\]\\]>/g, "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim() : "";
+      };
+      const title = cleanText(getTag("title"));
+      const url = getTag("link");
+      const snippet = cleanText(getTag("description"));
+      if (title && validHttpUrl(url)) results.push({ title: title.slice(0, 300), url, snippet: snippet.slice(0, 1800) });
+    }
+    return results.length
+      ? { results, warning: "वैकल्पिक Bing खोज इस्तेमाल हुई है; कुछ परिणाम अधूरे हो सकते हैं।" }
+      : { results: [], warning: "वैकल्पिक खोज से परिणाम नहीं मिले।" };
+  } catch {
+    return { results: [], warning: "वैकल्पिक इंटरनेट खोज उपलब्ध नहीं है।" };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function searchInternet(query, env) {
   // Preferred path: Cloudflare Web Search binding. No provider key is exposed
   // to the browser; provider billing/configuration is handled by Cloudflare AI Gateway.
@@ -268,9 +302,11 @@ async function searchInternet(query, env) {
       // as a fallback so the app can still retrieve source links without that binding.
       const fallback = await searchDuckDuckGoHtml(query);
       if (fallback.results.length) return fallback;
+      const bingFallback = await searchBingRss(query);
+      if (bingFallback.results.length) return bingFallback;
       return {
         results: [],
-        warning: "Cloudflare Web Search उपलब्ध नहीं है और वैकल्पिक खोज से भी परिणाम नहीं मिले।",
+        warning: "Cloudflare Web Search और दोनों वैकल्पिक खोज सेवाओं से परिणाम नहीं मिले।",
       };
     }
   }
