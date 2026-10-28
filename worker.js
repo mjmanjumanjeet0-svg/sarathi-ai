@@ -177,59 +177,46 @@ function decodeSearchUrl(value) {
 
 async function searchInternet(query) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 12000);
-
+  const timeout = setTimeout(() => controller.abort(), 10000);
   try {
-    const response = await fetch(
-      "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(query),
-      {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (compatible; SarathiAI/1.0)",
-          "Accept": "text/html",
-        },
-        signal: controller.signal,
-      }
-    );
-
+    const endpoint = "https://api.duckduckgo.com/?q=" +
+      encodeURIComponent(query) + "&format=json&no_html=1&skip_disambig=1";
+    const response = await fetch(endpoint, {
+      headers: { "Accept": "application/json" },
+      signal: controller.signal
+    });
     if (!response.ok) {
       return { results: [], warning: "इंटरनेट खोज सेवा उपलब्ध नहीं है।" };
     }
-
-    const html = await response.text();
-    const regex = /<a\b[^>]*class=["'][^"']*\bresult__a\b[^"']*["'][^>]*>[\s\S]*?<\/a>/gi;
-    const matches = [...html.matchAll(regex)];
+    const data = await response.json();
     const results = [];
-
-    for (let i = 0; i < matches.length && results.length < 5; i++) {
-      const match = matches[i];
-      const anchor = match[0];
-      const href = anchor.match(/\bhref=["']([^"']+)["']/i);
-
-      const title = cleanText(anchor);
-      if (!href || !title) continue;
-
-      const url = decodeSearchUrl(href[1].replace(/&amp;/g, "&"));
-      if (!url) continue;
-
-      const end = i + 1 < matches.length
-        ? matches[i + 1].index
-        : Math.min(html.length, match.index + 5000);
-
-      const section = html.slice(match.index, end);
-      const snippetMatch = section.match(
-        /<(?:a|div)\b[^>]*class=["'][^"']*\bresult__snippet\b[^"']*["'][^>]*>([\s\S]*?)<\/(?:a|div)>/i
-      );
-
+    if (data.AbstractText && data.AbstractURL) {
       results.push({
-        title,
-        url,
-        snippet: cleanText(snippetMatch?.[1] || ""),
+        title: cleanText(data.Heading || query),
+        url: data.AbstractURL,
+        snippet: cleanText(data.AbstractText)
       });
     }
-
+    function addTopics(items) {
+      for (const item of items || []) {
+        if (results.length >= 5) return;
+        if (item.Topics) {
+          addTopics(item.Topics);
+          continue;
+        }
+        if (item.FirstURL && item.Text && validHttpUrl(item.FirstURL)) {
+          results.push({
+            title: cleanText(item.Text.split(" - ")[0]),
+            url: item.FirstURL,
+            snippet: cleanText(item.Text)
+          });
+        }
+      }
+    }
+    addTopics(data.RelatedTopics);
     return results.length
       ? { results, warning: "" }
-      : { results: [], warning: "खोज के पढ़ने योग्य परिणाम नहीं मिले।" };
+      : { results: [], warning: "इस सवाल के लिए खोज में उपयोगी परिणाम नहीं मिले।" };
   } catch {
     return { results: [], warning: "इंटरनेट खोज अभी उपलब्ध नहीं है।" };
   } finally {
