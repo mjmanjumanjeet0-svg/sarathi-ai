@@ -20,10 +20,9 @@ const state = {
   chats: [],
   activeId: null,
   busy: false,
-  webEnabled: false,
+  webEnabled: localStorage.getItem("sarathi_ai_web_search_v1") === "true",
   recognition: null,
-  attachments: [],
-  webEnabled: localStorage.getItem("sarathi_ai_web_search_v1") === "true"
+  attachments: []
 };
 
 /* ========================================
@@ -608,6 +607,12 @@ async function sendMessage(text) {
 
 function openSettings() {
   const settings = getSettings();
+  const webButton = $("webToggle");
+  if (webButton) {
+    webButton.classList.toggle("active", state.webEnabled);
+    webButton.setAttribute("aria-pressed", String(state.webEnabled));
+    webButton.textContent = state.webEnabled ? "🌐 इंटरनेट खोज: चालू" : "🌐 इंटरनेट खोज: बंद";
+  }
 
   if ($("workerUrl")) $("workerUrl").value = settings.workerUrl || "";
   if ($("assistantName")) $("assistantName").value = settings.assistantName || "सारथी";
