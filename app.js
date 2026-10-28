@@ -2,13 +2,14 @@
 
 /* ========================================
    SARATHI AI — APP.JS
-   Compatible with the supplied index.html
+   Login + Chat + History + Settings
 ======================================== */
 
-const $ = (id) => document.getElementById(id);
+const $ = id => document.getElementById(id);
 
 const STORAGE_KEY = "sarathi_ai_chats_v1";
 const SETTINGS_KEY = "sarathi_ai_settings_v1";
+const AUTH_TOKEN_KEY = "sarathi_ai_auth_token_v1";
 
 const DEFAULT_SETTINGS = {
   workerUrl: "https://sarathi-ai.mjmanjumanjeet0.workers.dev",
@@ -21,10 +22,12 @@ const state = {
   busy: false,
   webEnabled: false,
   recognition: null,
-  attachments: [],
-  findMatches: [],
-  findIndex: 0
+  attachments: []
 };
+
+/* ========================================
+   GENERAL HELPERS
+======================================== */
 
 function makeId() {
   return Date.now().toString(36) +
@@ -50,8 +53,9 @@ function saveJSON(key, value) {
   }
 }
 
-function saveChats() {
-  saveJSON(STORAGE_KEY, state.chats);
+function setStatus(message) {
+  const element = $("status");
+  if (element) element.textContent = message || "";
 }
 
 function getSettings() {
@@ -66,13 +70,14 @@ function saveSettings(settings) {
   return saveJSON(SETTINGS_KEY, settings);
 }
 
-function activeChat() {
-  return state.chats.find(chat => chat.id === state.activeId) || null;
+function getWorkerUrl() {
+  return String(getSettings().workerUrl || "")
+    .trim()
+    .replace(/\/+$/, "");
 }
 
-function setStatus(message) {
-  const element = $("status");
-  if (element) element.textContent = message || "";
+function activeChat() {
+  return state.chats.find(chat => chat.id === state.activeId) || null;
 }
 
 function safeDialogOpen(dialog) {
@@ -80,12 +85,55 @@ function safeDialogOpen(dialog) {
   try {
     if (!dialog.open) dialog.showModal();
   } catch {
-    setStatus("यह डायलॉग इस ब्राउज़र में नहीं खुल सका।");
+    setStatus("डायलॉग नहीं खुल सका।");
   }
 }
 
 /* ========================================
-   TEXT FORMATTING
+   LOGIN AND TOKEN
+======================================== */
+
+async function loginWorker() {
+  const password = window.prompt("अपना Sarathi AI लॉगिन पासवर्ड लिखें:");
+
+  if (!password) {
+    throw new Error("लॉगिन पासवर्ड जरूरी है।");
+  }
+
+  const response = await fetch(getWorkerUrl() + "/api/login", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({ password })
+  });
+
+  let data;
+
+  try {
+    data = await response.json();
+  } catch {
+    throw new Error("लॉगिन सर्वर से सही जवाब नहीं मिला।");
+  }
+
+  if (!response.ok || !data.token) {
+    throw new Error(data.error || "लॉगिन नहीं हो सका।");
+  }
+
+  localStorage.setItem(AUTH_TOKEN_KEY, data.token);
+  return data.token;
+}
+
+async function getAuthToken() {
+  let token = localStorage.getItem(AUTH_TOKEN_KEY);
+
+  if (token) return token;
+
+  return await loginWorker();
+}
+
+/* ========================================
+   SAFE TEXT FORMATTING
 ======================================== */
 
 function escapeHTML(value) {
@@ -100,11 +148,9 @@ function escapeHTML(value) {
 
 function formatInline(text) {
   let safe = escapeHTML(text);
-
   safe = safe.replace(/`([^`]+)`/g, "<code>$1</code>");
   safe = safe.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
   safe = safe.replace(/\*(.+?)\*/g, "<em>$1</em>");
-
   return safe;
 }
 
@@ -185,9 +231,14 @@ function formatText(raw) {
 
   return output.join("\n");
 }
+
 /* ========================================
-   CHAT CREATION AND HISTORY
+   CHAT HISTORY
 ======================================== */
+
+function saveChats() {
+  saveJSON(STORAGE_KEY, state.chats);
+}
 
 function createChat() {
   const chat = {
@@ -216,9 +267,7 @@ function ensureChat() {
     return;
   }
 
-  if (!activeChat()) {
-    state.activeId = state.chats[0].id;
-  }
+  if (!activeChat()) state.activeId = state.chats[0].id;
 }
 
 function loadChats() {
@@ -246,56 +295,45 @@ function loadChats() {
   ensureChat();
 }
 
-function escapeAttribute(value) {
-  return escapeHTML(value).replace(/`/g, "&#96;");
-}
-
 function renderHistory() {
   const list = $("historyList");
   if (!list) return;
 
   list.replaceChildren();
 
-  const sortedChats = [...state.chats].sort((a, b) => {
+  const chats = [...state.chats].sort((a, b) => {
     if (a.pinned !== b.pinned) {
       return Number(b.pinned) - Number(a.pinned);
     }
     return (b.updatedAt || 0) - (a.updatedAt || 0);
   });
 
-  for (const chat of sortedChats) {
+  for (const chat of chats) {
     const row = document.createElement("div");
     row.className = "history-row";
 
     const button = document.createElement("button");
     button.type = "button";
     button.className = "history-item";
-    button.dataset.chatId = chat.id;
+    button.textContent = (chat.pinned ? "📌 " : "") + chat.title;
     button.title = chat.title;
 
-    if (chat.id === state.activeId) {
-      button.classList.add("active");
-    }
-
-    button.textContent = (chat.pinned ? "📌 " : "") + chat.title;
+    if (chat.id === state.activeId) button.classList.add("active");
 
     button.addEventListener("click", () => {
-  state.activeId = chat.id;
-  saveChats();
-  renderHistory();
-  renderMessages();
-  showWelcome();
-
-  closeSidebar();
-  closeMoreMenu();
-});
+      state.activeId = chat.id;
+      renderHistory();
+      renderMessages();
+      showWelcome();
+      closeSidebar();
+      closeMoreMenu();
+    });
 
     const deleteButton = document.createElement("button");
     deleteButton.type = "button";
     deleteButton.className = "delete-chat-btn";
     deleteButton.textContent = "🗑️";
-    deleteButton.title = "यह बातचीत हटाएँ";
-    deleteButton.setAttribute("aria-label", "यह बातचीत हटाएँ");
+    deleteButton.title = "बातचीत हटाएँ";
 
     deleteButton.addEventListener("click", event => {
       event.stopPropagation();
@@ -308,20 +346,11 @@ function renderHistory() {
 }
 
 function deleteChatById(chatId) {
-  const chat = state.chats.find(item => item.id === chatId);
-  if (!chat) return;
+  if (!window.confirm("क्या यह बातचीत हटानी है?")) return;
 
-  const confirmed = window.confirm(
-    `क्या "${chat.title}" बातचीत हटानी है?`
-  );
+  state.chats = state.chats.filter(chat => chat.id !== chatId);
 
-  if (!confirmed) return;
-
-  state.chats = state.chats.filter(item => item.id !== chatId);
-
-  if (state.activeId === chatId) {
-    state.activeId = null;
-  }
+  if (state.activeId === chatId) state.activeId = null;
 
   if (!state.chats.length) {
     const chat = {
@@ -332,7 +361,6 @@ function deleteChatById(chatId) {
       createdAt: Date.now(),
       updatedAt: Date.now()
     };
-
     state.chats.push(chat);
     state.activeId = chat.id;
   } else if (!activeChat()) {
@@ -347,64 +375,20 @@ function deleteChatById(chatId) {
 
 function deleteCurrentChat() {
   const chat = activeChat();
-  if (!chat) return;
-
-  const confirmed = window.confirm(
-    "क्या यह पूरी बातचीत हटानी है?"
-  );
-
-  if (!confirmed) return;
-
-  state.chats = state.chats.filter(item => item.id !== chat.id);
-  state.activeId = null;
-
-  if (!state.chats.length) {
-    const newChat = {
-      id: makeId(),
-      title: "नई बातचीत",
-      messages: [],
-      pinned: false,
-      createdAt: Date.now(),
-      updatedAt: Date.now()
-    };
-
-    state.chats.push(newChat);
-    state.activeId = newChat.id;
-  } else {
-    state.activeId = state.chats[0].id;
-  }
-
-  saveChats();
-  renderHistory();
-  renderMessages();
-  showWelcome();
+  if (chat) deleteChatById(chat.id);
 }
 
 /* ========================================
-   WELCOME SCREEN
+   WELCOME AND MESSAGES
 ======================================== */
 
 function showWelcome() {
-  const welcome = $("welcome");
-  const messages = $("messages");
   const chat = activeChat();
+  const hasMessages = Boolean(chat && chat.messages.length);
 
-  const hasMessages = Boolean(
-    chat && Array.isArray(chat.messages) && chat.messages.length
-  );
-
-  if (welcome) {
-    welcome.hidden = hasMessages;
-  }
-
-  if (messages) {
-    messages.hidden = !hasMessages;
-  }
+  if ($("welcome")) $("welcome").hidden = hasMessages;
+  if ($("messages")) $("messages").hidden = !hasMessages;
 }
-
-/* ========================================
-   MESSAGE RENDERING
-======================================== */
 
 function renderMessages() {
   const container = $("messages");
@@ -413,7 +397,10 @@ function renderMessages() {
   container.replaceChildren();
 
   const chat = activeChat();
-  if (!chat) return;
+  if (!chat) {
+    showWelcome();
+    return;
+  }
 
   for (const message of chat.messages) {
     const wrapper = document.createElement("article");
@@ -429,9 +416,7 @@ function renderMessages() {
 
     const label = document.createElement("div");
     label.className = "message-label";
-    label.textContent = message.role === "user"
-      ? "आप"
-      : getSettings().assistantName;
+    label.textContent = message.role === "user" ? "आप" : getSettings().assistantName;
 
     const body = document.createElement("div");
     body.className = "message-body";
@@ -443,69 +428,47 @@ function renderMessages() {
   }
 
   showWelcome();
-
   container.scrollTop = container.scrollHeight;
 }
-/* ========================================
-   MESSAGE HELPERS
-======================================== */
 
 function addMessage(role, content) {
   let chat = activeChat();
+  if (!chat) chat = createChat();
 
-  if (!chat) {
-    chat = createChat();
-  }
-
-  const message = {
+  chat.messages.push({
     id: makeId(),
     role,
     content: String(content || ""),
     createdAt: Date.now()
-  };
+  });
 
-  chat.messages.push(message);
   chat.updatedAt = Date.now();
 
   if (chat.title === "नई बातचीत" && role === "user") {
-    chat.title = String(content || "नई बातचीत")
-      .trim()
-      .slice(0, 35) || "नई बातचीत";
+    chat.title = String(content || "नई बातचीत").trim().slice(0, 35) || "नई बातचीत";
   }
 
   saveChats();
   renderHistory();
   renderMessages();
-
-  return message;
 }
 
 function setBusy(busy) {
   state.busy = busy;
 
-  const sendButton = $("sendBtn");
+  const button = $("sendBtn");
   const input = $("messageInput");
 
-  if (sendButton) {
-    sendButton.disabled = busy;
-    sendButton.textContent = busy ? "…" : "➤";
+  if (button) {
+    button.disabled = busy;
+    button.textContent = busy ? "…" : "➤";
   }
 
-  if (input) {
-    input.disabled = busy;
-  }
-}
-
-function getWorkerUrl() {
-  const settings = getSettings();
-
-  return String(settings.workerUrl || "")
-    .trim()
-    .replace(/\/+$/, "");
+  if (input) input.disabled = busy;
 }
 
 /* ========================================
-   SEND MESSAGE TO SARATHI AI
+   SEND MESSAGE
 ======================================== */
 
 async function sendMessage(text) {
@@ -518,8 +481,8 @@ async function sendMessage(text) {
   const workerUrl = getWorkerUrl();
 
   if (!workerUrl) {
-    setStatus("पहले सेटिंग्स में Worker URL सेव करें।");
-    safeDialogOpen($("settingsDialog"));
+    setStatus("सेटिंग्स में Worker URL भरें।");
+    openSettings();
     return;
   }
 
@@ -530,19 +493,18 @@ async function sendMessage(text) {
     input.style.height = "";
   }
 
-  state.attachments = [];
-  renderAttachmentPreview();
-
   addMessage("user", prompt);
-
   setBusy(true);
   setStatus("सारथी जवाब तैयार कर रहा है…");
 
   try {
-    const response = await fetch(workerUrl + "/api/chat", {
+    let token = await getAuthToken();
+
+    let response = await fetch(workerUrl + "/api/chat", {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + token
       },
       body: JSON.stringify({
         message: prompt,
@@ -565,10 +527,34 @@ async function sendMessage(text) {
       throw new Error("सर्वर से सही जवाब नहीं मिला।");
     }
 
+    if (response.status === 401 || response.status === 403) {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      token = await loginWorker();
+
+      response = await fetch(workerUrl + "/api/chat", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify({
+          message: prompt,
+          messages: activeChat().messages
+            .filter(item => item.role === "user" || item.role === "assistant")
+            .slice(-20)
+            .map(item => ({
+              role: item.role,
+              content: item.content
+            })),
+          webSearch: state.webEnabled
+        })
+      });
+
+      data = await response.json();
+    }
+
     if (!response.ok) {
-      throw new Error(
-        data.error || data.message || `सर्वर त्रुटि: ${response.status}`
-      );
+      throw new Error(data.error || data.message || `सर्वर त्रुटि: ${response.status}`);
     }
 
     const answer =
@@ -584,46 +570,26 @@ async function sendMessage(text) {
 
     addMessage("assistant", answer.trim());
 
-if (state.webEnabled) {
-  if (data.searchWarning) {
-    setStatus("🌐 इंटरनेट खोज: " + data.searchWarning);
-  } else if (data.sources && data.sources.length > 0) {
-    const sourceText = data.sources
-      .map((source, index) =>
+    if (state.webEnabled && data.sources?.length) {
+      const sourceText = data.sources.map((source, index) =>
         `${index + 1}. ${source.title}\n${source.url}`
-      )
-      .join("\n\n");
+      ).join("\n\n");
 
-    addMessage(
-      "assistant",
-      "🌐 इंटरनेट से मिले स्रोत:\n\n" + sourceText
-    );
+      addMessage("assistant", "🌐 इंटरनेट से मिले स्रोत:\n\n" + sourceText);
+    }
 
-    setStatus("इंटरनेट खोज सफल हुई।");
-  } else {
-    setStatus(
-      data.searchAttempted
-        ? "खोज हुई, लेकिन कोई स्रोत नहीं मिला।"
-        : "इस सवाल के लिए इंटरनेट खोज नहीं हुई।"
-    );
-  }
-} else {
-  setStatus("");
-}
+    setStatus("");
   } catch (error) {
-    const errorText = error && error.message
-      ? error.message
-      : "कनेक्शन में समस्या हुई।";
+    const message = error?.message || "कनेक्शन में समस्या हुई।";
 
     addMessage(
       "assistant",
-      "माफ करना, अभी जवाब नहीं मिल पाया।\n\nसमस्या: " + errorText
+      "माफ करना, अभी जवाब नहीं मिल पाया।\n\nसमस्या: " + message
     );
 
     setStatus("कनेक्शन की समस्या");
   } finally {
     setBusy(false);
-
     if (input) {
       input.disabled = false;
       input.focus();
@@ -632,7 +598,243 @@ if (state.webEnabled) {
 }
 
 /* ========================================
-   ATTACHMENT PREVIEW
+   SETTINGS
+======================================== */
+
+function openSettings() {
+  const settings = getSettings();
+
+  if ($("workerUrl")) $("workerUrl").value = settings.workerUrl || "";
+  if ($("assistantName")) $("assistantName").value = settings.assistantName || "सारथी";
+
+  safeDialogOpen($("settingsDialog"));
+}
+
+function handleSettingsSubmit(event) {
+  event.preventDefault();
+
+  const workerUrl = ($("workerUrl")?.value || "").trim().replace(/\/+$/, "");
+  const assistantName = ($("assistantName")?.value || "सारथी").trim().slice(0, 50) || "सारथी";
+
+  if (!workerUrl) {
+    setStatus("Worker URL भरना जरूरी है।");
+    return;
+  }
+
+  try {
+    const parsed = new URL(workerUrl);
+    if (parsed.protocol !== "https:") {
+      setStatus("Worker URL https:// से शुरू होना चाहिए।");
+      return;
+    }
+  } catch {
+    setStatus("Worker URL सही नहीं है।");
+    return;
+  }
+
+  saveSettings({ workerUrl, assistantName });
+  $("settingsDialog")?.close();
+  setStatus("सेटिंग्स सेव हो गईं।");
+  renderMessages();
+}
+
+/* ========================================
+   SIDEBAR AND MENUS
+======================================== */
+
+function closeSidebar() {
+  $("sidebar")?.classList.remove("open", "visible");
+  $("menuBtn")?.setAttribute("aria-expanded", "false");
+}
+
+function toggleSidebar() {
+  const sidebar = $("sidebar");
+  if (!sidebar) return;
+
+  const isOpen = sidebar.classList.contains("open");
+  sidebar.classList.toggle("open", !isOpen);
+  $("menuBtn")?.setAttribute("aria-expanded", String(!isOpen));
+}
+
+function closeMoreMenu() {
+  const menu = $("moreMenu");
+  if (!menu) return;
+
+  menu.classList.add("hidden");
+  menu.classList.remove("open");
+  menu.setAttribute("aria-hidden", "true");
+}
+
+function toggleMoreMenu() {
+  const menu = $("moreMenu");
+  if (!menu) return;
+
+  const isClosed = menu.classList.contains("hidden");
+  menu.classList.toggle("hidden", !isClosed);
+  menu.classList.toggle("open", isClosed);
+  menu.setAttribute("aria-hidden", String(isClosed));
+}
+
+function handleNewChat() {
+  createChat();
+  closeSidebar();
+  closeMoreMenu();
+
+  if ($("messageInput")) {
+    $("messageInput").value = "";
+    $("messageInput").style.height = "";
+    $("messageInput").focus();
+  }
+
+  setStatus("");
+}
+
+function togglePinCurrentChat() {
+  const chat = activeChat();
+  if (!chat) return;
+
+  chat.pinned = !chat.pinned;
+  chat.updatedAt = Date.now();
+
+  saveChats();
+  renderHistory();
+  closeMoreMenu();
+  setStatus(chat.pinned ? "बातचीत पिन हो गई।" : "पिन हट गया।");
+}
+
+function renameCurrentChat() {
+  const chat = activeChat();
+  if (!chat) return;
+
+  const title = window.prompt("बातचीत का नया नाम लिखो:", chat.title);
+  if (title === null) return;
+
+  const cleanTitle = title.trim().slice(0, 60);
+  if (!cleanTitle) {
+    setStatus("नाम खाली नहीं हो सकता।");
+    return;
+  }
+
+  chat.title = cleanTitle;
+  chat.updatedAt = Date.now();
+  saveChats();
+  renderHistory();
+  closeMoreMenu();
+}
+
+async function shareCurrentChat() {
+  const chat = activeChat();
+  if (!chat) return;
+
+  const text = [
+    chat.title,
+    "",
+    ...chat.messages.map(message =>
+      (message.role === "user" ? "आप: " : "सारथी: ") + message.content
+    )
+  ].join("\n");
+
+  try {
+    if (navigator.share) {
+      await navigator.share({ title: chat.title, text });
+    } else if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text);
+      setStatus("बातचीत कॉपी हो गई।");
+    } else {
+      window.prompt("बातचीत कॉपी करो:", text);
+    }
+  } catch (error) {
+    if (error?.name !== "AbortError") setStatus("शेयर नहीं हो सका।");
+  }
+
+  closeMoreMenu();
+}
+
+function openFindDialog() {
+  closeMoreMenu();
+  safeDialogOpen($("findDialog"));
+
+  if ($("findInput")) {
+    $("findInput").value = "";
+    $("findInput").focus();
+  }
+
+  if ($("findResult")) $("findResult").textContent = "";
+}
+
+function findInCurrentChat() {
+  const query = ($("findInput")?.value || "").trim();
+  const result = $("findResult");
+  const chat = activeChat();
+
+  if (!query) {
+    if (result) result.textContent = "खोजने के लिए शब्द लिखो।";
+    return;
+  }
+
+  const matches = chat?.messages.filter(message =>
+    String(message.content || "").toLowerCase().includes(query.toLowerCase())
+  ) || [];
+
+  if (result) {
+    result.textContent = matches.length
+      ? `${matches.length} संदेश मिले।`
+      : "कोई संदेश नहीं मिला।";
+  }
+}
+
+/* ========================================
+   VOICE INPUT
+======================================== */
+
+function startVoiceInput() {
+  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    setStatus("इस ब्राउज़र में वॉइस सुविधा उपलब्ध नहीं है।");
+    return;
+  }
+
+  if (state.recognition) {
+    try { state.recognition.stop(); } catch {}
+    state.recognition = null;
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+  recognition.lang = "hi-IN";
+  recognition.continuous = false;
+  recognition.interimResults = false;
+  state.recognition = recognition;
+
+  recognition.onstart = () => setStatus("बोलिए, सारथी सुन रहा है…");
+
+  recognition.onresult = event => {
+    const transcript = event.results?.[0]?.[0]?.transcript || "";
+    const input = $("messageInput");
+
+    if (input && transcript) {
+      input.value = (input.value ? input.value + " " : "") + transcript;
+      input.focus();
+    }
+
+    setStatus("");
+  };
+
+  recognition.onerror = () => setStatus("आवाज़ सुनने में समस्या हुई।");
+
+  recognition.onend = () => { state.recognition = null; };
+
+  try {
+    recognition.start();
+  } catch {
+    state.recognition = null;
+    setStatus("माइक्रोफोन शुरू नहीं हो सका।");
+  }
+}
+
+/* ========================================
+   ATTACHMENTS
 ======================================== */
 
 function renderAttachmentPreview() {
@@ -654,10 +856,7 @@ function renderAttachmentPreview() {
     remove.title = "फाइल हटाएँ";
 
     remove.addEventListener("click", () => {
-      state.attachments = state.attachments.filter(
-        current => current !== file
-      );
-
+      state.attachments = state.attachments.filter(item => item !== file);
       renderAttachmentPreview();
     });
 
@@ -671,402 +870,21 @@ function renderAttachmentPreview() {
 function addFiles(fileList) {
   if (!fileList) return;
 
-  const incoming = Array.from(fileList);
-  const maxFiles = 5;
-  const remaining = maxFiles - state.attachments.length;
-
-  if (remaining <= 0) {
-    setStatus("एक बार में अधिकतम 5 फाइलें चुन सकते हो।");
-    return;
-  }
-
-  state.attachments.push(...incoming.slice(0, remaining));
+  const files = Array.from(fileList).slice(0, 5 - state.attachments.length);
+  state.attachments.push(...files);
   renderAttachmentPreview();
 
-  setStatus(
-    "फाइल चुनी गई है। ध्यान दें: अभी फाइल की सामग्री AI को नहीं भेजी जाती।"
-  );
-}
-/* ========================================
-   SETTINGS
-======================================== */
-
-function openSettings() {
-  const settings = getSettings();
-
-  const workerInput = $("workerUrl");
-  const nameInput = $("assistantName");
-
-  if (workerInput) {
-    workerInput.value = settings.workerUrl || "";
-  }
-
-  if (nameInput) {
-    nameInput.value = settings.assistantName || "सारथी";
-  }
-
-  safeDialogOpen($("settingsDialog"));
-}
-
-function handleSettingsSubmit(event) {
-  event.preventDefault();
-
-  const workerUrl = ($("workerUrl")?.value || "")
-    .trim()
-    .replace(/\/+$/, "");
-
-  const assistantName = ($("assistantName")?.value || "सारथी")
-    .trim()
-    .slice(0, 50) || "सारथी";
-
-  if (!workerUrl) {
-    setStatus("Worker URL भरना जरूरी है।");
-    return;
-  }
-
-  try {
-    const parsed = new URL(workerUrl);
-
-    if (parsed.protocol !== "https:") {
-      setStatus("Worker URL https:// से शुरू होना चाहिए।");
-      return;
-    }
-  } catch {
-    setStatus("Worker URL सही नहीं है।");
-    return;
-  }
-
-  saveSettings({
-    workerUrl,
-    assistantName
-  });
-
-  const dialog = $("settingsDialog");
-
-  if (dialog?.open) {
-    dialog.close();
-  }
-
-  setStatus("सेटिंग्स सेव हो गईं।");
-  renderMessages();
-}
-
-/* ========================================
-   NEW CHAT
-======================================== */
-
-function handleNewChat() {
-  createChat();
-
-  closeSidebar();
-  closeMoreMenu();
-
-  const input = $("messageInput");
-
-  if (input) {
-    input.value = "";
-    input.style.height = "";
-    input.focus();
-  }
-
-  setStatus("");
-}
-
-/* ========================================
-   SIDEBAR AND MENUS
-======================================== */
-
-function toggleSidebar() {
-  const sidebar = $("sidebar");
-
-  if (!sidebar) {
-    console.error("Sarathi AI: sidebar नहीं मिला");
-    return;
-  }
-
-  const isOpen = sidebar.classList.contains("open");
-
-  sidebar.classList.toggle("open", !isOpen);
-
-  const button = $("menuBtn");
-
-  if (button) {
-    button.setAttribute("aria-expanded", String(!isOpen));
+  if (files.length) {
+    setStatus("फाइल चुनी गई है; अभी उसकी सामग्री AI को नहीं भेजी जाती।");
   }
 }
-
-function closeSidebar() {
-  const sidebar = $("sidebar");
-
-  if (sidebar) {
-    sidebar.classList.remove("open");
-    sidebar.classList.remove("visible");
-  }
-
-  const button = $("menuBtn");
-
-  if (button) {
-    button.setAttribute("aria-expanded", "false");
-  }
-}
-
-function closeMoreMenu() {
-  const menu = $("moreMenu");
-
-  if (!menu) return;
-
-  menu.classList.add("hidden");
-  menu.classList.remove("open");
-  menu.setAttribute("aria-hidden", "true");
-}
-
-function toggleMoreMenu() {
-  const menu = $("moreMenu");
-
-  if (!menu) {
-    console.error("Sarathi AI: moreMenu नहीं मिला");
-    return;
-  }
-
-  const isClosed = menu.classList.contains("hidden");
-
-  if (isClosed) {
-    menu.classList.remove("hidden");
-    menu.classList.add("open");
-    menu.setAttribute("aria-hidden", "false");
-  } else {
-    closeMoreMenu();
-  }
-}
-
-/* ========================================
-   PIN CHAT
-======================================== */
-
-function togglePinCurrentChat() {
-  const chat = activeChat();
-
-  if (!chat) {
-    setStatus("पहले कोई बातचीत खोलो।");
-    return;
-  }
-
-  chat.pinned = !chat.pinned;
-  chat.updatedAt = Date.now();
-
-  saveChats();
-  renderHistory();
-  closeMoreMenu();
-
-  setStatus(chat.pinned
-    ? "बातचीत पिन कर दी गई।"
-    : "बातचीत से पिन हट गया।"
-  );
-}
-
-/* ========================================
-   RENAME CHAT
-======================================== */
-
-function renameCurrentChat() {
-  const chat = activeChat();
-
-  if (!chat) return;
-
-  const newTitle = window.prompt(
-    "बातचीत का नया नाम लिखो:",
-    chat.title
-  );
-
-  if (newTitle === null) return;
-
-  const title = newTitle.trim().slice(0, 60);
-
-  if (!title) {
-    setStatus("नाम खाली नहीं हो सकता।");
-    return;
-  }
-
-  chat.title = title;
-  chat.updatedAt = Date.now();
-
-  saveChats();
-  renderHistory();
-  closeMoreMenu();
-
-  setStatus("बातचीत का नाम बदल गया।");
-}
-
-/* ========================================
-   SHARE CHAT
-======================================== */
-
-async function shareCurrentChat() {
-  const chat = activeChat();
-
-  if (!chat) return;
-
-  const text = [
-    chat.title,
-    "",
-    ...chat.messages.map(message =>
-      (message.role === "user" ? "आप: " : "सारथी: ") +
-      message.content
-    )
-  ].join("\n");
-
-  try {
-    if (navigator.share) {
-      await navigator.share({
-        title: chat.title,
-        text
-      });
-    } else if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(text);
-      setStatus("बातचीत कॉपी हो गई।");
-    } else {
-      window.prompt("बातचीत कॉपी करो:", text);
-    }
-  } catch (error) {
-    if (error?.name !== "AbortError") {
-      setStatus("शेयर नहीं हो सका।");
-    }
-  }
-
-  closeMoreMenu();
-}
-
-/* ========================================
-   FIND IN CHAT
-======================================== */
-
-function openFindDialog() {
-  closeMoreMenu();
-
-  const input = $("findInput");
-
-  safeDialogOpen($("findDialog"));
-
-  if (input) {
-    input.value = "";
-    input.focus();
-  }
-
-  const result = $("findResult");
-
-  if (result) {
-    result.textContent = "";
-  }
-}
-
-function findInCurrentChat() {
-  const query = ($("findInput")?.value || "").trim();
-  const result = $("findResult");
-  const chat = activeChat();
-
-  if (!query) {
-    if (result) result.textContent = "खोजने के लिए शब्द लिखो।";
-    return;
-  }
-
-  if (!chat) {
-    if (result) result.textContent = "कोई बातचीत नहीं मिली।";
-    return;
-  }
-
-  const matches = chat.messages.filter(message =>
-    String(message.content || "")
-      .toLowerCase()
-      .includes(query.toLowerCase())
-  );
-
-  if (result) {
-    result.textContent = matches.length
-      ? `${matches.length} संदेश मिले।`
-      : "कोई संदेश नहीं मिला।";
-  }
-}
-/* ========================================
-   SPEECH TO TEXT
-======================================== */
-
-function startVoiceInput() {
-  const SpeechRecognition =
-    window.SpeechRecognition ||
-    window.webkitSpeechRecognition;
-
-  if (!SpeechRecognition) {
-    setStatus("इस ब्राउज़र में वॉइस सुविधा उपलब्ध नहीं है।");
-    return;
-  }
-
-  if (state.recognition) {
-    try {
-      state.recognition.stop();
-    } catch {}
-    state.recognition = null;
-    return;
-  }
-
-  const recognition = new SpeechRecognition();
-
-  recognition.lang = "hi-IN";
-  recognition.continuous = false;
-  recognition.interimResults = false;
-
-  state.recognition = recognition;
-
-  recognition.onstart = () => {
-    setStatus("बोलिए, सारथी सुन रहा है…");
-  };
-
-  recognition.onresult = event => {
-    const transcript =
-      event.results?.[0]?.[0]?.transcript || "";
-
-    const input = $("messageInput");
-
-    if (input && transcript) {
-      input.value = (
-        input.value ? input.value + " " : ""
-      ) + transcript;
-
-      input.focus();
-    }
-
-    setStatus("");
-  };
-
-  recognition.onerror = () => {
-    setStatus("आवाज़ सुनने में समस्या हुई। माइक्रोफोन अनुमति जाँचें।");
-  };
-
-  recognition.onend = () => {
-    state.recognition = null;
-  };
-
-  try {
-    recognition.start();
-  } catch {
-    state.recognition = null;
-    setStatus("माइक्रोफोन शुरू नहीं हो सका।");
-  }
-}
-
-/* ========================================
-   ATTACHMENT DIALOG
-======================================== */
 
 function openAttachmentDialog() {
   safeDialogOpen($("attachDialog"));
 }
 
 function closeAttachmentDialog() {
-  const dialog = $("attachDialog");
-
-  if (dialog?.open) {
-    dialog.close();
-  }
+  $("attachDialog")?.close();
 }
 
 function choosePhotos() {
@@ -1076,7 +894,6 @@ function choosePhotos() {
   input.accept = "image/*";
   input.multiple = true;
   input.click();
-
   closeAttachmentDialog();
 }
 
@@ -1087,7 +904,6 @@ function chooseFiles() {
   input.accept = "*/*";
   input.multiple = true;
   input.click();
-
   closeAttachmentDialog();
 }
 
@@ -1099,12 +915,9 @@ function openCamera() {
   input.setAttribute("capture", "environment");
   input.multiple = false;
   input.click();
-
   closeAttachmentDialog();
 
-  window.setTimeout(() => {
-    input.removeAttribute("capture");
-  }, 1000);
+  setTimeout(() => input.removeAttribute("capture"), 1000);
 }
 
 /* ========================================
@@ -1118,27 +931,14 @@ function toggleWebSearch() {
 
   if (button) {
     button.classList.toggle("active", state.webEnabled);
-
-    button.setAttribute(
-      "aria-pressed",
-      String(state.webEnabled)
-    );
-
+    button.setAttribute("aria-pressed", String(state.webEnabled));
     button.textContent = state.webEnabled
       ? "🌐 इंटरनेट खोज: चालू"
       : "🌐 इंटरनेट खोज: बंद";
   }
 
-  setStatus(
-    state.webEnabled
-      ? "इंटरनेट खोज चालू है।"
-      : "इंटरनेट खोज बंद है।"
-  );
+  setStatus(state.webEnabled ? "इंटरनेट खोज चालू है।" : "इंटरनेट खोज बंद है।");
 }
-
-/* ========================================
-   AUTO RESIZE INPUT
-======================================== */
 
 function resizeMessageInput() {
   const input = $("messageInput");
@@ -1148,19 +948,12 @@ function resizeMessageInput() {
   input.style.height = Math.min(input.scrollHeight, 180) + "px";
 }
 
-/* ========================================
-   WELCOME PROMPT BUTTONS
-======================================== */
-
 function handlePromptClick(event) {
   const button = event.target.closest("[data-prompt]");
-  if (!button) return;
-
-  const prompt = button.getAttribute("data-prompt");
-  if (!prompt) return;
-
-  sendMessage(prompt);
+  const prompt = button?.getAttribute("data-prompt");
+  if (prompt) sendMessage(prompt);
 }
+
 /* ========================================
    EVENT LISTENERS
 ======================================== */
@@ -1173,7 +966,6 @@ function bindEvents() {
 
   $("newChatBtn")?.addEventListener("click", handleNewChat);
   $("topNewBtn")?.addEventListener("click", handleNewChat);
-
   $("menuBtn")?.addEventListener("click", toggleSidebar);
 
   $("settingsBtn")?.addEventListener("click", () => {
@@ -1181,105 +973,66 @@ function bindEvents() {
     openSettings();
   });
 
-  $("settingsForm")?.addEventListener(
-    "submit",
-    handleSettingsSubmit
-  );
+  $("settingsForm")?.addEventListener("submit", handleSettingsSubmit);
 
   $("cancelSettings")?.addEventListener("click", () => {
     $("settingsDialog")?.close();
   });
 
   $("moreBtn")?.addEventListener("click", toggleMoreMenu);
-
-  $("attachBtn")?.addEventListener(
-    "click",
-    openAttachmentDialog
-  );
-
-  $("closeAttach")?.addEventListener(
-    "click",
-    closeAttachmentDialog
-  );
+  $("attachBtn")?.addEventListener("click", openAttachmentDialog);
+  $("closeAttach")?.addEventListener("click", closeAttachmentDialog);
 
   $("cameraOption")?.addEventListener("click", openCamera);
   $("photosOption")?.addEventListener("click", choosePhotos);
   $("filesOption")?.addEventListener("click", chooseFiles);
+  $("micBtn")?.addEventListener("click", startVoiceInput);
+  $("webToggle")?.addEventListener("click", toggleWebSearch);
+
+  $("messageInput")?.addEventListener("input", resizeMessageInput);
+  $("welcome")?.addEventListener("click", handlePromptClick);
+  $("findNext")?.addEventListener("click", findInCurrentChat);
 
   $("fileInput")?.addEventListener("change", event => {
     addFiles(event.target.files);
     event.target.value = "";
   });
 
-  $("micBtn")?.addEventListener("click", startVoiceInput);
-
-  $("webToggle")?.addEventListener(
-    "click",
-    toggleWebSearch
-  );
-
-  $("messageInput")?.addEventListener(
-    "input",
-    resizeMessageInput
-  );
-
-  $("welcome")?.addEventListener(
-    "click",
-    handlePromptClick
-  );
-
-  $("findNext")?.addEventListener(
-    "click",
-    findInCurrentChat
-  );
-
   $("moreMenu")?.addEventListener("click", event => {
-    const actionButton = event.target.closest("[data-action]");
-    if (!actionButton) return;
+    const button = event.target.closest("[data-action]");
+    if (!button) return;
 
-    const action = actionButton.dataset.action;
-
-    switch (action) {
+    switch (button.dataset.action) {
       case "share":
         shareCurrentChat();
         break;
-
       case "pin":
         togglePinCurrentChat();
         break;
-
       case "find":
         openFindDialog();
         break;
-
       case "new":
         handleNewChat();
-        closeMoreMenu();
         break;
-
       case "rename":
         renameCurrentChat();
         break;
-
       case "delete":
         deleteCurrentChat();
         closeMoreMenu();
         break;
-
       case "settings":
         closeMoreMenu();
         openSettings();
         break;
-
       case "home":
         window.location.href = "/";
         break;
-
       case "project":
         setStatus("प्रोजेक्ट सुविधा अभी उपलब्ध नहीं है।");
         closeMoreMenu();
         break;
-
       default:
         setStatus("यह विकल्प अभी उपलब्ध नहीं है।");
     }
@@ -1300,14 +1053,12 @@ function bindEvents() {
   });
 
   document.addEventListener("keydown", event => {
-    if (event.key === "Escape") {
-      closeMoreMenu();
-    }
+    if (event.key === "Escape") closeMoreMenu();
   });
 }
 
 /* ========================================
-   START APPLICATION
+   START
 ======================================== */
 
 function initApp() {
@@ -1320,13 +1071,8 @@ function initApp() {
 
   const settings = getSettings();
 
-  if ($("workerUrl")) {
-    $("workerUrl").value = settings.workerUrl || "";
-  }
-
-  if ($("assistantName")) {
-    $("assistantName").value = settings.assistantName || "सारथी";
-  }
+  if ($("workerUrl")) $("workerUrl").value = settings.workerUrl || "";
+  if ($("assistantName")) $("assistantName").value = settings.assistantName || "सारथी";
 }
 
 if (document.readyState === "loading") {
