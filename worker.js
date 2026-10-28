@@ -175,26 +175,75 @@ function decodeSearchUrl(value) {
   }
 }
 
-async function searchInternet(query) {
+async function searchInternet(query, env) {
+  // Preferred path: Cloudflare Web Search binding. No provider key is exposed
+  // to the browser; provider billing/configuration is handled by Cloudflare AI Gateway.
+  if (env.AI && typeof env.AI.websearch === "function") {
+    try {
+      const response = await env.AI.websearch({
+        gatewayId: "default",
+        query: query.slice(0, 600),
+        provider: "ceramic",
+        limit: 5,
+      });
+
+      if (!response.ok) {
+        throw new Error("Cloudflare Web Search returned HTTP " + response.status);
+      }
+
+      const data = await response.json();
+      const raw = Array.isArray(data.results) ? data.results
+        : Array.isArray(data.web) ? data.web
+        : Array.isArray(data.data) ? data.data
+        : [];
+
+      const results = raw.slice(0, 5).map(item => {
+        const url = item.url || item.link || item.href;
+        const title = item.title || item.name || "";
+        const snippet = item.description || item.snippet || item.text || item.content || "";
+        if (!validHttpUrl(url) || !title) return null;
+        return {
+          title: cleanText(title).slice(0, 300),
+          url,
+          snippet: cleanText(snippet).slice(0, 1800),
+        };
+      }).filter(Boolean);
+
+      if (results.length) return { results, warning: "" };
+      return {
+        results: [],
+        warning: "वेब-सर्च सेवा चली, लेकिन इस सवाल के लिए उपयोगी परिणाम नहीं मिले।",
+      };
+    } catch {
+      // Do not silently present old model knowledge as live search.
+      return {
+        results: [],
+        warning: "Cloudflare वेब-सर्च उपलब्ध नहीं है। Dashboard में AI Gateway और Web Search सेटिंग जाँचें।",
+      };
+    }
+  }
+
+  // Explicitly mark the legacy fallback as limited; DuckDuckGo Instant Answer
+  // is not a full web-search API and often has no results for current prices/news.
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
+  const timeout = setTimeout(() => controller.abort(), 8000);
   try {
     const endpoint = "https://api.duckduckgo.com/?q=" +
-      encodeURIComponent(query) + "&format=json&no_html=1&skip_disambig=1";
+      encodeURIComponent(query.slice(0, 600)) + "&format=json&no_html=1&skip_disambig=1";
     const response = await fetch(endpoint, {
       headers: { "Accept": "application/json" },
-      signal: controller.signal
+      signal: controller.signal,
     });
     if (!response.ok) {
       return { results: [], warning: "इंटरनेट खोज सेवा उपलब्ध नहीं है।" };
     }
     const data = await response.json();
     const results = [];
-    if (data.AbstractText && data.AbstractURL) {
+    if (data.AbstractText && validHttpUrl(data.AbstractURL)) {
       results.push({
         title: cleanText(data.Heading || query),
         url: data.AbstractURL,
-        snippet: cleanText(data.AbstractText)
+        snippet: cleanText(data.AbstractText),
       });
     }
     function addTopics(items) {
@@ -202,21 +251,19 @@ async function searchInternet(query) {
         if (results.length >= 5) return;
         if (item.Topics) {
           addTopics(item.Topics);
-          continue;
-        }
-        if (item.FirstURL && item.Text && validHttpUrl(item.FirstURL)) {
+        } else if (item.FirstURL && item.Text && validHttpUrl(item.FirstURL)) {
           results.push({
             title: cleanText(item.Text.split(" - ")[0]),
             url: item.FirstURL,
-            snippet: cleanText(item.Text)
+            snippet: cleanText(item.Text),
           });
         }
       }
     }
     addTopics(data.RelatedTopics);
     return results.length
-      ? { results, warning: "" }
-      : { results: [], warning: "इस सवाल के लिए खोज में उपयोगी परिणाम नहीं मिले।" };
+      ? { results, warning: "सीमित खोज स्रोत इस्तेमाल हुआ; ताज़ा खबर/भाव के लिए परिणाम अधूरे हो सकते हैं।" }
+      : { results: [], warning: "सीमित खोज स्रोत से उपयोगी परिणाम नहीं मिले। Cloudflare Web Search binding सेट करें।" };
   } catch {
     return { results: [], warning: "इंटरनेट खोज अभी उपलब्ध नहीं है।" };
   } finally {
@@ -335,7 +382,7 @@ export default {
     let searchWarning = "";
 
     if (wantsSearch) {
-      const search = await searchInternet(userText);
+      const search = await searchInternet(userText, env);
       searchResults = search.results;
       searchWarning = search.warning;
     }
