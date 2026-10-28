@@ -192,7 +192,9 @@ async function searchInternet(query, env) {
       }
 
       const data = await response.json();
-      const raw = Array.isArray(data.results) ? data.results
+      // Cloudflare Web Search API returns its results in data.items.
+      const raw = Array.isArray(data.items) ? data.items
+        : Array.isArray(data.results) ? data.results
         : Array.isArray(data.web) ? data.web
         : Array.isArray(data.data) ? data.data
         : [];
