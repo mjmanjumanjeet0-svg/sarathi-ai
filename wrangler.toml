@@ -1,3 +1,8 @@
 name = "sarathi-ai"
 main = "worker.js"
 compatibility_date = "2026-10-14"
+
+[[ratelimits]]
+name = "SARATHI_RATE_LIMITER"
+namespace_id = "726104"
+simple = { limit = 10, period = 60 }
