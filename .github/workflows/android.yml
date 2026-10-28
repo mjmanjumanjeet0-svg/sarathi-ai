@@ -1,11 +1,12 @@
 name: Build Sarathi AI Android APK
 
-on:
+'on':
 workflow_dispatch:
+
 push:
 paths:
-- "android-app/**"
-- ".github/workflows/android.yml"
+- 'android-app/**'
+- '.github/workflows/android.yml'
 
 jobs:
 build:
@@ -19,7 +20,7 @@ steps:
     uses: actions/setup-java@v4
     with:
       distribution: temurin
-      java-version: "17"
+      java-version: '17'
 
   - name: Set up Android SDK
     uses: android-actions/setup-android@v3
@@ -27,7 +28,7 @@ steps:
   - name: Set up Gradle
     uses: gradle/actions/setup-gradle@v4
     with:
-      gradle-version: "8.9"
+      gradle-version: '8.9'
 
   - name: Accept Android licenses
     run: yes | sdkmanager --licenses || true
