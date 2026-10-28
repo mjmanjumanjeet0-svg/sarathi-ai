@@ -22,7 +22,8 @@ const state = {
   busy: false,
   webEnabled: false,
   recognition: null,
-  attachments: []
+  attachments: [],
+  webEnabled: localStorage.getItem("sarathi_ai_web_search_v1") === "true"
 };
 
 /* ========================================
@@ -578,7 +579,11 @@ async function sendMessage(text) {
       addMessage("assistant", "🌐 इंटरनेट से मिले स्रोत:\n\n" + sourceText);
     }
 
-    setStatus("");
+    if (state.webEnabled && data.searchWarning) {
+      setStatus("इंटरनेट खोज: " + data.searchWarning);
+    } else {
+      setStatus("");
+    }
   } catch (error) {
     const message = error?.message || "कनेक्शन में समस्या हुई।";
 
@@ -926,6 +931,7 @@ function openCamera() {
 
 function toggleWebSearch() {
   state.webEnabled = !state.webEnabled;
+  localStorage.setItem("sarathi_ai_web_search_v1", String(state.webEnabled));
 
   const button = $("webToggle");
 
