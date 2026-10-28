@@ -175,6 +175,53 @@ function decodeSearchUrl(value) {
   }
 }
 
+async function searchDuckDuckGoHtml(query) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const endpoint = "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(query.slice(0, 600));
+    const response = await fetch(endpoint, {
+      headers: {
+        "Accept": "text/html",
+        "User-Agent": "Mozilla/5.0 (compatible; SarathiAI/1.0)",
+      },
+      signal: controller.signal,
+    });
+    if (!response.ok) {
+      return { results: [], warning: "वैकल्पिक वेब खोज अभी उपलब्ध नहीं है।" };
+    }
+
+    const html = await response.text();
+    const blocks = html.match(/<div[^>]+class=["'][^"']*\bresult\b[^"']*["'][\s\S]*?(?=<div[^>]+class=["'][^"']*\bresult\b|$)/gi) || [];
+    const results = [];
+    const seen = new Set();
+
+    for (const block of blocks) {
+      if (results.length >= 5) break;
+      const linkMatch = block.match(/<a[^>]+class=["'][^"']*result__a[^"']*["'][^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i)
+        || block.match(/<a[^>]+href=["']([^"']+)["'][^>]+class=["'][^"']*result__a[^"']*["'][^>]*>([\s\S]*?)<\/a>/i);
+      if (!linkMatch) continue;
+
+      const url = decodeSearchUrl(linkMatch[1].replace(/&amp;/g, "&"));
+      const title = cleanText(linkMatch[2].replace(/<[^>]*>/g, " "));
+      if (!url || !title || seen.has(url)) continue;
+
+      const snippetMatch = block.match(/<[^>]+class=["'][^"']*result__snippet[^"']*["'][^>]*>([\s\S]*?)<\/[^>]+>/i);
+      const snippet = snippetMatch ? cleanText(snippetMatch[1].replace(/<[^>]*>/g, " ")) : "";
+      seen.add(url);
+      results.push({ title: title.slice(0, 300), url, snippet: snippet.slice(0, 1800) });
+    }
+
+    return results.length
+      ? { results, warning: "वैकल्पिक DuckDuckGo HTML खोज इस्तेमाल हुई है; कुछ ताज़ा या विशेष जानकारी अधूरी हो सकती है।" }
+      : { results: [], warning: "वैकल्पिक खोज से परिणाम नहीं मिले। प्रश्न को अलग शब्दों में पूछें या बाद में कोशिश करें।" };
+  } catch {
+    return { results: [], warning: "वैकल्पिक इंटरनेट खोज उपलब्ध नहीं है।" };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function searchInternet(query, env) {
   // Preferred path: Cloudflare Web Search binding. No provider key is exposed
   // to the browser; provider billing/configuration is handled by Cloudflare AI Gateway.
@@ -217,10 +264,13 @@ async function searchInternet(query, env) {
         warning: "वेब-सर्च सेवा चली, लेकिन इस सवाल के लिए उपयोगी परिणाम नहीं मिले।",
       };
     } catch {
-      // Do not silently present old model knowledge as live search.
+      // Cloudflare Web Search may require paid credits. Try ordinary HTML search
+      // as a fallback so the app can still retrieve source links without that binding.
+      const fallback = await searchDuckDuckGoHtml(query);
+      if (fallback.results.length) return fallback;
       return {
         results: [],
-        warning: "Cloudflare वेब-सर्च उपलब्ध नहीं है। Dashboard में AI Gateway और Web Search सेटिंग जाँचें।",
+        warning: "Cloudflare Web Search उपलब्ध नहीं है और वैकल्पिक खोज से भी परिणाम नहीं मिले।",
       };
     }
   }
