@@ -1,67 +1,68 @@
 name: Build Sarathi AI Android APK
 
 'on':
-workflow_dispatch:
-push:
-paths:
-- 'android-app/**'
-- '.github/workflows/android.yml'
+  workflow_dispatch:
+  push:
+    paths:
+      - 'android-app/**'
+      - '.github/workflows/android.yml'
 
 jobs:
-build:
-runs-on: ubuntu-latest
+  build:
+    runs-on: ubuntu-latest
 
-env:
-  ANDROID_HOME: /usr/local/lib/android/sdk
-  ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
-steps:
-  - name: Checkout repository
-    uses: actions/checkout@v4
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-  - name: Set up Java 17
-    uses: actions/setup-java@v5
-    with:
-      distribution: temurin
-      java-version: '17'
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
 
-  - name: Find Android SDK Manager
-    id: sdk
-    shell: bash
-    run: |
-      SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager 2>/dev/null | sort -V | tail -n 1)"
-      if [ -z "$SDKMANAGER" ]; then
-        echo "Error: Android SDK Manager was not found."
-        exit 1
-      fi
-      echo "SDKMANAGER=$SDKMANAGER" >> "$GITHUB_ENV"
-      echo "Found SDK Manager: $SDKMANAGER"
+      - name: Find Android SDK Manager
+        shell: bash
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager 2>/dev/null | sort -V | tail -n 1)"
 
-  - name: Accept Android SDK licenses
-    shell: bash
-    run: |
-      yes | "$SDKMANAGER" --licenses || true
+          if [ -z "$SDKMANAGER" ]; then
+            echo "Error: Android SDK Manager was not found."
+            exit 1
+          fi
 
-  - name: Install Android SDK packages
-    shell: bash
-    run: |
-      "$SDKMANAGER" \
-        "platform-tools" \
-        "platforms;android-35" \
-        "build-tools;35.0.0"
+          echo "SDKMANAGER=$SDKMANAGER" >> "$GITHUB_ENV"
+          echo "Found SDK Manager: $SDKMANAGER"
 
-  - name: Set up Gradle
-    uses: gradle/actions/setup-gradle@v4
-    with:
-      gradle-version: '8.9'
+      - name: Accept Android SDK licenses
+        shell: bash
+        run: |
+          yes | "$SDKMANAGER" --licenses || true
 
-  - name: Build debug APK
-    working-directory: android-app
-    run: gradle assembleDebug
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          "$SDKMANAGER" \
+            "platform-tools" \
+            "platforms;android-35" \
+            "build-tools;35.0.0"
 
-  - name: Upload APK
-    uses: actions/upload-artifact@v4
-    with:
-      name: SarathiAI-debug-apk
-      path: android-app/app/build/outputs/apk/debug/app-debug.apk
-      if-no-files-found: error
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Build debug APK
+        working-directory: android-app
+        run: gradle assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: SarathiAI-debug-apk
+          path: android-app/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
