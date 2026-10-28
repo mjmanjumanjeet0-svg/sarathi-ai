@@ -1,6 +1,6 @@
 name: Build Sarathi AI Android APK
 
-on:
+'on':
   workflow_dispatch:
   push:
     paths:
@@ -10,6 +10,11 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    env:
+      ANDROID_HOME: /usr/local/lib/android/sdk
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -20,20 +25,41 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Find Android SDK Manager
+        shell: bash
+        run: |
+          SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" \
+            -type f -name sdkmanager 2>/dev/null | sort -V | tail -n 1)"
+
+          if [ -z "$SDKMANAGER" ]; then
+            echo "Android SDK Manager not found"
+            exit 1
+          fi
+
+          echo "SDKMANAGER=$SDKMANAGER" >> "$GITHUB_ENV"
+          echo "Found SDK Manager: $SDKMANAGER"
+
+      - name: Accept Android SDK licenses
+        shell: bash
+        run: |
+          yes | "$SDKMANAGER" --licenses || true
+
+      - name: Install Android SDK packages
+        shell: bash
+        run: |
+          "$SDKMANAGER" \
+            "platform-tools" \
+            "platforms;android-34" \
+            "build-tools;34.0.0"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.9'
-
-      - name: Accept Android licenses
-        run: yes | sdkmanager --licenses || true
 
       - name: Build debug APK
         working-directory: android-app
-        run: gradle assembleDebug
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
