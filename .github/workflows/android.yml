@@ -25,13 +25,30 @@ steps:
       distribution: temurin
       java-version: '17'
 
-  - name: Set up Android SDK
-    uses: android-actions/setup-android@v3
-    with:
-      packages: 'platform-tools platforms;android-35 build-tools;35.0.0'
+  - name: Find Android SDK Manager
+    id: sdk
+    shell: bash
+    run: |
+      SDKMANAGER="$(find "$ANDROID_HOME/cmdline-tools" -type f -name sdkmanager 2>/dev/null | sort -V | tail -n 1)"
+      if [ -z "$SDKMANAGER" ]; then
+        echo "Error: Android SDK Manager was not found."
+        exit 1
+      fi
+      echo "SDKMANAGER=$SDKMANAGER" >> "$GITHUB_ENV"
+      echo "Found SDK Manager: $SDKMANAGER"
 
   - name: Accept Android SDK licenses
-    run: yes | sdkmanager --licenses || true
+    shell: bash
+    run: |
+      yes | "$SDKMANAGER" --licenses || true
+
+  - name: Install Android SDK packages
+    shell: bash
+    run: |
+      "$SDKMANAGER" \
+        "platform-tools" \
+        "platforms;android-35" \
+        "build-tools;35.0.0"
 
   - name: Set up Gradle
     uses: gradle/actions/setup-gradle@v4
