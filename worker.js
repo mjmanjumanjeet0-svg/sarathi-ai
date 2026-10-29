@@ -341,8 +341,8 @@ async function searchInternet(query, env) {
     }
   }
 
-  // Use a dedicated news feed for headline queries before general web fallbacks.
-  if (/(खबर|समाचार|news|breaking|latest)/i.test(query)) {
+  // Prefer a dedicated feed for current headlines and gold-rate searches.
+  if (/(खबर|समाचार|news|breaking|latest|सोने|सोना|gold|bullion|22\\s*k|24\\s*k)/i.test(query)) {
     const newsFallback = await searchGoogleNewsRss(query);
     if (newsFallback.results.length) return newsFallback;
   }
@@ -423,7 +423,9 @@ function filterRelevantSearchResults(query, results) {
   }
 
   let required = null;
-  if (/(सोने|सोना|gold|22\s*k|24\s*k|bullion)/i.test(q)) {
+  if (/(प्रधानमंत्री|prime minister|president|राष्ट्रपति|मुख्यमंत्री|chief minister)/i.test(q)) {
+    required = /(prime minister|प्रधानमंत्री|narendra modi|नरेंद्र मोदी|president|राष्ट्रपति|chief minister|मुख्यमंत्री)/i;
+  } else if (/(सोने|सोना|gold|22\s*k|24\s*k|bullion)/i.test(q)) {
     required = /(gold|सोना|सोने|sone|bullion|22\s*k|24\s*k|gold[- ]?rate|gold[- ]?price|sona|ज्वेलरी|jewellery)/i;
   } else if (/(चांदी|चाँदी|silver)/i.test(q)) {
     required = /(silver|चांदी|चाँदी|bullion|silver[- ]?(rate|price)|चांदी[- ]?(भाव|कीमत))/i;
