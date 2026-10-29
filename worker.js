@@ -342,8 +342,9 @@ async function searchInternet(query, env) {
     }
   }
 
-  // Prefer a dedicated feed for current headlines and gold-rate searches.
-  if (/(खबर|समाचार|news|breaking|latest|सोने|सोना|gold|bullion|22\\s*k|24\\s*k)/i.test(query)) {
+  // Google News RSS is useful for headlines, but not a reliable gold-price source.
+  const isGoldRateSearch = /(सोने|सोना|gold|bullion|22\\s*k|24\\s*k)/i.test(query);
+  if (!isGoldRateSearch && /(खबर|समाचार|news|breaking|latest)/i.test(query)) {
     const newsFallback = await searchGoogleNewsRss(query);
     if (newsFallback.results.length) return newsFallback;
   }
@@ -414,8 +415,10 @@ function filterRelevantSearchResults(query, results) {
     return list.filter(item => {
       try {
         const host = new URL(item.url).hostname.toLowerCase().replace(/^www\./, "");
-        // Google News RSS links are wrappers around publisher stories; allow them through
-        // so current-news searches are not accidentally filtered to an empty list.
+        const headline = `${item.title || ""} ${item.snippet || ""}`;
+        // Do not treat astrology or calendar pages as current news.
+        if (/(राशिफल|राशि फल|पंचांग|मुहूर्त|राहु.?काल|horoscope|zodiac|astrology|panchang)/i.test(headline)) return false;
+        // Google News RSS links are wrappers around publisher stories.
         return trustedNewsHost.test(host) || host === "news.google.com";
       } catch {
         return false;
