@@ -611,6 +611,22 @@ function handleLocalPhoneCommand(prompt) {
   return true;
 }
 
+function isSimpleGreeting(prompt) {
+  const normalized = String(prompt || "")
+    .toLocaleLowerCase("hi-IN")
+    .replace(/[!！?？.,،؛:;।॥🙏😊🙂🦚👋]+/g, " ")
+    .replace(/\\s+/g, " ")
+    .trim();
+  if (!normalized || normalized.length > 70) return false;
+  const words = normalized.split(" ");
+  const allowed = new Set([
+    "नमस्ते", "नमस्कार", "हेलो", "हैलो", "हाय", "सारथी",
+    "राम", "प्रणाम", "सुप्रभात", "शुभ", "सुबह", "शाम",
+    "hi", "hello", "hey", "good", "morning", "evening"
+  ]);
+  return words.length <= 6 && words.every(word => allowed.has(word));
+}
+
 function explicitlyRequestsWebSearch(prompt) {
   return /(?:इंटरनेट|वेब|online)\s*(?:पर\s*)?(?:खोज|सर्च|search)|(?:ताज़ा|ताजा|आज की|लेटेस्ट|latest|current|breaking)\s*(?:खबर|समाचार|news|updates?)|(?:search|खोज|सर्च)\s+(?:the\s+)?(?:internet|web|online)/i.test(String(prompt || ""));
 }
@@ -651,7 +667,7 @@ async function sendMessage(text) {
     input.style.height = "";
   }
 
-  const useWebSearch = state.webEnabled || explicitlyRequestsWebSearch(prompt);
+  const useWebSearch = !isSimpleGreeting(prompt) && (state.webEnabled || explicitlyRequestsWebSearch(prompt));
 
   addMessage("user", prompt);
   setBusy(true);
