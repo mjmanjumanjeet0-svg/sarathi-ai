@@ -363,8 +363,17 @@ function filterRelevantSearchResults(query, results) {
   let required = null;
 
   // Keep current-news queries from showing unrelated app-support/search results.
-  if (/(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|latest news|today.?s news|current news|breaking news|समाचार)/i.test(q)) {
-    required = /(news|समाचार|खबर|ख़बर|breaking|latest|india\.com|indianexpress\.com|thehindu\.com|ndtv\.com|hindustantimes\.com|bbc\.com|reuters\.com|apnews\.com|news18\.com|aajtak\.in|abplive\.com|amarujala\.com|jagran\.com|zeenews\.india\.com)/i;
+  if (/(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(q)) {
+    // For news, trust only recognizable news publisher domains. Never accept
+    // generic "latest/news" words in unrelated Microsoft or support pages.
+    return list.filter(item => {
+      try {
+        const host = new URL(item.url).hostname.toLowerCase().replace(/^www\\./, "");
+        return /(^|\\.)(indianexpress\\.com|thehindu\\.com|ndtv\\.com|hindustantimes\\.com|bbc\\.com|reuters\\.com|apnews\\.com|news18\\.com|aajtak\\.in|abplive\\.com|amarujala\\.com|jagran\\.com|zeenews\\.india\\.com|indiatoday\\.in|theprint\\.in|livemint\\.com|timesofindia\\.indiatimes\\.com|pti\\.in|aninews\\.in)$/.test(host);
+      } catch {
+        return false;
+      }
+    });
   } else if (/(सोने|सोना|gold|22\s*k|24\s*k|bullion)/i.test(q)) {
     required = /(gold|सोना|सोने|sone|bullion|22\s*k|24\s*k|gold[- ]?rate|gold[- ]?price|sona)/i;
   } else if (/(चांदी|चाँदी|silver)/i.test(q)) {
@@ -527,7 +536,8 @@ export default {
     let searchWarning = "";
 
     if (wantsSearch) {
-      const isCurrentNewsQuestion = /(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|latest news|today.?s news|current news|breaking news|समाचार)/i.test(userText);\n      const searchQuery = isCurrentNewsQuestion ? "भारत की आज की ताज़ा खबरें India latest news today" : userText;\n      const search = await searchInternet(searchQuery, env);
+      const isCurrentNewsQuestion = /(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(userText);
+      const searchQuery = isCurrentNewsQuestion ? "भारत की आज की ताज़ा खबरें India latest news today" : userText;\n      const search = await searchInternet(searchQuery, env);
       searchResults = filterRelevantSearchResults(userText, search.results);
       searchWarning = searchResults.length
         ? search.warning
