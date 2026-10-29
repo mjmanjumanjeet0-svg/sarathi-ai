@@ -233,13 +233,13 @@ async function searchBingRss(query) {
     });
     if (!response.ok) return { results: [], warning: "वैकल्पिक खोज सेवा उपलब्ध नहीं है।" };
     const xml = await response.text();
-    const items = xml.match(/<item[\\s>][\\s\\S]*?<\\/item>/gi) || [];
+    const items = xml.match(/<item[\s>][\s\S]*?<\/item>/gi) || [];
     const results = [];
     for (const item of items) {
       if (results.length >= 5) break;
       const getTag = (tag) => {
         const m = item.match(new RegExp("<" + tag + "[^>]*>([\\s\\S]*?)<\\/" + tag + ">", "i"));
-        return m ? m[1].replace(/<!\\[CDATA\\[|\\]\\]>/g, "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim() : "";
+        return m ? m[1].replace(/<!\[CDATA\[|\]\]>/g, "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim() : "";
       };
       const title = cleanText(getTag("title"));
       const url = getTag("link");
