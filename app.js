@@ -1240,7 +1240,7 @@ function bindEvents() {
 
     if (
       menu &&
-      !menu.hidden &&
+      !menu.classList.contains("hidden") &&
       !menu.contains(event.target) &&
       !button?.contains(event.target)
     ) {
