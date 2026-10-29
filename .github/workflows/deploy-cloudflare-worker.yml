@@ -8,9 +8,6 @@ on:
     paths:
       - "worker.js"
       - "wrangler.toml"
-      - "app.js"
-      - "index.html"
-      - "style.css"
       - ".github/workflows/deploy-cloudflare-worker.yml"
 
 permissions:
@@ -22,7 +19,7 @@ concurrency:
 
 jobs:
   validate:
-    name: Validate website and Worker syntax
+    name: Validate Worker and website syntax
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
