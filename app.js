@@ -611,6 +611,10 @@ function handleLocalPhoneCommand(prompt) {
   return true;
 }
 
+function explicitlyRequestsWebSearch(prompt) {
+  return /(?:इंटरनेट|वेब|online)\s*(?:पर\s*)?(?:खोज|सर्च|search)|(?:ताज़ा|ताजा|आज की|लेटेस्ट|latest|current|breaking)\s*(?:खबर|समाचार|news|updates?)|(?:search|खोज|सर्च)\s+(?:the\s+)?(?:internet|web|online)/i.test(String(prompt || ""));
+}
+
 /* ========================================
    SEND MESSAGE
 ======================================== */
@@ -647,9 +651,11 @@ async function sendMessage(text) {
     input.style.height = "";
   }
 
+  const useWebSearch = state.webEnabled || explicitlyRequestsWebSearch(prompt);
+
   addMessage("user", prompt);
   setBusy(true);
-  setStatus("सारथी जवाब तैयार कर रहा है…");
+  setStatus(useWebSearch ? "सारथी इंटरनेट पर खोजकर जवाब तैयार कर रहा है…" : "सारथी जवाब तैयार कर रहा है…");
 
   try {
     let token = await getAuthToken();
@@ -669,7 +675,7 @@ async function sendMessage(text) {
             role: item.role,
             content: item.content
           })),
-        webSearch: state.webEnabled
+        webSearch: useWebSearch
       })
     });
 
@@ -700,7 +706,7 @@ async function sendMessage(text) {
               role: item.role,
               content: item.content
             })),
-          webSearch: state.webEnabled
+          webSearch: useWebSearch
         })
       });
 
@@ -724,7 +730,7 @@ async function sendMessage(text) {
 
     addMessage("assistant", answer.trim());
 
-    if (state.webEnabled && data.sources?.length) {
+    if (useWebSearch && data.sources?.length) {
       const sourceText = data.sources.map((source, index) =>
         `${index + 1}. ${source.title}\n${source.url}`
       ).join("\n\n");
@@ -732,7 +738,7 @@ async function sendMessage(text) {
       addMessage("assistant", "🌐 इंटरनेट से मिले स्रोत:\n\n" + sourceText);
     }
 
-    if (state.webEnabled && data.searchWarning) {
+    if (useWebSearch && data.searchWarning) {
       setStatus("इंटरनेट खोज: " + data.searchWarning);
     } else {
       setStatus("");
