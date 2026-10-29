@@ -481,7 +481,25 @@ export default {
       return jsonResponse({ success: false, error: "AI सेवा का Secret उपलब्ध नहीं है।" }, 500);
     }
 
-    const wantsSearch = body.webSearch === true || body.internet === true;
+    const normalizedGreeting = userText
+      .toLocaleLowerCase("hi-IN")
+      .replace(/[!！?？.,،؛:;।॥🙏😊🙂🦚👋]+/g, " ")
+      .replace(/\\s+/g, " ")
+      .trim();
+    const greetingWords = normalizedGreeting ? normalizedGreeting.split(" ") : [];
+    const greetingVocabulary = new Set([
+      "नमस्ते", "नमस्कार", "हेलो", "हैलो", "हाय", "सारथी",
+      "राम", "प्रणाम", "सुप्रभात", "शुभ", "सुबह", "शाम",
+      "hi", "hello", "hey", "good", "morning", "evening"
+    ]);
+    const isGreetingOnly = normalizedGreeting.length <= 70 &&
+      greetingWords.length > 0 &&
+      greetingWords.length <= 6 &&
+      greetingWords.every(word => greetingVocabulary.has(word));
+
+    // Never search the web for a simple greeting, even if the browser toggle is on.
+    const wantsSearch = !isGreetingOnly &&
+      (body.webSearch === true || body.internet === true);
     let searchResults = [];
     let searchWarning = "";
 
@@ -509,7 +527,7 @@ export default {
 तुम सारथी AI हो, एक सक्षम, स्पष्ट और भरोसेमंद हिंदी सहायक।
 भाषा और शैली:
 - उपयोगकर्ता हिंदी में लिखे तो सरल, स्वाभाविक और व्याकरण-सही हिंदी में जवाब दो। भोजपुरी शब्द हों तो उन्हें समझकर सहज हिंदी/भोजपुरी में उत्तर दे सकते हो।
-- सीधे सवाल का सीधा उत्तर पहले दो। फिर जरूरत के अनुसार कारण और कदम समझाओ।
+- सीधे सवाल का सीधा उत्तर पहले दो। फिर जरूरत के अनुसार कारण और कदम समझाओ।\n- यदि उपयोगकर्ता केवल हेलो, नमस्ते, नमस्कार या साधारण अभिवादन करे, तो छोटा स्वाभाविक अभिवादन देकर पूछो कि किस मदद की जरूरत है। ऐसे अभिवादन पर किसी पुराने विषय, खरीदारी, समाचार या वेब खोज के परिणामों का उत्तर मत दो।\n- हमेशा नवीनतम उपयोगकर्ता संदेश को प्राथमिकता दो; पुरानी बातचीत तभी जारी रखो जब संदेश उसी का संदर्भ देता हो।
 - केवल एक पंक्ति में जवाब मत समेटो जब सवाल में विस्तार, तुलना या समाधान माँगा गया हो। उपयोगी उदाहरण दो, लेकिन अनावश्यक दोहराव न करो।
 - उपयोगकर्ता पहले ही जो जानकारी दे चुका है, वह दोबारा मत पूछो।
 - जहाँ अनिश्चितता हो, साफ बताओ; अनुमान को तथ्य मत बनाओ और नकली स्रोत/लिंक मत दो।
