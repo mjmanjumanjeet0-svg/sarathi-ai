@@ -423,6 +423,24 @@ function renderMessages() {
     body.innerHTML = formatText(message.content || "");
 
     content.append(label, body);
+
+    if (message.role !== "user") {
+      const speakButton = document.createElement("button");
+      speakButton.type = "button";
+      speakButton.className = "speak-btn";
+      speakButton.textContent = "🔊 जवाब सुनें";
+      speakButton.setAttribute("aria-label", "जवाब को फ़ोन पर सुनें");
+      speakButton.addEventListener("click", () => {
+        if (window.SarathiNative && typeof window.SarathiNative.speak === "function") {
+          window.SarathiNative.speak(String(message.content || ""));
+          setStatus("अगर फ़ोन में ऑफ़लाइन हिंदी आवाज़ उपलब्ध है, तो जवाब सुनाई देगा।");
+        } else {
+          setStatus("गोपनीयता के लिए ब्राउज़र की संभावित ऑनलाइन आवाज़ का इस्तेमाल नहीं किया गया।");
+        }
+      });
+      content.appendChild(speakButton);
+    }
+
     wrapper.append(avatar, content);
     container.appendChild(wrapper);
   }
@@ -797,50 +815,31 @@ function findInCurrentChat() {
    VOICE INPUT
 ======================================== */
 
-function startVoiceInput() {
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-
-  if (!SpeechRecognition) {
-    setStatus("इस ब्राउज़र में वॉइस सुविधा उपलब्ध नहीं है।");
-    return;
-  }
-
-  if (state.recognition) {
-    try { state.recognition.stop(); } catch {}
-    state.recognition = null;
-    return;
-  }
-
-  const recognition = new SpeechRecognition();
-  recognition.lang = "hi-IN";
-  recognition.continuous = false;
-  recognition.interimResults = false;
-  state.recognition = recognition;
-
-  recognition.onstart = () => setStatus("बोलिए, सारथी सुन रहा है…");
-
-  recognition.onresult = event => {
-    const transcript = event.results?.[0]?.[0]?.transcript || "";
+window.SarathiVoice = {
+  onResult(transcript) {
     const input = $("messageInput");
-
     if (input && transcript) {
       input.value = (input.value ? input.value + " " : "") + transcript;
       input.focus();
+      setStatus("आवाज़ लिख दी गई है। भेजने से पहले संदेश जाँच लें।");
     }
-
-    setStatus("");
-  };
-
-  recognition.onerror = () => setStatus("आवाज़ सुनने में समस्या हुई।");
-
-  recognition.onend = () => { state.recognition = null; };
-
-  try {
-    recognition.start();
-  } catch {
-    state.recognition = null;
-    setStatus("माइक्रोफोन शुरू नहीं हो सका।");
+  },
+  onError(message) {
+    setStatus(message || "ऑफ़लाइन आवाज़ सुविधा अभी उपलब्ध नहीं है।");
+  },
+  onStatus(message) {
+    setStatus(message || "");
   }
+};
+
+function startVoiceInput() {
+  if (window.SarathiNative && typeof window.SarathiNative.startListening === "function") {
+    setStatus("माइक्रोफ़ोन की अनुमति फ़ोन पर माँगी जाएगी; आवाज़ पहचान ऑफ़लाइन ही होगी।");
+    window.SarathiNative.startListening();
+    return;
+  }
+
+  setStatus("गोपनीयता के लिए ब्राउज़र की संभावित ऑनलाइन आवाज़ पहचान बंद है। ऑफ़लाइन आवाज़ के लिए Android ऐप इस्तेमाल करें।");
 }
 
 /* ========================================
