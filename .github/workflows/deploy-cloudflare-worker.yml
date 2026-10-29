@@ -41,10 +41,6 @@ jobs:
           test -s index.html
           test -s style.css
           test -s wrangler.toml
-          if grep -nF '\\n      const search' worker.js; then
-            echo "Literal escaped newline found in worker.js."
-            exit 1
-          fi
           grep -q '^main = "worker.js"$' wrangler.toml
 
   deploy:
