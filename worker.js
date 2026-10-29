@@ -360,32 +360,31 @@ function filterRelevantSearchResults(query, results) {
   const q = String(query || "").toLocaleLowerCase("hi-IN");
   const textOf = (item) => `${item.title || ""} ${item.url || ""} ${item.snippet || ""}`.toLocaleLowerCase("hi-IN");
   const list = Array.isArray(results) ? results : [];
-  let required = null;
 
-  // Keep current-news queries from showing unrelated app-support/search results.
   if (/(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(q)) {
-    // For news, trust only recognizable news publisher domains. Never accept
-    // generic "latest/news" words in unrelated Microsoft or support pages.
+    const trustedNewsHost = /(^|\.)(indianexpress\.com|thehindu\.com|ndtv\.com|hindustantimes\.com|bbc\.com|reuters\.com|apnews\.com|news18\.com|aajtak\.in|abplive\.com|amarujala\.com|jagran\.com|zeenews\.india\.com|indiatoday\.in|theprint\.in|livemint\.com|timesofindia\.indiatimes\.com|pti\.in|aninews\.in)$/;
     return list.filter(item => {
       try {
-        const host = new URL(item.url).hostname.toLowerCase().replace(/^www\\./, "");
-        return /(^|\\.)(indianexpress\\.com|thehindu\\.com|ndtv\\.com|hindustantimes\\.com|bbc\\.com|reuters\\.com|apnews\\.com|news18\\.com|aajtak\\.in|abplive\\.com|amarujala\\.com|jagran\\.com|zeenews\\.india\\.com|indiatoday\\.in|theprint\\.in|livemint\\.com|timesofindia\\.indiatimes\\.com|pti\\.in|aninews\\.in)$/.test(host);
+        const host = new URL(item.url).hostname.toLowerCase().replace(/^www\./, "");
+        return trustedNewsHost.test(host);
       } catch {
         return false;
       }
     });
-  } else if (/(सोने|सोना|gold|22\s*k|24\s*k|bullion)/i.test(q)) {
-    required = /(gold|सोना|सोने|sone|bullion|22\s*k|24\s*k|gold[- ]?rate|gold[- ]?price|sona)/i;
+  }
+
+  let required = null;
+  if (/(सोने|सोना|gold|22\s*k|24\s*k|bullion)/i.test(q)) {
+    required = /(gold|सोना|सोने|sone|bullion|22\s*k|24\s*k|gold[- ]?rate|gold[- ]?price|sona|ज्वेलरी|jewellery)/i;
   } else if (/(चांदी|चाँदी|silver)/i.test(q)) {
-    required = /(silver|चांदी|चाँदी|चांदी[- ]?(भाव|कीमत)|silver[- ]?(rate|price))/i;
+    required = /(silver|चांदी|चाँदी|bullion|silver[- ]?(rate|price)|चांदी[- ]?(भाव|कीमत))/i;
   } else if (/(मौसम|weather|तापमान|temperature)/i.test(q)) {
     required = /(weather|मौसम|temperature|forecast|तापमान)/i;
   } else if (/(ट्रेन|रेल|train|railway|पीएनआर|pnr)/i.test(q)) {
     required = /(train|railway|रेल|ट्रेन|pnr|indianrail)/i;
   }
 
-  if (!required) return list;
-  return list.filter(item => required.test(textOf(item)));
+  return required ? list.filter(item => required.test(textOf(item))) : list;
 }
 
 function buildSearchContext(results) {
@@ -539,7 +538,7 @@ export default {
     // Deploy marker: search syntax fix is included in this revision.
     if (wantsSearch) {
       const isCurrentNewsQuestion = /(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(userText);
-      const searchQuery = isCurrentNewsQuestion ? "भारत की आज की ताज़ा खबरें India latest news today" : userText;
+      const isGoldRateQuestion = /(सोने|सोना|gold|22\\s*k|24\\s*k|bullion)/i.test(userText);\n      const searchQuery = isCurrentNewsQuestion ? "भारत की आज की ताज़ा खबरें India latest news today" : isGoldRateQuestion ? "India today gold rate 22K 24K per gram per 10 gram date" : userText;
       const search = await searchInternet(searchQuery, env);
       searchResults = filterRelevantSearchResults(userText, search.results);
       searchWarning = searchResults.length
