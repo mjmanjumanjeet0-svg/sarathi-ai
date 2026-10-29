@@ -359,10 +359,13 @@ async function searchInternet(query, env) {
 function filterRelevantSearchResults(query, results) {
   const q = String(query || "").toLocaleLowerCase("hi-IN");
   const textOf = (item) => `${item.title || ""} ${item.url || ""} ${item.snippet || ""}`.toLocaleLowerCase("hi-IN");
+  const list = Array.isArray(results) ? results : [];
   let required = null;
 
-  // Protect users from unrelated fallback results for common current-price questions.
-  if (/(सोने|सोना|gold|22\s*k|24\s*k|bullion)/i.test(q)) {
+  // Keep current-news queries from showing unrelated app-support/search results.
+  if (/(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|latest news|today.?s news|current news|breaking news|समाचार)/i.test(q)) {
+    required = /(news|समाचार|खबर|ख़बर|breaking|latest|india\.com|indianexpress\.com|thehindu\.com|ndtv\.com|hindustantimes\.com|bbc\.com|reuters\.com|apnews\.com|news18\.com|aajtak\.in|abplive\.com|amarujala\.com|jagran\.com|zeenews\.india\.com)/i;
+  } else if (/(सोने|सोना|gold|22\s*k|24\s*k|bullion)/i.test(q)) {
     required = /(gold|सोना|सोने|sone|bullion|22\s*k|24\s*k|gold[- ]?rate|gold[- ]?price|sona)/i;
   } else if (/(चांदी|चाँदी|silver)/i.test(q)) {
     required = /(silver|चांदी|चाँदी|चांदी[- ]?(भाव|कीमत)|silver[- ]?(rate|price))/i;
@@ -372,8 +375,8 @@ function filterRelevantSearchResults(query, results) {
     required = /(train|railway|रेल|ट्रेन|pnr|indianrail)/i;
   }
 
-  if (!required) return Array.isArray(results) ? results : [];
-  return (Array.isArray(results) ? results : []).filter(item => required.test(textOf(item)));
+  if (!required) return list;
+  return list.filter(item => required.test(textOf(item)));
 }
 
 function buildSearchContext(results) {
@@ -524,7 +527,7 @@ export default {
     let searchWarning = "";
 
     if (wantsSearch) {
-      const search = await searchInternet(userText, env);
+      const isCurrentNewsQuestion = /(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|latest news|today.?s news|current news|breaking news|समाचार)/i.test(userText);\n      const searchQuery = isCurrentNewsQuestion ? "भारत की आज की ताज़ा खबरें India latest news today" : userText;\n      const search = await searchInternet(searchQuery, env);
       searchResults = filterRelevantSearchResults(userText, search.results);
       searchWarning = searchResults.length
         ? search.warning
