@@ -10,30 +10,35 @@ on:
       - "wrangler.toml"
       - ".github/workflows/deploy-cloudflare-worker.yml"
 
+permissions:
+  contents: read
+
+concurrency:
+  group: sarathi-ai-worker-production
+  cancel-in-progress: false
+
 jobs:
   deploy:
+    name: Validate and deploy Worker
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
-      - name: Validate and normalize Cloudflare credentials
-        env:
-          CF_API_TOKEN_INPUT: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          CF_ACCOUNT_ID_INPUT: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+      - name: Check Worker source and Wrangler config
         run: |
-          token="$(printf '%s' "$CF_API_TOKEN_INPUT" | tr -d '[:space:]')"
-          account="$(printf '%s' "$CF_ACCOUNT_ID_INPUT" | tr -d '[:space:]')"
-          if [ -z "$token" ]; then
-            echo "::error::CLOUDFLARE_API_TOKEN secret is missing or empty."
+          test -s worker.js
+          test -s wrangler.toml
+          if grep -nF '\\n      const search' worker.js; then
+            echo "Literal escaped newline found in worker.js."
             exit 1
           fi
-          if [ -z "$account" ]; then
-            echo "::error::CLOUDFLARE_ACCOUNT_ID secret is missing or empty."
-            exit 1
-          fi
-          echo "CLOUDFLARE_API_TOKEN=$token" >> "$GITHUB_ENV"
-          echo "CLOUDFLARE_ACCOUNT_ID=$account" >> "$GITHUB_ENV"
+          grep -q '^main = "worker.js"$' wrangler.toml
 
       - name: Deploy Worker
-        run: npx --yes wrangler@4 deploy worker.js --name sarathi-ai --compatibility-date 2026-10-29
+        uses: cloudflare/wrangler-action@v4
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: deploy
