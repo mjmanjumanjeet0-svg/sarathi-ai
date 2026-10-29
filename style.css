@@ -25,3 +25,5 @@ dialog{width:min(430px,calc(100% - 30px));background:var(--panel);color:var(--te
 .speak-btn{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:7px 10px;border-radius:9px;border:1px solid var(--border);background:var(--panel2);color:var(--text);font:inherit;font-size:13px;cursor:pointer}
 .speak-btn:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
 .speak-btn:active{transform:translateY(1px)}
+
+.privacy-note{max-width:850px;margin:6px auto 0;color:var(--muted);font-size:11px;line-height:1.5;text-align:center;padding:0 8px}
