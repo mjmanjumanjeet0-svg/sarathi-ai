@@ -693,7 +693,8 @@ async function sendMessage(text) {
     input.style.height = "";
   }
 
-  const useWebSearch = !isSimpleGreeting(prompt) && (state.webEnabled || explicitlyRequestsWebSearch(prompt));
+  const needsCurrentInfo = /(आज|अभी|वर्तमान|ताज़ा|ताजा|लेटेस्ट|latest|current|today|now|भाव|कीमत|रेट|rate|price|मौसम|weather|तापमान|ट्रेन|रेल|train|pnr|समय सारणी|खबर|समाचार|news|सोने|सोना|gold|चांदी|चाँदी|silver|स्टॉक|शेयर बाजार|share market|exchange rate|डॉलर|रुपया)/i.test(prompt);
+  const useWebSearch = !isSimpleGreeting(prompt) && (explicitlyRequestsWebSearch(prompt) || (state.webEnabled && needsCurrentInfo));
 
   addMessage("user", prompt);
   setBusy(true);
