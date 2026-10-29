@@ -535,6 +535,7 @@ export default {
     let searchResults = [];
     let searchWarning = "";
 
+    // Keep this block as normal JavaScript lines; never insert literal \\n separators here.
     // Deploy marker: search syntax fix is included in this revision.
     if (wantsSearch) {
       const isCurrentNewsQuestion = /(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(userText);
