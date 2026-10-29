@@ -19,6 +19,8 @@ import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.webkit.WebChromeClient;
+import android.webkit.ValueCallback;
 import android.webkit.WebResourceRequest;
 import android.widget.Toast;
 
@@ -32,6 +34,8 @@ public class MainActivity extends Activity {
     private static final int REQUEST_RECORD_AUDIO = 1201;
     private static final String APP_HOST = "mjmanjumanjeet0-svg.github.io";
     private WebView webView;
+    private ValueCallback<Uri[]> filePathCallback;
+    private static final int REQUEST_FILE_CHOOSER = 1202;
     private SpeechRecognizer speechRecognizer;
     private TextToSpeech textToSpeech;
     private Voice localHindiVoice;
@@ -83,6 +87,30 @@ public class MainActivity extends Activity {
         });
 
         webView.addJavascriptInterface(new SarathiBridge(), "SarathiNative");
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback,
+                    FileChooserParams params) {
+                if (filePathCallback != null) filePathCallback.onReceiveValue(null);
+                filePathCallback = callback;
+                try {
+                    Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    intent.setType("*/*");
+                    if (params.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE) {
+                        intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE, true);
+                    }
+                    startActivityForResult(intent, REQUEST_FILE_CHOOSER);
+                    return true;
+                } catch (Exception error) {
+                    filePathCallback = null;
+                    callback.onReceiveValue(null);
+                    notifyVoice("onError", "फ़ाइल चुनने की विंडो नहीं खुली। फ़ाइल की सामग्री अपने-आप कहीं नहीं भेजी गई।");
+                    return false;
+                }
+            }
+        });
+
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
@@ -347,6 +375,19 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_FILE_CHOOSER && filePathCallback != null) {
+            Uri[] results = resultCode == RESULT_OK && data != null
+                ? WebChromeClient.FileChooserParams.parseResult(resultCode, data)
+                : null;
+            filePathCallback.onReceiveValue(results);
+            filePathCallback = null;
+            return;
+        }
+        super.onActivityResult(requestCode, resultCode, data);
+    }
+
+    @Override
     public void onBackPressed() {
         if (webView != null && webView.canGoBack()) {
             webView.goBack();
@@ -366,6 +407,10 @@ public class MainActivity extends Activity {
             textToSpeech.stop();
             textToSpeech.shutdown();
             textToSpeech = null;
+        }
+        if (filePathCallback != null) {
+            filePathCallback.onReceiveValue(null);
+            filePathCallback = null;
         }
         if (webView != null) {
             webView.removeJavascriptInterface("SarathiNative");
