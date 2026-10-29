@@ -405,7 +405,9 @@ function filterRelevantSearchResults(query, results) {
     return list.filter(item => {
       try {
         const host = new URL(item.url).hostname.toLowerCase().replace(/^www\./, "");
-        return trustedNewsHost.test(host);
+        // Google News RSS links are wrappers around publisher stories; allow them through
+        // so current-news searches are not accidentally filtered to an empty list.
+        return trustedNewsHost.test(host) || host === "news.google.com";
       } catch {
         return false;
       }
@@ -577,7 +579,7 @@ export default {
     // Deploy marker: search syntax fix is included in this revision.
     if (wantsSearch) {
       const isCurrentNewsQuestion = /(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(userText);
-      const isGoldRateQuestion = /(सोने|सोना|gold|22\\s*k|24\\s*k|bullion)/i.test(userText);
+      const isGoldRateQuestion = /(सोने|सोना|gold|22\s*k|24\s*k|bullion)/i.test(userText);
       const searchQuery = isCurrentNewsQuestion ? "भारत की आज की ताज़ा खबरें India latest news today" : isGoldRateQuestion ? "India today gold rate 22K 24K per gram per 10 gram date" : userText;
       const search = await searchInternet(searchQuery, env);
       searchResults = filterRelevantSearchResults(userText, search.results);
