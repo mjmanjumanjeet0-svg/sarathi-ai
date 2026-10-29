@@ -486,6 +486,132 @@ function setBusy(busy) {
 }
 
 /* ========================================
+   PRIVACY-FIRST PHONE ACTIONS
+   Only exact commands are handled locally.
+   Sensitive actions open a review screen; they are never sent automatically.
+======================================== */
+
+function handleLocalPhoneCommand(prompt) {
+  let action = null;
+  let match;
+
+  match = prompt.match(/^(?:सारथी\s*)?(?:कॉल|फोन लगाओ|फोन करो|call)\s+(\+?[0-9][0-9\s-]{5,18})$/i);
+  if (match) {
+    const phone = match[1].replace(/[\s-]/g, "");
+    action = {
+      confirm: "फ़ोन का डायलर खुलेगा: " + phone + "\nकॉल अपने-आप नहीं लगेगी। आगे बढ़ें?",
+      run: () => window.SarathiNative.openDialer(phone),
+      success: "डायलर खुलने पर नंबर जाँचें। कॉल लगाने के लिए आपको फ़ोन में खुद बटन दबाना होगा।"
+    };
+  }
+
+  if (!action) {
+    match = prompt.match(/^(?:sms|एसएमएस|मैसेज)\s+(\+?[0-9][0-9\s-]{5,18})\s*[:：]\s*([\s\S]{1,4000})$/i);
+    if (match) {
+      const phone = match[1].replace(/[\s-]/g, "");
+      const body = match[2].trim();
+      action = {
+        confirm: "संदेश ऐप में यह ड्राफ़्ट खुलेगा:\nनंबर: " + phone + "\nसंदेश: " + body + "\nइसे अपने-आप नहीं भेजा जाएगा। आगे बढ़ें?",
+        run: () => window.SarathiNative.composeSms(phone, body),
+        success: "संदेश ऐप खुलने पर नंबर और संदेश जाँचें। भेजने के लिए आपको खुद Send दबाना होगा।"
+      };
+    }
+  }
+
+  if (!action) {
+    match = prompt.match(/^(?:ईमेल|email)\s+([^\s:]+@[^\s:]+)\s*[:：]\s*([\s\S]{1,8000})$/i);
+    if (match) {
+      const email = match[1];
+      const body = match[2].trim();
+      action = {
+        confirm: "ईमेल ड्राफ़्ट खुलेगा:\nप्राप्तकर्ता: " + email + "\nसंदेश: " + body + "\nईमेल अपने-आप नहीं भेजा जाएगा। आगे बढ़ें?",
+        run: () => window.SarathiNative.composeEmail(email, "", body),
+        success: "ईमेल ऐप खुलने पर प्राप्तकर्ता और संदेश जाँचें। भेजने के लिए आपको खुद Send दबाना होगा।"
+      };
+    }
+  }
+
+  if (!action) {
+    match = prompt.match(/^(?:सारथी\s*)?(?:अलार्म|alarm)\s+(?:(सुबह|शाम|रात|am|pm)\s*)?(\d{1,2})(?::(\d{2}))?\s*(?:बजे)?(?:\s+(.+))?$/i);
+    if (match) {
+      const period = (match[1] || "").toLowerCase();
+      let hour = Number(match[2]);
+      const minute = Number(match[3] || 0);
+      const label = (match[4] || "सारथी अलार्म").trim();
+
+      if (minute > 59 || hour > 23 || (hour > 12 && period) || hour === 0 && period) {
+        addMessage("user", prompt);
+        addMessage("assistant", "समय स्पष्ट नहीं है। उदाहरण: ‘अलार्म सुबह 7 बजे’ या ‘अलार्म 19:30’। कोई अलार्म नहीं लगाया गया।");
+        return true;
+      }
+
+      if (!period && hour >= 1 && hour <= 12 && !match[3]) {
+        addMessage("user", prompt);
+        addMessage("assistant", "सुबह या शाम स्पष्ट नहीं है। ‘अलार्म सुबह 7 बजे’ या ‘अलार्म शाम 7 बजे’ लिखें। अभी कोई अलार्म नहीं लगाया गया।");
+        return true;
+      }
+
+      if (period === "शाम" || period === "रात" || period === "pm") {
+        if (hour < 12) hour += 12;
+      } else if ((period === "सुबह" || period === "am") && hour === 12) {
+        hour = 0;
+      }
+
+      action = {
+        confirm: "घड़ी ऐप में " + String(hour).padStart(2, "0") + ":" + String(minute).padStart(2, "0") +
+          " का अलार्म खोलना है? सेव करने से पहले घड़ी ऐप में समय जाँच सकेंगे।",
+        run: () => window.SarathiNative.setAlarm(hour, minute, label),
+        success: "घड़ी ऐप खुलेगा। समय जाँचकर वहाँ अलार्म सेव करें।"
+      };
+    }
+  }
+
+  if (!action) {
+    match = prompt.match(/^(?:(?:खोलो|open)\s+(.+)|(.+?)\s+(?:खोलो|open))$/i);
+    if (match) {
+      const requested = (match[1] || match[2] || "").trim().toLowerCase();
+      const apps = {
+        "ब्राउज़र": "browser", "browser": "browser", "इंटरनेट": "browser",
+        "संदेश": "messages", "messages": "messages", "मैसेज ऐप": "messages",
+        "ईमेल ऐप": "email", "email": "email", "कैलेंडर": "calendar", "calendar": "calendar",
+        "संपर्क": "contacts", "contacts": "contacts", "मैप": "maps", "maps": "maps",
+        "सेटिंग्स": "settings", "settings": "settings", "यूट्यूब": "youtube", "youtube": "youtube",
+        "व्हाट्सऐप": "whatsapp", "whatsapp": "whatsapp"
+      };
+      const key = apps[requested];
+      if (key) {
+        action = {
+          confirm: "फ़ोन में " + requested + " ऐप खोलना है?",
+          run: () => window.SarathiNative.openApp(key),
+          success: "ऐप खोलने का अनुरोध किया गया।"
+        };
+      }
+    }
+  }
+
+  if (!action) return false;
+
+  addMessage("user", prompt);
+  if (!window.SarathiNative) {
+    addMessage("assistant", "यह फ़ोन वाला काम केवल Sarathi Android ऐप में उपलब्ध होगा। अभी कोई कॉल, संदेश, ईमेल या अलार्म नहीं किया गया।");
+    return true;
+  }
+
+  if (!window.confirm(action.confirm)) {
+    addMessage("assistant", "ठीक है। आपकी अनुमति के बिना कोई फ़ोन कार्रवाई नहीं की गई।");
+    return true;
+  }
+
+  try {
+    action.run();
+    addMessage("assistant", action.success);
+  } catch {
+    addMessage("assistant", "फ़ोन कार्रवाई शुरू नहीं हो सकी। कोई संदेश या ईमेल अपने-आप नहीं भेजा गया।");
+  }
+  return true;
+}
+
+/* ========================================
    SEND MESSAGE
 ======================================== */
 
@@ -495,6 +621,16 @@ async function sendMessage(text) {
   ).trim();
 
   if (!prompt || state.busy) return;
+
+  // Phone actions are parsed and handled locally before any cloud request.
+  if (handleLocalPhoneCommand(prompt)) {
+    const input = $("messageInput");
+    if (input) {
+      input.value = "";
+      input.style.height = "";
+    }
+    return;
+  }
 
   const workerUrl = getWorkerUrl();
 
