@@ -374,8 +374,27 @@ export default {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
 
+    // Public health check: opening the Worker root in a browser sends GET.
+    // Keep the actual login and chat APIs POST-only below.
+    if ((request.method === "GET" || request.method === "HEAD") &&
+        (url.pathname === "/" || url.pathname === "")) {
+      if (request.method === "HEAD") {
+        return new Response(null, { status: 200, headers: CORS_HEADERS });
+      }
+
+      return jsonResponse({
+        success: true,
+        service: "Sarathi AI Worker",
+        status: "running",
+        endpoints: {
+          login: "POST /api/login",
+          chat: "POST /api/chat"
+        }
+      });
+    }
+
     if (request.method !== "POST") {
-      return jsonResponse({ success: false, error: "अनुरोध उपलब्ध नहीं है।" }, 404);
+      return jsonResponse({ success: false, error: "अनुरोध उपलब्ध नहीं है। API के लिए POST अनुरोध भेजें।" }, 405);
     }
 
     if (url.pathname !== "/api/login" && url.pathname !== "/api/chat") {
