@@ -293,23 +293,20 @@ async function searchInternet(query, env) {
       }).filter(Boolean);
 
       if (results.length) return { results, warning: "" };
-      return {
-        results: [],
-        warning: "वेब-सर्च सेवा चली, लेकिन इस सवाल के लिए उपयोगी परिणाम नहीं मिले।",
-      };
+      // An empty result is not final: continue to public search fallbacks below.
     } catch {
-      // Cloudflare Web Search may require paid credits. Try ordinary HTML search
-      // as a fallback so the app can still retrieve source links without that binding.
-      const fallback = await searchDuckDuckGoHtml(query);
-      if (fallback.results.length) return fallback;
-      const bingFallback = await searchBingRss(query);
-      if (bingFallback.results.length) return bingFallback;
-      return {
-        results: [],
-        warning: "Cloudflare Web Search और दोनों वैकल्पिक खोज सेवाओं से परिणाम नहीं मिले।",
-      };
+      // The primary binding may be unavailable or require paid credits.
+      // Continue to public search fallbacks below.
     }
   }
+
+  // Full-search fallbacks must also run when the Cloudflare AI binding is absent.
+  // DuckDuckGo Instant Answer is only the last resort because it often misses news.
+  const htmlFallback = await searchDuckDuckGoHtml(query);
+  if (htmlFallback.results.length) return htmlFallback;
+
+  const bingFallback = await searchBingRss(query);
+  if (bingFallback.results.length) return bingFallback;
 
   // Explicitly mark the legacy fallback as limited; DuckDuckGo Instant Answer
   // is not a full web-search API and often has no results for current prices/news.
