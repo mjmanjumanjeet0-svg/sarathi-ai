@@ -27,3 +27,21 @@ dialog{width:min(430px,calc(100% - 30px));background:var(--panel);color:var(--te
 .speak-btn:active{transform:translateY(1px)}
 
 .privacy-note{max-width:850px;margin:6px auto 0;color:var(--muted);font-size:11px;line-height:1.5;text-align:center;padding:0 8px}
+
+
+/* Align message styles with the DOM classes rendered by app.js */
+.message-avatar{width:36px;height:36px;flex:0 0 36px;display:grid;place-items:center;background:var(--panel2);border-radius:12px}
+.message-content{max-width:min(78%,690px);min-width:0;padding:13px 16px;line-height:1.8;overflow-wrap:anywhere;white-space:normal;border:1px solid var(--border);border-radius:14px;background:var(--panel)}
+.user-message{justify-content:flex-end}
+.user-message .message-content{background:var(--user)}
+.message-label{font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:600}
+.message-body p{margin:0 0 9px}
+.message-body p:last-child{margin-bottom:0}
+.message-body ul,.message-body ol{padding-left:24px;margin:7px 0}
+.message-body h1,.message-body h2,.message-body h3{line-height:1.4;margin:12px 0 7px}
+.message-body pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#06132a;padding:10px;border-radius:8px;max-width:100%;overflow-x:auto}
+.message-body code{font-family:ui-monospace,monospace}
+.attachment-preview:not(.hidden){display:flex;flex-wrap:wrap;gap:8px}
+.attachment-item{display:flex;align-items:center;gap:8px;padding:7px 10px;border:1px solid var(--border);border-radius:9px;background:var(--panel)}
+.attachment-item button{border:0;background:transparent;color:var(--text);font-size:18px}
+@media(max-width:700px){.message-content{max-width:88%;padding:11px 12px}}
