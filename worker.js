@@ -356,6 +356,26 @@ async function searchInternet(query, env) {
   }
 }
 
+function filterRelevantSearchResults(query, results) {
+  const q = String(query || "").toLocaleLowerCase("hi-IN");
+  const textOf = (item) => `${item.title || ""} ${item.url || ""} ${item.snippet || ""}`.toLocaleLowerCase("hi-IN");
+  let required = null;
+
+  // Protect users from unrelated fallback results for common current-price questions.
+  if (/(सोने|सोना|gold|22\s*k|24\s*k|bullion)/i.test(q)) {
+    required = /(gold|सोना|सोने|sone|bullion|22\s*k|24\s*k|gold[- ]?rate|gold[- ]?price|sona)/i;
+  } else if (/(चांदी|चाँदी|silver)/i.test(q)) {
+    required = /(silver|चांदी|चाँदी|चांदी[- ]?(भाव|कीमत)|silver[- ]?(rate|price))/i;
+  } else if (/(मौसम|weather|तापमान|temperature)/i.test(q)) {
+    required = /(weather|मौसम|temperature|forecast|तापमान)/i;
+  } else if (/(ट्रेन|रेल|train|railway|पीएनआर|pnr)/i.test(q)) {
+    required = /(train|railway|रेल|ट्रेन|pnr|indianrail)/i;
+  }
+
+  if (!required) return Array.isArray(results) ? results : [];
+  return (Array.isArray(results) ? results : []).filter(item => required.test(textOf(item)));
+}
+
 function buildSearchContext(results) {
   if (!results.length) return "";
 
@@ -505,8 +525,10 @@ export default {
 
     if (wantsSearch) {
       const search = await searchInternet(userText, env);
-      searchResults = search.results;
-      searchWarning = search.warning;
+      searchResults = filterRelevantSearchResults(userText, search.results);
+      searchWarning = searchResults.length
+        ? search.warning
+        : "खोज में आपके सवाल से मेल खाते भरोसेमंद परिणाम नहीं मिले। गलत या असंबंधित स्रोत नहीं दिखाए गए।";
 
       // Never let the model pretend it has current web information when every
       // search provider returned no usable results.
