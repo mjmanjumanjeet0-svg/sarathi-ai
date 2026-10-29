@@ -154,25 +154,47 @@ public class MainActivity extends Activity {
             return;
         }
 
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
-            notifyVoice("onError", "इस Android संस्करण पर सुरक्षित ऑफ़लाइन आवाज़ पहचान उपलब्ध नहीं है। आवाज़ इंटरनेट पर भेजने के बजाय इसे बंद रखा गया है।");
+        boolean offlineAvailable = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                && SpeechRecognizer.isOnDeviceRecognitionAvailable(this);
+        if (offlineAvailable) {
+            startRecognition(false);
             return;
         }
 
-        if (!SpeechRecognizer.isOnDeviceRecognitionAvailable(this)) {
-            notifyVoice("onError", "ऑफ़लाइन हिंदी आवाज़ पहचान उपलब्ध नहीं है। फ़ोन में हिंदी का ऑफ़लाइन भाषा पैक उपलब्ध होने पर फिर कोशिश करें।");
-            return;
-        }
+        // Never send microphone audio to an online recognition service without a clear, per-use choice.
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("हिंदी आवाज़ पहचान")
+                .setMessage("इस फ़ोन पर ऑफ़लाइन हिंदी आवाज़ पहचान उपलब्ध नहीं है। अगर आप आगे बढ़ते हैं, तो आपकी आवाज़ पहचानने के लिए इंटरनेट के ज़रिए फ़ोन की स्पीच सेवा को भेजी जा सकती है। क्या आप इस बार ऑनलाइन पहचान इस्तेमाल करना चाहते हैं?")
+                .setPositiveButton("हाँ, इस बार इस्तेमाल करें", (dialog, which) -> startRecognition(true))
+                .setNegativeButton("रद्द करें", (dialog, which) ->
+                        notifyVoice("onError", "ऑनलाइन आवाज़ पहचान रद्द कर दी गई। आपकी आवाज़ नहीं सुनी गई।"))
+                .setCancelable(true)
+                .show();
+    }
 
+    private void startRecognition(boolean useOnlineService) {
         try {
             if (speechRecognizer != null) {
                 speechRecognizer.cancel();
                 speechRecognizer.destroy();
+                speechRecognizer = null;
             }
-            speechRecognizer = SpeechRecognizer.createOnDeviceSpeechRecognizer(this);
+
+            if (useOnlineService) {
+                speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                    && SpeechRecognizer.isOnDeviceRecognitionAvailable(this)) {
+                speechRecognizer = SpeechRecognizer.createOnDeviceSpeechRecognizer(this);
+            } else {
+                notifyVoice("onError", "ऑफ़लाइन आवाज़ पहचान उपलब्ध नहीं है।");
+                return;
+            }
+
             speechRecognizer.setRecognitionListener(new RecognitionListener() {
                 @Override public void onReadyForSpeech(Bundle params) {
-                    notifyVoice("onStatus", "बोलिए, सारथी फ़ोन पर ही सुन रहा है…");
+                    notifyVoice("onStatus", useOnlineService
+                            ? "बोलिए, ऑनलाइन हिंदी आवाज़ पहचान चालू है…"
+                            : "बोलिए, सारथी फ़ोन पर ही सुन रहा है…");
                 }
                 @Override public void onBeginningOfSpeech() {}
                 @Override public void onRmsChanged(float rmsdB) {}
@@ -181,7 +203,9 @@ public class MainActivity extends Activity {
                     notifyVoice("onStatus", "आवाज़ समझी जा रही है…");
                 }
                 @Override public void onError(int error) {
-                    notifyVoice("onError", "आवाज़ पहचान नहीं हो सकी। हिंदी का ऑफ़लाइन भाषा पैक और माइक्रोफ़ोन अनुमति जाँचें।");
+                    notifyVoice("onError", useOnlineService
+                            ? "ऑनलाइन आवाज़ पहचान नहीं चल सकी। इंटरनेट कनेक्शन और माइक्रोफ़ोन अनुमति जाँचें।"
+                            : "आवाज़ पहचान नहीं हो सकी। हिंदी का ऑफ़लाइन भाषा पैक और माइक्रोफ़ोन अनुमति जाँचें।");
                 }
                 @Override public void onResults(Bundle results) {
                     ArrayList<String> matches = results == null ? null
@@ -199,7 +223,7 @@ public class MainActivity extends Activity {
             Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN");
-            intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, true);
+            intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, !useOnlineService);
             intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);
             speechRecognizer.startListening(intent);
         } catch (Exception error) {
