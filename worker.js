@@ -484,7 +484,7 @@ export default {
     const normalizedGreeting = userText
       .toLocaleLowerCase("hi-IN")
       .replace(/[!！?？.,،؛:;।॥🙏😊🙂🦚👋]+/g, " ")
-      .replace(/\\s+/g, " ")
+      .replace(/\s+/g, " ")
       .trim();
     const greetingWords = normalizedGreeting ? normalizedGreeting.split(" ") : [];
     const greetingVocabulary = new Set([
