@@ -260,8 +260,9 @@ async function searchGoogleNewsRss(query) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
+    const freshQuery = query + " when:2d";
     const endpoint = "https://news.google.com/rss/search?q=" +
-      encodeURIComponent(query.slice(0, 400)) + "&hl=hi&gl=IN&ceid=IN:hi";
+      encodeURIComponent(freshQuery.slice(0, 400)) + "&hl=hi&gl=IN&ceid=IN:hi";
     const response = await fetch(endpoint, {
       headers: { "Accept": "application/rss+xml, application/xml, text/xml" },
       signal: controller.signal,
@@ -279,9 +280,16 @@ async function searchGoogleNewsRss(query) {
       const title = cleanText(tag("title"));
       const url = tag("link");
       const snippet = cleanText(tag("description"));
-      if (title && validHttpUrl(url)) results.push({ title: title.slice(0, 300), url, snippet: snippet.slice(0, 1800) });
+      const publishedText = tag("pubDate");
+      const publishedAt = publishedText ? Date.parse(publishedText) : NaN;
+      // Exclude dated stories older than 48 hours from a current-news feed.
+      if (title && validHttpUrl(url) && Number.isFinite(publishedAt) &&
+          Date.now() - publishedAt <= 48 * 60 * 60 * 1000 &&
+          publishedAt <= Date.now() + 60 * 60 * 1000) {
+        results.push({ title: title.slice(0, 300), url, snippet: snippet.slice(0, 1800), publishedAt: new Date(publishedAt).toISOString() });
+      }
     }
-    return { results, warning: results.length ? "Google News RSS से मिले परिणाम; खबरों की तारीख जाँचें।" : "Google News RSS से परिणाम नहीं मिले।" };
+    return { results, warning: results.length ? "Google News RSS से पिछले 48 घंटों के परिणाम मिले।" : "पिछले 48 घंटों की तारीख वाले परिणाम नहीं मिले।" };
   } catch {
     return { results: [], warning: "Google News RSS खोज अभी उपलब्ध नहीं है।" };
   } finally {
@@ -297,8 +305,8 @@ async function searchInternet(query, env) {
       const response = await env.AI.websearch({
         gatewayId: "default",
         query: query.slice(0, 600),
-        provider: "ceramic",
-        limit: 5,
+        provider: "exa",
+        limit: 8,
       });
 
       if (!response.ok) {
@@ -580,7 +588,12 @@ export default {
     if (wantsSearch) {
       const isCurrentNewsQuestion = /(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(userText);
       const isGoldRateQuestion = /(सोने|सोना|gold|22\s*k|24\s*k|bullion)/i.test(userText);
-      const searchQuery = isCurrentNewsQuestion ? "भारत की आज की ताज़ा खबरें India latest news today" : isGoldRateQuestion ? "India today gold rate 22K 24K per gram per 10 gram date" : userText;
+      const indiaToday = new Intl.DateTimeFormat("en-CA", { timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+      const searchQuery = isCurrentNewsQuestion
+        ? "India latest news when:2d " + indiaToday
+        : isGoldRateQuestion
+          ? "India 22K 24K gold rate today per gram 10 gram " + indiaToday
+          : userText;
       const search = await searchInternet(searchQuery, env);
       searchResults = filterRelevantSearchResults(userText, search.results);
       searchWarning = searchResults.length
