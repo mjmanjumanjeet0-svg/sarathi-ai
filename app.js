@@ -615,7 +615,7 @@ function isSimpleGreeting(prompt) {
   const normalized = String(prompt || "")
     .toLocaleLowerCase("hi-IN")
     .replace(/[!！?？.,،؛:;।॥🙏😊🙂🦚👋]+/g, " ")
-    .replace(/\\s+/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
   if (!normalized || normalized.length > 70) return false;
   const words = normalized.split(" ");
