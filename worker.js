@@ -470,6 +470,20 @@ export default {
       const search = await searchInternet(userText, env);
       searchResults = search.results;
       searchWarning = search.warning;
+
+      // Never let the model pretend it has current web information when every
+      // search provider returned no usable results.
+      if (searchResults.length === 0) {
+        return jsonResponse({
+          success: true,
+          reply: "मैंने इंटरनेट पर खोजने की कोशिश की, लेकिन अभी भरोसेमंद परिणाम नहीं मिले। इसलिए ताज़ा खबर या वर्तमान जानकारी का अनुमान लगाकर नहीं बताऊँगा। थोड़ी देर बाद फिर कोशिश करें या सवाल को दूसरे शब्दों में पूछें।",
+          ...dateTime,
+          webSearch: false,
+          searchAttempted: true,
+          searchWarning: searchWarning || "इंटरनेट खोज से कोई परिणाम नहीं मिला।",
+          sources: [],
+        });
+      }
     }
 
     const systemPrompt = `
