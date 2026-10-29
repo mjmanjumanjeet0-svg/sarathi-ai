@@ -256,6 +256,39 @@ async function searchBingRss(query) {
   }
 }
 
+async function searchGoogleNewsRss(query) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const endpoint = "https://news.google.com/rss/search?q=" +
+      encodeURIComponent(query.slice(0, 400)) + "&hl=hi&gl=IN&ceid=IN:hi";
+    const response = await fetch(endpoint, {
+      headers: { "Accept": "application/rss+xml, application/xml, text/xml" },
+      signal: controller.signal,
+    });
+    if (!response.ok) return { results: [], warning: "Google News RSS खोज उपलब्ध नहीं है।" };
+    const xml = await response.text();
+    const items = xml.match(/<item[\s>][\s\S]*?<\/item>/gi) || [];
+    const results = [];
+    for (const item of items) {
+      if (results.length >= 5) break;
+      const tag = (name) => {
+        const match = item.match(new RegExp("<" + name + "[^>]*>([\\s\\S]*?)<\\/" + name + ">", "i"));
+        return match ? match[1].replace(/<!\[CDATA\[|\]\]>/g, "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim() : "";
+      };
+      const title = cleanText(tag("title"));
+      const url = tag("link");
+      const snippet = cleanText(tag("description"));
+      if (title && validHttpUrl(url)) results.push({ title: title.slice(0, 300), url, snippet: snippet.slice(0, 1800) });
+    }
+    return { results, warning: results.length ? "Google News RSS से मिले परिणाम; खबरों की तारीख जाँचें।" : "Google News RSS से परिणाम नहीं मिले।" };
+  } catch {
+    return { results: [], warning: "Google News RSS खोज अभी उपलब्ध नहीं है।" };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function searchInternet(query, env) {
   // Preferred path: Cloudflare Web Search binding. No provider key is exposed
   // to the browser; provider billing/configuration is handled by Cloudflare AI Gateway.
@@ -298,6 +331,12 @@ async function searchInternet(query, env) {
       // The primary binding may be unavailable or require paid credits.
       // Continue to public search fallbacks below.
     }
+  }
+
+  // Use a dedicated news feed for headline queries before general web fallbacks.
+  if (/(खबर|समाचार|news|breaking|latest)/i.test(query)) {
+    const newsFallback = await searchGoogleNewsRss(query);
+    if (newsFallback.results.length) return newsFallback;
   }
 
   // Full-search fallbacks must also run when the Cloudflare AI binding is absent.
@@ -538,7 +577,8 @@ export default {
     // Deploy marker: search syntax fix is included in this revision.
     if (wantsSearch) {
       const isCurrentNewsQuestion = /(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(userText);
-      const isGoldRateQuestion = /(सोने|सोना|gold|22\\s*k|24\\s*k|bullion)/i.test(userText);\n      const searchQuery = isCurrentNewsQuestion ? "भारत की आज की ताज़ा खबरें India latest news today" : isGoldRateQuestion ? "India today gold rate 22K 24K per gram per 10 gram date" : userText;
+      const isGoldRateQuestion = /(सोने|सोना|gold|22\\s*k|24\\s*k|bullion)/i.test(userText);
+      const searchQuery = isCurrentNewsQuestion ? "भारत की आज की ताज़ा खबरें India latest news today" : isGoldRateQuestion ? "India today gold rate 22K 24K per gram per 10 gram date" : userText;
       const search = await searchInternet(searchQuery, env);
       searchResults = filterRelevantSearchResults(userText, search.results);
       searchWarning = searchResults.length
