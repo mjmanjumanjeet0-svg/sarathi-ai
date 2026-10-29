@@ -627,6 +627,32 @@ function isSimpleGreeting(prompt) {
   return words.length <= 6 && words.every(word => allowed.has(word));
 }
 
+function filterSourcesForPrompt(prompt, sources) {
+  const q = String(prompt || "").toLocaleLowerCase("hi-IN");
+  const items = Array.isArray(sources) ? sources : [];
+  let pattern = null;
+
+  if (/(सोने|सोना|gold|bullion|22\s*k|24\s*k)/i.test(q)) {
+    pattern = /(gold|सोना|सोने|bullion|22\s*k|24\s*k|gold[- ]?(rate|price)|precious[- ]?metal)/i;
+  }
+  if (/(चांदी|चाँदी|silver)/i.test(q)) {
+    const silverPattern = /(silver|चांदी|चाँदी|bullion|precious[- ]?metal)/i;
+    pattern = pattern ? {
+      test: (value) => pattern.test(value) || silverPattern.test(value)
+    } : silverPattern;
+  }
+  if (/(मौसम|weather|तापमान|temperature)/i.test(q)) {
+    pattern = /(weather|मौसम|temperature|forecast|तापमान)/i;
+  } else if (/(ट्रेन|रेल|train|railway|पीएनआर|pnr)/i.test(q)) {
+    pattern = /(train|railway|रेल|ट्रेन|pnr|indianrail)/i;
+  }
+
+  if (!pattern) return items;
+  return items.filter(source => pattern.test(
+    `${source.title || ""} ${source.url || ""} ${source.snippet || ""}`
+  ));
+}
+
 function explicitlyRequestsWebSearch(prompt) {
   return /(?:इंटरनेट|वेब|online)\s*(?:पर\s*)?(?:खोज|सर्च|search)|(?:ताज़ा|ताजा|आज की|लेटेस्ट|latest|current|breaking)\s*(?:खबर|समाचार|news|updates?)|(?:search|खोज|सर्च)\s+(?:the\s+)?(?:internet|web|online)/i.test(String(prompt || ""));
 }
@@ -746,8 +772,10 @@ async function sendMessage(text) {
 
     addMessage("assistant", answer.trim());
 
-    if (useWebSearch && data.sources?.length) {
-      const sourceText = data.sources.map((source, index) =>
+    const relevantSources = filterSourcesForPrompt(prompt, data.sources);
+
+    if (useWebSearch && relevantSources.length) {
+      const sourceText = relevantSources.map((source, index) =>
         `${index + 1}. ${source.title}\n${source.url}`
       ).join("\n\n");
 
