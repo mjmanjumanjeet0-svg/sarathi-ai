@@ -719,7 +719,7 @@ async function sendMessage(text) {
     try {
       attachmentContext = await extractAttachmentsText(state.attachments);
       if (!attachmentContext.trim()) throw new Error("फाइलों से कोई पढ़ने योग्य पाठ नहीं मिला।");
-      prompt = (prompt + "\\n\\nसंलग्न सामग्री:\\n" + attachmentContext).slice(0, 11500);
+      prompt = (prompt + "\n\nसंलग्न सामग्री:\n" + attachmentContext).slice(0, 11500);
       state.attachments = [];
       renderAttachmentPreview();
     } catch (error) {
@@ -1119,7 +1119,7 @@ function addFiles(fileList) {
   if (!fileList) return;
   const allowed = Array.from(fileList).filter(file =>
     file.size <= 10 * 1024 * 1024 &&
-    (/^(image\\/(png|jpeg|webp))$/.test(file.type) ||
+    (["image/png", "image/jpeg", "image/webp"].includes(file.type) ||
       file.type === "application/pdf" ||
       file.type === "text/plain" ||
       file.name.toLowerCase().endsWith(".docx"))
@@ -1158,10 +1158,10 @@ async function extractPdfText(file) {
     const page = await pdf.getPage(pageNo);
     const content = await page.getTextContent();
     const text = content.items.map(item => item.str || "").join(" ").trim();
-    if (text) pages.push("[पृष्ठ " + pageNo + "]\\n" + text);
+    if (text) pages.push("[पृष्ठ " + pageNo + "]\n" + text);
     page.cleanup();
   }
-  let result = pages.join("\\n\\n");
+  let result = pages.join("\n\n");
   if (!result.trim()) {
     const Tesseract = await loadExternalScript(
       "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js", "Tesseract"
@@ -1177,11 +1177,11 @@ async function extractPdfText(file) {
         canvas.height = Math.ceil(viewport.height);
         await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
         const output = await worker.recognize(canvas);
-        if (output.data.text.trim()) ocrPages.push("[पृष्ठ " + pageNo + " OCR]\\n" + output.data.text.trim());
+        if (output.data.text.trim()) ocrPages.push("[पृष्ठ " + pageNo + " OCR]\n" + output.data.text.trim());
         canvas.width = 0; canvas.height = 0;
         page.cleanup();
       }
-      result = ocrPages.join("\\n\\n");
+      result = ocrPages.join("\n\n");
     } finally {
       await worker.terminate();
     }
@@ -1227,15 +1227,15 @@ async function extractAttachmentsText(files) {
     const content = await extractOneFile(file);
     const clean = String(content || "").trim();
     if (!clean) {
-      output.push("[फाइल: " + file.name + "]\\nइस फाइल से पढ़ने योग्य पाठ नहीं मिला।");
+      output.push("[फाइल: " + file.name + "]\nइस फाइल से पढ़ने योग्य पाठ नहीं मिला।");
       continue;
     }
     const chunk = clean.slice(0, remaining);
-    output.push("[फाइल: " + file.name + "]\\n" + chunk);
+    output.push("[फाइल: " + file.name + "]\n" + chunk);
     remaining -= chunk.length;
     if (remaining <= 0) break;
   }
-  return output.join("\\n\\n");
+  return output.join("\n\n");
 }
 
 function openAttachmentDialog() {
