@@ -678,11 +678,12 @@ function explicitlyRequestsWebSearch(prompt) {
 ======================================== */
 
 async function sendMessage(text) {
-  const prompt = String(
+  let prompt = String(
     text !== undefined ? text : ($("messageInput")?.value || "")
   ).trim();
 
-  if (!prompt || state.busy) return;
+  if ((!prompt && !state.attachments.length) || state.busy) return;
+  if (!prompt && state.attachments.length) prompt = "कृपया संलग्न फाइल/फोटो की सामग्री पढ़कर समझाओ और मेरे सवालों में मदद करो।";
   const shouldSpeakReply = state.voiceReplyPending;
   state.voiceReplyPending = false;
 
@@ -709,6 +710,21 @@ async function sendMessage(text) {
   if (input) {
     input.value = "";
     input.style.height = "";
+  }
+
+  let attachmentContext = "";
+  if (state.attachments.length) {
+    if (!window.confirm("चुनी गई फाइलों से निकाला गया पाठ इंटरनेट के जरिए AI सेवा को भेजा जाएगा। क्या भेजना है?")) return;
+    try {
+      attachmentContext = await extractAttachmentsText(state.attachments);
+      if (!attachmentContext.trim()) throw new Error("फाइलों से कोई पढ़ने योग्य पाठ नहीं मिला।");
+      prompt = (prompt + "\\n\\nसंलग्न सामग्री:\\n" + attachmentContext).slice(0, 11500);
+      state.attachments = [];
+      renderAttachmentPreview();
+    } catch (error) {
+      setStatus("फाइल नहीं पढ़ी जा सकी: " + (error?.message || "अज्ञात त्रुटि"));
+      return;
+    }
   }
 
   const needsCurrentInfo = /(आज|अभी|वर्तमान|ताज़ा|ताजा|लेटेस्ट|latest|current|today|now|भाव|कीमत|रेट|rate|price|मौसम|weather|तापमान|ट्रेन|रेल|train|pnr|समय सारणी|खबर|समाचार|news|सोने|सोना|gold|चांदी|चाँदी|silver|स्टॉक|शेयर बाजार|share market|exchange rate|डॉलर|रुपया)/i.test(prompt);
@@ -1098,14 +1114,125 @@ function renderAttachmentPreview() {
 
 function addFiles(fileList) {
   if (!fileList) return;
-
-  const files = Array.from(fileList).slice(0, 5 - state.attachments.length);
+  const allowed = Array.from(fileList).filter(file =>
+    file.size <= 10 * 1024 * 1024 &&
+    (/^(image\\/(png|jpeg|webp))$/.test(file.type) ||
+      file.type === "application/pdf" ||
+      file.type === "text/plain" ||
+      file.name.toLowerCase().endsWith(".docx"))
+  );
+  const files = allowed.slice(0, Math.max(0, 5 - state.attachments.length));
   state.attachments.push(...files);
   renderAttachmentPreview();
+  if (files.length) setStatus("फाइल तैयार है। भेजने पर उसका पाठ AI को भेजा जाएगा।");
+  else if (fileList.length) setStatus("फाइल का प्रकार समर्थित नहीं है, या फाइल 10 MB से बड़ी है। PDF, DOCX, TXT या PNG/JPG/WEBP फोटो चुनें।");
+}
 
-  if (files.length) {
-    setStatus("फाइल चुनी गई है; अभी उसकी सामग्री AI को नहीं भेजी जाती।");
+function loadExternalScript(src, globalName) {
+  if (window[globalName]) return Promise.resolve(window[globalName]);
+  if (window.__sarathiScriptPromises?.[src]) return window.__sarathiScriptPromises[src];
+  window.__sarathiScriptPromises = window.__sarathiScriptPromises || {};
+  window.__sarathiScriptPromises[src] = new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = src;
+    script.async = true;
+    script.onload = () => window[globalName]
+      ? resolve(window[globalName])
+      : reject(new Error("लाइब्रेरी लोड हुई, लेकिन उपलब्ध नहीं है।"));
+    script.onerror = () => reject(new Error("फाइल पढ़ने की लाइब्रेरी डाउनलोड नहीं हो सकी। इंटरनेट जाँचें।"));
+    document.head.appendChild(script);
+  });
+  return window.__sarathiScriptPromises[src];
+}
+
+async function extractPdfText(file) {
+  const pdfjs = await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs");
+  pdfjs.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
+  const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
+  const pageLimit = Math.min(pdf.numPages, 25);
+  const pages = [];
+  for (let pageNo = 1; pageNo <= pageLimit; pageNo++) {
+    const page = await pdf.getPage(pageNo);
+    const content = await page.getTextContent();
+    const text = content.items.map(item => item.str || "").join(" ").trim();
+    if (text) pages.push("[पृष्ठ " + pageNo + "]\\n" + text);
+    page.cleanup();
   }
+  let result = pages.join("\\n\\n");
+  if (!result.trim()) {
+    const Tesseract = await loadExternalScript(
+      "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js", "Tesseract"
+    );
+    const worker = await Tesseract.createWorker("eng+hin");
+    try {
+      const ocrPages = [];
+      for (let pageNo = 1; pageNo <= Math.min(pageLimit, 5); pageNo++) {
+        const page = await pdf.getPage(pageNo);
+        const viewport = page.getViewport({ scale: 1.35 });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.ceil(viewport.width);
+        canvas.height = Math.ceil(viewport.height);
+        await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+        const output = await worker.recognize(canvas);
+        if (output.data.text.trim()) ocrPages.push("[पृष्ठ " + pageNo + " OCR]\\n" + output.data.text.trim());
+        canvas.width = 0; canvas.height = 0;
+        page.cleanup();
+      }
+      result = ocrPages.join("\\n\\n");
+    } finally {
+      await worker.terminate();
+    }
+  }
+  return result.slice(0, 8500);
+}
+
+async function extractOneFile(file) {
+  const name = file.name.toLowerCase();
+  if (file.type === "text/plain" || name.endsWith(".txt")) {
+    return (await file.text()).slice(0, 8500);
+  }
+  if (file.type === "application/pdf" || name.endsWith(".pdf")) {
+    return await extractPdfText(file);
+  }
+  if (name.endsWith(".docx")) {
+    const mammoth = await loadExternalScript(
+      "https://cdn.jsdelivr.net/npm/mammoth@1.9.0/mammoth.browser.min.js", "mammoth"
+    );
+    const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+    return String(result.value || "").slice(0, 8500);
+  }
+  if (file.type.startsWith("image/")) {
+    const Tesseract = await loadExternalScript(
+      "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js", "Tesseract"
+    );
+    const worker = await Tesseract.createWorker("eng+hin");
+    try {
+      const result = await worker.recognize(file);
+      return String(result.data.text || "").slice(0, 8500);
+    } finally {
+      await worker.terminate();
+    }
+  }
+  throw new Error(file.name + ": यह फाइल प्रकार समर्थित नहीं है।");
+}
+
+async function extractAttachmentsText(files) {
+  const output = [];
+  let remaining = 9500;
+  for (const file of files) {
+    setStatus("फाइल पढ़ी जा रही है: " + file.name);
+    const content = await extractOneFile(file);
+    const clean = String(content || "").trim();
+    if (!clean) {
+      output.push("[फाइल: " + file.name + "]\\nइस फाइल से पढ़ने योग्य पाठ नहीं मिला।");
+      continue;
+    }
+    const chunk = clean.slice(0, remaining);
+    output.push("[फाइल: " + file.name + "]\\n" + chunk);
+    remaining -= chunk.length;
+    if (remaining <= 0) break;
+  }
+  return output.join("\\n\\n");
 }
 
 function openAttachmentDialog() {
@@ -1243,6 +1370,45 @@ function runStudyAction(action) {
     "\nकाम: " + (tasks[action] || tasks.explain) +
     "\nआधिकारिक सिलेबस, परीक्षा तिथि या पुस्तक के तथ्य उपलब्ध स्रोत से सत्यापित करो; जानकारी न हो तो साफ बताओ, अनुमान मत लगाओ।";
   sendMessage(prompt);
+}
+
+const STUDY_PROGRESS_KEY = "sarathi_ai_study_progress_v1";
+
+function readStudyProgress() {
+  try { return JSON.parse(localStorage.getItem(STUDY_PROGRESS_KEY) || '{"sessions":0,"lastDate":""}'); }
+  catch { return { sessions: 0, lastDate: "" }; }
+}
+
+function renderStudyProgress() {
+  const progress = readStudyProgress();
+  const count = $("studyProgressCount");
+  if (count) count.textContent = String(progress.sessions || 0) + " अध्ययन सत्र पूरे";
+  const done = $("studyDoneBtn");
+  if (done) {
+    const today = new Date().toISOString().slice(0, 10);
+    done.disabled = progress.lastDate === today;
+    done.textContent = done.disabled ? "✓ आज का सत्र दर्ज है" : "✓ आज का सत्र पूरा";
+  }
+}
+
+function bindStudyProgress() {
+  renderStudyProgress();
+  $("studyDoneBtn")?.addEventListener("click", () => {
+    const progress = readStudyProgress();
+    const today = new Date().toISOString().slice(0, 10);
+    if (progress.lastDate !== today) {
+      progress.sessions = Number(progress.sessions || 0) + 1;
+      progress.lastDate = today;
+      try { localStorage.setItem(STUDY_PROGRESS_KEY, JSON.stringify(progress)); } catch {}
+    }
+    renderStudyProgress();
+    setStatus("आज का अध्ययन सत्र दर्ज हो गया।");
+  });
+  $("studyResetBtn")?.addEventListener("click", () => {
+    if (!window.confirm("क्या पढ़ाई की प्रगति का रिकॉर्ड रीसेट करना है?")) return;
+    localStorage.removeItem(STUDY_PROGRESS_KEY);
+    renderStudyProgress();
+  });
 }
 
 function bindEducationHub() {
@@ -1387,6 +1553,7 @@ function initApp() {
   loadChats();
   bindEvents();
   bindEducationHub();
+  bindStudyProgress();
   renderHistory();
   renderMessages();
   renderAttachmentPreview();
