@@ -592,7 +592,8 @@ function handleLocalPhoneCommand(prompt) {
         "सेटिंग्स": "settings", "settings": "settings", "यूट्यूब": "youtube", "youtube": "youtube",
         "व्हाट्सऐप": "whatsapp", "whatsapp": "whatsapp"
       };
-      const key = apps[requested];
+      // Known Hindi names use aliases; any other exact launcher app name is also supported.
+      const key = apps[requested] || requested;
       if (key) {
         action = {
           confirm: "फ़ोन में " + requested + " ऐप खोलना है?",
