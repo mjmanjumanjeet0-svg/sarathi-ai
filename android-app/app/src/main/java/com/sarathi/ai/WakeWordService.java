@@ -265,27 +265,44 @@ public class WakeWordService extends Service {
         }
     }
 
-    private void handleRecognition(String json) {
-        if (!running || speaking || json == null) return;
+    private void handlePartialRecognition(String json) {
+        if (!running || speaking || awaitingCommand || json == null) return;
         try {
-            String text = new JSONObject(json).optString("text", "").toLowerCase(Locale.ROOT);
-            String normalized = text.replaceAll("[^\\p{L}\\p{N}]+", " ").trim().replaceAll("\\s+", " ");
-            // Wake only on a complete greeting phrase; ordinary mentions of Sarathi must not activate it.
-            // Accept the standalone wake name as well as common Hindi/English greetings.
-            // Vosk may omit the greeting word even when the user said "हेलो सारथी".
-            boolean wakeDetected = normalized.equals("सारथी")
-                    || normalized.equals("सारथी जी")
-                    || normalized.endsWith(" सारथी")
-                    || normalized.endsWith(" सारथी जी")
-                    || normalized.matches("(?:हेलो|हैलो|नमस्ते|हे)\\s+सारथी")
-                    || normalized.matches("(?:hello|helo|hi|namaste|hey)\\s+(?:sarathi|sarthi)")
-                    || normalized.equals("sarathi")
-                    || normalized.equals("sarthi");
-            if (wakeDetected) {
-                showWakeNotification();
-                speakWakeReply();
-            }
+            String partial = new JSONObject(json).optString("partial", "");
+            if (!partial.trim().isEmpty()) checkWakePhrase(partial);
         } catch (Exception ignored) {}
+    }
+
+    private void handleRecognition(String json) {
+        if (!running || speaking || awaitingCommand || json == null) return;
+        try {
+            String recognized = new JSONObject(json).optString("text", "");
+            if (!recognized.trim().isEmpty()) checkWakePhrase(recognized);
+        } catch (Exception ignored) {}
+    }
+
+    private void checkWakePhrase(String recognized) {
+        if (!running || speaking || awaitingCommand || recognized == null) return;
+        String normalized = recognized.toLowerCase(Locale.ROOT)
+                .replaceAll("[^\\p{L}\\p{N}]+", " ").trim().replaceAll("\\s+", " ");
+        // Match partial and final Vosk hypotheses so Sarathi can react without waiting
+        // for a long pause after the wake phrase.
+        boolean wakeDetected = normalized.equals("सारथी")
+                || normalized.equals("सारथी जी")
+                || normalized.endsWith(" सारथी")
+                || normalized.endsWith(" सारथी जी")
+                || normalized.matches("(?:हेलो|हैलो|नमस्ते|हे)\\s+सारथी")
+                || normalized.matches("(?:hello|helo|hi|namaste|hey)\\s+(?:sarathi|sarthi)")
+                || normalized.equals("sarathi")
+                || normalized.equals("sarthi");
+        if (wakeDetected) {
+            showWakeNotification();
+            speakWakeReply();
+        } else if (!normalized.isEmpty()) {
+            // Local diagnostic: confirms what the offline recognizer actually heard.
+            String shortText = normalized.length() > 45 ? normalized.substring(0, 45) : normalized;
+            updateStatus("आवाज़ पहचानी: " + shortText);
+        }
     }
 
     private void speakWakeReply() {
