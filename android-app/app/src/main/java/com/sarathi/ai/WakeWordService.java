@@ -41,7 +41,7 @@ public class WakeWordService extends Service {
     private static final String MODEL_NAME = "vosk-model-small-hi-0.22";
     private static final String MODEL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip";
     private final Handler handler = new Handler(Looper.getMainLooper());
-    private final ExecutorService worker = Executors.newSingleThreadExecutor();
+    private ExecutorService worker = Executors.newSingleThreadExecutor();
     private volatile boolean running = false;
     private volatile boolean speaking = false;
     private Model model;
@@ -76,6 +76,7 @@ public class WakeWordService extends Service {
             }
             startForeground(NOTIFICATION_ID, buildNotification("पहली बार हिंदी मॉडल डाउनलोड हो रहा है…"));
             running = true;
+            if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
             worker.execute(this::prepareModelAndListen);
         }
         return START_STICKY;
@@ -125,9 +126,9 @@ public class WakeWordService extends Service {
             speechService = new SpeechService(recognizer, 16000.0f);
             updateStatus("सारथी ऑफ़लाइन हिंदी में सुन रहा है — बंद करने तक");
             speechService.startListening(new RecognitionListener() {
-                @Override public void onPartialResult(String hypothesis) { handleRecognition(hypothesis); }
+                @Override public void onPartialResult(String hypothesis) { }
                 @Override public void onResult(String result) { handleRecognition(result); }
-                @Override public void onFinalResult(String result) { handleRecognition(result); }
+                @Override public void onFinalResult(String result) { }
                 @Override public void onError(Exception exception) {
                     if (running) updateStatus("माइक्रोफ़ोन में समस्या: अनुमति जाँचें और दोबारा चालू करें");
                 }
@@ -196,12 +197,10 @@ public class WakeWordService extends Service {
         if (!running || speaking || json == null) return;
         try {
             String text = new JSONObject(json).optString("text", "").toLowerCase(Locale.ROOT);
-            String normalized = text.replaceAll("[^\\p{L}]", "");
-            boolean wakeDetected = normalized.contains("सारथी")
-                    || normalized.contains("सारथ")
-                    || normalized.contains("सरथी")
-                    || normalized.contains("sarathi")
-                    || normalized.contains("sarthi");
+            String normalized = text.replaceAll("[^\\p{L}\\p{N}]+", " ").trim().replaceAll("\\s+", " ");
+            // Wake only on a complete greeting phrase; ordinary mentions of Sarathi must not activate it.
+            boolean wakeDetected = normalized.matches("(?:हेलो|हैलो|नमस्ते)\\s+सारथी")
+                    || normalized.matches("(?:hello|helo|namaste)\\s+(?:sarathi|sarthi)");
             if (wakeDetected) {
                 showWakeNotification();
                 speakWakeReply();
