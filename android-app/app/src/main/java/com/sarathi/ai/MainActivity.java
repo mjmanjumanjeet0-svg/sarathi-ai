@@ -59,23 +59,24 @@ public class MainActivity extends Activity {
     private boolean wakeReceiverRegistered = false;
     private final BroadcastReceiver wakeDetectedReceiver = new BroadcastReceiver() {
         @Override public void onReceive(Context context, Intent intent) {
-            if (!appInForeground || intent == null) return;
+            if (intent == null) return;
             if (ACTION_WAKE_RESULT.equals(intent.getAction())) {
                 String command = intent.getStringExtra(EXTRA_WAKE_TEXT);
                 wakeCommandSession = false;
-                notifyVoice("onWakeCommandResult", command == null ? "" : command);
+                pendingWakeResultText = command == null ? "" : command;
+                pendingWakeResult = true;
+                deliverPendingWakeEvents();
                 return;
             }
             if (!ACTION_WAKE_DETECTED.equals(intent.getAction())) return;
             pendingWakeCommand = true;
             wakeCommandSession = true;
-            if (pageLoaded) {
-                pendingWakeCommand = false;
-                startWakeCommandCapture();
-            }
+            deliverPendingWakeEvents();
         }
     };
     private boolean pendingWakeCommand = false;
+    private boolean pendingWakeResult = false;
+    private String pendingWakeResultText = "";
     private boolean wakeCommandSession = false;
     private String selectedSpeechLanguage = "hi-IN";
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -96,6 +97,9 @@ public class MainActivity extends Activity {
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
+        // The app shell is hosted on GitHub Pages; avoid stale cached JavaScript
+        // after web fixes are published.
+        settings.setCacheMode(WebSettings.LOAD_NO_CACHE);
         settings.setLoadsImagesAutomatically(true);
         settings.setMediaPlaybackRequiresUserGesture(true);
         settings.setAllowFileAccess(false);
@@ -186,10 +190,7 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 pageLoaded = true;
-                if (pendingWakeCommand) {
-                    pendingWakeCommand = false;
-                    startWakeCommandCapture();
-                }
+                deliverPendingWakeEvents();
             }
 
             @Override
@@ -220,10 +221,21 @@ public class MainActivity extends Activity {
             intent.setAction(null);
             pendingWakeCommand = true;
             wakeCommandSession = true;
-            if (pageLoaded) {
-                pendingWakeCommand = false;
-                startWakeCommandCapture();
-            }
+            deliverPendingWakeEvents();
+        }
+    }
+
+    private void deliverPendingWakeEvents() {
+        if (!appInForeground || !pageLoaded) return;
+        if (pendingWakeResult) {
+            String command = pendingWakeResultText;
+            pendingWakeResult = false;
+            pendingWakeResultText = "";
+            notifyVoice("onWakeCommandResult", command);
+        }
+        if (pendingWakeCommand) {
+            pendingWakeCommand = false;
+            startWakeCommandCapture();
         }
     }
 
@@ -766,6 +778,7 @@ public class MainActivity extends Activity {
     protected void onResume() {
         super.onResume();
         appInForeground = true;
+        deliverPendingWakeEvents();
     }
 
     @Override
