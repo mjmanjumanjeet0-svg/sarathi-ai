@@ -32,22 +32,33 @@ public class WakeWordService extends Service {
     }
 
     @Override public int onStartCommand(Intent intent, int flags, int startId) {
+        android.content.SharedPreferences prefs =
+                getSharedPreferences("sarathi_wake_settings", MODE_PRIVATE);
         if (intent != null && ACTION_STOP.equals(intent.getAction())) {
+            prefs.edit().putBoolean("enabled", false).apply();
             stopListening();
             stopForeground(true);
             stopSelf();
             return START_NOT_STICKY;
         }
+        if (intent == null && !prefs.getBoolean("enabled", false)) {
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+        if (intent != null && ACTION_START.equals(intent.getAction())) {
+            prefs.edit().putBoolean("enabled", true).apply();
+        }
         if (!running) {
             if (Build.VERSION.SDK_INT < 31 || !SpeechRecognizer.isOnDeviceRecognitionAvailable(this)) {
+                prefs.edit().putBoolean("enabled", false).apply();
                 stopSelf();
                 return START_NOT_STICKY;
             }
-            startForeground(NOTIFICATION_ID, buildNotification("सारथी वेक-वर्ड सुन रहा है"));
+            startForeground(NOTIFICATION_ID, buildNotification("सारथी वेक-वर्ड चालू है — बंद करने तक सुनता रहेगा"));
             running = true;
             beginRecognition();
         }
-        return START_NOT_STICKY;
+        return START_STICKY;
     }
 
     private void createChannel() {
