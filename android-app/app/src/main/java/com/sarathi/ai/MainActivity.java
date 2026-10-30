@@ -45,6 +45,7 @@ public class MainActivity extends Activity {
     private boolean pendingListen = false;
     private boolean pageLoaded = false;
     private boolean pendingWakeCommand = false;
+    private boolean wakeCommandSession = false;
     private String selectedSpeechLanguage = "hi-IN";
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -160,6 +161,7 @@ public class MainActivity extends Activity {
         if (intent != null && ACTION_WAKE_COMMAND.equals(intent.getAction())) {
             intent.setAction(null);
             pendingWakeCommand = true;
+            wakeCommandSession = true;
             if (pageLoaded) {
                 pendingWakeCommand = false;
                 startListening();
@@ -240,10 +242,14 @@ public class MainActivity extends Activity {
                 .setMessage(message)
                 .setPositiveButton("हाँ, इस बार इस्तेमाल करें", (dialog, which) -> startRecognition(true))
                 .setNegativeButton("रद्द करें", (dialog, which) -> {
+                    wakeCommandSession = false;
                     notifyVoice("onError", "ऑनलाइन आवाज़ पहचान रद्द कर दी गई। आपकी आवाज़ नहीं सुनी गई।");
                     resumeWakeWordAfterCommand();
                 })
-                .setOnCancelListener(dialog -> resumeWakeWordAfterCommand())
+                .setOnCancelListener(dialog -> {
+                    wakeCommandSession = false;
+                    resumeWakeWordAfterCommand();
+                })
                 .setCancelable(true)
                 .show();
     }
@@ -325,6 +331,7 @@ public class MainActivity extends Activity {
                     if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS
                             && !hasMicrophonePermission()) {
                         pendingListen = false;
+                        wakeCommandSession = false;
                         notifyVoice("onError", "Android ने माइक्रोफ़ोन अनुमति नहीं दी। सेटिंग में Sarathi AI → माइक्रोफ़ोन → केवल ऐप इस्तेमाल करते समय अनुमति चुनें।");
                         resumeWakeWordAfterCommand();
                     } else if (!useOnlineService) {
@@ -351,8 +358,14 @@ public class MainActivity extends Activity {
                     ArrayList<String> matches = results == null ? null
                         : results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                     if (matches != null && !matches.isEmpty()) {
-                        notifyVoice("onResult", matches.get(0));
+                        if (wakeCommandSession) {
+                            wakeCommandSession = false;
+                            notifyVoice("onWakeCommandResult", matches.get(0));
+                        } else {
+                            notifyVoice("onResult", matches.get(0));
+                        }
                     } else {
+                        wakeCommandSession = false;
                         notifyVoice("onError", "आवाज़ से शब्द समझ नहीं आए। फिर बोलकर देखें।");
                     }
                     resumeWakeWordAfterCommand();
@@ -377,6 +390,7 @@ public class MainActivity extends Activity {
             intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);
             speechRecognizer.startListening(intent);
         } catch (Exception error) {
+            wakeCommandSession = false;
             notifyVoice("onError", "माइक्रोफ़ोन शुरू नहीं हो सका।");
             resumeWakeWordAfterCommand();
         }
@@ -392,6 +406,7 @@ public class MainActivity extends Activity {
                 beginListeningWithSelectedLanguage();
             } else {
                 pendingListen = false;
+                wakeCommandSession = false;
                 notifyVoice("onError", "माइक्रोफ़ोन अनुमति नहीं मिली। अनुमति के बिना आवाज़ नहीं सुनी जाएगी।");
                 resumeWakeWordAfterCommand();
             }
