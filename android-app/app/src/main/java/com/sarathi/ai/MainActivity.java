@@ -155,16 +155,19 @@ public class MainActivity extends Activity {
     }
 
     private void startListening() {
-        String[] labels = Build.VERSION.SDK_INT >= 34
-                ? new String[]{"हिन्दी + English (अपने-आप पहचानें)", "केवल हिन्दी", "केवल English"}
-                : new String[]{"हिन्दी", "English"};
+        // Android 14+ can detect Hindi and English in the same utterance when the speech provider supports it.
+        if (Build.VERSION.SDK_INT >= 34) {
+            selectedSpeechLanguage = "auto";
+            beginListeningWithSelectedLanguage();
+            return;
+        }
+
+        // Older Android versions do not expose reliable built-in language detection.
+        String[] labels = new String[]{"हिन्दी", "English"};
         new android.app.AlertDialog.Builder(this)
                 .setTitle("आवाज़ की भाषा चुनें")
                 .setItems(labels, (dialog, which) -> {
-                    if (Build.VERSION.SDK_INT >= 34 && which == 0) selectedSpeechLanguage = "auto";
-                    else if ((Build.VERSION.SDK_INT >= 34 && which == 2)
-                            || (Build.VERSION.SDK_INT < 34 && which == 1)) selectedSpeechLanguage = "en-IN";
-                    else selectedSpeechLanguage = "hi-IN";
+                    selectedSpeechLanguage = which == 1 ? "en-IN" : "hi-IN";
                     beginListeningWithSelectedLanguage();
                 })
                 .setNegativeButton("रद्द करें", (dialog, which) -> notifyVoice("onError", "आवाज़ पहचान रद्द कर दी गई।"))
