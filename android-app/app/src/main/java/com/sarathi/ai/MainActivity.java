@@ -282,6 +282,14 @@ public class MainActivity extends Activity {
             Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN");
+            // Android 14+ can detect Hindi and Indian English in the same utterance.
+            if (Build.VERSION.SDK_INT >= 34) {
+                intent.putExtra(RecognizerIntent.EXTRA_ENABLE_LANGUAGE_DETECTION, true);
+                intent.putExtra(
+                    RecognizerIntent.EXTRA_LANGUAGE_DETECTION_ALLOWED_LANGUAGES,
+                    new String[]{"hi-IN", "en-IN"}
+                );
+            }
             intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, !useOnlineService);
             intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);
             speechRecognizer.startListening(intent);
