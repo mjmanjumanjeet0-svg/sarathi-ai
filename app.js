@@ -715,6 +715,7 @@ async function sendMessage(text) {
   let attachmentContext = "";
   if (state.attachments.length) {
     if (!window.confirm("चुनी गई फाइलों से निकाला गया पाठ इंटरनेट के जरिए AI सेवा को भेजा जाएगा। क्या भेजना है?")) return;
+    setBusy(true);
     try {
       attachmentContext = await extractAttachmentsText(state.attachments);
       if (!attachmentContext.trim()) throw new Error("फाइलों से कोई पढ़ने योग्य पाठ नहीं मिला।");
@@ -722,12 +723,14 @@ async function sendMessage(text) {
       state.attachments = [];
       renderAttachmentPreview();
     } catch (error) {
+      setBusy(false);
       setStatus("फाइल नहीं पढ़ी जा सकी: " + (error?.message || "अज्ञात त्रुटि"));
       return;
     }
+    setBusy(false);
   }
 
-  const needsCurrentInfo = /(आज|अभी|वर्तमान|ताज़ा|ताजा|लेटेस्ट|latest|current|today|now|भाव|कीमत|रेट|rate|price|मौसम|weather|तापमान|ट्रेन|रेल|train|pnr|समय सारणी|खबर|समाचार|news|सोने|सोना|gold|चांदी|चाँदी|silver|स्टॉक|शेयर बाजार|share market|exchange rate|डॉलर|रुपया)/i.test(prompt);
+  const needsCurrentInfo = /(आज|अभी|वर्तमान|ताज़ा|ताजा|लेटेस्ट|latest|current|today|now|भाव|कीमत|रेट|rate|price|मौसम|weather|तापमान|ट्रेन|रेल|train|pnr|समय सारणी|खबर|समाचार|news|सोने|सोना|gold|चांदी|चाँदी|silver|स्टॉक|शेयर बाजार|share market|exchange rate|डॉलर|रुपया|सिलेबस|पाठ्यक्रम|परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|परिणाम|आवेदन|फॉर्म|फीस|पात्रता|नियम|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(prompt);
   const useWebSearch = !isSimpleGreeting(prompt) && (explicitlyRequestsWebSearch(prompt) || (state.webEnabled && needsCurrentInfo));
 
   addMessage("user", prompt);
@@ -1385,7 +1388,7 @@ function renderStudyProgress() {
   if (count) count.textContent = String(progress.sessions || 0) + " अध्ययन सत्र पूरे";
   const done = $("studyDoneBtn");
   if (done) {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
     done.disabled = progress.lastDate === today;
     done.textContent = done.disabled ? "✓ आज का सत्र दर्ज है" : "✓ आज का सत्र पूरा";
   }
@@ -1395,7 +1398,7 @@ function bindStudyProgress() {
   renderStudyProgress();
   $("studyDoneBtn")?.addEventListener("click", () => {
     const progress = readStudyProgress();
-    const today = new Date().toISOString().slice(0, 10);
+    const today = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 10);
     if (progress.lastDate !== today) {
       progress.sessions = Number(progress.sessions || 0) + 1;
       progress.lastDate = today;
