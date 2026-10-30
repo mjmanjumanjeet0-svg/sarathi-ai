@@ -557,13 +557,17 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface
         public void openDialer(String phone) {
-            String number = cleanPhone(phone);
-            if (number == null) {
-                notifyVoice("onError", "कॉल के लिए 7 से 15 अंकों का फ़ोन नंबर चाहिए।");
+            String raw = phone == null ? "" : phone.trim();
+            String number = raw.isEmpty() ? "" : cleanPhone(raw);
+            if (!raw.isEmpty() && number == null) {
+                notifyVoice("onError", "कॉल के लिए 7 से 15 अंकों का सही फ़ोन नंबर चाहिए।");
                 return;
             }
+            Intent dialIntent = number.isEmpty()
+                    ? new Intent(Intent.ACTION_DIAL)
+                    : new Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", number, null));
             runOnUiThread(() -> launchExternalIntent(
-                new Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", number, null)),
+                dialIntent,
                 "डायलर नहीं खुल सका।"
             ));
         }
@@ -661,11 +665,17 @@ public class MainActivity extends Activity {
                 case "settings":
                     intent = new Intent(android.provider.Settings.ACTION_SETTINGS);
                     break;
+                case "phone":
+                case "dialer":
+                    intent = new Intent(Intent.ACTION_DIAL);
+                    break;
                 case "youtube":
                     intent = getPackageManager().getLaunchIntentForPackage("com.google.android.youtube");
+                    if (intent == null) intent = findInstalledAppIntent("YouTube");
                     break;
                 case "whatsapp":
                     intent = getPackageManager().getLaunchIntentForPackage("com.whatsapp");
+                    if (intent == null) intent = findInstalledAppIntent("WhatsApp");
                     break;
                 default:
                     intent = findInstalledAppIntent(appName);
