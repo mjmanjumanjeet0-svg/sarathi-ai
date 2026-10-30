@@ -788,6 +788,11 @@ async function sendMessage(text) {
 
     addMessage("assistant", answer.trim());
 
+    // Speak every completed Sarathi reply through Android TTS when running in the native app.
+    if (window.SarathiNative && typeof window.SarathiNative.speak === "function") {
+      window.SarathiNative.speak(answer.trim());
+    }
+
     const relevantSources = filterSourcesForPrompt(prompt, data.sources);
 
     if (useWebSearch && relevantSources.length) {
