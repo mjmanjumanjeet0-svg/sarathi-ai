@@ -44,6 +44,8 @@ public class WakeWordService extends Service {
     private ExecutorService worker = Executors.newSingleThreadExecutor();
     private volatile boolean running = false;
     private volatile boolean speaking = false;
+    private volatile boolean retryScheduled = false;
+    private int retryAttempt = 0;
     private Model model;
     private Recognizer recognizer;
     private SpeechService speechService;
@@ -130,21 +132,64 @@ public class WakeWordService extends Service {
                 @Override public void onResult(String result) { handleRecognition(result); }
                 @Override public void onFinalResult(String result) { }
                 @Override public void onError(Exception exception) {
-                    if (running) updateStatus("माइक्रोफ़ोन में समस्या: अनुमति जाँचें और दोबारा चालू करें");
+                    scheduleListeningRetry("माइक्रोफ़ोन में अस्थायी समस्या आई है");
                 }
-                @Override public void onTimeout() {}
+                @Override public void onTimeout() {
+                    scheduleListeningRetry("आवाज़ पहचान दोबारा शुरू की जा रही है");
+                }
             });
         } catch (Exception error) {
-            handler.post(() -> {
-                if (running) {
-                    updateStatus("मॉडल तैयार नहीं हुआ। इंटरनेट और खाली जगह जाँचें; फिर दोबारा चालू करें।");
-                    getSharedPreferences("sarathi_wake_settings", MODE_PRIVATE).edit().putBoolean("enabled", false).apply();
-                    stopListening();
-                    stopForeground(true);
-                    stopSelf();
+            scheduleListeningRetry("मॉडल या माइक्रोफ़ोन तैयार नहीं हुआ; सारथी फिर कोशिश करेगा");
+        }
+    }
+
+    private void scheduleListeningRetry(String message) {
+        if (!running || retryScheduled) return;
+        retryScheduled = true;
+        int attempt = Math.min(retryAttempt++, 6);
+        long delayMs = Math.min(5000L << attempt, 300000L);
+        updateStatus(message + "। " + Math.max(1, delayMs / 1000) + " सेकंड बाद फिर कोशिश होगी।");
+        handler.postDelayed(() -> {
+            retryScheduled = false;
+            if (!running) return;
+            if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
+            worker.execute(() -> {
+                try {
+                    if (speechService != null) {
+                        speechService.cancel();
+                        speechService.shutdown();
+                        speechService = null;
+                    }
+                    if (recognizer != null) {
+                        recognizer.close();
+                        recognizer = null;
+                    }
+                    if (model == null) {
+                        prepareModelAndListen();
+                        return;
+                    }
+                    recognizer = new Recognizer(model, 16000.0f);
+                    speechService = new SpeechService(recognizer, 16000.0f);
+                    speechService.startListening(new RecognitionListener() {
+                        @Override public void onPartialResult(String hypothesis) { }
+                        @Override public void onResult(String result) {
+                            handleRecognition(result);
+                        }
+                        @Override public void onFinalResult(String result) { }
+                        @Override public void onError(Exception exception) {
+                            scheduleListeningRetry("माइक्रोफ़ोन में अस्थायी समस्या आई है");
+                        }
+                        @Override public void onTimeout() {
+                            scheduleListeningRetry("आवाज़ पहचान दोबारा शुरू की जा रही है");
+                        }
+                    });
+                    retryAttempt = 0;
+                    updateStatus("सारथी ऑफ़लाइन हिंदी में सुन रहा है — बंद करने तक");
+                } catch (Exception error) {
+                    scheduleListeningRetry("आवाज़ पहचान फिर शुरू नहीं हो सकी");
                 }
             });
-        }
+        }, delayMs);
     }
 
     private void downloadModel(File destination) throws Exception {
@@ -254,7 +299,9 @@ public class WakeWordService extends Service {
 
     private void stopListening() {
         running = false;
-        worker.shutdownNow();
+        retryScheduled = false;
+        handler.removeCallbacksAndMessages(null);
+        if (worker != null) worker.shutdownNow();
         if (speechService != null) { speechService.cancel(); speechService.shutdown(); speechService = null; }
         if (recognizer != null) { recognizer.close(); recognizer = null; }
         if (model != null) { model.close(); model = null; }
