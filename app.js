@@ -1011,6 +1011,9 @@ async function sendMessage(text) {
     );
 
     setStatus("कनेक्शन की समस्या");
+    if (shouldSpeakReply && !state.voiceStopRequested && window.SarathiNative && typeof window.SarathiNative.speak === "function") {
+      window.SarathiNative.speak("माफ़ कीजिए, अभी जवाब नहीं मिल पाया। " + message);
+    }
   } finally {
     setBusy(false);
     if (input) {
@@ -1230,9 +1233,14 @@ window.SarathiVoice = {
       setStatus("सारथी आपका आदेश समझ रहा है…");
       state.voiceStopRequested = false;
       state.voiceReplyPending = true;
+      // Pause recognition while the request is being processed so one utterance
+      // cannot accidentally trigger overlapping requests.
+      if (window.SarathiNative && typeof window.SarathiNative.pauseWakeWord === "function") {
+        window.SarathiNative.pauseWakeWord();
+      }
       sendMessage(String(transcript).trim());
     } else {
-      const message = "आवाज़ समझ नहीं आई। कृपया हेलो सारथी कहकर आदेश थोड़ा पास और साफ़ बोलें।";
+      const message = "आवाज़ समझ नहीं आई। कृपया फिर से साफ़ बोलें।";
       setStatus(message);
       if (window.SarathiNative && typeof window.SarathiNative.speak === "function") {
         window.SarathiNative.speak(message);
