@@ -153,7 +153,7 @@ public class WakeWordService extends Service {
             speechService = new SpeechService(recognizer, 16000.0f);
             updateStatus("सारथी ऑफ़लाइन हिंदी में सुन रहा है — बंद करने तक");
             speechService.startListening(new RecognitionListener() {
-                @Override public void onPartialResult(String hypothesis) { }
+                @Override public void onPartialResult(String hypothesis) { handlePartialRecognition(hypothesis); }
                 @Override public void onResult(String result) { handleRecognition(result); }
                 @Override public void onFinalResult(String result) { }
                 @Override public void onError(Exception exception) {
@@ -197,7 +197,7 @@ public class WakeWordService extends Service {
                     recognizer = new Recognizer(model, 16000.0f);
                     speechService = new SpeechService(recognizer, 16000.0f);
                     speechService.startListening(new RecognitionListener() {
-                        @Override public void onPartialResult(String hypothesis) { }
+                        @Override public void onPartialResult(String hypothesis) { handlePartialRecognition(hypothesis); }
                         @Override public void onResult(String result) {
                             handleRecognition(result);
                         }
