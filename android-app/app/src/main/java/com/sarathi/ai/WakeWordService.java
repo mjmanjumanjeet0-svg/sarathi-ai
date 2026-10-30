@@ -352,7 +352,16 @@ public class WakeWordService extends Service {
         if (!running || textToSpeech == null) { resumeListening(); return; }
         textToSpeech.setOnUtteranceProgressListener(new UtteranceProgressListener() {
             @Override public void onStart(String id) {}
-            @Override public void onDone(String id) { handler.postDelayed(WakeWordService.this::resumeListening, 350); }
+            @Override public void onDone(String id) {
+                handler.postDelayed(() -> {
+                    if (running && awaitingCommand) {
+                        Intent detected = new Intent(MainActivity.ACTION_WAKE_DETECTED);
+                        detected.setPackage(getPackageName());
+                        sendBroadcast(detected);
+                    }
+                    resumeListening();
+                }, 350);
+            }
             @Override public void onError(String id) { handler.post(WakeWordService.this::resumeListening); }
         });
         int result = textToSpeech.speak("जी, बताइए।", TextToSpeech.QUEUE_FLUSH, null, "sarathi_wake_reply");
