@@ -422,20 +422,20 @@ async function enrichGoldRateResults(results) {
       if (!response.ok) return item;
       const html = (await response.text()).slice(0, 1200000);
       const visible = cleanText(html
-        .replace(/<script[\\s\\S]*?<\\/script>/gi, " ")
-        .replace(/<style[\\s\\S]*?<\\/style>/gi, " ")
+        .replace(/<script[\s\S]*?<\/script>/gi, " ")
+        .replace(/<style[\s\S]*?<\/style>/gi, " ")
         .replace(/<[^>]+>/g, " ")
         .replace(/&nbsp;|&#160;/gi, " ")
         .replace(/&#8377;|&\#x20b9;/gi, "₹"));
       const contexts = [];
-      const labelPattern = /(?:22\\s*(?:k|karat|carat)|24\\s*(?:k|karat|carat)|22 कैरेट|24 कैरेट)/gi;
+      const labelPattern = /(?:22\s*(?:k|karat|carat)|24\s*(?:k|karat|carat)|22 कैरेट|24 कैरेट)/gi;
       let match;
       while ((match = labelPattern.exec(visible)) && contexts.length < 8) {
         const start = Math.max(0, match.index - 100);
         const end = Math.min(visible.length, match.index + 220);
-        const context = visible.slice(start, end).replace(/\\s+/g, " ").trim();
-        if (/(₹|rs\\.?|inr|रुपये|रु\\.?)/i.test(context) &&
-            /[0-9][0-9,]*(?:\\.[0-9]+)?/.test(context)) {
+        const context = visible.slice(start, end).replace(/\s+/g, " ").trim();
+        if (/(₹|rs\.?|inr|रुपये|रु\.?)/i.test(context) &&
+            /[0-9][0-9,]*(?:\.[0-9]+)?/.test(context)) {
           contexts.push(context);
         }
       }
