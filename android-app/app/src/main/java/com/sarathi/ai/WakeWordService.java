@@ -159,6 +159,7 @@ public class WakeWordService extends Service {
                     scheduleListeningRetry("आवाज़ पहचान दोबारा शुरू की जा रही है");
                 }
             });
+            if (awaitingCommand) speechService.setPause(true);
         } catch (Exception error) {
             scheduleListeningRetry("मॉडल या माइक्रोफ़ोन तैयार नहीं हुआ; सारथी फिर कोशिश करेगा");
         }
@@ -204,6 +205,7 @@ public class WakeWordService extends Service {
                             scheduleListeningRetry("आवाज़ पहचान दोबारा शुरू की जा रही है");
                         }
                     });
+                    if (awaitingCommand) speechService.setPause(true);
                     retryAttempt = 0;
                     updateStatus("सारथी ऑफ़लाइन हिंदी में सुन रहा है — बंद करने तक");
                 } catch (Exception error) {
