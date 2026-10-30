@@ -295,27 +295,34 @@ public class WakeWordService extends Service {
         if (!running || speaking || awaitingCommand || recognized == null) return;
         String normalized = recognized.toLowerCase(Locale.ROOT)
                 .replaceAll("[^\\p{L}\\p{N}]+", " ").trim().replaceAll("\\s+", " ");
-        // Common Hindi ASR spelling variants of the spoken wake word.
-        normalized = normalized.replace("सारथि", "सारथी").replace("सरथी", "सारथी");
-        // Match partial and final Vosk hypotheses so Sarathi can react without waiting
-        // for a long pause after the wake phrase.
-        boolean wakeDetected = normalized.equals("सारथी")
+        // Hindi Vosk small models sometimes split a familiar wake word into
+        // fragments such as "स रथ" or "ह ल स रथ". Keep the original words for
+        // exact matching, and also compare a compact form for these common splits.
+        normalized = normalized.replace("सारथि", "सारथी")
+                .replace("सरथी", "सारथी")
+                .replace("सारथ", "सारथी");
+        String compact = normalized.replaceAll("[^\\p{L}\\p{N}]", "");
+        boolean hindiWake = normalized.equals("सारथी")
                 || normalized.equals("सारथी जी")
                 || normalized.endsWith(" सारथी")
                 || normalized.endsWith(" सारथी जी")
                 || normalized.matches("(?:हेलो|हैलो|नमस्ते|हे)\\s+सारथी")
-                || normalized.matches("(?:hello|helo|hi|namaste|hey)\\s+(?:sarathi|sarthi)")
+                || compact.equals("सरथ")
+                || compact.equals("हलसरथ")
+                || compact.equals("हेलोसरथ")
+                || compact.equals("हैलोसरथ")
+                || compact.endsWith("सारथी")
+                || compact.endsWith("सरथ");
+        boolean englishWake = normalized.matches("(?:hello|helo|hi|namaste|hey)\\s+(?:sarathi|sarthi)")
                 || normalized.equals("sarathi")
                 || normalized.equals("sarthi");
-        if (wakeDetected) {
+        if (hindiWake || englishWake) {
             showWakeNotification();
-            // Create and use Android TextToSpeech on the main thread.
+            // Speak immediately; opening the notification then starts command capture.
             handler.post(this::speakWakeReply);
-        } else if (!normalized.isEmpty()) {
-            // Local diagnostic: confirms what the offline recognizer actually heard.
-            String shortText = normalized.length() > 45 ? normalized.substring(0, 45) : normalized;
-            updateStatus("आवाज़ पहचानी: " + shortText);
         }
+        // Ignore unrelated/garbled Vosk guesses. Showing each guess as a notification
+        // status made the screen look as if Sarathi was transcribing the user's speech.
     }
 
     private void speakWakeReply() {
