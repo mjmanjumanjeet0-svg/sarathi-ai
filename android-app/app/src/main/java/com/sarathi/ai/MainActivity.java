@@ -3,6 +3,9 @@ package com.sarathi.ai;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.BroadcastReceiver;
+import android.content.Context;
+import android.content.IntentFilter;
 import android.provider.AlarmClock;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
@@ -35,6 +38,7 @@ import java.util.Set;
 
 public class MainActivity extends Activity {
     public static final String ACTION_WAKE_COMMAND = "com.sarathi.ai.WAKE_COMMAND";
+    public static final String ACTION_WAKE_DETECTED = "com.sarathi.ai.WAKE_DETECTED";
     private static final int REQUEST_RECORD_AUDIO = 1201;
     private static final String APP_HOST = "mjmanjumanjeet0-svg.github.io";
     private WebView webView;
@@ -49,6 +53,19 @@ public class MainActivity extends Activity {
     private boolean pendingListen = false;
     private boolean pendingWakeStart = false;
     private boolean pageLoaded = false;
+    private boolean appInForeground = false;
+    private boolean wakeReceiverRegistered = false;
+    private final BroadcastReceiver wakeDetectedReceiver = new BroadcastReceiver() {
+        @Override public void onReceive(Context context, Intent intent) {
+            if (!appInForeground || intent == null || !ACTION_WAKE_DETECTED.equals(intent.getAction())) return;
+            pendingWakeCommand = true;
+            wakeCommandSession = true;
+            if (pageLoaded) {
+                pendingWakeCommand = false;
+                startListening();
+            }
+        }
+    };
     private boolean pendingWakeCommand = false;
     private boolean wakeCommandSession = false;
     private String selectedSpeechLanguage = "hi-IN";
@@ -60,6 +77,10 @@ public class MainActivity extends Activity {
 
         webView = new WebView(this);
         setContentView(webView);
+        IntentFilter wakeFilter = new IntentFilter(ACTION_WAKE_DETECTED);
+        if (Build.VERSION.SDK_INT >= 33) registerReceiver(wakeDetectedReceiver, wakeFilter, Context.RECEIVER_NOT_EXPORTED);
+        else registerReceiver(wakeDetectedReceiver, wakeFilter);
+        wakeReceiverRegistered = true;
 
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
@@ -712,6 +733,18 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    protected void onResume() {
+        super.onResume();
+        appInForeground = true;
+    }
+
+    @Override
+    protected void onPause() {
+        appInForeground = false;
+        super.onPause();
+    }
+
+    @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
@@ -742,6 +775,11 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        appInForeground = false;
+        if (wakeReceiverRegistered) {
+            try { unregisterReceiver(wakeDetectedReceiver); } catch (Exception ignored) {}
+            wakeReceiverRegistered = false;
+        }
         if (speechRecognizer != null) {
             speechRecognizer.cancel();
             speechRecognizer.destroy();
