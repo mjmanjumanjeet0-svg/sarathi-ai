@@ -271,8 +271,16 @@ public class WakeWordService extends Service {
             String text = new JSONObject(json).optString("text", "").toLowerCase(Locale.ROOT);
             String normalized = text.replaceAll("[^\\p{L}\\p{N}]+", " ").trim().replaceAll("\\s+", " ");
             // Wake only on a complete greeting phrase; ordinary mentions of Sarathi must not activate it.
-            boolean wakeDetected = normalized.matches("(?:हेलो|हैलो|नमस्ते)\\s+सारथी")
-                    || normalized.matches("(?:hello|helo|namaste)\\s+(?:sarathi|sarthi)");
+            // Accept the standalone wake name as well as common Hindi/English greetings.
+            // Vosk may omit the greeting word even when the user said "हेलो सारथी".
+            boolean wakeDetected = normalized.equals("सारथी")
+                    || normalized.equals("सारथी जी")
+                    || normalized.endsWith(" सारथी")
+                    || normalized.endsWith(" सारथी जी")
+                    || normalized.matches("(?:हेलो|हैलो|नमस्ते|हे)\\s+सारथी")
+                    || normalized.matches("(?:hello|helo|hi|namaste|hey)\\s+(?:sarathi|sarthi)")
+                    || normalized.equals("sarathi")
+                    || normalized.equals("sarthi");
             if (wakeDetected) {
                 showWakeNotification();
                 speakWakeReply();
