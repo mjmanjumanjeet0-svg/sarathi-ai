@@ -38,6 +38,7 @@ public class WakeWordService extends Service {
     public static final String ACTION_STOP = "com.sarathi.ai.WAKE_STOP";
     public static final String ACTION_PAUSE = "com.sarathi.ai.WAKE_PAUSE";
     public static final String ACTION_RESUME = "com.sarathi.ai.WAKE_RESUME";
+    public static final String ACTION_CAPTURE_COMMAND = "com.sarathi.ai.WAKE_CAPTURE_COMMAND";
     private static final String CHANNEL = "sarathi_wake_channel";
     private static final int NOTIFICATION_ID = 771;
     private static final String MODEL_NAME = "vosk-model-small-hi-0.22";
@@ -49,6 +50,8 @@ public class WakeWordService extends Service {
     private volatile boolean speaking = false;
     private volatile boolean retryScheduled = false;
     private volatile boolean awaitingCommand = false;
+    private volatile boolean commandMode = false;
+    private volatile boolean commandDelivered = false;
     private Runnable commandTimeout;
     private int retryAttempt = 0;
     private Model model;
@@ -78,6 +81,10 @@ public class WakeWordService extends Service {
             awaitingCommand = true;
             if (speechService != null) speechService.setPause(true);
             scheduleCommandTimeout(60000L);
+            return START_STICKY;
+        }
+        if (intent != null && ACTION_CAPTURE_COMMAND.equals(intent.getAction())) {
+            if (running) beginCommandCapture();
             return START_STICKY;
         }
         if (intent != null && ACTION_RESUME.equals(intent.getAction())) {
@@ -150,24 +157,104 @@ public class WakeWordService extends Service {
             if (!running) return;
             if (!marker.isFile()) throw new Exception("हिंदी मॉडल अधूरा है");
             model = new Model(modelDir.getAbsolutePath());
-            recognizer = createWakeRecognizer();
-            speechService = new SpeechService(recognizer, 16000.0f);
-            updateStatus("सारथी ऑफ़लाइन हिंदी में सुन रहा है — बंद करने तक");
-            speechService.startListening(new RecognitionListener() {
-                @Override public void onPartialResult(String hypothesis) { /* Ignore unstable partial Hindi guesses. */ }
-                @Override public void onResult(String result) { handleRecognition(result); }
-                @Override public void onFinalResult(String result) { handleRecognition(result); }
-                @Override public void onError(Exception exception) {
-                    scheduleListeningRetry("माइक्रोफ़ोन में अस्थायी समस्या आई है");
-                }
-                @Override public void onTimeout() {
-                    scheduleListeningRetry("आवाज़ पहचान दोबारा शुरू की जा रही है");
-                }
-            });
-            if (awaitingCommand) speechService.setPause(true);
+            startWakeRecognition();
         } catch (Exception error) {
             scheduleListeningRetry("मॉडल या माइक्रोफ़ोन तैयार नहीं हुआ; सारथी फिर कोशिश करेगा");
         }
+    }
+
+    private void startWakeRecognition() throws Exception {
+        commandMode = false;
+        recognizer = createWakeRecognizer();
+        speechService = new SpeechService(recognizer, 16000.0f);
+        speechService.startListening(new RecognitionListener() {
+            @Override public void onPartialResult(String hypothesis) { }
+            @Override public void onResult(String result) { handleRecognition(result); }
+            @Override public void onFinalResult(String result) { handleRecognition(result); }
+            @Override public void onError(Exception exception) {
+                if (commandMode) finishCommand("{}");
+                else scheduleListeningRetry("माइक्रोफ़ोन में अस्थायी समस्या आई है");
+            }
+            @Override public void onTimeout() {
+                if (commandMode) finishCommand("{}");
+                else scheduleListeningRetry("आवाज़ पहचान दोबारा शुरू की जा रही है");
+            }
+        });
+        if (awaitingCommand) speechService.setPause(true);
+        updateStatus("सारथी ऑफ़लाइन हिंदी में सुन रहा है — बंद करने तक");
+    }
+
+    private void beginCommandCapture() {
+        if (!running || commandMode) return;
+        awaitingCommand = false;
+        commandMode = true;
+        commandDelivered = false;
+        if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
+        commandTimeout = () -> finishCommand("{}");
+        handler.postDelayed(commandTimeout, 15000L);
+        updateStatus("बोलिए, सारथी आपका हिंदी आदेश ऑफ़लाइन सुन रहा है…");
+        if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
+        worker.execute(() -> {
+            try {
+                if (speechService != null) {
+                    speechService.cancel();
+                    speechService.shutdown();
+                    speechService = null;
+                }
+                if (recognizer != null) {
+                    recognizer.close();
+                    recognizer = null;
+                }
+                if (!running || !commandMode || model == null) return;
+                recognizer = new Recognizer(model, 16000.0f);
+                speechService = new SpeechService(recognizer, 16000.0f);
+                speechService.startListening(new RecognitionListener() {
+                    @Override public void onPartialResult(String hypothesis) { }
+                    @Override public void onResult(String result) { finishCommand(result); }
+                    @Override public void onFinalResult(String result) { finishCommand(result); }
+                    @Override public void onError(Exception exception) { finishCommand("{}"); }
+                    @Override public void onTimeout() { finishCommand("{}"); }
+                });
+            } catch (Exception error) {
+                finishCommand("{}");
+            }
+        });
+    }
+
+    private void finishCommand(String json) {
+        if (!running || !commandMode || commandDelivered) return;
+        commandDelivered = true;
+        if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
+        commandTimeout = null;
+        String command = "";
+        try { command = new JSONObject(json == null ? "{}" : json).optString("text", "").trim(); }
+        catch (Exception ignored) { }
+        if (!command.isEmpty()) {
+            Intent result = new Intent(MainActivity.ACTION_WAKE_RESULT);
+            result.setPackage(getPackageName());
+            result.putExtra(MainActivity.EXTRA_WAKE_TEXT, command);
+            sendBroadcast(result);
+            updateStatus("आदेश समझ लिया गया। सारथी जवाब तैयार कर रहा है…");
+        } else {
+            updateStatus("आवाज़ से आदेश समझ नहीं आया। दोबारा हेलो सारथी कहें।");
+        }
+        if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
+        worker.execute(() -> {
+            try {
+                if (speechService != null) {
+                    speechService.cancel();
+                    speechService.shutdown();
+                    speechService = null;
+                }
+                if (recognizer != null) {
+                    recognizer.close();
+                    recognizer = null;
+                }
+                if (running) startWakeRecognition();
+            } catch (Exception error) {
+                scheduleListeningRetry("आवाज़ पहचान दोबारा शुरू नहीं हो सकी");
+            }
+        });
     }
 
     private void scheduleListeningRetry(String message) {
@@ -195,22 +282,7 @@ public class WakeWordService extends Service {
                         prepareModelAndListen();
                         return;
                     }
-                    recognizer = createWakeRecognizer();
-                    speechService = new SpeechService(recognizer, 16000.0f);
-                    speechService.startListening(new RecognitionListener() {
-                        @Override public void onPartialResult(String hypothesis) { /* Ignore unstable partial Hindi guesses. */ }
-                        @Override public void onResult(String result) {
-                            handleRecognition(result);
-                        }
-                        @Override public void onFinalResult(String result) { handleRecognition(result); }
-                        @Override public void onError(Exception exception) {
-                            scheduleListeningRetry("माइक्रोफ़ोन में अस्थायी समस्या आई है");
-                        }
-                        @Override public void onTimeout() {
-                            scheduleListeningRetry("आवाज़ पहचान दोबारा शुरू की जा रही है");
-                        }
-                    });
-                    if (awaitingCommand) speechService.setPause(true);
+                    startWakeRecognition();
                     retryAttempt = 0;
                     updateStatus("सारथी ऑफ़लाइन हिंदी में सुन रहा है — बंद करने तक");
                 } catch (Exception error) {
@@ -403,7 +475,8 @@ public class WakeWordService extends Service {
         if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
         commandTimeout = () -> {
             commandTimeout = null;
-            if (running && awaitingCommand) {
+            if (running && commandMode) finishCommand("{}");
+            else if (running && awaitingCommand) {
                 awaitingCommand = false;
                 resumeListening();
             }
@@ -430,6 +503,8 @@ public class WakeWordService extends Service {
     private void stopListening() {
         running = false;
         awaitingCommand = false;
+        commandMode = false;
+        commandDelivered = true;
         retryScheduled = false;
         commandTimeout = null;
         handler.removeCallbacksAndMessages(null);
