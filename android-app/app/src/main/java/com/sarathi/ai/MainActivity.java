@@ -469,6 +469,9 @@ public class MainActivity extends Activity {
                         @Override public void onError(String utteranceId) {
                             mainHandler.post(MainActivity.this::resumeWakeWordAfterCommand);
                         }
+                        @Override public void onStop(String utteranceId, boolean interrupted) {
+                            mainHandler.post(MainActivity.this::resumeWakeWordAfterCommand);
+                        }
                     });
                     int result = textToSpeech.speak(toSpeak, TextToSpeech.QUEUE_FLUSH, null, "sarathi-local-voice");
                     if (result == TextToSpeech.ERROR) resumeWakeWordAfterCommand();
