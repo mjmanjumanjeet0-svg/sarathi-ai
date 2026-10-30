@@ -94,24 +94,18 @@
 
       <div class="status" id="status" aria-live="polite"></div>
 
-      <div class="web-row wake-control-row">
-        <button type="button" id="wakeStartMain" class="web-toggle">🦚 सारथी सुनना चालू करें</button>
-        <button type="button" id="wakeStopMain" class="web-toggle">⏹ सारथी सुनना बंद करें</button>
-      </div>
-
-      <div class="web-row">
+      <div class="web-row control-row" aria-label="सारथी नियंत्रण">
         <button
           type="button"
           id="webToggle"
           class="web-toggle"
           aria-pressed="false">
-          🌐 इंटरनेट खोज: बंद
+          🌐 इंटरनेट: बंद
         </button>
-
-        <span class="web-note">
-          ताज़ा जानकारी के लिए इंटरनेट खोज चालू रखें।
-        </span>
+        <button type="button" id="wakeStartMain" class="web-toggle">🦚 सुनना चालू</button>
+        <button type="button" id="wakeStopMain" class="web-toggle">⏹ सुनना बंद</button>
       </div>
+      <p class="web-note control-note">इंटरनेट खोज और वेक-वर्ड को यहाँ से चालू या बंद करें।</p>
 
       <form class="composer" id="chatForm">
 
