@@ -874,7 +874,8 @@ async function sendMessage(text) {
   }
 
   const needsCurrentInfo = /(आज|अभी|वर्तमान|ताज़ा|ताजा|लेटेस्ट|latest|current|today|now|भाव|कीमत|रेट|rate|price|मौसम|weather|तापमान|ट्रेन|रेल|train|pnr|समय सारणी|खबर|समाचार|news|सोने|सोना|gold|चांदी|चाँदी|silver|स्टॉक|शेयर बाजार|share market|exchange rate|डॉलर|रुपया|राष्ट्रपति|प्रधानमंत्री|मुख्यमंत्री|राज्यपाल|लोकसभा अध्यक्ष|सिलेबस|पाठ्यक्रम|परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|परिणाम|आवेदन|फॉर्म|फीस|पात्रता|नियम|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(prompt);
-  // Search only when explicitly requested or when current information is needed.\n  const useWebSearch = !isSimpleGreeting(prompt) && (explicitlyRequestsWebSearch(prompt) || needsCurrentInfo);
+  // Search only when explicitly requested or when current information is needed.
+  const useWebSearch = !isSimpleGreeting(prompt) && (explicitlyRequestsWebSearch(prompt) || needsCurrentInfo);
 
   addMessage("user", prompt);
   setBusy(true);
@@ -954,7 +955,7 @@ async function sendMessage(text) {
     // If structured sources are shown below the answer, remove any model-made
     // duplicate source list from the answer itself.
     const cleanAnswer = data.sources?.length
-      ? answer.trim().replace(/\\n{1,2}\\s*(?:स्रोत(?: सूची)?|sources?)\\s*[:：][\\s\\S]*$/i, "").trim()
+      ? answer.trim().replace(/\n{1,2}\s*(?:स्रोत(?: सूची)?|sources?)\s*[:：][\s\S]*$/i, "").trim()
       : answer.trim();
 
     if (prompt.includes("SARATHI_QUIZ_JSON:")) {
