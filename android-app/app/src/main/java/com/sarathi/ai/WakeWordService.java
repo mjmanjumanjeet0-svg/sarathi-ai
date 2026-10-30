@@ -36,6 +36,8 @@ import java.util.zip.ZipInputStream;
 public class WakeWordService extends Service {
     public static final String ACTION_START = "com.sarathi.ai.WAKE_START";
     public static final String ACTION_STOP = "com.sarathi.ai.WAKE_STOP";
+    public static final String ACTION_PAUSE = "com.sarathi.ai.WAKE_PAUSE";
+    public static final String ACTION_RESUME = "com.sarathi.ai.WAKE_RESUME";
     private static final String CHANNEL = "sarathi_wake_channel";
     private static final int NOTIFICATION_ID = 771;
     private static final String MODEL_NAME = "vosk-model-small-hi-0.22";
@@ -45,6 +47,7 @@ public class WakeWordService extends Service {
     private volatile boolean running = false;
     private volatile boolean speaking = false;
     private volatile boolean retryScheduled = false;
+    private volatile boolean awaitingCommand = false;
     private int retryAttempt = 0;
     private Model model;
     private Recognizer recognizer;
@@ -64,6 +67,22 @@ public class WakeWordService extends Service {
             stopForeground(true);
             stopSelf();
             return START_NOT_STICKY;
+        }
+        if (intent != null && ACTION_PAUSE.equals(intent.getAction())) {
+            if (!running) {
+                stopSelf();
+                return START_NOT_STICKY;
+            }
+            awaitingCommand = true;
+            if (speechService != null) speechService.setPause(true);
+            return START_STICKY;
+        }
+        if (intent != null && ACTION_RESUME.equals(intent.getAction())) {
+            if (running) {
+                awaitingCommand = false;
+                resumeListening();
+            }
+            return START_STICKY;
         }
         if (intent == null && !prefs.getBoolean("enabled", false)) {
             stopSelf();
@@ -280,6 +299,10 @@ public class WakeWordService extends Service {
     private void resumeListening() {
         speaking = false;
         if (running && speechService != null) {
+            if (awaitingCommand) {
+                updateStatus("सारथी ने आवाज़ सुनी। आदेश सुनने के लिए सूचना दबाएँ।");
+                return;
+            }
             speechService.reset();
             speechService.setPause(false);
             updateStatus("सारथी ऑफ़लाइन हिंदी में सुन रहा है — बंद करने तक");
@@ -287,7 +310,17 @@ public class WakeWordService extends Service {
     }
 
     private void showWakeNotification() {
+        awaitingCommand = true;
+        if (speechService != null) speechService.setPause(true);
+        handler.postDelayed(() -> {
+            if (running && awaitingCommand) {
+                awaitingCommand = false;
+                resumeListening();
+            }
+        }, 20000L);
+
         Intent open = new Intent(this, MainActivity.class);
+        open.setAction(MainActivity.ACTION_WAKE_COMMAND);
         open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         PendingIntent pending = PendingIntent.getActivity(this, 772, open,
                 PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0));
@@ -299,6 +332,7 @@ public class WakeWordService extends Service {
 
     private void stopListening() {
         running = false;
+        awaitingCommand = false;
         retryScheduled = false;
         handler.removeCallbacksAndMessages(null);
         if (worker != null) worker.shutdownNow();
