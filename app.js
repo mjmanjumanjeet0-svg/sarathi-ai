@@ -874,8 +874,12 @@ async function sendMessage(text) {
   }
 
   const needsCurrentInfo = /(आज|अभी|वर्तमान|ताज़ा|ताजा|लेटेस्ट|latest|current|today|now|भाव|कीमत|रेट|rate|price|मौसम|weather|तापमान|ट्रेन|रेल|train|pnr|समय सारणी|खबर|समाचार|news|सोने|सोना|gold|चांदी|चाँदी|silver|स्टॉक|शेयर बाजार|share market|exchange rate|डॉलर|रुपया|राष्ट्रपति|प्रधानमंत्री|मुख्यमंत्री|राज्यपाल|लोकसभा अध्यक्ष|सिलेबस|पाठ्यक्रम|परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|परिणाम|आवेदन|फॉर्म|फीस|पात्रता|नियम|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(prompt);
-  // Search only when explicitly requested or when current information is needed.
-  const useWebSearch = !isSimpleGreeting(prompt) && (explicitlyRequestsWebSearch(prompt) || needsCurrentInfo);
+  // The web toggle enables useful searches, but never search greetings, tiny follow-ups,
+  // or stable basic facts such as India's capital.
+  const isStableGeneralKnowledge = /(?:भारत|india).{0,18}(?:राजधानी|capital)|(?:राजधानी|capital).{0,18}(?:भारत|india)/i.test(prompt);
+  const isTinyFollowUp = prompt.trim().length <= 8 && !needsCurrentInfo && !explicitlyRequestsWebSearch(prompt);
+  const useWebSearch = !isSimpleGreeting(prompt) && !isStableGeneralKnowledge && !isTinyFollowUp &&
+    (explicitlyRequestsWebSearch(prompt) || needsCurrentInfo || state.webEnabled);
 
   addMessage("user", prompt);
   setBusy(true);
