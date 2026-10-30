@@ -229,14 +229,16 @@ public class WakeWordService extends Service {
         String command = "";
         try { command = new JSONObject(json == null ? "{}" : json).optString("text", "").trim(); }
         catch (Exception ignored) { }
+        // Always notify the Activity, including an empty result. Otherwise the
+        // UI can remain stuck on "बोलिए" and the user gets no explanation.
+        Intent result = new Intent(MainActivity.ACTION_WAKE_RESULT);
+        result.setPackage(getPackageName());
+        result.putExtra(MainActivity.EXTRA_WAKE_TEXT, command);
+        sendBroadcast(result);
         if (!command.isEmpty()) {
-            Intent result = new Intent(MainActivity.ACTION_WAKE_RESULT);
-            result.setPackage(getPackageName());
-            result.putExtra(MainActivity.EXTRA_WAKE_TEXT, command);
-            sendBroadcast(result);
             updateStatus("आदेश समझ लिया गया। सारथी जवाब तैयार कर रहा है…");
         } else {
-            updateStatus("आवाज़ से आदेश समझ नहीं आया। दोबारा हेलो सारथी कहें।");
+            updateStatus("आवाज़ समझ नहीं आई। कृपया थोड़ा साफ़ और पास से बोलें।");
         }
         if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
         worker.execute(() -> {
