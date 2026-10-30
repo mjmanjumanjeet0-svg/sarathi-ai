@@ -479,6 +479,38 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void startWakeWord() {
+            runOnUiThread(() -> {
+                if (Build.VERSION.SDK_INT < 31 || !SpeechRecognizer.isOnDeviceRecognitionAvailable(MainActivity.this)) {
+                    notifyVoice("onError", "इस फ़ोन में ऑफ़लाइन आवाज़ पहचान उपलब्ध नहीं है। वेक-वर्ड सेवा चालू नहीं की गई।");
+                    return;
+                }
+                if (!hasMicrophonePermission()) {
+                    requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_RECORD_AUDIO);
+                    notifyVoice("onError", "पहले माइक्रोफ़ोन अनुमति दें, फिर वेक-वर्ड चालू करें।");
+                    return;
+                }
+                try {
+                    Intent service = new Intent(MainActivity.this, WakeWordService.class);
+                    service.setAction(WakeWordService.ACTION_START);
+                    if (Build.VERSION.SDK_INT >= 26) startForegroundService(service);
+                    else startService(service);
+                    notifyVoice("onStatus", "वेक-वर्ड सेवा चालू करने का अनुरोध भेजा गया। ऊपर स्थायी सूचना दिखेगी।");
+                } catch (Exception error) {
+                    notifyVoice("onError", "वेक-वर्ड सेवा शुरू नहीं हो सकी।");
+                }
+            });
+        }
+
+        @JavascriptInterface
+        public void stopWakeWord() {
+            Intent service = new Intent(MainActivity.this, WakeWordService.class);
+            service.setAction(WakeWordService.ACTION_STOP);
+            startService(service);
+            notifyVoice("onStatus", "वेक-वर्ड सेवा बंद करने का अनुरोध भेजा गया।");
+        }
+
+        @JavascriptInterface
         public void stopSpeaking() {
             runOnUiThread(() -> {
                 if (textToSpeech != null) textToSpeech.stop();
