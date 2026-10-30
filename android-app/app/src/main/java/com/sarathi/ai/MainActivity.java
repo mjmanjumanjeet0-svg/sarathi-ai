@@ -162,9 +162,13 @@ public class MainActivity extends Activity {
         }
 
         // Never send microphone audio to an online recognition service without a clear, per-use choice.
+        showOnlineVoiceConsent("इस फ़ोन पर ऑफ़लाइन हिंदी आवाज़ पहचान उपलब्ध नहीं है। अगर आप आगे बढ़ते हैं, तो आपकी आवाज़ पहचानने के लिए इंटरनेट के ज़रिए फ़ोन की स्पीच सेवा को भेजी जा सकती है। क्या आप इस बार ऑनलाइन पहचान इस्तेमाल करना चाहते हैं?");
+    }
+
+    private void showOnlineVoiceConsent(String message) {
         new android.app.AlertDialog.Builder(this)
                 .setTitle("हिंदी आवाज़ पहचान")
-                .setMessage("इस फ़ोन पर ऑफ़लाइन हिंदी आवाज़ पहचान उपलब्ध नहीं है। अगर आप आगे बढ़ते हैं, तो आपकी आवाज़ पहचानने के लिए इंटरनेट के ज़रिए फ़ोन की स्पीच सेवा को भेजी जा सकती है। क्या आप इस बार ऑनलाइन पहचान इस्तेमाल करना चाहते हैं?")
+                .setMessage(message)
                 .setPositiveButton("हाँ, इस बार इस्तेमाल करें", (dialog, which) -> startRecognition(true))
                 .setNegativeButton("रद्द करें", (dialog, which) ->
                         notifyVoice("onError", "ऑनलाइन आवाज़ पहचान रद्द कर दी गई। आपकी आवाज़ नहीं सुनी गई।"))
@@ -203,9 +207,19 @@ public class MainActivity extends Activity {
                     notifyVoice("onStatus", "आवाज़ समझी जा रही है…");
                 }
                 @Override public void onError(int error) {
-                    notifyVoice("onError", useOnlineService
-                            ? "ऑनलाइन आवाज़ पहचान नहीं चल सकी। इंटरनेट कनेक्शन और माइक्रोफ़ोन अनुमति जाँचें।"
-                            : "आवाज़ पहचान नहीं हो सकी। हिंदी का ऑफ़लाइन भाषा पैक और माइक्रोफ़ोन अनुमति जाँचें।");
+                    if (!useOnlineService && error != SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
+                        mainHandler.post(() -> showOnlineVoiceConsent(
+                                "इस फ़ोन की ऑफ़लाइन हिंदी आवाज़ पहचान अभी काम नहीं कर पाई। क्या आप इस बार इंटरनेट के माध्यम से हिंदी आवाज़ पहचान इस्तेमाल करना चाहते हैं?"
+                        ));
+                    } else {
+                        notifyVoice("onError", useOnlineService
+                                ? "ऑनलाइन आवाज़ पहचान नहीं चल सकी। इंटरनेट कनेक्शन और माइक्रोफ़ोन अनुमति जाँचें।"
+                                : "माइक्रोफ़ोन अनुमति नहीं मिली। फ़ोन की सेटिंग में अनुमति जाँचें।");
+                    }
+                    if (speechRecognizer != null) {
+                        speechRecognizer.destroy();
+                        speechRecognizer = null;
+                    }
                 }
                 @Override public void onResults(Bundle results) {
                     ArrayList<String> matches = results == null ? null
