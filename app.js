@@ -1026,6 +1026,14 @@ window.SarathiVoice = {
       setStatus("आवाज़ लिख दी गई है। भेजने से पहले संदेश जाँच लें।");
     }
   },
+  onWakeCommandResult(transcript) {
+    if (transcript && String(transcript).trim()) {
+      setStatus("सारथी आपका आदेश समझ रहा है…");
+      sendMessage(String(transcript).trim());
+    } else {
+      setStatus("आवाज़ से आदेश समझ नहीं आया। फिर कोशिश करें।");
+    }
+  },
   onError(message) {
     setStatus(message || "ऑफ़लाइन आवाज़ सुविधा अभी उपलब्ध नहीं है।");
   },
