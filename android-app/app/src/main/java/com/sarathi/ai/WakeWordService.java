@@ -80,7 +80,7 @@ public class WakeWordService extends Service {
                 @Override public void onBeginningOfSpeech() {}
                 @Override public void onRmsChanged(float rmsdB) {}
                 @Override public void onBufferReceived(byte[] buffer) {}
-                @Override public void onEndOfSpeech() { scheduleRestart(400); }
+                @Override public void onEndOfSpeech() {}
                 @Override public void onError(int error) { scheduleRestart(900); }
                 @Override public void onResults(android.os.Bundle results) {
                     ArrayList<String> words = results == null ? null : results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
