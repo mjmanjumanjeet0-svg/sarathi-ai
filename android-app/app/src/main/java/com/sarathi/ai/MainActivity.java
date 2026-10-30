@@ -393,6 +393,7 @@ public class MainActivity extends Activity {
             } else {
                 pendingListen = false;
                 notifyVoice("onError", "माइक्रोफ़ोन अनुमति नहीं मिली। अनुमति के बिना आवाज़ नहीं सुनी जाएगी।");
+                resumeWakeWordAfterCommand();
             }
         }
     }
