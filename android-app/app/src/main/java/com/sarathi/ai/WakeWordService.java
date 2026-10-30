@@ -13,6 +13,8 @@ import android.os.Looper;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
+import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 
 import java.util.ArrayList;
 import java.util.Locale;
@@ -25,6 +27,8 @@ public class WakeWordService extends Service {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private SpeechRecognizer recognizer;
     private boolean running = false;
+    private TextToSpeech textToSpeech;
+    private boolean speaking = false;
 
     @Override public void onCreate() {
         super.onCreate();
@@ -100,7 +104,8 @@ public class WakeWordService extends Service {
                             String normalized = word.toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}]", "");
                             if (normalized.contains("सारथी") || normalized.contains("sarathi")) {
                                 showWakeNotification();
-                                break;
+                                speakWakeReply();
+                                return;
                             }
                         }
                     }
@@ -118,8 +123,59 @@ public class WakeWordService extends Service {
         } catch (Exception ignored) { scheduleRestart(2000); }
     }
 
+    private void speakWakeReply() {
+        if (!running || speaking) return;
+        speaking = true;
+        if (textToSpeech == null) {
+            textToSpeech = new TextToSpeech(getApplicationContext(), status -> {
+                if (status == TextToSpeech.SUCCESS && textToSpeech != null) {
+                    int language = textToSpeech.setLanguage(new Locale("hi", "IN"));
+                    if (language == TextToSpeech.LANG_MISSING_DATA
+                            || language == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        speaking = false;
+                        scheduleRestart(700);
+                        return;
+                    }
+                    speakGreeting();
+                } else {
+                    speaking = false;
+                    scheduleRestart(700);
+                }
+            });
+        } else {
+            speakGreeting();
+        }
+    }
+
+    private void speakGreeting() {
+        if (!running || textToSpeech == null) {
+            speaking = false;
+            return;
+        }
+        textToSpeech.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+            @Override public void onStart(String utteranceId) {}
+            @Override public void onDone(String utteranceId) {
+                handler.post(() -> {
+                    speaking = false;
+                    scheduleRestart(350);
+                });
+            }
+            @Override public void onError(String utteranceId) {
+                handler.post(() -> {
+                    speaking = false;
+                    scheduleRestart(700);
+                });
+            }
+        });
+        if (Build.VERSION.SDK_INT >= 21) {
+            textToSpeech.speak("जी, बताइए।", TextToSpeech.QUEUE_FLUSH, null, "sarathi_wake_reply");
+        } else {
+            textToSpeech.speak("जी, बताइए।", TextToSpeech.QUEUE_FLUSH, null);
+        }
+    }
+
     private void scheduleRestart(long delay) {
-        handler.postDelayed(() -> { if (running) beginRecognition(); }, delay);
+        handler.postDelayed(() -> { if (running && !speaking) beginRecognition(); }, delay);
     }
 
     private void showWakeNotification() {
@@ -144,6 +200,7 @@ public class WakeWordService extends Service {
         running = false;
         handler.removeCallbacksAndMessages(null);
         if (recognizer != null) { recognizer.cancel(); recognizer.destroy(); recognizer = null; }
+        if (textToSpeech != null) { textToSpeech.stop(); textToSpeech.shutdown(); textToSpeech = null; }
     }
 
     @Override public void onDestroy() { stopListening(); super.onDestroy(); }
