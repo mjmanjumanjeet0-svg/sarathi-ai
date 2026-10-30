@@ -23,7 +23,8 @@ const state = {
   webEnabled: localStorage.getItem("sarathi_ai_web_search_v1") === "true",
   recognition: null,
   attachments: [],
-  voiceReplyPending: false
+  voiceReplyPending: false,
+  voiceStopRequested: false
 };
 
 /* ========================================
@@ -766,6 +767,20 @@ async function sendMessage(text) {
     text !== undefined ? text : ($("messageInput")?.value || "")
   ).trim();
 
+  const quietCommand = /^(?:(?:अच्छा|ठीक)\s+है\s+सारथी|ओके\s+सारथी|okay\s+sarathi|ok\s+sarathi|बस\s+सारथी|धन्यवाद\s+सारथी)$/i.test(prompt);
+  if (quietCommand) {
+    state.voiceReplyPending = false;
+    state.voiceStopRequested = true;
+    if (window.SarathiNative && typeof window.SarathiNative.stopSpeaking === "function") {
+      window.SarathiNative.stopSpeaking();
+    }
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    setStatus("ठीक है। सारथी शांत है। दोबारा बुलाने के लिए “हेलो सारथी” कहें।");
+    const input = $("messageInput");
+    if (input) { input.value = ""; input.style.height = ""; }
+    return;
+  }
+
   if ((!prompt && !state.attachments.length) || state.busy) return;
   if (!prompt && state.attachments.length) prompt = "कृपया संलग्न फाइल/फोटो की सामग्री पढ़कर समझाओ और मेरे सवालों में मदद करो।";
   const shouldSpeakReply = state.voiceReplyPending;
@@ -909,7 +924,7 @@ async function sendMessage(text) {
 
     // Only speak automatically for a reply triggered by the wake-word voice command.
     // Typed messages stay silent; the user can still tap the per-message speaker button.
-    if (shouldSpeakReply && window.SarathiNative && typeof window.SarathiNative.speak === "function") {
+    if (shouldSpeakReply && !state.voiceStopRequested && window.SarathiNative && typeof window.SarathiNative.speak === "function") {
       window.SarathiNative.speak(answer.trim());
     }
 
@@ -1154,6 +1169,7 @@ window.SarathiVoice = {
   onWakeCommandResult(transcript) {
     if (transcript && String(transcript).trim()) {
       setStatus("सारथी आपका आदेश समझ रहा है…");
+      state.voiceStopRequested = false;
       state.voiceReplyPending = true;
       sendMessage(String(transcript).trim());
     } else {
