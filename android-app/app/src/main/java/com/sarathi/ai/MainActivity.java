@@ -39,6 +39,7 @@ public class MainActivity extends Activity {
     private SpeechRecognizer speechRecognizer;
     private TextToSpeech textToSpeech;
     private Voice localHindiVoice;
+    private Voice localEnglishVoice;
     private boolean pendingListen = false;
     private String selectedSpeechLanguage = "hi-IN";
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
@@ -71,18 +72,23 @@ public class MainActivity extends Activity {
                     if (voices != null) {
                         for (Voice voice : voices) {
                             Locale locale = voice.getLocale();
-                            if (locale != null
-                                    && "hi".equalsIgnoreCase(locale.getLanguage())
+                            if (locale == null || voice.isNetworkConnectionRequired()) continue;
+                            if ("hi".equalsIgnoreCase(locale.getLanguage())
                                     && ("IN".equalsIgnoreCase(locale.getCountry()) || locale.getCountry().isEmpty())
-                                    && !voice.isNetworkConnectionRequired()) {
+                                    && localHindiVoice == null) {
                                 localHindiVoice = voice;
-                                textToSpeech.setVoice(voice);
-                                break;
+                            } else if ("en".equalsIgnoreCase(locale.getLanguage())
+                                    && ("IN".equalsIgnoreCase(locale.getCountry()) || "US".equalsIgnoreCase(locale.getCountry())
+                                    || locale.getCountry().isEmpty())
+                                    && localEnglishVoice == null) {
+                                localEnglishVoice = voice;
                             }
                         }
+                        if (localHindiVoice != null) textToSpeech.setVoice(localHindiVoice);
                     }
                 } catch (Exception ignored) {
                     localHindiVoice = null;
+                    localEnglishVoice = null;
                 }
             }
         });
@@ -349,11 +355,24 @@ public class MainActivity extends Activity {
             if (safeText.length() > 2500) safeText = safeText.substring(0, 2500);
             final String toSpeak = safeText;
             runOnUiThread(() -> {
-                if (textToSpeech == null || localHindiVoice == null) {
-                    notifyVoice("onError", "फ़ोन में ऑफ़लाइन हिंदी आवाज़ उपलब्ध नहीं है। कुछ भी इंटरनेट पर भेजकर नहीं सुनाया गया।");
+                if (textToSpeech == null) {
+                    notifyVoice("onError", "फ़ोन की टेक्स्ट-टू-स्पीच सेवा अभी तैयार नहीं है।");
                     return;
                 }
-                textToSpeech.speak(toSpeak, TextToSpeech.QUEUE_FLUSH, null, "sarathi-local-voice");
+                boolean hindiText = toSpeak.matches("(?s).*[ऀ-ॿ].*");
+                Voice selectedVoice = hindiText ? localHindiVoice : localEnglishVoice;
+                if (selectedVoice == null) {
+                    notifyVoice("onError", hindiText
+                            ? "फ़ोन में ऑफ़लाइन हिंदी आवाज़ उपलब्ध नहीं है। Android की Text-to-Speech सेटिंग में हिंदी आवाज़ डाउनलोड करें।"
+                            : "फ़ोन में ऑफ़लाइन English आवाज़ उपलब्ध नहीं है। Android की Text-to-Speech सेटिंग में English आवाज़ डाउनलोड करें।");
+                    return;
+                }
+                try {
+                    textToSpeech.setVoice(selectedVoice);
+                    textToSpeech.speak(toSpeak, TextToSpeech.QUEUE_FLUSH, null, "sarathi-local-voice");
+                } catch (Exception error) {
+                    notifyVoice("onError", "चुनी हुई भाषा में जवाब बोलना शुरू नहीं हो सका।");
+                }
             });
         }
 
