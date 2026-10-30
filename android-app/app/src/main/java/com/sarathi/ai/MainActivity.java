@@ -509,6 +509,11 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void pauseWakeWord() {
+            runOnUiThread(MainActivity.this::pauseWakeWordForCommand);
+        }
+
+        @JavascriptInterface
         public void speak(String text) {
             String safeText = text == null ? "" : text.trim();
             if (safeText.isEmpty()) return;
