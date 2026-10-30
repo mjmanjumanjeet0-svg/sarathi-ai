@@ -42,7 +42,7 @@ public class WakeWordService extends Service {
     private static final int NOTIFICATION_ID = 771;
     private static final String MODEL_NAME = "vosk-model-small-hi-0.22";
     private static final String MODEL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip";
-    private static final String WAKE_GRAMMAR = "[\"सारथी\",\"सारथी जी\",\"हेलो सारथी\",\"हैलो सारथी\",\"नमस्ते सारथी\",\"हे सारथी\",\"सरथी\",\"सारथि\",\"[unk]\"]";
+    private static final String WAKE_GRAMMAR = "[\"सारथी\",\"सारथी जी\",\"हेलो सारथी\",\"हैलो सारथी\",\"नमस्ते सारथी\",\"हे सारथी\",\"ठीक है सारथी\",\"ओके सारथी\",\"सरथी\",\"सारथि\",\"[unk]\"]";
     private final Handler handler = new Handler(Looper.getMainLooper());
     private ExecutorService worker = Executors.newSingleThreadExecutor();
     private volatile boolean running = false;
@@ -302,6 +302,21 @@ public class WakeWordService extends Service {
                 .replace("सरथी", "सारथी")
                 ;
         String compact = normalized.replaceAll("[^\\p{L}\\p{N}]", "");
+        boolean quietCommand = normalized.equals("ठीक है सारथी")
+                || normalized.equals("अच्छा है सारथी")
+                || normalized.equals("ओके सारथी")
+                || normalized.equals("ok sarathi")
+                || normalized.equals("okay sarathi")
+                || compact.equals("ठीकहैसारथी")
+                || compact.equals("ओकेसारथी");
+        if (quietCommand) {
+            updateStatus("सारथी शांत है। दोबारा बुलाने के लिए हेलो सारथी कहें।");
+            if (speechService != null) {
+                speechService.reset();
+                speechService.setPause(false);
+            }
+            return;
+        }
         boolean hindiWake = normalized.equals("सारथी")
                 || normalized.equals("सारथी जी")
                 || normalized.endsWith(" सारथी")
