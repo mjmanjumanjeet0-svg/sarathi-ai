@@ -81,8 +81,10 @@ public class WakeWordService extends Service {
             if (running) {
                 awaitingCommand = false;
                 resumeListening();
+                return START_STICKY;
             }
-            return START_STICKY;
+            stopSelf();
+            return START_NOT_STICKY;
         }
         if (intent == null && !prefs.getBoolean("enabled", false)) {
             stopSelf();
