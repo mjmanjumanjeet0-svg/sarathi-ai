@@ -71,7 +71,7 @@ public class MainActivity extends Activity {
             wakeCommandSession = true;
             if (pageLoaded) {
                 pendingWakeCommand = false;
-                startListening();
+                startWakeCommandCapture();
             }
         }
     };
@@ -188,7 +188,7 @@ public class MainActivity extends Activity {
                 pageLoaded = true;
                 if (pendingWakeCommand) {
                     pendingWakeCommand = false;
-                    startListening();
+                    startWakeCommandCapture();
                 }
             }
 
@@ -222,7 +222,7 @@ public class MainActivity extends Activity {
             wakeCommandSession = true;
             if (pageLoaded) {
                 pendingWakeCommand = false;
-                startListening();
+                startWakeCommandCapture();
             }
         }
     }
@@ -265,8 +265,19 @@ public class MainActivity extends Activity {
     }
 
     private void startListening() {
-        // Reuse the Vosk service that detected the wake word. Do not start a
-        // second Android SpeechRecognizer or ask for online speech consent.
+        pauseWakeWordForCommand();
+        if (Build.VERSION.SDK_INT >= 34) {
+            selectedSpeechLanguage = "auto";
+            beginListeningWithSelectedLanguage();
+            return;
+        }
+        selectedSpeechLanguage = "hi-IN";
+        beginListeningWithSelectedLanguage();
+    }
+
+    private void startWakeCommandCapture() {
+        // Reuse the Vosk service that detected the wake word. This avoids
+        // opening a second recognizer and avoids the provider error 9 path.
         Intent service = new Intent(this, WakeWordService.class);
         service.setAction(WakeWordService.ACTION_CAPTURE_COMMAND);
         try {
