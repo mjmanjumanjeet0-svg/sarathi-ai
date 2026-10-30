@@ -1185,6 +1185,14 @@ function bindEvents() {
   $("filesOption")?.addEventListener("click", chooseFiles);
   $("micBtn")?.addEventListener("click", startVoiceInput);
   $("webToggle")?.addEventListener("click", toggleWebSearch);
+  $("wakeStart")?.addEventListener("click", () => {
+    if (window.SarathiNative?.startWakeWord) window.SarathiNative.startWakeWord();
+    else setStatus("वेक-वर्ड सुविधा Android ऐप में ही उपलब्ध है।");
+  });
+  $("wakeStop")?.addEventListener("click", () => {
+    if (window.SarathiNative?.stopWakeWord) window.SarathiNative.stopWakeWord();
+    else setStatus("वेक-वर्ड सुविधा Android ऐप में ही उपलब्ध है।");
+  });
 
   $("messageInput")?.addEventListener("input", resizeMessageInput);
   $("welcome")?.addEventListener("click", handlePromptClick);
