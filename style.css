@@ -72,3 +72,18 @@ dialog{width:min(430px,calc(100% - 30px));background:var(--panel);color:var(--te
 .study-progress div span{color:var(--muted);font-size:11px}
 .study-progress button{border:1px solid var(--border);background:var(--panel2);color:var(--text);border-radius:8px;padding:8px 10px;font-size:11px}
 .study-progress button:disabled{opacity:.55}
+
+
+/* Interactive scored MCQ test */
+.quiz-card{margin-top:14px;padding:14px;border:1px solid var(--border);border-radius:13px;background:#07172f}
+.quiz-card h3{margin:0 0 12px;font-size:16px}
+.quiz-question{min-width:0;margin:10px 0;padding:10px;border:1px solid var(--border);border-radius:10px}
+.quiz-question legend{padding:0 5px;white-space:normal;font-weight:650;line-height:1.6}
+.quiz-option{display:block;width:100%;margin:7px 0;padding:9px 11px;text-align:left;border:1px solid var(--border);border-radius:8px;background:var(--panel2);color:var(--text);white-space:normal}
+.quiz-option.selected{border-color:var(--blue2);background:#174078}
+.quiz-option:disabled{opacity:1}
+.quiz-feedback{font-size:12px;line-height:1.6;margin:9px 0 0}
+.quiz-feedback.correct{color:#61d6a4}.quiz-feedback.incorrect{color:#ffb4a9}
+.quiz-footer{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:12px}
+.quiz-submit{padding:10px 14px;border:0;border-radius:9px;background:var(--blue);color:white;font-weight:650}
+.quiz-submit:disabled{opacity:.5}
