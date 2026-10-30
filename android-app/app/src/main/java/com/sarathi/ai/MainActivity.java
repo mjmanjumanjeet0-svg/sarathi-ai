@@ -22,6 +22,7 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebChromeClient;
+import android.webkit.JsResult;
 import android.webkit.ValueCallback;
 import android.webkit.WebResourceRequest;
 import android.widget.Toast;
@@ -113,6 +114,18 @@ public class MainActivity extends Activity {
 
         webView.addJavascriptInterface(new SarathiBridge(), "SarathiNative");
         webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
+                new android.app.AlertDialog.Builder(MainActivity.this)
+                        .setTitle("सारथी AI की अनुमति")
+                        .setMessage(message == null ? "क्या यह कार्रवाई करनी है?" : message)
+                        .setPositiveButton("हाँ, आगे बढ़ें", (dialog, which) -> result.confirm())
+                        .setNegativeButton("रद्द करें", (dialog, which) -> result.cancel())
+                        .setOnCancelListener(dialog -> result.cancel())
+                        .show();
+                return true;
+            }
+
             @Override
             public boolean onShowFileChooser(WebView view, ValueCallback<Uri[]> callback,
                     FileChooserParams params) {
@@ -228,19 +241,10 @@ public class MainActivity extends Activity {
             return;
         }
 
-        // Older Android versions do not expose reliable built-in language detection.
-        String[] labels = new String[]{"हिन्दी", "English"};
-        new android.app.AlertDialog.Builder(this)
-                .setTitle("आवाज़ की भाषा चुनें")
-                .setItems(labels, (dialog, which) -> {
-                    selectedSpeechLanguage = which == 1 ? "en-IN" : "hi-IN";
-                    beginListeningWithSelectedLanguage();
-                })
-                .setNegativeButton("रद्द करें", (dialog, which) -> {
-                    notifyVoice("onError", "आवाज़ पहचान रद्द कर दी गई।");
-                    resumeWakeWordAfterCommand();
-                })
-                .show();
+        // Wake-word commands default to Hindi on older Android versions.
+        // This avoids an extra language picker every time the user says "हेलो सारथी".
+        selectedSpeechLanguage = "hi-IN";
+        beginListeningWithSelectedLanguage();
     }
 
     private void beginListeningWithSelectedLanguage() {
