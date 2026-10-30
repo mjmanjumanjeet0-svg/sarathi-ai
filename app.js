@@ -580,6 +580,42 @@ function setBusy(busy) {
 function handleLocalPhoneCommand(prompt) {
   let action = null;
   let match;
+  const command = String(prompt || "").toLocaleLowerCase("hi-IN")
+    .replace(/[!！?？.,،:;।॥]+/g, " ").replace(/\\s+/g, " ").trim();
+  const openWords = "(?:खोलो|खोल दो|खोल दीजिए|ओपन करो|ओपेन करो|ओपने करो|open|open करो|चालू करो)";
+  const appAliases = {
+    "यूट्यूब": "youtube", "youtube": "youtube", "यूटुब": "youtube",
+    "क्रोम": "chrome", "chrome": "chrome", "गूगल क्रोम": "chrome",
+    "व्हाट्सऐप": "whatsapp", "व्हाट्सएप": "whatsapp", "whatsapp": "whatsapp",
+    "कैमरा": "camera", "camera": "camera", "गैलरी": "gallery", "gallery": "gallery", "फोटो": "gallery",
+    "सेटिंग": "settings", "सेटिंग्स": "settings", "settings": "settings",
+    "फोन": "phone", "डायलर": "phone", "dialer": "phone",
+    "मैप": "maps", "मैप्स": "maps", "maps": "maps",
+    "ब्राउज़र": "browser", "browser": "browser", "इंटरनेट": "browser",
+    "संदेश": "messages", "मैसेज": "messages", "messages": "messages",
+    "ईमेल": "email", "email": "email", "कैलेंडर": "calendar", "calendar": "calendar",
+    "संपर्क": "contacts", "contacts": "contacts"
+  };
+
+  match = command.match(new RegExp("^(?:(?:सारथी)\\s*)?(.+?)\\s+" + openWords + "$", "i"))
+    || command.match(new RegExp("^(?:(?:सारथी)\\s*)?" + openWords + "\\s+(.+)$", "i"));
+  if (match) {
+    const requested = (match[1] || match[2] || "").trim();
+    const key = appAliases[requested] || requested;
+    if (key) action = {
+      confirm: "फ़ोन में " + requested + " ऐप खोलना है?",
+      run: () => window.SarathiNative.openApp(key),
+      success: requested + " ऐप खोलने का अनुरोध किया गया।"
+    };
+  }
+
+  if (!action && /^(?:(?:सारथी)\\s*)?(?:कॉल|काल|फोन)\\s*(?:लगाओ|मिलाओ|करो|खोलो)?$/i.test(command)) {
+    action = {
+      confirm: "फ़ोन का डायलर खोलना है? नंबर चुनकर कॉल आपको खुद लगानी होगी।",
+      run: () => window.SarathiNative.openDialer(""),
+      success: "डायलर खुल गया। नंबर चुनें और कॉल लगाने से पहले जाँच लें।"
+    };
+  }
 
   match = prompt.match(/^(?:सारथी\s*)?(?:कॉल|फोन लगाओ|फोन करो|call)\s+(\+?[0-9][0-9\s-]{5,18})$/i);
   if (match) {
@@ -653,13 +689,13 @@ function handleLocalPhoneCommand(prompt) {
   }
 
   if (!action) {
-    match = prompt.match(/^(?:youtube|यूट्यूब)(?:\s+पर)?\s+(?:search|खोजो|ढूँढो|ढूंढो|चलाओ|play)\s+(.+)$/i)
-      || prompt.match(/^(?:play|search)\s+(.+?)\s+(?:on\s+youtube|यूट्यूब\s+पर)$/i)
-      || prompt.match(/^यूट्यूब\s+पर\s+(.+?)\s+(?:चलाओ|खोजो)$/i);
+    match = command.match(/^(?:youtube|यूट्यूब|यूटुब)(?:\\s+पर)?\\s+(?:search|खोजो|ढूँढो|ढूंढो|चलाओ|play)\\s+(.+)$/i)
+      || command.match(/^(?:play|search)\\s+(.+?)\\s+(?:on\\s+youtube|यूट्यूब\\s+पर)$/i)
+      || command.match(/^यूट्यूब\\s+पर\\s+(.+?)\\s+(?:चलाओ|खोजो)$/i);
     if (match) {
       const query = match[1].trim();
       action = {
-        confirm: "YouTube पर यह खोज खोलनी है?\n" + query + "\nसही वीडियो चुनकर चलाएँ।",
+        confirm: "YouTube पर यह खोज खोलनी है?\\n" + query + "\\nसही वीडियो चुनकर चलाएँ।",
         run: () => window.SarathiNative.searchYouTube(query),
         success: "YouTube खोज खुल गई। सही वीडियो चुनकर चलाएँ।"
       };
@@ -667,26 +703,15 @@ function handleLocalPhoneCommand(prompt) {
   }
 
   if (!action) {
-    match = prompt.match(/^(?:(?:खोलो|open)\s+(.+)|(.+?)\s+(?:खोलो|open))$/i);
+    match = command.match(/^(?:(?:खोलो|open)\\s+(.+)|(.+?)\\s+(?:खोलो|open))$/i);
     if (match) {
       const requested = (match[1] || match[2] || "").trim().toLowerCase();
-      const apps = {
-        "ब्राउज़र": "browser", "browser": "browser", "इंटरनेट": "browser",
-        "संदेश": "messages", "messages": "messages", "मैसेज ऐप": "messages",
-        "ईमेल ऐप": "email", "email": "email", "कैलेंडर": "calendar", "calendar": "calendar",
-        "संपर्क": "contacts", "contacts": "contacts", "मैप": "maps", "maps": "maps",
-        "सेटिंग्स": "settings", "settings": "settings", "यूट्यूब": "youtube", "youtube": "youtube",
-        "व्हाट्सऐप": "whatsapp", "whatsapp": "whatsapp"
+      const key = appAliases[requested] || requested;
+      if (key) action = {
+        confirm: "फ़ोन में " + requested + " ऐप खोलना है?",
+        run: () => window.SarathiNative.openApp(key),
+        success: "ऐप खोलने का अनुरोध किया गया।"
       };
-      // Known Hindi names use aliases; any other exact launcher app name is also supported.
-      const key = apps[requested] || requested;
-      if (key) {
-        action = {
-          confirm: "फ़ोन में " + requested + " ऐप खोलना है?",
-          run: () => window.SarathiNative.openApp(key),
-          success: "ऐप खोलने का अनुरोध किया गया।"
-        };
-      }
     }
   }
 
@@ -830,7 +855,7 @@ async function sendMessage(text) {
   }
 
   const needsCurrentInfo = /(आज|अभी|वर्तमान|ताज़ा|ताजा|लेटेस्ट|latest|current|today|now|भाव|कीमत|रेट|rate|price|मौसम|weather|तापमान|ट्रेन|रेल|train|pnr|समय सारणी|खबर|समाचार|news|सोने|सोना|gold|चांदी|चाँदी|silver|स्टॉक|शेयर बाजार|share market|exchange rate|डॉलर|रुपया|सिलेबस|पाठ्यक्रम|परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|परिणाम|आवेदन|फॉर्म|फीस|पात्रता|नियम|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(prompt);
-  const useWebSearch = !isSimpleGreeting(prompt) && (explicitlyRequestsWebSearch(prompt) || state.webEnabled || needsCurrentInfo);
+  // Search only when explicitly requested or when current information is needed.\n  const useWebSearch = !isSimpleGreeting(prompt) && (explicitlyRequestsWebSearch(prompt) || needsCurrentInfo);
 
   addMessage("user", prompt);
   setBusy(true);
