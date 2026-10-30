@@ -1228,7 +1228,11 @@ window.SarathiVoice = {
       state.voiceReplyPending = true;
       sendMessage(String(transcript).trim());
     } else {
-      setStatus("आवाज़ से आदेश समझ नहीं आया। फिर कोशिश करें।");
+      const message = "आवाज़ समझ नहीं आई। कृपया हेलो सारथी कहकर आदेश थोड़ा पास और साफ़ बोलें।";
+      setStatus(message);
+      if (window.SarathiNative && typeof window.SarathiNative.speak === "function") {
+        window.SarathiNative.speak(message);
+      }
     }
   },
   onError(message) {
