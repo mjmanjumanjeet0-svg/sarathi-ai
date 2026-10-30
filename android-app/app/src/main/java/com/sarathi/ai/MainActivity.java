@@ -39,6 +39,8 @@ import java.util.Set;
 public class MainActivity extends Activity {
     public static final String ACTION_WAKE_COMMAND = "com.sarathi.ai.WAKE_COMMAND";
     public static final String ACTION_WAKE_DETECTED = "com.sarathi.ai.WAKE_DETECTED";
+    public static final String ACTION_WAKE_RESULT = "com.sarathi.ai.WAKE_RESULT";
+    public static final String EXTRA_WAKE_TEXT = "wake_text";
     private static final int REQUEST_RECORD_AUDIO = 1201;
     private static final String APP_HOST = "mjmanjumanjeet0-svg.github.io";
     private WebView webView;
@@ -57,7 +59,14 @@ public class MainActivity extends Activity {
     private boolean wakeReceiverRegistered = false;
     private final BroadcastReceiver wakeDetectedReceiver = new BroadcastReceiver() {
         @Override public void onReceive(Context context, Intent intent) {
-            if (!appInForeground || intent == null || !ACTION_WAKE_DETECTED.equals(intent.getAction())) return;
+            if (!appInForeground || intent == null) return;
+            if (ACTION_WAKE_RESULT.equals(intent.getAction())) {
+                String command = intent.getStringExtra(EXTRA_WAKE_TEXT);
+                wakeCommandSession = false;
+                notifyVoice("onWakeCommandResult", command == null ? "" : command);
+                return;
+            }
+            if (!ACTION_WAKE_DETECTED.equals(intent.getAction())) return;
             pendingWakeCommand = true;
             wakeCommandSession = true;
             if (pageLoaded) {
@@ -77,7 +86,9 @@ public class MainActivity extends Activity {
 
         webView = new WebView(this);
         setContentView(webView);
-        IntentFilter wakeFilter = new IntentFilter(ACTION_WAKE_DETECTED);
+        IntentFilter wakeFilter = new IntentFilter();
+        wakeFilter.addAction(ACTION_WAKE_DETECTED);
+        wakeFilter.addAction(ACTION_WAKE_RESULT);
         if (Build.VERSION.SDK_INT >= 33) registerReceiver(wakeDetectedReceiver, wakeFilter, Context.RECEIVER_NOT_EXPORTED);
         else registerReceiver(wakeDetectedReceiver, wakeFilter);
         wakeReceiverRegistered = true;
@@ -254,18 +265,16 @@ public class MainActivity extends Activity {
     }
 
     private void startListening() {
-        pauseWakeWordForCommand();
-        // Android 14+ can detect Hindi and English in the same utterance when the speech provider supports it.
-        if (Build.VERSION.SDK_INT >= 34) {
-            selectedSpeechLanguage = "auto";
-            beginListeningWithSelectedLanguage();
-            return;
+        // Reuse the Vosk service that detected the wake word. Do not start a
+        // second Android SpeechRecognizer or ask for online speech consent.
+        Intent service = new Intent(this, WakeWordService.class);
+        service.setAction(WakeWordService.ACTION_CAPTURE_COMMAND);
+        try {
+            startService(service);
+            notifyVoice("onStatus", "बोलिए, सारथी ऑफ़लाइन हिंदी में सुन रहा है…");
+        } catch (Exception error) {
+            notifyVoice("onError", "ऑफ़लाइन आदेश पहचान शुरू नहीं हो सकी।");
         }
-
-        // Wake-word commands default to Hindi on older Android versions.
-        // This avoids an extra language picker every time the user says "हेलो सारथी".
-        selectedSpeechLanguage = "hi-IN";
-        beginListeningWithSelectedLanguage();
     }
 
     private void beginListeningWithSelectedLanguage() {
