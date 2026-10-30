@@ -1184,6 +1184,78 @@ function handlePromptClick(event) {
   if (prompt) sendMessage(prompt);
 }
 
+
+/* ========================================
+   EDUCATION HUB — local learner profile + guided study prompts
+======================================== */
+const STUDY_PROFILE_KEY = "sarathi_ai_study_profile_v1";
+
+function readStudyProfile() {
+  try { return JSON.parse(localStorage.getItem(STUDY_PROFILE_KEY) || "{}"); }
+  catch { return {}; }
+}
+
+function loadStudyProfile() {
+  const profile = readStudyProfile();
+  const fields = { studyLevel: "level", studyBoard: "board", studySubject: "subject", studyExam: "exam" };
+  for (const [id, key] of Object.entries(fields)) {
+    const element = $(id);
+    if (element && profile[key]) element.value = profile[key];
+  }
+}
+
+function runStudyAction(action) {
+  const profile = {
+    level: $("studyLevel")?.value.trim() || "",
+    board: $("studyBoard")?.value.trim() || "",
+    subject: $("studySubject")?.value.trim() || "",
+    exam: $("studyExam")?.value.trim() || ""
+  };
+  try { localStorage.setItem(STUDY_PROFILE_KEY, JSON.stringify(profile)); }
+  catch { setStatus("पढ़ाई की जानकारी डिवाइस में सेव नहीं हो सकी।"); }
+
+  const topic = $("studyTopic")?.value.trim() || "";
+  const context = [
+    profile.level && "कक्षा/कोर्स: " + profile.level,
+    profile.board && "बोर्ड/विश्वविद्यालय: " + profile.board,
+    profile.subject && "विषय/पेपर: " + profile.subject,
+    profile.exam && "परीक्षा/वर्ष: " + profile.exam,
+    topic && "अध्याय/टॉपिक/सवाल: " + topic
+  ].filter(Boolean).join("\n");
+
+  const tasks = {
+    explain: "मुझे यह विषय शिक्षक की तरह आसान भाषा में चरणबद्ध समझाओ। उदाहरण और अंत में पुनरावर्तन भी दो।",
+    notes: "इस विषय के व्यवस्थित, परीक्षा-उपयोगी अध्यायवार नोट्स बनाओ। महत्वपूर्ण परिभाषाएँ और तथ्य शामिल करो।",
+    questions: "इस विषय के महत्वपूर्ण अभ्यास प्रश्न बनाओ। प्रश्नों को अंक और कठिनाई के अनुसार बाँटो। किसी प्रश्न के परीक्षा में आने की गारंटी मत देना।",
+    quiz: "मेरी तैयारी जाँचने के लिए 10 MCQ का इंटरैक्टिव शैली वाला टेस्ट एक-एक करके पूछो। मेरे उत्तर के बाद सही उत्तर और कारण समझाओ।",
+    paper: "इस पाठ्यक्रम के अनुसार अभ्यास के लिए मॉडल प्रश्नपत्र बनाओ। आधिकारिक पुराने पेपर न होने पर इसे स्पष्ट रूप से नमूना बताओ।",
+    plan: "मेरे लिए यथार्थवादी पढ़ाई और पुनरावृत्ति योजना बनाओ। विषयों, छोटे अध्ययन सत्रों और अभ्यास को शामिल करो।"
+  };
+  const prompt = "मेरी पढ़ाई में मदद करो।\n" + (context || "मेरे स्तर के अनुसार पहले जरूरी जानकारी पूछो।") +
+    "\nकाम: " + (tasks[action] || tasks.explain) +
+    "\nआधिकारिक सिलेबस, परीक्षा तिथि या पुस्तक के तथ्य उपलब्ध स्रोत से सत्यापित करो; जानकारी न हो तो साफ बताओ, अनुमान मत लगाओ।";
+  sendMessage(prompt);
+}
+
+function bindEducationHub() {
+  loadStudyProfile();
+  $("educationHub")?.addEventListener("click", event => {
+    const button = event.target.closest("[data-study]");
+    if (button) runStudyAction(button.dataset.study);
+  });
+  for (const id of ["studyLevel", "studyBoard", "studySubject", "studyExam"]) {
+    $(id)?.addEventListener("change", () => {
+      const profile = {
+        level: $("studyLevel")?.value || "",
+        board: $("studyBoard")?.value || "",
+        subject: $("studySubject")?.value || "",
+        exam: $("studyExam")?.value || ""
+      };
+      try { localStorage.setItem(STUDY_PROFILE_KEY, JSON.stringify(profile)); } catch {}
+    });
+  }
+}
+
 /* ========================================
    EVENT LISTENERS
 ======================================== */
@@ -1306,6 +1378,7 @@ function bindEvents() {
 function initApp() {
   loadChats();
   bindEvents();
+  bindEducationHub();
   renderHistory();
   renderMessages();
   renderAttachmentPreview();
