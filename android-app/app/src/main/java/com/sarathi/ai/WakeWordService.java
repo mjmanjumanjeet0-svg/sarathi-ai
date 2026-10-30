@@ -48,6 +48,7 @@ public class WakeWordService extends Service {
     private volatile boolean speaking = false;
     private volatile boolean retryScheduled = false;
     private volatile boolean awaitingCommand = false;
+    private Runnable commandTimeout;
     private int retryAttempt = 0;
     private Model model;
     private Recognizer recognizer;
@@ -75,11 +76,14 @@ public class WakeWordService extends Service {
             }
             awaitingCommand = true;
             if (speechService != null) speechService.setPause(true);
+            scheduleCommandTimeout(60000L);
             return START_STICKY;
         }
         if (intent != null && ACTION_RESUME.equals(intent.getAction())) {
             if (running) {
                 awaitingCommand = false;
+                if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
+                commandTimeout = null;
                 resumeListening();
                 return START_STICKY;
             }
@@ -313,15 +317,22 @@ public class WakeWordService extends Service {
         }
     }
 
-    private void showWakeNotification() {
-        awaitingCommand = true;
-        if (speechService != null) speechService.setPause(true);
-        handler.postDelayed(() -> {
+    private void scheduleCommandTimeout(long delayMs) {
+        if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
+        commandTimeout = () -> {
+            commandTimeout = null;
             if (running && awaitingCommand) {
                 awaitingCommand = false;
                 resumeListening();
             }
-        }, 20000L);
+        };
+        handler.postDelayed(commandTimeout, delayMs);
+    }
+
+    private void showWakeNotification() {
+        awaitingCommand = true;
+        if (speechService != null) speechService.setPause(true);
+        scheduleCommandTimeout(20000L);
 
         Intent open = new Intent(this, MainActivity.class);
         open.setAction(MainActivity.ACTION_WAKE_COMMAND);
@@ -338,6 +349,7 @@ public class WakeWordService extends Service {
         running = false;
         awaitingCommand = false;
         retryScheduled = false;
+        commandTimeout = null;
         handler.removeCallbacksAndMessages(null);
         if (worker != null) worker.shutdownNow();
         if (speechService != null) { speechService.cancel(); speechService.shutdown(); speechService = null; }
