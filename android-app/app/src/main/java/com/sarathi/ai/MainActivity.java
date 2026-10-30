@@ -41,6 +41,8 @@ public class MainActivity extends Activity {
     private static final int REQUEST_FILE_CHOOSER = 1202;
     private SpeechRecognizer speechRecognizer;
     private TextToSpeech textToSpeech;
+    private boolean ttsReady = false;
+    private String pendingSpeechText = null;
     private Voice localHindiVoice;
     private Voice localEnglishVoice;
     private boolean pendingListen = false;
@@ -74,6 +76,7 @@ public class MainActivity extends Activity {
 
         textToSpeech = new TextToSpeech(this, status -> {
             if (status == TextToSpeech.SUCCESS && textToSpeech != null) {
+                ttsReady = true;
                 try {
                     Set<Voice> voices = textToSpeech.getVoices();
                     if (voices != null) {
@@ -97,6 +100,14 @@ public class MainActivity extends Activity {
                     localHindiVoice = null;
                     localEnglishVoice = null;
                 }
+                if (pendingSpeechText != null && !pendingSpeechText.trim().isEmpty()) {
+                    String queuedText = pendingSpeechText;
+                    pendingSpeechText = null;
+                    new SarathiBridge().speak(queuedText);
+                }
+            } else {
+                ttsReady = false;
+                notifyVoice("onError", "फ़ोन की Text-to-Speech सेवा शुरू नहीं हो सकी। Android में टेक्स्ट-टू-स्पीच इंजन जाँचें।");
             }
         });
 
@@ -447,8 +458,9 @@ public class MainActivity extends Activity {
             if (safeText.length() > 2500) safeText = safeText.substring(0, 2500);
             final String toSpeak = safeText;
             runOnUiThread(() -> {
-                if (textToSpeech == null) {
-                    notifyVoice("onError", "फ़ोन की टेक्स्ट-टू-स्पीच सेवा अभी तैयार नहीं है।");
+                if (textToSpeech == null || !ttsReady) {
+                    pendingSpeechText = toSpeak;
+                    notifyVoice("onStatus", "सारथी की आवाज़ सेवा तैयार हो रही है; जवाब तैयार होते ही बोलूँगी।");
                     return;
                 }
                 try {
