@@ -655,11 +655,14 @@ export default {
       const isCurrentNewsQuestion = /(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(userText);
       const isGoldRateQuestion = /(सोने|सोना|gold|22\s*k|24\s*k|bullion)/i.test(userText);
       const indiaToday = new Intl.DateTimeFormat("en-CA", { timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+      const isOfficialEducationQuestion = /(सिलेबस|पाठ्यक्रम|परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|परिणाम|आवेदन|फॉर्म|फीस|पात्रता|नियम|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(userText);
       const searchQuery = isCurrentNewsQuestion
         ? "India latest news when:2d " + indiaToday
         : isGoldRateQuestion
           ? "India 22K 24K gold rate today per gram 10 gram " + indiaToday
-          : userText;
+          : isOfficialEducationQuestion
+            ? userText + " official website government university board site:gov.in OR site:ac.in"
+            : userText;
       const search = await searchInternet(searchQuery, env);
       searchResults = filterRelevantSearchResults(userText, search.results);
       if (isGoldRateQuestion && searchResults.length) {
