@@ -731,7 +731,7 @@ export default {
       .slice(-10)
       .map(m => ({
         role: m.role,
-        content: m.content.slice(0, 6000),
+        content: m.content.slice(0, m.role === "user" ? 11000 : 4000),
       }));
 
     if (searchResults.length) {
