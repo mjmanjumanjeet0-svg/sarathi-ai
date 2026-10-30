@@ -201,8 +201,19 @@ public class MainActivity extends Activity {
         }
     }
 
+    private boolean hasMicrophonePermission() {
+        return Build.VERSION.SDK_INT < 23
+                || checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
+    }
+
     private void startRecognition(boolean useOnlineService) {
         try {
+            // Re-check permission immediately before starting the speech service.
+            if (!hasMicrophonePermission()) {
+                pendingListen = true;
+                requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_RECORD_AUDIO);
+                return;
+            }
             if (!SpeechRecognizer.isRecognitionAvailable(this)) {
                 notifyVoice("onError", "इस फ़ोन में कोई आवाज़ पहचान सेवा उपलब्ध नहीं मिली। Google ऐप या Speech Services इंस्टॉल/अपडेट करें और फिर कोशिश करें।");
                 return;
@@ -240,6 +251,13 @@ public class MainActivity extends Activity {
                         mainHandler.post(() -> showOnlineVoiceConsent(
                                 "इस फ़ोन की ऑफ़लाइन हिंदी आवाज़ पहचान अभी काम नहीं कर पाई। क्या आप इस बार इंटरनेट के माध्यम से हिंदी आवाज़ पहचान इस्तेमाल करना चाहते हैं?"
                         ));
+                    } else if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
+                        if (!hasMicrophonePermission()) {
+                            pendingListen = false;
+                            notifyVoice("onError", "Android ने माइक्रोफ़ोन अनुमति नहीं दी। सेटिंग में Sarathi AI → माइक्रोफ़ोन → केवल ऐप इस्तेमाल करते समय अनुमति चुनें।");
+                        } else {
+                            notifyVoice("onError", "Android की स्पीच सेवा ने अनुमति त्रुटि (कोड 9) लौटाई, जबकि Sarathi AI को माइक्रोफ़ोन अनुमति मिली हुई है। यह ऐप की अनुमति बंद होने का संदेश नहीं है। Google ऐप और Speech Services अपडेट करें।");
+                        }
                     } else {
                         notifyVoice("onError", getSpeechErrorMessage(error, useOnlineService));
                     }
