@@ -125,7 +125,7 @@ public class WakeWordService extends Service {
             speechService = new SpeechService(recognizer, 16000.0f);
             updateStatus("सारथी ऑफ़लाइन हिंदी में सुन रहा है — बंद करने तक");
             speechService.startListening(new RecognitionListener() {
-                @Override public void onPartialResult(String hypothesis) {}
+                @Override public void onPartialResult(String hypothesis) { handleRecognition(hypothesis); }
                 @Override public void onResult(String result) { handleRecognition(result); }
                 @Override public void onFinalResult(String result) { handleRecognition(result); }
                 @Override public void onError(Exception exception) {
@@ -197,7 +197,12 @@ public class WakeWordService extends Service {
         try {
             String text = new JSONObject(json).optString("text", "").toLowerCase(Locale.ROOT);
             String normalized = text.replaceAll("[^\\p{L}]", "");
-            if (normalized.contains("सारथी") || normalized.contains("sarathi")) {
+            boolean wakeDetected = normalized.contains("सारथी")
+                    || normalized.contains("सारथ")
+                    || normalized.contains("सरथी")
+                    || normalized.contains("sarathi")
+                    || normalized.contains("sarthi");
+            if (wakeDetected) {
                 showWakeNotification();
                 speakWakeReply();
             }
