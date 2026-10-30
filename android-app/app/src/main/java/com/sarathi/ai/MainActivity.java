@@ -176,8 +176,37 @@ public class MainActivity extends Activity {
                 .show();
     }
 
+    private String getSpeechErrorMessage(int error, boolean online) {
+        switch (error) {
+            case SpeechRecognizer.ERROR_NETWORK:
+            case SpeechRecognizer.ERROR_NETWORK_TIMEOUT:
+                return "आवाज़ पहचान सेवा तक नेटवर्क नहीं पहुँच रहा। मोबाइल डेटा चालू करके फिर कोशिश करें। (त्रुटि " + error + ")";
+            case SpeechRecognizer.ERROR_SERVER:
+            case SpeechRecognizer.ERROR_SERVER_DISCONNECTED:
+                return "Google/फ़ोन की आवाज़ पहचान सेवा ने जवाब नहीं दिया। Google ऐप और Speech Services को अपडेट करें। (त्रुटि " + error + ")";
+            case SpeechRecognizer.ERROR_CLIENT:
+                return "फ़ोन की स्पीच सेवा शुरू नहीं हो सकी। डिफ़ॉल्ट डिजिटल असिस्टेंट/स्पीच सेवा जाँचें। (त्रुटि " + error + ")";
+            case SpeechRecognizer.ERROR_NO_MATCH:
+            case SpeechRecognizer.ERROR_SPEECH_TIMEOUT:
+                return "आवाज़ साफ़ नहीं मिली। माइक्रोफ़ोन के पास धीरे और स्पष्ट बोलकर फिर कोशिश करें। (त्रुटि " + error + ")";
+            case SpeechRecognizer.ERROR_LANGUAGE_NOT_SUPPORTED:
+            case SpeechRecognizer.ERROR_LANGUAGE_UNAVAILABLE:
+                return "फ़ोन की स्पीच सेवा में हिंदी (भारत) उपलब्ध नहीं है। Google ऐप या Speech Services में हिंदी भाषा जोड़ें। (त्रुटि " + error + ")";
+            case SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS:
+                return "माइक्रोफ़ोन अनुमति नहीं मिली। फ़ोन की ऐप सेटिंग में अनुमति दें।";
+            case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
+                return "आवाज़ पहचान पहले से चल रही है। कुछ सेकंड बाद फिर कोशिश करें। (त्रुटि " + error + ")";
+            default:
+                return (online ? "ऑनलाइन" : "ऑफ़लाइन") + " आवाज़ पहचान विफल हुई। Google ऐप/Speech Services, हिंदी भाषा और नेटवर्क जाँचें। (त्रुटि " + error + ")";
+        }
+    }
+
     private void startRecognition(boolean useOnlineService) {
         try {
+            if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+                notifyVoice("onError", "इस फ़ोन में कोई आवाज़ पहचान सेवा उपलब्ध नहीं मिली। Google ऐप या Speech Services इंस्टॉल/अपडेट करें और फिर कोशिश करें।");
+                return;
+            }
             if (speechRecognizer != null) {
                 speechRecognizer.cancel();
                 speechRecognizer.destroy();
@@ -212,9 +241,7 @@ public class MainActivity extends Activity {
                                 "इस फ़ोन की ऑफ़लाइन हिंदी आवाज़ पहचान अभी काम नहीं कर पाई। क्या आप इस बार इंटरनेट के माध्यम से हिंदी आवाज़ पहचान इस्तेमाल करना चाहते हैं?"
                         ));
                     } else {
-                        notifyVoice("onError", useOnlineService
-                                ? "ऑनलाइन आवाज़ पहचान नहीं चल सकी। इंटरनेट कनेक्शन और माइक्रोफ़ोन अनुमति जाँचें।"
-                                : "माइक्रोफ़ोन अनुमति नहीं मिली। फ़ोन की सेटिंग में अनुमति जाँचें।");
+                        notifyVoice("onError", getSpeechErrorMessage(error, useOnlineService));
                     }
                     if (speechRecognizer != null) {
                         speechRecognizer.destroy();
