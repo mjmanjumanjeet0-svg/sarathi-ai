@@ -15,6 +15,7 @@ import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
 import android.speech.tts.TextToSpeech;
+import android.speech.tts.UtteranceProgressListener;
 import android.speech.tts.Voice;
 import android.webkit.JavascriptInterface;
 import android.webkit.WebSettings;
@@ -293,6 +294,7 @@ public class MainActivity extends Activity {
                 return;
             }
             if (!SpeechRecognizer.isRecognitionAvailable(this)) {
+                wakeCommandSession = false;
                 notifyVoice("onError", "इस फ़ोन में कोई आवाज़ पहचान सेवा उपलब्ध नहीं मिली। Google ऐप या Speech Services इंस्टॉल/अपडेट करें और फिर कोशिश करें।");
                 resumeWakeWordAfterCommand();
                 return;
@@ -343,9 +345,11 @@ public class MainActivity extends Activity {
                                         : "इस फ़ोन की ऑफ़लाइन हिंदी आवाज़ पहचान अभी काम नहीं कर पाई। क्या आप इस बार इंटरनेट के माध्यम से आवाज़ पहचान इस्तेमाल करना चाहते हैं?"
                         ));
                     } else if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
+                        wakeCommandSession = false;
                         notifyVoice("onError", "Sarathi AI की माइक्रोफ़ोन अनुमति चालू है, लेकिन फ़ोन की ऑनलाइन स्पीच सेवा ने अनुमति त्रुटि (कोड 9) दी। यह स्पीच सेवा/फ़ोन की समस्या है; आवाज़ इंटरनेट पर भेजने की अनुमति देने से भी यह सेवा ठीक होना निश्चित नहीं है।");
                         resumeWakeWordAfterCommand();
                     } else {
+                        wakeCommandSession = false;
                         notifyVoice("onError", getSpeechErrorMessage(error, true));
                         resumeWakeWordAfterCommand();
                     }
@@ -438,9 +442,21 @@ public class MainActivity extends Activity {
                     return;
                 }
                 try {
+                    pauseWakeWordForCommand();
                     textToSpeech.setVoice(selectedVoice);
-                    textToSpeech.speak(toSpeak, TextToSpeech.QUEUE_FLUSH, null, "sarathi-local-voice");
+                    textToSpeech.setOnUtteranceProgressListener(new UtteranceProgressListener() {
+                        @Override public void onStart(String utteranceId) {}
+                        @Override public void onDone(String utteranceId) {
+                            mainHandler.post(MainActivity.this::resumeWakeWordAfterCommand);
+                        }
+                        @Override public void onError(String utteranceId) {
+                            mainHandler.post(MainActivity.this::resumeWakeWordAfterCommand);
+                        }
+                    });
+                    int result = textToSpeech.speak(toSpeak, TextToSpeech.QUEUE_FLUSH, null, "sarathi-local-voice");
+                    if (result == TextToSpeech.ERROR) resumeWakeWordAfterCommand();
                 } catch (Exception error) {
+                    resumeWakeWordAfterCommand();
                     notifyVoice("onError", "चुनी हुई भाषा में जवाब बोलना शुरू नहीं हो सका।");
                 }
             });
