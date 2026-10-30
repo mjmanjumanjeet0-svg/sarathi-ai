@@ -52,3 +52,17 @@ dialog{width:min(430px,calc(100% - 30px));background:var(--panel);color:var(--te
 .control-row .web-toggle{flex:1 1 0;min-width:0;white-space:nowrap;text-align:center;padding:9px 6px;font-size:12px}
 .control-note{max-width:820px;margin:0 auto 7px;text-align:center}
 @media(max-width:700px){.control-row{gap:5px}.control-row .web-toggle{font-size:11px;padding:8px 3px;letter-spacing:-.15px}.control-note{font-size:10px}}
+
+/* Education and exam preparation hub */
+.education-hub{max-width:760px;margin:28px auto 18px;padding:18px;background:linear-gradient(145deg,#0c2143,#0b1a34);border:1px solid var(--border);border-radius:18px;text-align:left}
+.education-kicker{font-size:10px;letter-spacing:1.4px;color:#79b8ff;font-weight:800}
+.education-heading h2{font-size:20px;margin:5px 0}.education-heading p{font-size:12px;color:var(--muted);line-height:1.6;margin:0 0 15px}
+.education-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.education-fields label{display:flex;flex-direction:column;gap:6px;color:var(--muted);font-size:12px}
+.education-fields input,.education-fields select{width:100%;min-width:0;background:#06132a;color:var(--text);border:1px solid var(--border);border-radius:9px;padding:10px;font:inherit;font-size:13px}
+.education-fields .study-topic{grid-column:1/-1}
+.study-actions{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:13px}
+.study-actions button{border:1px solid var(--border);background:var(--panel2);color:var(--text);border-radius:10px;padding:11px 7px;font-size:12px}
+.study-actions button:active{transform:translateY(1px);background:#174078}
+.education-footnote{color:var(--muted);font-size:10px;margin:12px 0 0;line-height:1.5}
+@media(max-width:700px){.education-hub{margin:22px 0 15px;padding:13px}.education-fields{gap:8px}.study-actions{grid-template-columns:repeat(2,minmax(0,1fr))}.education-heading h2{font-size:18px}}
