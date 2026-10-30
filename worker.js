@@ -443,7 +443,7 @@ async function enrichGoldRateResults(results) {
       const combined = [item.title || "", item.snippet || "", ...contexts].join(" | ");
       const rateFor = (karat) => {
         const escaped = String(karat);
-        const re = new RegExp("(?:\\\\b" + escaped + "\\\\s*K\\\\b|" + escaped + "\\\\s*कैरेट|" + escaped + "\\\\s*karat)[^₹]{0,90}(?:₹|Rs\\\\.?|INR)\\\\s*([0-9,]+(?:\\\\.[0-9]+)?)", "i");
+        const re = new RegExp("(?:\\b" + escaped + "\\s*K\\b|" + escaped + "\\s*कैरेट|" + escaped + "\\s*karat)[^₹]{0,90}(?:₹|Rs\\.?|INR)\\s*([0-9,]+(?:\\.[0-9]+)?)", "i");
         const m = combined.match(re);
         return m ? Number(m[1].replace(/,/g, "")) : null;
       };
