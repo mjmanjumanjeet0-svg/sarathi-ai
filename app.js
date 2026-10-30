@@ -811,7 +811,7 @@ async function sendMessage(text) {
     text !== undefined ? text : ($("messageInput")?.value || "")
   ).trim();
 
-  const quietCommand = /^(?:(?:अच्छा|ठीक)\s+है\s+सारथी|ओके\s+सारथी|okay\s+sarathi|ok\s+sarathi|बस\s+सारथी|धन्यवाद\s+सारथी)$/i.test(prompt);
+  const quietCommand = /^(?:(?:अच्छा|ठीक)\s+है\s+सारथी|(?:ठीक|अच्छा)\s+है\s+बाय|ओके\s+सारथी|okay\s+sarathi|ok\s+sarathi|बस\s+सारथी|धन्यवाद\s+सारथी|बाय(?:\s+सारथी)?|bye(?:\s+sarathi)?|अलविदा(?:\s+सारथी)?)$/i.test(prompt);
   if (quietCommand) {
     state.voiceReplyPending = false;
     state.voiceStopRequested = true;
@@ -878,8 +878,10 @@ async function sendMessage(text) {
   // or stable basic facts such as India's capital.
   const isStableGeneralKnowledge = /(?:भारत|india).{0,18}(?:राजधानी|capital)|(?:राजधानी|capital).{0,18}(?:भारत|india)/i.test(prompt);
   const isTinyFollowUp = prompt.trim().length <= 8 && !needsCurrentInfo && !explicitlyRequestsWebSearch(prompt);
+  // Never search merely because the web toggle was left on.
+  // Search only when the user explicitly asks for the internet, or a current fact is needed.
   const useWebSearch = !isSimpleGreeting(prompt) && !isStableGeneralKnowledge && !isTinyFollowUp &&
-    (explicitlyRequestsWebSearch(prompt) || needsCurrentInfo || state.webEnabled);
+    (explicitlyRequestsWebSearch(prompt) || (state.webEnabled && needsCurrentInfo));
 
   addMessage("user", prompt);
   setBusy(true);
@@ -985,7 +987,9 @@ async function sendMessage(text) {
 
     const relevantSources = filterSourcesForPrompt(prompt, data.sources);
 
-    if (useWebSearch && relevantSources.length) {
+    // Keep source links out of ordinary answers. Show them only when the user
+    // explicitly asked Sarathi to search the internet.
+    if (explicitlyRequestsWebSearch(prompt) && useWebSearch && relevantSources.length) {
       const sourceText = relevantSources.map((source, index) =>
         `${index + 1}. ${source.title}\n${source.url}`
       ).join("\n\n");
