@@ -52,6 +52,7 @@ public class WakeWordService extends Service {
     private volatile boolean awaitingCommand = false;
     private volatile boolean commandMode = false;
     private volatile boolean commandDelivered = false;
+    private volatile boolean conversationMode = false;
     private Runnable commandTimeout;
     private int retryAttempt = 0;
     private Model model;
@@ -93,6 +94,13 @@ public class WakeWordService extends Service {
                 if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
                 commandTimeout = null;
                 resumeListening();
+                if (conversationMode && speechService == null && model != null) {
+                    if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
+                    worker.execute(() -> {
+                        try { startConversationRecognition(); }
+                        catch (Exception error) { scheduleListeningRetry("लगातार सुनना फिर शुरू नहीं हो सका"); }
+                    });
+                }
                 return START_STICKY;
             }
             stopSelf();
@@ -240,6 +248,14 @@ public class WakeWordService extends Service {
         } else {
             updateStatus("आवाज़ समझ नहीं आई। कृपया थोड़ा साफ़ और पास से बोलें।");
         }
+        String normalized = command.toLowerCase(Locale.ROOT)
+                .replaceAll("[^\\p{L}\\p{N}]+", " ").trim().replaceAll("\\s+", " ");
+        if (normalized.equals("ओके सारथी") || normalized.equals("ठीक है बाय")
+                || normalized.equals("अच्छा है बाय") || normalized.equals("बाय")
+                || normalized.equals("बाय सारथी") || normalized.equals("bye")
+                || normalized.equals("bye sarathi") || normalized.equals("अलविदा सारथी")) {
+            conversationMode = false;
+        }
         if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
         worker.execute(() -> {
             try {
@@ -252,11 +268,51 @@ public class WakeWordService extends Service {
                     recognizer.close();
                     recognizer = null;
                 }
-                if (running) startWakeRecognition();
+                if (running) {
+                    if (conversationMode) startConversationRecognition();
+                    else startWakeRecognition();
+                }
             } catch (Exception error) {
                 scheduleListeningRetry("आवाज़ पहचान दोबारा शुरू नहीं हो सकी");
             }
         });
+    }
+
+    private void handleConversationUtterance(String json) {
+        if (!running || !conversationMode || awaitingCommand || commandDelivered || json == null) return;
+        String text = "";
+        try { text = new JSONObject(json).optString("text", "").trim(); }
+        catch (Exception ignored) { }
+        if (text.isEmpty()) return;
+        commandMode = true;
+        finishCommand(json);
+    }
+
+    private void startConversationRecognition() throws Exception {
+        if (!running || !conversationMode || model == null) return;
+        commandMode = false;
+        commandDelivered = false;
+        recognizer = new Recognizer(model, 16000.0f);
+        speechService = new SpeechService(recognizer, 16000.0f);
+        speechService.startListening(new RecognitionListener() {
+            @Override public void onPartialResult(String hypothesis) { }
+            @Override public void onResult(String result) { handleConversationUtterance(result); }
+            @Override public void onFinalResult(String result) { handleConversationUtterance(result); }
+            @Override public void onError(Exception exception) {
+                if (running && conversationMode && !awaitingCommand) {
+                    scheduleListeningRetry("लगातार आवाज़ पहचान में समस्या आई");
+                }
+            }
+            @Override public void onTimeout() {
+                if (running && conversationMode && !awaitingCommand) {
+                    scheduleListeningRetry("सुनना फिर शुरू किया जा रहा है");
+                }
+            }
+        });
+        if (awaitingCommand) speechService.setPause(true);
+        updateStatus(awaitingCommand
+                ? "सारथी जवाब बोल रहा है…"
+                : "सारथी लगातार सुन रहा है — बातचीत खत्म करने के लिए ‘बाय सारथी’ कहें।");
     }
 
     private void scheduleListeningRetry(String message) {
@@ -284,9 +340,12 @@ public class WakeWordService extends Service {
                         prepareModelAndListen();
                         return;
                     }
-                    startWakeRecognition();
+                    if (conversationMode) startConversationRecognition();
+                    else startWakeRecognition();
                     retryAttempt = 0;
-                    updateStatus("सारथी ऑफ़लाइन हिंदी में सुन रहा है — बंद करने तक");
+                    updateStatus(conversationMode
+                            ? "सारथी लगातार सुन रहा है — बातचीत खत्म करने के लिए ‘बाय सारथी’ कहें।"
+                            : "सारथी ऑफ़लाइन हिंदी में सुन रहा है — बंद करने तक");
                 } catch (Exception error) {
                     scheduleListeningRetry("आवाज़ पहचान फिर शुरू नहीं हो सकी");
                 }
@@ -406,6 +465,7 @@ public class WakeWordService extends Service {
                 || normalized.equals("sarathi")
                 || normalized.equals("sarthi");
         if (hindiWake || englishWake) {
+            conversationMode = true;
             showWakeNotification();
             // Speak immediately; opening the notification then starts command capture.
             handler.post(this::speakWakeReply);
