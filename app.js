@@ -958,11 +958,19 @@ async function sendMessage(text) {
       throw new Error("AI से खाली जवाब मिला। Worker को जाँचना होगा।");
     }
 
-    // If structured sources are shown below the answer, remove any model-made
-    // duplicate source list from the answer itself.
-    const cleanAnswer = data.sources?.length
-      ? answer.trim().replace(/\n{1,2}\s*(?:स्रोत(?: सूची)?|sources?)\s*[:：][\s\S]*$/i, "").trim()
-      : answer.trim();
+    // Never display stray or unrelated links in ordinary conversation.
+    // Sources are shown only when the user explicitly asks for an internet search.
+    let cleanAnswer = answer.trim();
+    if (!explicitlyRequestsWebSearch(prompt)) {
+      cleanAnswer = cleanAnswer
+        .replace(/\n{0,2}\s*(?:🌐\s*)?(?:इंटरनेट से मिले स्रोत|स्रोत(?: सूची)?|sources?)\s*[:：][\s\S]*$/i, "")
+        .replace(/^\s*(?:https?:\/\/\S+|www\.\S+)\s*$/gim, "")
+        .trim();
+    } else if (data.sources?.length) {
+      cleanAnswer = cleanAnswer
+        .replace(/\n{1,2}\s*(?:स्रोत(?: सूची)?|sources?)\s*[:：][\s\S]*$/i, "")
+        .trim();
+    }
 
     if (prompt.includes("SARATHI_QUIZ_JSON:")) {
       const quiz = parseSarathiQuiz(cleanAnswer);
