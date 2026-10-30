@@ -689,13 +689,13 @@ function handleLocalPhoneCommand(prompt) {
   }
 
   if (!action) {
-    match = command.match(/^(?:youtube|यूट्यूब|यूटुब)(?:\s+पर)?\s+(?:search|खोजो|ढूँढो|ढूंढो|चलाओ|play)\\s+(.+)$/i)
+    match = command.match(/^(?:youtube|यूट्यूब|यूटुब)(?:\s+पर)?\s+(?:search|खोजो|ढूँढो|ढूंढो|चलाओ|play)\s+(.+)$/i)
       || command.match(/^(?:play|search)\s+(.+?)\s+(?:on\s+youtube|यूट्यूब\s+पर)$/i)
       || command.match(/^यूट्यूब\s+पर\s+(.+?)\s+(?:चलाओ|खोजो)$/i);
     if (match) {
       const query = match[1].trim();
       action = {
-        confirm: "YouTube पर यह खोज खोलनी है?\\n" + query + "\\nसही वीडियो चुनकर चलाएँ।",
+        confirm: "YouTube पर यह खोज खोलनी है?\n" + query + "\nसही वीडियो चुनकर चलाएँ।",
         run: () => window.SarathiNative.searchYouTube(query),
         success: "YouTube खोज खुल गई। सही वीडियो चुनकर चलाएँ।"
       };
