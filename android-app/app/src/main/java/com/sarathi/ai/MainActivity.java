@@ -40,6 +40,7 @@ public class MainActivity extends Activity {
     private TextToSpeech textToSpeech;
     private Voice localHindiVoice;
     private boolean pendingListen = false;
+    private String selectedSpeechLanguage = "hi-IN";
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     @Override
@@ -148,7 +149,24 @@ public class MainActivity extends Activity {
     }
 
     private void startListening() {
-        if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+        String[] labels = Build.VERSION.SDK_INT >= 34
+                ? new String[]{"हिन्दी + English (अपने-आप पहचानें)", "केवल हिन्दी", "केवल English"}
+                : new String[]{"हिन्दी", "English"};
+        new android.app.AlertDialog.Builder(this)
+                .setTitle("आवाज़ की भाषा चुनें")
+                .setItems(labels, (dialog, which) -> {
+                    if (Build.VERSION.SDK_INT >= 34 && which == 0) selectedSpeechLanguage = "auto";
+                    else if ((Build.VERSION.SDK_INT >= 34 && which == 2)
+                            || (Build.VERSION.SDK_INT < 34 && which == 1)) selectedSpeechLanguage = "en-IN";
+                    else selectedSpeechLanguage = "hi-IN";
+                    beginListeningWithSelectedLanguage();
+                })
+                .setNegativeButton("रद्द करें", (dialog, which) -> notifyVoice("onError", "आवाज़ पहचान रद्द कर दी गई।"))
+                .show();
+    }
+
+    private void beginListeningWithSelectedLanguage() {
+        if (!hasMicrophonePermission()) {
             pendingListen = true;
             requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_RECORD_AUDIO);
             return;
@@ -236,9 +254,11 @@ public class MainActivity extends Activity {
 
             speechRecognizer.setRecognitionListener(new RecognitionListener() {
                 @Override public void onReadyForSpeech(Bundle params) {
+                    String languageLabel = "en-IN".equals(selectedSpeechLanguage)
+                            ? "English" : ("auto".equals(selectedSpeechLanguage) ? "हिन्दी + English" : "हिन्दी");
                     notifyVoice("onStatus", useOnlineService
-                            ? "बोलिए, ऑनलाइन हिंदी आवाज़ पहचान चालू है…"
-                            : "बोलिए, सारथी फ़ोन पर ही सुन रहा है…");
+                            ? "बोलिए, ऑनलाइन " + languageLabel + " आवाज़ पहचान चालू है…"
+                            : "बोलिए, ऑफ़लाइन " + languageLabel + " आवाज़ पहचान चालू है…");
                 }
                 @Override public void onBeginningOfSpeech() {}
                 @Override public void onRmsChanged(float rmsdB) {}
@@ -281,9 +301,10 @@ public class MainActivity extends Activity {
 
             Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
-            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, "hi-IN");
-            // Android 14+ can detect Hindi and Indian English in the same utterance.
-            if (Build.VERSION.SDK_INT >= 34) {
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE,
+                    "auto".equals(selectedSpeechLanguage) ? "hi-IN" : selectedSpeechLanguage);
+            // Android 14+ providers may detect Hindi and English automatically.
+            if (Build.VERSION.SDK_INT >= 34 && "auto".equals(selectedSpeechLanguage)) {
                 intent.putExtra(RecognizerIntent.EXTRA_ENABLE_LANGUAGE_DETECTION, true);
                 intent.putExtra(
                     RecognizerIntent.EXTRA_LANGUAGE_DETECTION_ALLOWED_LANGUAGES,
