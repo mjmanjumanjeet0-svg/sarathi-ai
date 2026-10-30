@@ -267,19 +267,22 @@ public class MainActivity extends Activity {
                     notifyVoice("onStatus", "आवाज़ समझी जा रही है…");
                 }
                 @Override public void onError(int error) {
-                    if (!useOnlineService && error != SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
+                    if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS
+                            && !hasMicrophonePermission()) {
+                        pendingListen = false;
+                        notifyVoice("onError", "Android ने माइक्रोफ़ोन अनुमति नहीं दी। सेटिंग में Sarathi AI → माइक्रोफ़ोन → केवल ऐप इस्तेमाल करते समय अनुमति चुनें।");
+                    } else if (!useOnlineService) {
+                        // If the offline provider fails (including provider-side error 9),
+                        // offer the normal recognizer only after explicit per-use consent.
                         mainHandler.post(() -> showOnlineVoiceConsent(
-                                "इस फ़ोन की ऑफ़लाइन हिंदी आवाज़ पहचान अभी काम नहीं कर पाई। क्या आप इस बार इंटरनेट के माध्यम से हिंदी आवाज़ पहचान इस्तेमाल करना चाहते हैं?"
+                                error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS
+                                        ? "Sarathi AI को माइक्रोफ़ोन अनुमति मिली है, लेकिन फ़ोन की ऑफ़लाइन स्पीच सेवा ने अनुमति त्रुटि (कोड 9) दी। क्या आप इस बार इंटरनेट के माध्यम से आवाज़ पहचान इस्तेमाल करना चाहते हैं?"
+                                        : "इस फ़ोन की ऑफ़लाइन हिंदी आवाज़ पहचान अभी काम नहीं कर पाई। क्या आप इस बार इंटरनेट के माध्यम से आवाज़ पहचान इस्तेमाल करना चाहते हैं?"
                         ));
                     } else if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
-                        if (!hasMicrophonePermission()) {
-                            pendingListen = false;
-                            notifyVoice("onError", "Android ने माइक्रोफ़ोन अनुमति नहीं दी। सेटिंग में Sarathi AI → माइक्रोफ़ोन → केवल ऐप इस्तेमाल करते समय अनुमति चुनें।");
-                        } else {
-                            notifyVoice("onError", "Android की स्पीच सेवा ने अनुमति त्रुटि (कोड 9) लौटाई, जबकि Sarathi AI को माइक्रोफ़ोन अनुमति मिली हुई है। यह ऐप की अनुमति बंद होने का संदेश नहीं है। Google ऐप और Speech Services अपडेट करें।");
-                        }
+                        notifyVoice("onError", "Sarathi AI की माइक्रोफ़ोन अनुमति चालू है, लेकिन फ़ोन की ऑनलाइन स्पीच सेवा ने अनुमति त्रुटि (कोड 9) दी। यह स्पीच सेवा/फ़ोन की समस्या है; आवाज़ इंटरनेट पर भेजने की अनुमति देने से भी यह सेवा ठीक होना निश्चित नहीं है।");
                     } else {
-                        notifyVoice("onError", getSpeechErrorMessage(error, useOnlineService));
+                        notifyVoice("onError", getSpeechErrorMessage(error, true));
                     }
                     if (speechRecognizer != null) {
                         speechRecognizer.destroy();
