@@ -42,6 +42,7 @@ public class WakeWordService extends Service {
     private static final int NOTIFICATION_ID = 771;
     private static final String MODEL_NAME = "vosk-model-small-hi-0.22";
     private static final String MODEL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip";
+    private static final String WAKE_GRAMMAR = "[\"सारथी\",\"सारथी जी\",\"हेलो सारथी\",\"हैलो सारथी\",\"नमस्ते सारथी\",\"हे सारथी\",\"सरथी\",\"सारथि\",\"[unk]\"]";
     private final Handler handler = new Handler(Looper.getMainLooper());
     private ExecutorService worker = Executors.newSingleThreadExecutor();
     private volatile boolean running = false;
@@ -294,6 +295,8 @@ public class WakeWordService extends Service {
         if (!running || speaking || awaitingCommand || recognized == null) return;
         String normalized = recognized.toLowerCase(Locale.ROOT)
                 .replaceAll("[^\\p{L}\\p{N}]+", " ").trim().replaceAll("\\s+", " ");
+        // Common Hindi ASR spelling variants of the spoken wake word.
+        normalized = normalized.replace("सारथि", "सारथी").replace("सरथी", "सारथी");
         // Match partial and final Vosk hypotheses so Sarathi can react without waiting
         // for a long pause after the wake phrase.
         boolean wakeDetected = normalized.equals("सारथी")
