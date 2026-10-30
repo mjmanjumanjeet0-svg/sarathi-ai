@@ -442,6 +442,21 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void searchYouTube(String searchText) {
+            String query = searchText == null ? "" : searchText.trim();
+            if (query.isEmpty() || query.length() > 200) {
+                notifyVoice("onError", "YouTube खोज के लिए 1 से 200 अक्षर का नाम लिखें।");
+                return;
+            }
+            Uri searchUri = Uri.parse("https://www.youtube.com/results")
+                    .buildUpon().appendQueryParameter("search_query", query).build();
+            runOnUiThread(() -> launchExternalIntent(
+                    new Intent(Intent.ACTION_VIEW, searchUri),
+                    "YouTube खोज नहीं खुल सकी।"
+            ));
+        }
+
+        @JavascriptInterface
         public void openApp(String appName) {
             String key = appName == null ? "" : appName.trim().toLowerCase(Locale.ROOT);
             Intent intent = null;
