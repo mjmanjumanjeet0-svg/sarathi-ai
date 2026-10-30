@@ -44,6 +44,7 @@ public class MainActivity extends Activity {
     private Voice localHindiVoice;
     private Voice localEnglishVoice;
     private boolean pendingListen = false;
+    private boolean pendingWakeStart = false;
     private boolean pageLoaded = false;
     private boolean pendingWakeCommand = false;
     private boolean wakeCommandSession = false;
@@ -167,6 +168,18 @@ public class MainActivity extends Activity {
                 pendingWakeCommand = false;
                 startListening();
             }
+        }
+    }
+
+    private void startWakeWordService() {
+        try {
+            Intent service = new Intent(this, WakeWordService.class);
+            service.setAction(WakeWordService.ACTION_START);
+            if (Build.VERSION.SDK_INT >= 26) startForegroundService(service);
+            else startService(service);
+            notifyVoice("onStatus", "हिंदी ऑफ़लाइन मॉडल तैयार किया जा रहा है। पहली बार इंटरनेट से लगभग 42 MB डाउनलोड होगा; इसके बाद आवाज़ पहचान फ़ोन पर ही होगी।");
+        } catch (Exception error) {
+            notifyVoice("onError", "वेक-वर्ड सेवा शुरू नहीं हो सकी।");
         }
     }
 
@@ -408,8 +421,12 @@ public class MainActivity extends Activity {
             if (granted && pendingListen) {
                 pendingListen = false;
                 beginListeningWithSelectedLanguage();
+            } else if (granted && pendingWakeStart) {
+                pendingWakeStart = false;
+                startWakeWordService();
             } else {
                 pendingListen = false;
+                pendingWakeStart = false;
                 wakeCommandSession = false;
                 notifyVoice("onError", "माइक्रोफ़ोन अनुमति नहीं मिली। अनुमति के बिना आवाज़ नहीं सुनी जाएगी।");
                 resumeWakeWordAfterCommand();
@@ -634,19 +651,12 @@ public class MainActivity extends Activity {
         public void startWakeWord() {
             runOnUiThread(() -> {
                 if (!hasMicrophonePermission()) {
+                    pendingWakeStart = true;
                     requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_RECORD_AUDIO);
-                    notifyVoice("onError", "पहले माइक्रोफ़ोन अनुमति दें, फिर वेक-वर्ड चालू करें।");
+                    notifyVoice("onStatus", "वेक-वर्ड चालू करने के लिए माइक्रोफ़ोन अनुमति दें।");
                     return;
                 }
-                try {
-                    Intent service = new Intent(MainActivity.this, WakeWordService.class);
-                    service.setAction(WakeWordService.ACTION_START);
-                    if (Build.VERSION.SDK_INT >= 26) startForegroundService(service);
-                    else startService(service);
-                    notifyVoice("onStatus", "हिंदी ऑफ़लाइन मॉडल तैयार किया जा रहा है। पहली बार इंटरनेट से लगभग 42 MB डाउनलोड होगा; इसके बाद आवाज़ पहचान फ़ोन पर ही होगी।");
-                } catch (Exception error) {
-                    notifyVoice("onError", "वेक-वर्ड सेवा शुरू नहीं हो सकी।");
-                }
+                startWakeWordService();
             });
         }
 
@@ -707,6 +717,7 @@ public class MainActivity extends Activity {
             textToSpeech.shutdown();
             textToSpeech = null;
         }
+        resumeWakeWordAfterCommand();
         if (filePathCallback != null) {
             filePathCallback.onReceiveValue(null);
             filePathCallback = null;
