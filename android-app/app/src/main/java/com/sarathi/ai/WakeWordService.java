@@ -149,13 +149,13 @@ public class WakeWordService extends Service {
             if (!running) return;
             if (!marker.isFile()) throw new Exception("हिंदी मॉडल अधूरा है");
             model = new Model(modelDir.getAbsolutePath());
-            recognizer = new Recognizer(model, 16000.0f);
+            recognizer = createWakeRecognizer();
             speechService = new SpeechService(recognizer, 16000.0f);
             updateStatus("सारथी ऑफ़लाइन हिंदी में सुन रहा है — बंद करने तक");
             speechService.startListening(new RecognitionListener() {
-                @Override public void onPartialResult(String hypothesis) { handlePartialRecognition(hypothesis); }
+                @Override public void onPartialResult(String hypothesis) { /* Ignore unstable partial Hindi guesses. */ }
                 @Override public void onResult(String result) { handleRecognition(result); }
-                @Override public void onFinalResult(String result) { }
+                @Override public void onFinalResult(String result) { handleRecognition(result); }
                 @Override public void onError(Exception exception) {
                     scheduleListeningRetry("माइक्रोफ़ोन में अस्थायी समस्या आई है");
                 }
@@ -194,14 +194,14 @@ public class WakeWordService extends Service {
                         prepareModelAndListen();
                         return;
                     }
-                    recognizer = new Recognizer(model, 16000.0f);
+                    recognizer = createWakeRecognizer();
                     speechService = new SpeechService(recognizer, 16000.0f);
                     speechService.startListening(new RecognitionListener() {
-                        @Override public void onPartialResult(String hypothesis) { handlePartialRecognition(hypothesis); }
+                        @Override public void onPartialResult(String hypothesis) { /* Ignore unstable partial Hindi guesses. */ }
                         @Override public void onResult(String result) {
                             handleRecognition(result);
                         }
-                        @Override public void onFinalResult(String result) { }
+                        @Override public void onFinalResult(String result) { handleRecognition(result); }
                         @Override public void onError(Exception exception) {
                             scheduleListeningRetry("माइक्रोफ़ोन में अस्थायी समस्या आई है");
                         }
@@ -262,6 +262,15 @@ public class WakeWordService extends Service {
                 }
                 zip.closeEntry();
             }
+        }
+    }
+
+    private Recognizer createWakeRecognizer() throws Exception {
+        try {
+            return new Recognizer(model, 16000.0f, WAKE_GRAMMAR);
+        } catch (Exception grammarError) {
+            // Fall back to the full Hindi model if this model build rejects dynamic grammar.
+            return new Recognizer(model, 16000.0f);
         }
     }
 
