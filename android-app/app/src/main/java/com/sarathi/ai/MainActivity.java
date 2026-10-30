@@ -326,7 +326,7 @@ public class MainActivity extends Activity {
             boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
             if (granted && pendingListen) {
                 pendingListen = false;
-                startListening();
+                beginListeningWithSelectedLanguage();
             } else {
                 pendingListen = false;
                 notifyVoice("onError", "माइक्रोफ़ोन अनुमति नहीं मिली। अनुमति के बिना आवाज़ नहीं सुनी जाएगी।");
