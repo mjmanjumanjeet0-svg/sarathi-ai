@@ -129,7 +129,12 @@
             <button type="button" data-study="career">🧭 करियर मार्गदर्शन</button>
             <button type="button" data-study="book">📖 किताब / PDF पढ़ो</button>
           </div>
-          <p class="education-footnote" id="educationStatus">आपकी चुनी हुई पढ़ाई की जानकारी इसी डिवाइस में सेव रहेगी।</p>
+          <div class="study-progress" id="studyProgress">
+            <div><strong>मेरी पढ़ाई की प्रगति</strong><span id="studyProgressCount">0 अध्ययन सत्र पूरे</span></div>
+            <button type="button" id="studyDoneBtn">✓ आज का सत्र पूरा</button>
+            <button type="button" id="studyResetBtn">प्रगति रीसेट</button>
+          </div>
+          <p class="education-footnote" id="educationStatus">पढ़ाई की प्रोफ़ाइल और प्रगति इसी डिवाइस में सेव रहती है। PDF, DOCX, TXT और फोटो से पाठ निकालकर भेजने की सुविधा उपलब्ध है।</p>
         </section>
       </div>
 
@@ -191,7 +196,7 @@
         <input
           type="file"
           id="fileInput"
-          accept="image/*,.pdf,.txt,.doc,.docx"
+          accept="image/*,.pdf,.txt,.docx"
           multiple
           hidden>
       </form>
@@ -203,7 +208,7 @@
       </p>
       <p class="privacy-note">
         🔒 गोपनीयता: भेजे गए संदेशों का जवाब देने के लिए वे इंटरनेट पर AI सेवा को भेजे जाते हैं।
-        चुनी गई फोटो/फ़ाइल की सामग्री अभी AI को नहीं भेजी जाती। कॉल, SMS या ईमेल अपने-आप नहीं भेजे जाते।
+        भेजने पर चुनी गई PDF/TXT/DOCX या फोटो से निकाला गया पाठ AI सेवा को भेजा जाता है। संवेदनशील जानकारी वाली फाइल न भेजें। कॉल, SMS या ईमेल अपने-आप नहीं भेजे जाते।
       </p>
     </div>
 
