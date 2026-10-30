@@ -603,7 +603,8 @@ function handleLocalPhoneCommand(prompt) {
     const requested = (match[1] || match[2] || "").trim();
     const key = appAliases[requested] || requested;
     if (key) action = {
-      confirm: "फ़ोन में " + requested + " ऐप खोलना है?",
+      instant: true,
+      speech: requested + " ऐप खोल रहा हूँ।",
       run: () => window.SarathiNative.openApp(key),
       success: requested + " ऐप खोलने का अनुरोध किया गया।"
     };
@@ -611,7 +612,8 @@ function handleLocalPhoneCommand(prompt) {
 
   if (!action && /^(?:(?:सारथी)\s*)?(?:कॉल|काल|फोन)\s*(?:लगाओ|मिलाओ|करो|खोलो)?$/i.test(command)) {
     action = {
-      confirm: "फ़ोन का डायलर खोलना है? नंबर चुनकर कॉल आपको खुद लगानी होगी।",
+      instant: true,
+      speech: "डायलर खोल रहा हूँ। नंबर चुनकर कॉल आपको खुद लगानी होगी।",
       run: () => window.SarathiNative.openDialer(""),
       success: "डायलर खुल गया। नंबर चुनें और कॉल लगाने से पहले जाँच लें।"
     };
@@ -695,9 +697,10 @@ function handleLocalPhoneCommand(prompt) {
     if (match) {
       const query = match[1].trim();
       action = {
-        confirm: "YouTube पर यह खोज खोलनी है?\n" + query + "\nसही वीडियो चुनकर चलाएँ।",
+        instant: true,
+        speech: "YouTube पर खोज खोल रहा हूँ।",
         run: () => window.SarathiNative.searchYouTube(query),
-        success: "YouTube खोज खुल गई। सही वीडियो चुनकर चलाएँ।"
+        success: "YouTube खोज खोल दी गई। सही वीडियो चुनकर चलाएँ।"
       };
     }
   }
@@ -708,7 +711,8 @@ function handleLocalPhoneCommand(prompt) {
       const requested = (match[1] || match[2] || "").trim().toLowerCase();
       const key = appAliases[requested] || requested;
       if (key) action = {
-        confirm: "फ़ोन में " + requested + " ऐप खोलना है?",
+        instant: true,
+        speech: requested + " ऐप खोल रहा हूँ।",
         run: () => window.SarathiNative.openApp(key),
         success: "ऐप खोलने का अनुरोध किया गया।"
       };
@@ -723,7 +727,22 @@ function handleLocalPhoneCommand(prompt) {
     return true;
   }
 
-  if (!window.confirm(action.confirm)) {
+  if (action.instant) {
+    const voiceTriggered = state.voiceReplyPending;
+    state.voiceReplyPending = false;
+    if (voiceTriggered && window.SarathiNative && typeof window.SarathiNative.speak === "function") {
+      window.SarathiNative.speak(action.speech || action.success);
+      window.setTimeout(() => {
+        try { action.run(); } catch { setStatus("फ़ोन में ऐप नहीं खुल सका।"); }
+      }, 650);
+    } else {
+      action.run();
+    }
+    addMessage("assistant", action.success);
+    return true;
+  }
+
+  if (action.confirm && !window.confirm(action.confirm)) {
     addMessage("assistant", "ठीक है। आपकी अनुमति के बिना कोई फ़ोन कार्रवाई नहीं की गई।");
     return true;
   }
@@ -854,7 +873,7 @@ async function sendMessage(text) {
     setBusy(false);
   }
 
-  const needsCurrentInfo = /(आज|अभी|वर्तमान|ताज़ा|ताजा|लेटेस्ट|latest|current|today|now|भाव|कीमत|रेट|rate|price|मौसम|weather|तापमान|ट्रेन|रेल|train|pnr|समय सारणी|खबर|समाचार|news|सोने|सोना|gold|चांदी|चाँदी|silver|स्टॉक|शेयर बाजार|share market|exchange rate|डॉलर|रुपया|सिलेबस|पाठ्यक्रम|परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|परिणाम|आवेदन|फॉर्म|फीस|पात्रता|नियम|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(prompt);
+  const needsCurrentInfo = /(आज|अभी|वर्तमान|ताज़ा|ताजा|लेटेस्ट|latest|current|today|now|भाव|कीमत|रेट|rate|price|मौसम|weather|तापमान|ट्रेन|रेल|train|pnr|समय सारणी|खबर|समाचार|news|सोने|सोना|gold|चांदी|चाँदी|silver|स्टॉक|शेयर बाजार|share market|exchange rate|डॉलर|रुपया|राष्ट्रपति|प्रधानमंत्री|मुख्यमंत्री|राज्यपाल|लोकसभा अध्यक्ष|सिलेबस|पाठ्यक्रम|परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|परिणाम|आवेदन|फॉर्म|फीस|पात्रता|नियम|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(prompt);
   // Search only when explicitly requested or when current information is needed.\n  const useWebSearch = !isSimpleGreeting(prompt) && (explicitlyRequestsWebSearch(prompt) || needsCurrentInfo);
 
   addMessage("user", prompt);
@@ -932,8 +951,14 @@ async function sendMessage(text) {
       throw new Error("AI से खाली जवाब मिला। Worker को जाँचना होगा।");
     }
 
+    // If structured sources are shown below the answer, remove any model-made
+    // duplicate source list from the answer itself.
+    const cleanAnswer = data.sources?.length
+      ? answer.trim().replace(/\\n{1,2}\\s*(?:स्रोत(?: सूची)?|sources?)\\s*[:：][\\s\\S]*$/i, "").trim()
+      : answer.trim();
+
     if (prompt.includes("SARATHI_QUIZ_JSON:")) {
-      const quiz = parseSarathiQuiz(answer.trim());
+      const quiz = parseSarathiQuiz(cleanAnswer);
       if (quiz) {
         addMessage("assistant", "आपका अभ्यास टेस्ट तैयार है। हर प्रश्न का एक विकल्प चुनकर टेस्ट जमा करें।");
         const chat = activeChat();
@@ -944,13 +969,13 @@ async function sendMessage(text) {
         addMessage("assistant", "टेस्ट का प्रारूप सही नहीं मिला। कृपया MCQ टेस्ट फिर से शुरू करें।\n\n" + answer.trim());
       }
     } else {
-      addMessage("assistant", answer.trim());
+      addMessage("assistant", cleanAnswer);
     }
 
     // Only speak automatically for a reply triggered by the wake-word voice command.
     // Typed messages stay silent; the user can still tap the per-message speaker button.
     if (shouldSpeakReply && !state.voiceStopRequested && window.SarathiNative && typeof window.SarathiNative.speak === "function") {
-      window.SarathiNative.speak(answer.trim());
+      window.SarathiNative.speak(cleanAnswer);
     }
 
     const relevantSources = filterSourcesForPrompt(prompt, data.sources);
