@@ -5,6 +5,7 @@ import android.app.Activity;
 import android.content.Intent;
 import android.provider.AlarmClock;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -492,17 +493,46 @@ public class MainActivity extends Activity {
                     intent = getPackageManager().getLaunchIntentForPackage("com.whatsapp");
                     break;
                 default:
-                    notifyVoice("onError", "यह ऐप अभी सुरक्षित सूची में नहीं है।");
-                    return;
+                    intent = findInstalledAppIntent(appName);
+                    break;
             }
             final Intent launch = intent;
             runOnUiThread(() -> {
                 if (launch == null) {
-                    notifyVoice("onError", "यह ऐप फ़ोन में इंस्टॉल नहीं है या खुल नहीं सका।");
+                    notifyVoice("onError", "इस नाम का ऐप फ़ोन में नहीं मिला। ऐप का नाम जाँचकर फिर बोलें।");
                 } else {
                     launchExternalIntent(launch, "ऐप नहीं खुल सका।");
                 }
             });
+        }
+
+        private Intent findInstalledAppIntent(String requestedName) {
+            String wanted = normalizeAppName(requestedName);
+            if (wanted.isEmpty()) return null;
+
+            Intent launcherQuery = new Intent(Intent.ACTION_MAIN);
+            launcherQuery.addCategory(Intent.CATEGORY_LAUNCHER);
+            try {
+                for (ResolveInfo info : getPackageManager().queryIntentActivities(launcherQuery, 0)) {
+                    if (info.activityInfo == null) continue;
+                    CharSequence label = info.loadLabel(getPackageManager());
+                    if (label != null && wanted.equals(normalizeAppName(label.toString()))) {
+                        Intent launch = new Intent(Intent.ACTION_MAIN);
+                        launch.addCategory(Intent.CATEGORY_LAUNCHER);
+                        launch.setClassName(info.activityInfo.packageName, info.activityInfo.name);
+                        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        return launch;
+                    }
+                }
+            } catch (Exception ignored) {
+                return null;
+            }
+            return null;
+        }
+
+        private String normalizeAppName(String value) {
+            return value == null ? "" : value.toLowerCase(Locale.ROOT)
+                    .replaceAll("[^\\p{L}\\p{N}]", "");
         }
 
         private String cleanPhone(String value) {
