@@ -581,7 +581,7 @@ function handleLocalPhoneCommand(prompt) {
   let action = null;
   let match;
   const command = String(prompt || "").toLocaleLowerCase("hi-IN")
-    .replace(/[!！?？.,،:;।॥]+/g, " ").replace(/\\s+/g, " ").trim();
+    .replace(/[!！?？.,،:;।॥]+/g, " ").replace(/\s+/g, " ").trim();
   const openWords = "(?:खोलो|खोल दो|खोल दीजिए|ओपन करो|ओपेन करो|ओपने करो|open|open करो|चालू करो)";
   const appAliases = {
     "यूट्यूब": "youtube", "youtube": "youtube", "यूटुब": "youtube",
@@ -609,7 +609,7 @@ function handleLocalPhoneCommand(prompt) {
     };
   }
 
-  if (!action && /^(?:(?:सारथी)\\s*)?(?:कॉल|काल|फोन)\\s*(?:लगाओ|मिलाओ|करो|खोलो)?$/i.test(command)) {
+  if (!action && /^(?:(?:सारथी)\s*)?(?:कॉल|काल|फोन)\s*(?:लगाओ|मिलाओ|करो|खोलो)?$/i.test(command)) {
     action = {
       confirm: "फ़ोन का डायलर खोलना है? नंबर चुनकर कॉल आपको खुद लगानी होगी।",
       run: () => window.SarathiNative.openDialer(""),
@@ -689,9 +689,9 @@ function handleLocalPhoneCommand(prompt) {
   }
 
   if (!action) {
-    match = command.match(/^(?:youtube|यूट्यूब|यूटुब)(?:\\s+पर)?\\s+(?:search|खोजो|ढूँढो|ढूंढो|चलाओ|play)\\s+(.+)$/i)
-      || command.match(/^(?:play|search)\\s+(.+?)\\s+(?:on\\s+youtube|यूट्यूब\\s+पर)$/i)
-      || command.match(/^यूट्यूब\\s+पर\\s+(.+?)\\s+(?:चलाओ|खोजो)$/i);
+    match = command.match(/^(?:youtube|यूट्यूब|यूटुब)(?:\s+पर)?\s+(?:search|खोजो|ढूँढो|ढूंढो|चलाओ|play)\\s+(.+)$/i)
+      || command.match(/^(?:play|search)\s+(.+?)\s+(?:on\s+youtube|यूट्यूब\s+पर)$/i)
+      || command.match(/^यूट्यूब\s+पर\s+(.+?)\s+(?:चलाओ|खोजो)$/i);
     if (match) {
       const query = match[1].trim();
       action = {
@@ -703,7 +703,7 @@ function handleLocalPhoneCommand(prompt) {
   }
 
   if (!action) {
-    match = command.match(/^(?:(?:खोलो|open)\\s+(.+)|(.+?)\\s+(?:खोलो|open))$/i);
+    match = command.match(/^(?:(?:खोलो|open)\s+(.+)|(.+?)\s+(?:खोलो|open))$/i);
     if (match) {
       const requested = (match[1] || match[2] || "").trim().toLowerCase();
       const key = appAliases[requested] || requested;
