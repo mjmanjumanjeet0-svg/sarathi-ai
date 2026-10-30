@@ -391,6 +391,88 @@ function showWelcome() {
   if ($("messages")) $("messages").hidden = !hasMessages;
 }
 
+function renderQuizCard(message) {
+  const quiz = message.quiz;
+  if (!quiz || !Array.isArray(quiz.questions)) return null;
+  const card = document.createElement("section");
+  card.className = "quiz-card";
+  const heading = document.createElement("h3");
+  heading.textContent = quiz.title || "सारथी अभ्यास टेस्ट";
+  card.appendChild(heading);
+  const chosen = Array.isArray(quiz.selected) ? quiz.selected : [];
+  quiz.questions.forEach((item, index) => {
+    const block = document.createElement("fieldset");
+    block.className = "quiz-question";
+    const legend = document.createElement("legend");
+    legend.textContent = (index + 1) + ". " + item.question;
+    block.appendChild(legend);
+    (item.options || []).forEach((option, optionIndex) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.className = "quiz-option";
+      button.textContent = String.fromCharCode(65 + optionIndex) + ". " + option;
+      button.disabled = Boolean(quiz.submitted);
+      if (chosen[index] === optionIndex) button.classList.add("selected");
+      button.addEventListener("click", () => {
+        quiz.selected = Array.isArray(quiz.selected) ? quiz.selected : [];
+        quiz.selected[index] = optionIndex;
+        saveChats();
+        renderMessages();
+      });
+      block.appendChild(button);
+    });
+    if (quiz.submitted) {
+      const feedback = document.createElement("p");
+      const correct = Number(item.answer) === Number(chosen[index]);
+      feedback.className = "quiz-feedback " + (correct ? "correct" : "incorrect");
+      feedback.textContent = (correct ? "सही उत्तर। " : "सही उत्तर: " + String.fromCharCode(65 + Number(item.answer)) + ". ") + (item.explanation || "");
+      block.appendChild(feedback);
+    }
+    card.appendChild(block);
+  });
+  const footer = document.createElement("div");
+  footer.className = "quiz-footer";
+  if (quiz.submitted) {
+    const score = document.createElement("strong");
+    score.textContent = "आपका परिणाम: " + quiz.score + " / " + quiz.questions.length;
+    footer.appendChild(score);
+  } else {
+    const submit = document.createElement("button");
+    submit.type = "button";
+    submit.className = "quiz-submit";
+    submit.textContent = "टेस्ट जमा करें";
+    submit.disabled = quiz.questions.some((_, i) => !Number.isInteger(chosen[i]));
+    submit.addEventListener("click", () => {
+      quiz.score = quiz.questions.reduce((total, item, i) => total + (Number(item.answer) === Number(chosen[i]) ? 1 : 0), 0);
+      quiz.submitted = true;
+      saveChats();
+      renderMessages();
+    });
+    footer.appendChild(submit);
+  }
+  card.appendChild(footer);
+  return card;
+}
+
+function parseSarathiQuiz(raw) {
+  const text = String(raw || "").replace(/^\s*\x60{3}(?:json)?\s*/i, "").replace(/\s*\x60{3}\s*$/, "");
+  const start = text.indexOf("{");
+  const end = text.lastIndexOf("}");
+  if (start < 0 || end <= start) return null;
+  try {
+    const data = JSON.parse(text.slice(start, end + 1));
+    if (!Array.isArray(data.questions) || data.questions.length < 3 || data.questions.length > 20) return null;
+    const questions = data.questions.map(q => ({
+      question: String(q.question || ""),
+      options: Array.isArray(q.options) ? q.options.slice(0, 4).map(String) : [],
+      answer: Number(q.answer),
+      explanation: String(q.explanation || "")
+    }));
+    if (questions.some(q => !q.question || q.options.length !== 4 || !Number.isInteger(q.answer) || q.answer < 0 || q.answer > 3)) return null;
+    return { title: String(data.title || "अभ्यास टेस्ट"), questions, selected: [], submitted: false, score: null };
+  } catch { return null; }
+}
+
 function renderMessages() {
   const container = $("messages");
   if (!container) return;
@@ -424,6 +506,8 @@ function renderMessages() {
     body.innerHTML = formatText(message.content || "");
 
     content.append(label, body);
+    const quizCard = renderQuizCard(message);
+    if (quizCard) content.appendChild(quizCard);
 
     if (message.role !== "user") {
       const speakButton = document.createElement("button");
@@ -808,7 +892,20 @@ async function sendMessage(text) {
       throw new Error("AI से खाली जवाब मिला। Worker को जाँचना होगा।");
     }
 
-    addMessage("assistant", answer.trim());
+    if (prompt.includes("SARATHI_QUIZ_JSON:")) {
+      const quiz = parseSarathiQuiz(answer.trim());
+      if (quiz) {
+        addMessage("assistant", "आपका अभ्यास टेस्ट तैयार है। हर प्रश्न का एक विकल्प चुनकर टेस्ट जमा करें।");
+        const chat = activeChat();
+        chat.messages[chat.messages.length - 1].quiz = quiz;
+        saveChats();
+        renderMessages();
+      } else {
+        addMessage("assistant", "टेस्ट का प्रारूप सही नहीं मिला। कृपया MCQ टेस्ट फिर से शुरू करें।\n\n" + answer.trim());
+      }
+    } else {
+      addMessage("assistant", answer.trim());
+    }
 
     // Only speak automatically for a reply triggered by the wake-word voice command.
     // Typed messages stay silent; the user can still tap the per-message speaker button.
@@ -1357,7 +1454,7 @@ function runStudyAction(action) {
     explain: "मुझे यह विषय शिक्षक की तरह आसान भाषा में चरणबद्ध समझाओ। उदाहरण और अंत में पुनरावर्तन भी दो।",
     notes: "इस विषय के व्यवस्थित, परीक्षा-उपयोगी अध्यायवार नोट्स बनाओ। महत्वपूर्ण परिभाषाएँ और तथ्य शामिल करो।",
     questions: "इस विषय के महत्वपूर्ण अभ्यास प्रश्न बनाओ। प्रश्नों को अंक और कठिनाई के अनुसार बाँटो। किसी प्रश्न के परीक्षा में आने की गारंटी मत देना।",
-    quiz: "मेरी तैयारी जाँचने के लिए 10 MCQ का इंटरैक्टिव शैली वाला टेस्ट एक-एक करके पूछो। मेरे उत्तर के बाद सही उत्तर और कारण समझाओ।",
+    quiz: "SARATHI_QUIZ_JSON: मेरे विषय और टॉपिक पर 10 MCQ का टेस्ट बनाओ। केवल वैध JSON लौटाओ, Markdown नहीं। संरचना: {\"title\":\"टेस्ट का नाम\",\"questions\":[{\"question\":\"प्रश्न\",\"options\":[\"A\",\"B\",\"C\",\"D\"],\"answer\":0,\"explanation\":\"कारण\"}]}। answer शून्य-आधारित सही विकल्प संख्या हो। हर प्रश्न के चार विकल्प हों।",
     paper: "इस पाठ्यक्रम के अनुसार अभ्यास के लिए मॉडल प्रश्नपत्र बनाओ। आधिकारिक पुराने पेपर न होने पर इसे स्पष्ट रूप से नमूना बताओ।",
     plan: "मेरे लिए यथार्थवादी पढ़ाई और पुनरावृत्ति योजना बनाओ। विषयों, छोटे अध्ययन सत्रों और अभ्यास को शामिल करो।",
     english: "मुझे अंग्रेजी बिल्कुल शुरुआत से A से Z तक सिखाओ। अक्षर, ध्वनि, उच्चारण, रोजमर्रा के शब्द, छोटे वाक्य और धीरे-धीरे पढ़ना-लिखना सिखाओ। हर चरण पर छोटा अभ्यास कराओ।",
