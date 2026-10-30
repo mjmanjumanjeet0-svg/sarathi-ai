@@ -291,6 +291,8 @@ public class WakeWordService extends Service {
     private void startConversationRecognition() throws Exception {
         if (!running || !conversationMode || model == null) return;
         commandMode = false;
+        // Each new utterance in an active conversation is a fresh command.
+        // Without resetting this flag, only the first spoken request is handled.
         commandDelivered = false;
         recognizer = new Recognizer(model, 16000.0f);
         speechService = new SpeechService(recognizer, 16000.0f);
