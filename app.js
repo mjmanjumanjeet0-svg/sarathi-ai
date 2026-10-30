@@ -1021,7 +1021,7 @@ window.SarathiVoice = {
 
 function startVoiceInput() {
   if (window.SarathiNative && typeof window.SarathiNative.startListening === "function") {
-    setStatus("माइक्रोफ़ोन की अनुमति फ़ोन पर माँगी जाएगी; आवाज़ पहचान ऑफ़लाइन ही होगी।");
+    setStatus("माइक्रोफ़ोन अनुमति दें और हिन्दी या English चुनें। कुछ फ़ोनों में आवाज़ पहचान इंटरनेट सेवा से हो सकती है।");
     window.SarathiNative.startListening();
     return;
   }
