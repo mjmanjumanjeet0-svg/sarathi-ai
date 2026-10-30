@@ -22,7 +22,8 @@ const state = {
   busy: false,
   webEnabled: localStorage.getItem("sarathi_ai_web_search_v1") === "true",
   recognition: null,
-  attachments: []
+  attachments: [],
+  voiceReplyPending: false
 };
 
 /* ========================================
@@ -682,6 +683,8 @@ async function sendMessage(text) {
   ).trim();
 
   if (!prompt || state.busy) return;
+  const shouldSpeakReply = state.voiceReplyPending;
+  state.voiceReplyPending = false;
 
   // Phone actions are parsed and handled locally before any cloud request.
   if (handleLocalPhoneCommand(prompt)) {
@@ -788,8 +791,9 @@ async function sendMessage(text) {
 
     addMessage("assistant", answer.trim());
 
-    // Speak every completed Sarathi reply through Android TTS when running in the native app.
-    if (window.SarathiNative && typeof window.SarathiNative.speak === "function") {
+    // Only speak automatically for a reply triggered by the wake-word voice command.
+    // Typed messages stay silent; the user can still tap the per-message speaker button.
+    if (shouldSpeakReply && window.SarathiNative && typeof window.SarathiNative.speak === "function") {
       window.SarathiNative.speak(answer.trim());
     }
 
@@ -1034,6 +1038,7 @@ window.SarathiVoice = {
   onWakeCommandResult(transcript) {
     if (transcript && String(transcript).trim()) {
       setStatus("सारथी आपका आदेश समझ रहा है…");
+      state.voiceReplyPending = true;
       sendMessage(String(transcript).trim());
     } else {
       setStatus("आवाज़ से आदेश समझ नहीं आया। फिर कोशिश करें।");
