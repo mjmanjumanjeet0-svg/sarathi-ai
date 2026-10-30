@@ -297,7 +297,8 @@ public class WakeWordService extends Service {
                 || normalized.equals("sarthi");
         if (wakeDetected) {
             showWakeNotification();
-            speakWakeReply();
+            // Create and use Android TextToSpeech on the main thread.
+            handler.post(this::speakWakeReply);
         } else if (!normalized.isEmpty()) {
             // Local diagnostic: confirms what the offline recognizer actually heard.
             String shortText = normalized.length() > 45 ? normalized.substring(0, 45) : normalized;
@@ -312,9 +313,18 @@ public class WakeWordService extends Service {
         if (textToSpeech == null) {
             textToSpeech = new TextToSpeech(getApplicationContext(), status -> {
                 if (status == TextToSpeech.SUCCESS && textToSpeech != null) {
-                    textToSpeech.setLanguage(new Locale("hi", "IN"));
+                    int languageStatus = textToSpeech.setLanguage(new Locale("hi", "IN"));
+                    if (languageStatus == TextToSpeech.LANG_MISSING_DATA
+                            || languageStatus == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        updateStatus("फ़ोन में हिंदी बोलने की आवाज़ उपलब्ध नहीं है; Text-to-Speech में हिंदी आवाज़ जोड़ें");
+                        resumeListening();
+                        return;
+                    }
                     speakGreeting();
-                } else resumeListening();
+                } else {
+                    updateStatus("फ़ोन की बोलने वाली सेवा शुरू नहीं हुई; Text-to-Speech जाँचें");
+                    resumeListening();
+                }
             });
         } else speakGreeting();
     }
@@ -326,7 +336,11 @@ public class WakeWordService extends Service {
             @Override public void onDone(String id) { handler.postDelayed(WakeWordService.this::resumeListening, 350); }
             @Override public void onError(String id) { handler.post(WakeWordService.this::resumeListening); }
         });
-        textToSpeech.speak("जी, बताइए।", TextToSpeech.QUEUE_FLUSH, null, "sarathi_wake_reply");
+        int result = textToSpeech.speak("जी, बताइए।", TextToSpeech.QUEUE_FLUSH, null, "sarathi_wake_reply");
+        if (result == TextToSpeech.ERROR) {
+            updateStatus("सारथी का जवाब बोलना शुरू नहीं हुआ; फ़ोन की TTS आवाज़ जाँचें");
+            resumeListening();
+        }
     }
 
     private void resumeListening() {
