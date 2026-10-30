@@ -32,6 +32,7 @@ import java.util.Locale;
 import java.util.Set;
 
 public class MainActivity extends Activity {
+    public static final String ACTION_WAKE_COMMAND = "com.sarathi.ai.WAKE_COMMAND";
     private static final int REQUEST_RECORD_AUDIO = 1201;
     private static final String APP_HOST = "mjmanjumanjeet0-svg.github.io";
     private WebView webView;
@@ -42,6 +43,8 @@ public class MainActivity extends Activity {
     private Voice localHindiVoice;
     private Voice localEnglishVoice;
     private boolean pendingListen = false;
+    private boolean pageLoaded = false;
+    private boolean pendingWakeCommand = false;
     private String selectedSpeechLanguage = "hi-IN";
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -121,6 +124,16 @@ public class MainActivity extends Activity {
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                pageLoaded = true;
+                if (pendingWakeCommand) {
+                    pendingWakeCommand = false;
+                    startListening();
+                }
+            }
+
+            @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
                 String scheme = uri.getScheme();
@@ -140,6 +153,30 @@ public class MainActivity extends Activity {
         });
 
         webView.loadUrl("https://" + APP_HOST + "/sarathi-ai/");
+        handleWakeCommandIntent(getIntent());
+    }
+
+    private void handleWakeCommandIntent(Intent intent) {
+        if (intent != null && ACTION_WAKE_COMMAND.equals(intent.getAction())) {
+            intent.setAction(null);
+            pendingWakeCommand = true;
+            if (pageLoaded) {
+                pendingWakeCommand = false;
+                startListening();
+            }
+        }
+    }
+
+    private void pauseWakeWordForCommand() {
+        Intent service = new Intent(this, WakeWordService.class);
+        service.setAction(WakeWordService.ACTION_PAUSE);
+        try { startService(service); } catch (Exception ignored) {}
+    }
+
+    private void resumeWakeWordAfterCommand() {
+        Intent service = new Intent(this, WakeWordService.class);
+        service.setAction(WakeWordService.ACTION_RESUME);
+        try { startService(service); } catch (Exception ignored) {}
     }
 
     private void notifyVoice(String callback, String message) {
@@ -156,6 +193,7 @@ public class MainActivity extends Activity {
     }
 
     private void startListening() {
+        pauseWakeWordForCommand();
         // Android 14+ can detect Hindi and English in the same utterance when the speech provider supports it.
         if (Build.VERSION.SDK_INT >= 34) {
             selectedSpeechLanguage = "auto";
@@ -171,7 +209,10 @@ public class MainActivity extends Activity {
                     selectedSpeechLanguage = which == 1 ? "en-IN" : "hi-IN";
                     beginListeningWithSelectedLanguage();
                 })
-                .setNegativeButton("रद्द करें", (dialog, which) -> notifyVoice("onError", "आवाज़ पहचान रद्द कर दी गई।"))
+                .setNegativeButton("रद्द करें", (dialog, which) -> {
+                    notifyVoice("onError", "आवाज़ पहचान रद्द कर दी गई।");
+                    resumeWakeWordAfterCommand();
+                })
                 .show();
     }
 
@@ -190,16 +231,19 @@ public class MainActivity extends Activity {
         }
 
         // Never send microphone audio to an online recognition service without a clear, per-use choice.
-        showOnlineVoiceConsent("इस फ़ोन पर ऑफ़लाइन हिंदी आवाज़ पहचान उपलब्ध नहीं है। अगर आप आगे बढ़ते हैं, तो आपकी आवाज़ पहचानने के लिए इंटरनेट के ज़रिए फ़ोन की स्पीच सेवा को भेजी जा सकती है। क्या आप इस बार ऑनलाइन पहचान इस्तेमाल करना चाहते हैं?");
+        showOnlineVoiceConsent("इस फ़ोन पर चुनी हुई भाषा की ऑफ़लाइन आवाज़ पहचान उपलब्ध नहीं है। अगर आप आगे बढ़ते हैं, तो आपकी आवाज़ पहचानने के लिए इंटरनेट के ज़रिए फ़ोन की स्पीच सेवा को भेजी जा सकती है। क्या आप इस बार ऑनलाइन पहचान इस्तेमाल करना चाहते हैं?");
     }
 
     private void showOnlineVoiceConsent(String message) {
         new android.app.AlertDialog.Builder(this)
-                .setTitle("हिंदी आवाज़ पहचान")
+                .setTitle("आवाज़ पहचान")
                 .setMessage(message)
                 .setPositiveButton("हाँ, इस बार इस्तेमाल करें", (dialog, which) -> startRecognition(true))
-                .setNegativeButton("रद्द करें", (dialog, which) ->
-                        notifyVoice("onError", "ऑनलाइन आवाज़ पहचान रद्द कर दी गई। आपकी आवाज़ नहीं सुनी गई।"))
+                .setNegativeButton("रद्द करें", (dialog, which) -> {
+                    notifyVoice("onError", "ऑनलाइन आवाज़ पहचान रद्द कर दी गई। आपकी आवाज़ नहीं सुनी गई।");
+                    resumeWakeWordAfterCommand();
+                })
+                .setOnCancelListener(dialog -> resumeWakeWordAfterCommand())
                 .setCancelable(true)
                 .show();
     }
@@ -244,6 +288,7 @@ public class MainActivity extends Activity {
             }
             if (!SpeechRecognizer.isRecognitionAvailable(this)) {
                 notifyVoice("onError", "इस फ़ोन में कोई आवाज़ पहचान सेवा उपलब्ध नहीं मिली। Google ऐप या Speech Services इंस्टॉल/अपडेट करें और फिर कोशिश करें।");
+                resumeWakeWordAfterCommand();
                 return;
             }
             if (speechRecognizer != null) {
@@ -281,6 +326,7 @@ public class MainActivity extends Activity {
                             && !hasMicrophonePermission()) {
                         pendingListen = false;
                         notifyVoice("onError", "Android ने माइक्रोफ़ोन अनुमति नहीं दी। सेटिंग में Sarathi AI → माइक्रोफ़ोन → केवल ऐप इस्तेमाल करते समय अनुमति चुनें।");
+                        resumeWakeWordAfterCommand();
                     } else if (!useOnlineService) {
                         // If the offline provider fails (including provider-side error 9),
                         // offer the normal recognizer only after explicit per-use consent.
@@ -291,8 +337,10 @@ public class MainActivity extends Activity {
                         ));
                     } else if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
                         notifyVoice("onError", "Sarathi AI की माइक्रोफ़ोन अनुमति चालू है, लेकिन फ़ोन की ऑनलाइन स्पीच सेवा ने अनुमति त्रुटि (कोड 9) दी। यह स्पीच सेवा/फ़ोन की समस्या है; आवाज़ इंटरनेट पर भेजने की अनुमति देने से भी यह सेवा ठीक होना निश्चित नहीं है।");
+                        resumeWakeWordAfterCommand();
                     } else {
                         notifyVoice("onError", getSpeechErrorMessage(error, true));
+                        resumeWakeWordAfterCommand();
                     }
                     if (speechRecognizer != null) {
                         speechRecognizer.destroy();
@@ -307,6 +355,7 @@ public class MainActivity extends Activity {
                     } else {
                         notifyVoice("onError", "आवाज़ से शब्द समझ नहीं आए। फिर बोलकर देखें।");
                     }
+                    resumeWakeWordAfterCommand();
                 }
                 @Override public void onPartialResults(Bundle partialResults) {}
                 @Override public void onEvent(int eventType, Bundle params) {}
@@ -329,6 +378,7 @@ public class MainActivity extends Activity {
             speechRecognizer.startListening(intent);
         } catch (Exception error) {
             notifyVoice("onError", "माइक्रोफ़ोन शुरू नहीं हो सका।");
+            resumeWakeWordAfterCommand();
         }
     }
 
@@ -582,6 +632,13 @@ public class MainActivity extends Activity {
                 if (textToSpeech != null) textToSpeech.stop();
             });
         }
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleWakeCommandIntent(intent);
     }
 
     @Override
