@@ -300,7 +300,7 @@ public class WakeWordService extends Service {
         // exact matching, and also compare a compact form for these common splits.
         normalized = normalized.replace("सारथि", "सारथी")
                 .replace("सरथी", "सारथी")
-                .replace("सारथ", "सारथी");
+                ;
         String compact = normalized.replaceAll("[^\\p{L}\\p{N}]", "");
         boolean hindiWake = normalized.equals("सारथी")
                 || normalized.equals("सारथी जी")
