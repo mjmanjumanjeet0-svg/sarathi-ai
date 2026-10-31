@@ -485,7 +485,7 @@ export default {
     // accidentally consume separately billed Workers AI credits.
     if (url.pathname === "/api/media/image" || url.pathname === "/api/media/understand") {
       if (!env.SARATHI_LOGIN_PASSWORD ||
-          !await verifyToken((request.headers.get("Authorization") || "").replace(/^Bearer\\s+/i, ""), env.SARATHI_LOGIN_PASSWORD)) {
+          !await verifyToken((request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, ""), env.SARATHI_LOGIN_PASSWORD)) {
         return jsonResponse({ success: false, error: "सत्र समाप्त हो गया है। दोबारा लॉगिन करें।" }, 401);
       }
       return jsonResponse({
