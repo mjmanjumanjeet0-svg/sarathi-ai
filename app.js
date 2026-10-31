@@ -507,6 +507,37 @@ function renderMessages() {
     const body = document.createElement("div");
     body.className = "message-body";
     body.innerHTML = formatText(message.content || "");
+    if (message.role !== "user" && Array.isArray(message.sources) && message.sources.length) {
+      const sourceBox = document.createElement("section");
+      sourceBox.className = "message-sources";
+      sourceBox.style.cssText = "margin-top:12px;padding-top:9px;border-top:1px solid var(--border,#ddd)";
+      const sourceHeading = document.createElement("strong");
+      sourceHeading.textContent = "स्रोत और आगे पढ़ें";
+      sourceBox.appendChild(sourceHeading);
+      const sourceList = document.createElement("ol");
+      sourceList.style.cssText = "margin:6px 0 0;padding-left:22px";
+      for (const source of message.sources) {
+        try {
+          const url = new URL(source.url);
+          if (!["http:", "https:"].includes(url.protocol)) continue;
+          const item = document.createElement("li");
+          const link = document.createElement("a");
+          link.href = url.href;
+          link.target = "_blank";
+          link.rel = "noopener noreferrer";
+          link.textContent = String(source.title || source.publisher || url.hostname).slice(0, 240);
+          item.appendChild(link);
+          const meta = document.createElement("small");
+          meta.textContent = [source.publisher, source.publishedAt].filter(Boolean).join(" · ");
+          if (meta.textContent) item.appendChild(meta);
+          sourceList.appendChild(item);
+        } catch {}
+      }
+      if (sourceList.children.length) {
+        sourceBox.appendChild(sourceList);
+        body.appendChild(sourceBox);
+      }
+    }
     if (message.imageUrl) {
       const imageWrap = document.createElement("div");
       imageWrap.style.cssText = "position:relative;display:inline-block;max-width:100%;margin-top:10px";
@@ -566,7 +597,7 @@ function renderMessages() {
   container.scrollTop = container.scrollHeight;
 }
 
-function addMessage(role, content, imageUrl) {
+function addMessage(role, content, imageUrl, sources) {
   let chat = activeChat();
   if (!chat) chat = createChat();
 
@@ -575,6 +606,7 @@ function addMessage(role, content, imageUrl) {
     role,
     content: String(content || ""),
     ...(imageUrl ? { imageUrl: String(imageUrl) } : {}),
+    ...(Array.isArray(sources) && sources.length ? { sources: sources.filter(source => source && typeof source.title === "string" && /^https?:\\/\\//i.test(source.url || "")).slice(0, 8).map(source => ({ title: source.title.slice(0, 240), url: source.url, publisher: String(source.publisher || "").slice(0, 100), publishedAt: String(source.publishedAt || "").slice(0, 80) })) } : {}),
     createdAt: Date.now()
   });
 
@@ -1012,7 +1044,7 @@ async function sendMessage(text) {
         addMessage("assistant", "टेस्ट का प्रारूप सही नहीं मिला। कृपया MCQ टेस्ट फिर से शुरू करें।\n\n" + answer.trim());
       }
     } else {
-      addMessage("assistant", cleanAnswer);
+      addMessage("assistant", cleanAnswer, null, useWebSearch ? filterSourcesForPrompt(prompt, data.sources || []) : []);
     }
 
     // Only speak automatically for a reply triggered by the wake-word voice command.
