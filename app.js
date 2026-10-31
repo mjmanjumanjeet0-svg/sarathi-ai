@@ -811,7 +811,7 @@ async function sendMessage(text) {
     text !== undefined ? text : ($("messageInput")?.value || "")
   ).trim();
 
-  const quietCommand = /^(?:(?:अच्छा|ठीक)\s+है\s+सारथी|(?:ठीक|अच्छा)\s+है\s+बाय|ओके\s+सारथी|okay\s+sarathi|ok\s+sarathi|बस\s+सारथी|धन्यवाद\s+सारथी|बाय(?:\s+सारथी)?|bye(?:\s+sarathi)?|अलविदा(?:\s+सारथी)?)$/i.test(prompt);
+  const quietCommand = /^(?:(?:अच्छा|ठीक)\s+है\s+सारथी|(?:ठीक|अच्छा)\s+है\s+बाय(?:\s+सारथी)?|ओके\s+सारथी|okay\s+sarathi|ok\s+sarathi|बस\s+सारथी|धन्यवाद\s+सारथी|बाय(?:\s+सारथी)?|bye(?:\s+sarathi)?|अलविदा(?:\s+सारथी)?)$/i.test(prompt);
   if (quietCommand) {
     state.voiceReplyPending = false;
     state.voiceStopRequested = true;
@@ -963,8 +963,15 @@ async function sendMessage(text) {
     let cleanAnswer = answer.trim();
     if (!explicitlyRequestsWebSearch(prompt)) {
       cleanAnswer = cleanAnswer
-        .replace(/\n{0,2}\s*(?:🌐\s*)?(?:इंटरनेट से मिले स्रोत|स्रोत(?: सूची)?|sources?)\s*[:：][\s\S]*$/i, "")
-        .replace(/^\s*(?:https?:\/\/\S+|www\.\S+)\s*$/gim, "")
+        // Remove common source/reference sections, including English headings.
+        .replace(/\n{0,2}\s*(?:🌐\s*)?(?:इंटरनेट से मिले स्रोत|स्रोत(?: सूची)?|references?|sources?|वेबसाइट(?:ें)?|लिंक(?:\s*सूची)?)\s*[:：]?\s*[\s\S]*$/i, "")
+        // Remove standalone URLs and Markdown link lines inserted by a model.
+        .replace(/^\s*(?:[-*•]\s*)?(?:\[[^\]]+\]\([^)]*https?:\/\/[^)]+\)|https?:\/\/\S+|www\.\S+)\s*$/gim, "")
+        // Remove inline Markdown links while preserving their readable label.
+        .replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, "$1")
+        // Remove bare URLs even if the model placed them after a sentence.
+        .replace(/https?:\/\/\S+|www\.\S+/gi, "")
+        .replace(/\n{3,}/g, "\n\n")
         .trim();
     } else if (data.sources?.length) {
       cleanAnswer = cleanAnswer
