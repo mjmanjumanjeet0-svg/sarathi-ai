@@ -155,6 +155,7 @@
         </button>
         <button type="button" id="wakeStartMain" class="web-toggle">🦚 सुनना चालू</button>
         <button type="button" id="wakeStopMain" class="web-toggle">⏹ सुनना बंद</button>
+        <button type="button" id="mediaStudioOpen" class="web-toggle">🎨 मीडिया स्टूडियो</button>
       </div>
       <p class="web-note control-note">इंटरनेट खोज और वेक-वर्ड को यहाँ से चालू या बंद करें।</p>
 
@@ -265,6 +266,49 @@
   </form>
 </dialog>
 
+<dialog id="mediaStudioDialog">
+  <div class="dialog-inner media-studio">
+    <h2>🎨 सारथी मीडिया स्टूडियो</h2>
+    <p class="hint">फोटो और पोस्टर की एडिटिंग इसी डिवाइस पर होती है। आपकी मूल फाइल नहीं बदलेगी।</p>
+    <div class="media-tabs">
+      <button type="button" class="primary-btn" data-media-tab="image">फोटो / पोस्टर</button>
+      <button type="button" class="secondary-btn" data-media-tab="video">वीडियो ट्रिम</button>
+    </div>
+    <section id="mediaImagePanel">
+      <label for="mediaImageInput">फोटो चुनें</label>
+      <input id="mediaImageInput" type="file" accept="image/*">
+      <div class="media-preview"><canvas id="mediaCanvas" width="900" height="600"></canvas></div>
+      <label>फिल्टर
+        <select id="mediaFilter">
+          <option value="none">मूल</option><option value="contrast">कॉन्ट्रास्ट</option>
+          <option value="bright">उज्ज्वल</option><option value="mono">ब्लैक एंड व्हाइट</option>
+          <option value="warm">वार्म</option><option value="cool">कूल</option>
+        </select>
+      </label>
+      <label for="mediaTitle">फोटो / पोस्टर पर लिखें</label>
+      <input id="mediaTitle" type="text" maxlength="90" placeholder="अपना शीर्षक लिखें">
+      <label for="mediaSubtitle">दूसरी लाइन (वैकल्पिक)</label>
+      <input id="mediaSubtitle" type="text" maxlength="140" placeholder="पोस्ट की बाकी बात लिखें">
+      <div class="dialog-actions">
+        <button type="button" class="secondary-btn" id="mediaReset">रीसेट</button>
+        <button type="button" class="primary-btn" id="mediaDownload">फोटो डाउनलोड करें</button>
+      </div>
+    </section>
+    <section id="mediaVideoPanel" hidden>
+      <label for="mediaVideoInput">वीडियो चुनें</label>
+      <input id="mediaVideoInput" type="file" accept="video/*">
+      <video id="mediaVideo" controls playsinline></video>
+      <div class="media-time-fields">
+        <label>शुरुआत (सेकंड)<input id="videoStart" type="number" min="0" step="0.1" value="0"></label>
+        <label>अंत (सेकंड)<input id="videoEnd" type="number" min="0" step="0.1" value="10"></label>
+      </div>
+      <p class="hint" id="videoStatus">वीडियो चुनें। समर्थित ब्राउज़र में चुना हुआ हिस्सा WebM में सेव होगा।</p>
+      <button type="button" class="primary-btn" id="videoExport">चुना हिस्सा एक्सपोर्ट करें</button>
+    </section>
+    <div class="dialog-actions"><button type="button" class="secondary-btn" id="mediaStudioClose">बंद करें</button></div>
+  </div>
+</dialog>
+
 <dialog id="findDialog">
   <form method="dialog" class="dialog-inner">
     <h2>चैट में खोजें</h2>
@@ -286,6 +330,7 @@
   </form>
 </dialog>
 
+<script src="media-studio.js"></script>
 <script src="app.js"></script>
 
 </body>
