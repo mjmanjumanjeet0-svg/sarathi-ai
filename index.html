@@ -284,6 +284,7 @@
 <dialog id="mediaStudioDialog">
   <div class="dialog-inner media-studio">
     <h2>🖼️ सारथी मीडिया स्टूडियो</h2>
+    <p class="hint">Zero-Cost Mode: AI से नई फोटो बनाना और फोटो/वीडियो समझना फिलहाल बंद है। चुनी हुई फोटो पर फ़िल्टर, शीर्षक और पोस्टर बनाना तथा वीडियो ट्रिम करना डिवाइस पर उपलब्ध है।</p>
     <div class="media-tabs">
       <button type="button" data-media-tab="image">फोटो / पोस्टर</button>
       <button type="button" data-media-tab="video">वीडियो ट्रिम</button>
@@ -295,7 +296,7 @@
       <label>AI से फोटो बनाने या चुनी फोटो में बदलाव का निर्देश
         <textarea id="mediaPrompt" rows="3" placeholder="उदाहरण: पहाड़ों के बीच सुंदर सूर्योदय का दृश्य बनाओ।"></textarea>
       </label>
-      <button type="button" class="primary-btn" id="mediaGenerateImage">AI फोटो बनाएँ</button>
+      <button type="button" class="primary-btn" id="mediaGenerateImage" disabled>AI फोटो (फिलहाल बंद)</button>
       <p id="mediaAiStatus" class="hint" aria-live="polite"></p>
       <div class="media-preview"><canvas id="mediaCanvas" width="900" height="600"></canvas></div>
       <label>फोटो फ़िल्टर
