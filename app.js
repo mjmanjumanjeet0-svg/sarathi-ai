@@ -585,8 +585,16 @@ function handleLocalPhoneCommand(prompt) {
   const openWords = "(?:खोलो|खोल दो|खोल दीजिए|ओपन करो|ओपेन करो|ओपने करो|open|open करो|चालू करो)";
   const appAliases = {
     "यूट्यूब": "youtube", "youtube": "youtube", "यूटुब": "youtube",
+    "चैट जीपीटी": "ChatGPT", "चैटजीपीटी": "ChatGPT", "चैटजिपिटी": "ChatGPT",
+    "chat gpt": "ChatGPT", "chatgpt": "ChatGPT",
     "क्रोम": "chrome", "chrome": "chrome", "गूगल क्रोम": "chrome",
     "व्हाट्सऐप": "whatsapp", "व्हाट्सएप": "whatsapp", "whatsapp": "whatsapp",
+    "इंस्टाग्राम": "Instagram", "instagram": "Instagram",
+    "फेसबुक": "Facebook", "facebook": "Facebook",
+    "टेलीग्राम": "Telegram", "telegram": "Telegram",
+    "स्पॉटिफाई": "Spotify", "spotify": "Spotify",
+    "जीपे": "Google Pay", "गूगल पे": "Google Pay", "google pay": "Google Pay", "gpay": "Google Pay",
+    "फोनपे": "PhonePe", "phonepe": "PhonePe",
     "कैमरा": "camera", "camera": "camera", "गैलरी": "gallery", "gallery": "gallery", "फोटो": "gallery",
     "सेटिंग": "settings", "सेटिंग्स": "settings", "settings": "settings",
     "फोन": "phone", "डायलर": "phone", "dialer": "phone",
