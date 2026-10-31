@@ -87,3 +87,17 @@ dialog{width:min(430px,calc(100% - 30px));background:var(--panel);color:var(--te
 .quiz-footer{display:flex;justify-content:flex-end;align-items:center;gap:10px;margin-top:12px}
 .quiz-submit{padding:10px 14px;border:0;border-radius:9px;background:var(--blue);color:white;font-weight:650}
 .quiz-submit:disabled{opacity:.5}
+
+
+/* Sarathi local media studio */
+.media-studio{width:min(760px,94vw);max-height:88vh;overflow:auto}
+.media-tabs{display:flex;gap:8px;margin:12px 0}
+.media-studio label{display:flex;flex-direction:column;gap:6px;margin:10px 0;color:var(--muted);font-size:13px}
+.media-studio input,.media-studio select{width:100%;padding:10px;border-radius:9px;border:1px solid var(--border);background:#06132a;color:var(--text);font:inherit}
+.media-preview{background:#020817;border:1px solid var(--border);border-radius:10px;overflow:hidden;margin:10px 0}
+#mediaCanvas{display:block;width:100%;height:auto;max-height:48vh;object-fit:contain}
+#mediaVideo{display:block;width:100%;max-height:42vh;background:#020817;border-radius:10px;margin:12px 0}
+.media-time-fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+#mediaStudioDialog .dialog-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+#mediaStudioDialog [hidden]{display:none!important}
+@media(max-width:700px){.media-studio{padding:14px}.media-time-fields{grid-template-columns:1fr 1fr}}
