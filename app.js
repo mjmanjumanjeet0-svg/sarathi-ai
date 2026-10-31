@@ -754,6 +754,36 @@ async function downloadSarathiImage(imageUrl, edited) {
   setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
 }
 
+async function postChatWithRetry(url, token, payload) {
+  let lastError = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 45000);
+    try {
+      const response = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": "Bearer " + token
+        },
+        body: JSON.stringify(payload),
+        signal: controller.signal
+      });
+      if (![502, 503, 504].includes(response.status) || attempt === 1) return response;
+      lastError = new Error("सर्वर अस्थायी रूप से व्यस्त है।");
+    } catch (error) {
+      lastError = error?.name === "AbortError"
+        ? new Error("सर्वर से जवाब आने में समय अधिक लगा।")
+        : error;
+      if (attempt === 1) throw lastError;
+    } finally {
+      clearTimeout(timeout);
+    }
+    await new Promise(resolve => setTimeout(resolve, 900));
+  }
+  throw lastError || new Error("सर्वर से संपर्क नहीं हो सका।");
+}
+
 function explicitlyRequestsWebSearch(prompt) {
   return /(?:इंटरनेट|वेब|online)\s*(?:पर\s*)?(?:खोज|सर्च|search)|(?:ताज़ा|ताजा|आज की|लेटेस्ट|latest|current|breaking)\s*(?:खबर|समाचार|news|updates?)|(?:search|खोज|सर्च)\s+(?:the\s+)?(?:internet|web|online)/i.test(String(prompt || ""));
 }
@@ -900,24 +930,14 @@ async function sendMessage(text) {
   try {
     let token = await getAuthToken();
 
-    let response = await fetch(workerUrl + "/api/chat", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": "Bearer " + token
-      },
-      body: JSON.stringify({
+    let response = await postChatWithRetry(workerUrl + "/api/chat", token, {
         message: prompt,
         messages: activeChat().messages
           .filter(item => item.role === "user" || item.role === "assistant")
           .slice(-20)
-          .map(item => ({
-            role: item.role,
-            content: item.content
-          })),
+          .map(item => ({ role: item.role, content: item.content })),
         webSearch: useWebSearch
-      })
-    });
+      });
 
     let data;
 
@@ -931,23 +951,13 @@ async function sendMessage(text) {
       localStorage.removeItem(AUTH_TOKEN_KEY);
       token = await loginWorker();
 
-      response = await fetch(workerUrl + "/api/chat", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": "Bearer " + token
-        },
-        body: JSON.stringify({
-          message: prompt,
-          messages: activeChat().messages
-            .filter(item => item.role === "user" || item.role === "assistant")
-            .slice(-20)
-            .map(item => ({
-              role: item.role,
-              content: item.content
-            })),
-          webSearch: useWebSearch
-        })
+      response = await postChatWithRetry(workerUrl + "/api/chat", token, {
+        message: prompt,
+        messages: activeChat().messages
+          .filter(item => item.role === "user" || item.role === "assistant")
+          .slice(-20)
+          .map(item => ({ role: item.role, content: item.content })),
+        webSearch: useWebSearch
       });
 
       data = await response.json();
