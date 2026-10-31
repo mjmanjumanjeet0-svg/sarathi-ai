@@ -191,18 +191,50 @@
     const end = Number($("videoEnd").value);
     if (!video.src || !Number.isFinite(video.duration)) return status("पहले वीडियो चुनें।");
     if (!(start >= 0 && end > start && end <= video.duration)) return status("वीडियो का समय सही चुनें।");
-    if (!video.captureStream || !window.MediaRecorder) return status("इस ब्राउज़र में वीडियो एक्सपोर्ट समर्थित नहीं है।");
+    if (!HTMLCanvasElement.prototype.captureStream || !window.MediaRecorder) return status("इस ब्राउज़र में वीडियो एक्सपोर्ट समर्थित नहीं है।");
     if (exportBusy) return;
     exportBusy = true;
     $("videoExport").disabled = true;
+    let frameHandle = 0;
+    let stream = null;
     try {
       video.pause();
+      video.playbackRate = Number($("mediaVideoSpeed")?.value || 1);
+      const width = Math.min(1280, video.videoWidth || 1280);
+      const height = Math.max(1, Math.round(width * (video.videoHeight || 720) / (video.videoWidth || 1280)));
+      const canvas = document.createElement("canvas");
+      canvas.width = width; canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      const filter = $("mediaVideoFilter")?.value || "none";
+      const title = ($("mediaVideoTitle")?.value || "").trim();
+      const paint = () => {
+        if (video.readyState >= 2) {
+          ctx.filter = filter;
+          ctx.drawImage(video, 0, 0, width, height);
+          ctx.filter = "none";
+          if (title) {
+            const band = Math.max(54, Math.round(height * .16));
+            ctx.fillStyle = "rgba(0,0,0,.62)";
+            ctx.fillRect(0, height - band, width, band);
+            ctx.fillStyle = "#fff";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "middle";
+            ctx.font = "bold " + Math.max(20, Math.round(width * .04)) + "px sans-serif";
+            ctx.fillText(title, width / 2, height - band / 2, width * .9);
+          }
+        }
+        frameHandle = requestAnimationFrame(paint);
+      };
       video.currentTime = start;
       await new Promise((resolve, reject) => {
         video.onseeked = resolve;
         video.onerror = reject;
       });
-      const stream = video.captureStream();
+      stream = canvas.captureStream(30);
+      if (video.captureStream) {
+        const sourceStream = video.captureStream();
+        sourceStream.getAudioTracks().forEach(track => stream.addTrack(track));
+      }
       const mime = MediaRecorder.isTypeSupported("video/webm;codecs=vp9,opus")
         ? "video/webm;codecs=vp9,opus" : "video/webm";
       const recorder = new MediaRecorder(stream, { mimeType: mime });
@@ -212,29 +244,32 @@
         recorder.onerror = () => reject(new Error("वीडियो रिकॉर्डिंग असफल हुई।"));
         recorder.onstop = resolve;
       });
+      paint();
       recorder.start(250);
       video.ontimeupdate = () => {
-        if (video.currentTime >= end) {
+        if (video.currentTime >= end || video.ended) {
           video.pause();
           if (recorder.state !== "inactive") recorder.stop();
         }
       };
       await video.play();
       await finished;
-      stream.getTracks().forEach(track => track.stop());
       const blob = new Blob(chunks, { type: "video/webm" });
       if (!blob.size) throw new Error("वीडियो फ़ाइल खाली बनी।");
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
-      a.href = url; a.download = "sarathi-trimmed-video.webm"; a.click();
+      a.href = url; a.download = "sarathi-edited-video.webm"; a.click();
       setTimeout(() => URL.revokeObjectURL(url), 3000);
-      $("videoStatus").textContent = "चुना हुआ वीडियो हिस्सा WebM में सेव हो गया।";
+      $("videoStatus").textContent = "वीडियो ट्रिम और चुने गए फिल्टर/टेक्स्ट के साथ WebM में सेव हो गया।";
     } catch (error) {
       $("videoStatus").textContent = error.message || "वीडियो एक्सपोर्ट नहीं हो सका।";
     } finally {
+      if (frameHandle) cancelAnimationFrame(frameHandle);
+      if (stream) stream.getTracks().forEach(track => track.stop());
       exportBusy = false;
       $("videoExport").disabled = false;
       video.ontimeupdate = null;
+      video.playbackRate = 1;
     }
   }
 
