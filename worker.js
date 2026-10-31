@@ -170,13 +170,90 @@ function validHttpUrl(value) {
 }
 
 async function searchInternet(query, env) {
+  const searchQuery = String(query || "").trim().slice(0, 1024);
+  if (!searchQuery) return { results: [], warning: "खोज का सवाल खाली है।" };
+
+  // Prefer Exa when EXA_API_KEY is configured. Keep Cloudflare Web Search
+  // as a fallback for deployments that have not added the Exa secret.
+  if (env.EXA_API_KEY) {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15000);
+    try {
+      const isNewsQuery = /(खबर|समाचार|news|breaking|latest|ताज़ा|ताजा)/i.test(searchQuery);
+      const requestBody = {
+        query: searchQuery,
+        type: "auto",
+        numResults: 8,
+        contents: { highlights: true }
+      };
+      if (isNewsQuery) {
+        requestBody.category = "news";
+        const since = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
+        requestBody.startPublishedDate = since.toISOString();
+      }
+      const response = await fetch("https://api.exa.ai/search", {
+        method: "POST",
+        headers: {
+          "x-api-key": env.EXA_API_KEY,
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify(requestBody),
+        signal: controller.signal
+      });
+      let payload = {};
+      try { payload = await response.json(); } catch {}
+      if (!response.ok) {
+        const tag = String(payload?.tag || "").slice(0, 80);
+        const detail = String(payload?.error || "").slice(0, 180);
+        console.error("Exa search failed", response.status, tag, detail);
+        let warning = "Exa सर्च सेवा ने HTTP " + response.status + " लौटाया।";
+        if (response.status === 401 || response.status === 403) warning = "Exa API Key स्वीकार नहीं हुई। Cloudflare Secret का नाम EXA_API_KEY और उसकी वैधता जाँचें।";
+        else if (response.status === 402) warning = "Exa खाते में सर्च उपयोग के लिए क्रेडिट या उपलब्ध सीमा नहीं है।";
+        else if (response.status === 429) warning = "Exa सर्च की अनुरोध सीमा पूरी हो गई है। थोड़ी देर बाद प्रयास करें।";
+        else if (response.status >= 500) warning = "Exa सर्च सेवा अभी उपलब्ध नहीं है। थोड़ी देर बाद प्रयास करें।";
+        return { results: [], warning, errorCode: tag, httpStatus: response.status };
+      }
+      const items = Array.isArray(payload?.results) ? payload.results : [];
+      const results = items
+        .filter(item => item && typeof item.title === "string" && typeof item.url === "string" && validHttpUrl(item.url))
+        .slice(0, 8)
+        .map(item => {
+          let publisher = "वेबसाइट";
+          try { publisher = new URL(item.url).hostname.replace(/^www\\./i, ""); } catch {}
+          const highlights = Array.isArray(item.highlights) ? item.highlights.join(" ") : "";
+          return {
+            title: cleanText(item.title).slice(0, 300),
+            url: item.url,
+            snippet: cleanText(highlights || item.text || item.summary || "").slice(0, 1800),
+            publisher,
+            publishedAt: typeof item.publishedDate === "string" ? item.publishedDate : ""
+          };
+        });
+      return {
+        results,
+        warning: results.length ? "Exa से वास्तविक वेब परिणाम मिले।" : "Exa खोज में इस सवाल के लिए कोई परिणाम नहीं मिला।"
+      };
+    } catch (error) {
+      const code = String(error?.name || error?.code || "").slice(0, 80);
+      console.error("Exa search request failed", code, error?.message || error);
+      return {
+        results: [],
+        warning: error?.name === "AbortError" ? "Exa सर्च में समय अधिक लगा। दोबारा प्रयास करें।" : "Exa सर्च सेवा से संपर्क नहीं हो सका।",
+        errorCode: code
+      };
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
   if (!env.AI || typeof env.AI.websearch !== "function") {
-    return { results: [], warning: "Cloudflare Web Search उपलब्ध नहीं है। Worker के AI binding और खाते की सुविधा जाँचें।" };
+    return { results: [], warning: "वेब खोज उपलब्ध नहीं है। EXA_API_KEY Secret या Cloudflare AI binding जाँचें।" };
   }
   try {
     const response = await env.AI.websearch({
       gatewayId: "default",
-      query: String(query || "").trim().slice(0, 1024),
+      query: searchQuery,
       limit: 8
     });
     if (!response.ok) {
@@ -187,9 +264,9 @@ async function searchInternet(query, env) {
       } catch {}
       const status = Number(response.status) || 0;
       let warning = "वेब खोज सेवा ने HTTP " + status + " लौटाया।";
-      if (status === 402) warning = "Cloudflare AI Gateway में सर्च के लिए क्रेडिट उपलब्ध नहीं हैं। क्रेडिट जोड़ें या प्रदाता की API Key सेट करें।";
-      else if (status === 401 || status === 403) warning = "Cloudflare AI Gateway ने अनुमति अस्वीकार की। AI Gateway और Workers AI की अनुमति जाँचें।";
-      else if (status === 400) warning = "Cloudflare Web Search ने अनुरोध अस्वीकार किया। अनुरोध या Gateway सेटिंग जाँचें।";
+      if (status === 402) warning = "Cloudflare AI Gateway में सर्च के लिए क्रेडिट उपलब्ध नहीं हैं। EXA_API_KEY Secret जोड़ें या Gateway क्रेडिट उपलब्ध कराएँ।";
+      else if (status === 401 || status === 403) warning = "Cloudflare AI Gateway ने अनुमति अस्वीकार की।";
+      else if (status === 400) warning = "Cloudflare Web Search ने अनुरोध अस्वीकार किया।";
       return { results: [], warning, errorCode, httpStatus: status };
     }
     const payload = await response.json();
@@ -208,14 +285,12 @@ async function searchInternet(query, env) {
       });
     return { results, warning: results.length ? "Cloudflare Web Search से वास्तविक वेब परिणाम मिले।" : "वेब खोज में इस सवाल के लिए कोई परिणाम नहीं मिला।" };
   } catch (error) {
-    console.error("Web search failed", error?.code || "", error?.message || error);
+    console.error("Cloudflare Web Search failed", error?.code || "", error?.message || error);
     const code = String(error?.code || "").slice(0, 80);
-    const message = String(error?.message || "").slice(0, 240);
     return {
       results: [],
       warning: code ? "Cloudflare Web Search त्रुटि: " + code : "Cloudflare Web Search से संपर्क नहीं हो सका।",
-      errorCode: code,
-      errorMessage: message
+      errorCode: code
     };
   }
 }
