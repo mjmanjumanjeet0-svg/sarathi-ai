@@ -803,7 +803,7 @@ async function sendMessage(text) {
     return;
   }
 
-  const videoFile = state.attachments.find(file => file.type.startsWith("video/") || /\\.(mp4|webm|mov)$/i.test(file.name));
+  const videoFile = state.attachments.find(file => file.type.startsWith("video/") || /\.(mp4|webm|mov)$/i.test(file.name));
   const imageFile = state.attachments.find(file => file.type.startsWith("image/"));
   const asksToEditImage = /(फोटो|तस्वीर|इमेज|image|photo).{0,45}(एडिट|बदल|सुधार|edit|change|modify)|(एडिट|बदल|सुधार|edit|change|modify).{0,45}(फोटो|तस्वीर|इमेज|image|photo)/i.test(prompt);
   const asksToGenerateImage = /(फोटो|तस्वीर|इमेज|image|picture).{0,55}(बनाओ|बना दो|बना लें|बनाएं|बनाकर|तैयार|generate|create|draw)|(बनाओ|बना दो|बना लें|बनाएं|बनाकर|तैयार|generate|create|draw).{0,55}(फोटो|तस्वीर|इमेज|image|picture)/i.test(prompt);
@@ -1348,7 +1348,7 @@ function addFiles(fileList) {
       file.type === "application/pdf" ||
       file.type === "text/plain" ||
       file.name.toLowerCase().endsWith(".docx") ||
-      /\\.(mp4|webm|mov)$/i.test(file.name))
+      /\.(mp4|webm|mov)$/i.test(file.name))
   );
   const files = allowed.slice(0, Math.max(0, 5 - state.attachments.length));
   state.attachments.push(...files);
