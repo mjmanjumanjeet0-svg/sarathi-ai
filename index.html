@@ -156,6 +156,7 @@
         <button type="button" id="wakeStartMain" class="web-toggle">🦚 सुनना चालू</button>
         <button type="button" id="wakeStopMain" class="web-toggle">⏹ सुनना बंद</button>
         <button type="button" id="mediaStudioOpen" class="web-toggle">🎨 मीडिया स्टूडियो</button>
+        <button type="button" id="projectStudioOpen" class="web-toggle">📁 प्रोजेक्ट वर्कस्पेस</button>
       </div>
       <p class="web-note control-note">इंटरनेट खोज और वेक-वर्ड को यहाँ से चालू या बंद करें।</p>
 
@@ -337,6 +338,27 @@
   </div>
 </dialog>
 
+<dialog id="projectStudioDialog">
+  <div class="dialog-inner project-studio">
+    <h2>📁 सारथी प्रोजेक्ट वर्कस्पेस</h2>
+    <p class="hint">अपने प्रोजेक्ट और उनकी फाइलें इस डिवाइस पर व्यवस्थित करें। सामग्री अपने-आप इंटरनेट पर अपलोड नहीं होती।</p>
+    <label>प्रोजेक्ट का नाम<input id="projectName" maxlength="70" placeholder="जैसे मेरी वेबसाइट"></label>
+    <label>प्रोजेक्ट का विवरण<input id="projectDescription" maxlength="240" placeholder="इस प्रोजेक्ट में क्या बनाना है?"></label>
+    <button type="button" class="primary-btn" id="projectCreate">＋ प्रोजेक्ट बनाएँ</button>
+    <label>मौजूदा प्रोजेक्ट<select id="projectSelect"><option value="">प्रोजेक्ट चुनें</option></select></label>
+    <label>फाइल का नाम<input id="projectFileName" maxlength="90" value="README.md" placeholder="index.html"></label>
+    <label>फाइल की सामग्री<textarea id="projectFileContent" rows="10" placeholder="यहाँ कोड, नोट्स या प्रोजेक्ट सामग्री लिखें…"></textarea></label>
+    <div class="dialog-actions">
+      <button type="button" class="secondary-btn" id="projectSaveFile">फाइल सेव करें</button>
+      <button type="button" class="secondary-btn" id="projectDownloadFile">फाइल डाउनलोड</button>
+      <button type="button" class="secondary-btn" id="projectDelete">प्रोजेक्ट हटाएँ</button>
+    </div>
+    <div id="projectFileList" class="project-file-list"></div>
+    <p class="hint" id="projectStatus" aria-live="polite">प्रोजेक्ट डेटा केवल इसी डिवाइस के ब्राउज़र में सेव रहेगा।</p>
+    <div class="dialog-actions"><button type="button" class="secondary-btn" id="projectStudioClose">बंद करें</button></div>
+  </div>
+</dialog>
+
 <dialog id="findDialog">
   <form method="dialog" class="dialog-inner">
     <h2>चैट में खोजें</h2>
@@ -359,6 +381,7 @@
 </dialog>
 
 <script src="media-studio.js"></script>
+<script src="project-studio.js"></script>
 <script src="app.js"></script>
 
 </body>
