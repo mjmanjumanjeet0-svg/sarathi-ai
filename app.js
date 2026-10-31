@@ -606,7 +606,7 @@ function addMessage(role, content, imageUrl, sources) {
     role,
     content: String(content || ""),
     ...(imageUrl ? { imageUrl: String(imageUrl) } : {}),
-    ...(Array.isArray(sources) && sources.length ? { sources: sources.filter(source => source && typeof source.title === "string" && /^https?:\\/\\//i.test(source.url || "")).slice(0, 8).map(source => ({ title: source.title.slice(0, 240), url: source.url, publisher: String(source.publisher || "").slice(0, 100), publishedAt: String(source.publishedAt || "").slice(0, 80) })) } : {}),
+    ...(Array.isArray(sources) && sources.length ? { sources: sources.filter(source => source && typeof source.title === "string" && (String(source.url || "").startsWith("https://") || String(source.url || "").startsWith("http://"))).slice(0, 8).map(source => ({ title: source.title.slice(0, 240), url: source.url, publisher: String(source.publisher || "").slice(0, 100), publishedAt: String(source.publishedAt || "").slice(0, 80) })) } : {}),
     createdAt: Date.now()
   });
 
