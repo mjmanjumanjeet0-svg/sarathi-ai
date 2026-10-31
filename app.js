@@ -507,6 +507,34 @@ function renderMessages() {
     const body = document.createElement("div");
     body.className = "message-body";
     body.innerHTML = formatText(message.content || "");
+    if (message.imageUrl) {
+      const image = document.createElement("img");
+      image.src = message.imageUrl;
+      image.alt = "सारथी द्वारा बनाई गई तस्वीर";
+      image.loading = "lazy";
+      image.style.cssText = "display:block;max-width:100%;height:auto;border-radius:12px;margin-top:10px";
+      const download = document.createElement("button");
+      download.type = "button";
+      download.className = "speak-btn";
+      download.textContent = "⬇️ फोटो डाउनलोड करें";
+      download.addEventListener("click", async () => {
+        try {
+          const response = await fetch(message.imageUrl);
+          if (!response.ok) throw new Error("डाउनलोड उपलब्ध नहीं है।");
+          const blob = await response.blob();
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement("a");
+          link.href = url;
+          link.download = "sarathi-ai-image.png";
+          link.click();
+          setTimeout(() => URL.revokeObjectURL(url), 1500);
+        } catch (error) {
+          window.open(message.imageUrl, "_blank", "noopener");
+          setStatus("फोटो नए टैब में खुली है; वहाँ से सेव करें।");
+        }
+      });
+      body.append(image, download);
+    }
 
     content.append(label, body);
     const quizCard = renderQuizCard(message);
@@ -537,7 +565,7 @@ function renderMessages() {
   container.scrollTop = container.scrollHeight;
 }
 
-function addMessage(role, content) {
+function addMessage(role, content, imageUrl) {
   let chat = activeChat();
   if (!chat) chat = createChat();
 
@@ -545,6 +573,7 @@ function addMessage(role, content) {
     id: makeId(),
     role,
     content: String(content || ""),
+    ...(imageUrl ? { imageUrl: String(imageUrl) } : {}),
     createdAt: Date.now()
   });
 
@@ -615,6 +644,31 @@ function filterSourcesForPrompt(prompt, sources) {
   ));
 }
 
+async function requestSarathiImage(prompt, imageFile) {
+  const token = await getAuthToken();
+  let images;
+  if (imageFile) {
+    if (!/^image\/(png|jpeg|webp)$/i.test(imageFile.type) || imageFile.size > 4 * 1024 * 1024) {
+      throw new Error("फोटो PNG/JPG/WEBP में और 4 MB तक होनी चाहिए।");
+    }
+    const dataUrl = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result || ""));
+      reader.onerror = () => reject(new Error("फोटो पढ़ी नहीं जा सकी।"));
+      reader.readAsDataURL(imageFile);
+    });
+    images = [dataUrl];
+  }
+  const response = await fetch(getWorkerUrl() + "/api/media/image", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+    body: JSON.stringify({ prompt, ...(images ? { images } : {}) })
+  });
+  const data = await response.json();
+  if (!response.ok || !data.imageUrl) throw new Error(data.error || "फोटो तैयार नहीं हो सकी।");
+  return data.imageUrl;
+}
+
 function explicitlyRequestsWebSearch(prompt) {
   return /(?:इंटरनेट|वेब|online)\s*(?:पर\s*)?(?:खोज|सर्च|search)|(?:ताज़ा|ताजा|आज की|लेटेस्ट|latest|current|breaking)\s*(?:खबर|समाचार|news|updates?)|(?:search|खोज|सर्च)\s+(?:the\s+)?(?:internet|web|online)/i.test(String(prompt || ""));
 }
@@ -655,6 +709,36 @@ async function sendMessage(text) {
   if (!workerUrl) {
     setStatus("सेटिंग्स में Worker URL भरें।");
     openSettings();
+    return;
+  }
+
+  const imageFile = state.attachments.find(file => file.type.startsWith("image/"));
+  const asksToEditImage = /(फोटो|तस्वीर|इमेज|image|photo).{0,35}(एडिट|बदल|सुधार|edit|change|modify)|(एडिट|बदल|सुधार|edit|change|modify).{0,35}(फोटो|तस्वीर|इमेज|image|photo)/i.test(prompt);
+  const asksToGenerateImage = /(फोटो|तस्वीर|इमेज|image|picture).{0,45}(बनाओ|बनाकर|तैयार|generate|create|draw)|(बनाओ|बनाकर|तैयार|generate|create|draw).{0,45}(फोटो|तस्वीर|इमेज|image|picture)/i.test(prompt);
+  if (asksToEditImage || asksToGenerateImage) {
+    if (asksToEditImage && !imageFile) {
+      setStatus("जिस फोटो को एडिट करना है, उसे + बटन से पहले जोड़ें।");
+      return;
+    }
+    if (imageFile && !asksToEditImage) {
+      setStatus("फोटो एडिट करने के लिए लिखें: इस फोटो का बैकग्राउंड बदल दो।");
+      return;
+    }
+    addMessage("user", prompt);
+    if (imageFile) state.attachments = state.attachments.filter(file => file !== imageFile);
+    renderAttachmentPreview();
+    setBusy(true);
+    setStatus(asksToEditImage ? "फोटो एडिट हो रही है…" : "नई फोटो बनाई जा रही है…");
+    try {
+      const imageUrl = await requestSarathiImage(prompt, imageFile || null);
+      addMessage("assistant", asksToEditImage ? "आपकी एडिट की हुई फोटो तैयार है।" : "आपकी बनाई हुई फोटो तैयार है।", imageUrl);
+      setStatus("फोटो तैयार है। नीचे डाउनलोड बटन दबाकर सेव करें।");
+    } catch (error) {
+      addMessage("assistant", "फोटो तैयार नहीं हो सकी: " + (error?.message || "कृपया बाद में कोशिश करें।"));
+      setStatus("फोटो सेवा में समस्या आई।");
+    } finally {
+      setBusy(false);
+    }
     return;
   }
 
