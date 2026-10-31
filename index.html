@@ -273,7 +273,17 @@
     <div class="media-tabs">
       <button type="button" class="primary-btn" data-media-tab="image">फोटो / पोस्टर</button>
       <button type="button" class="secondary-btn" data-media-tab="video">वीडियो ट्रिम</button>
+      <button type="button" class="secondary-btn" data-media-tab="project">प्रोजेक्ट</button>
     </div>
+    <section id="mediaGeneratePanel">
+      <h3>✨ AI से नई फोटो बनाएँ</h3>
+      <label for="aiImagePrompt">कैसी फोटो चाहिए?</label>
+      <textarea id="aiImagePrompt" rows="3" maxlength="1200" placeholder="जैसे: पहाड़ों के बीच सूर्योदय का सुंदर दृश्य, सिनेमैटिक फोटो"></textarea>
+      <button type="button" class="primary-btn" id="aiImageGenerate">AI फोटो बनाएँ</button>
+      <p class="hint" id="aiImageStatus">AI फोटो बनाने के लिए Worker में Cloudflare Workers AI binding जरूरी है।</p>
+      <img id="aiImageResult" alt="AI से बनी फोटो" hidden>
+      <button type="button" class="secondary-btn" id="aiImageDownload" hidden>AI फोटो सेव करें</button>
+    </section>
     <section id="mediaImagePanel">
       <label for="mediaPrompt">AI से नई फोटो बनाने का निर्देश</label>
       <textarea id="mediaPrompt" rows="3" maxlength="1200" placeholder="जैसे: पहाड़ों के बीच सूर्योदय का सुंदर सिनेमैटिक दृश्य, वास्तविक फोटोग्राफी शैली"></textarea>
@@ -298,6 +308,19 @@
         <button type="button" class="secondary-btn" id="mediaReset">रीसेट</button>
         <button type="button" class="primary-btn" id="mediaDownload">फोटो डाउनलोड करें</button>
       </div>
+    </section>
+    <section id="mediaProjectPanel" hidden>
+      <h3>🧰 प्रोजेक्ट वर्कस्पेस</h3>
+      <p class="hint">यहाँ टेक्स्ट/कोड फाइल बनाओ, एडिट करो और अपने डिवाइस में सेव करो। फाइल अपने-आप किसी सर्वर पर अपलोड नहीं होगी।</p>
+      <label for="projectFileName">फाइल का नाम</label>
+      <input id="projectFileName" type="text" value="index.html" maxlength="100">
+      <label for="projectCode">प्रोजेक्ट कोड / सामग्री</label>
+      <textarea id="projectCode" rows="12" spellcheck="false" placeholder="यहाँ अपना कोड या डॉक्यूमेंट लिखें..."></textarea>
+      <div class="dialog-actions">
+        <button type="button" class="secondary-btn" id="projectNew">नई फाइल</button>
+        <button type="button" class="primary-btn" id="projectSave">फाइल सेव करें</button>
+      </div>
+      <p class="hint" id="projectStatus">एक फाइल चुनें या यहाँ नई सामग्री लिखें।</p>
     </section>
     <section id="mediaVideoPanel" hidden>
       <label for="mediaVideoInput">वीडियो चुनें</label>
