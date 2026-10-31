@@ -144,7 +144,7 @@ function shouldSearchAutomatically(text) {
   const q = String(text || "").trim();
   if (!q || q.length < 8) return false;
   // Search automatically for facts that commonly change or require authoritative verification.
-  return /(आज|अभी|वर्तमान|लेटेस्ट|ताज़ा|ताजा|नवीनतम|इस साल|इस महीने|कल|कब चलेगी|कितने बजे|ट्रेन|रेलवे|प्लेटफॉर्म|मौसम|तापमान|भाव|कीमत|दाम|रेट|की दर|उपलब्धता|खुला है|बंद है|समय सारणी|परीक्षा तिथि|एडमिट कार्ड|रिजल्ट|परिणाम|फॉर्म|आवेदन|फीस|पात्रता|नियम|सरकारी योजना|आधिकारिक|नया अपडेट|समाचार|खबर|न्यूज़|news|latest|today|current|price|rate|schedule|status|result|admit card|official|202[6-9])/i.test(q)
+  return /(आज|अभी|वर्तमान|लेटेस्ट|ताज़ा|ताजा|नवीनतम|इस साल|इस महीने|कल|कब चलेगी|कितने बजे|ट्रेन|रेलवे|प्लेटफॉर्म|मौसम|तापमान|भाव|कीमत|दाम|रेट|की दर|उपलब्धता|खुला है|बंद है|समय सारणी|परीक्षा तिथि|एडमिट कार्ड|रिजल्ट|परिणाम|फॉर्म|आवेदन|फीस|पात्रता|नियम|सरकारी योजना|आधिकारिक|नया अपडेट|समाचार|खबर|न्यूज़|सिलेबस|पाठ्यक्रम|प्रवेश|मान्यता|विश्वविद्यालय|बोर्ड|news|latest|today|current|price|rate|schedule|status|result|admit card|official|syllabus|curriculum|admission|accreditation|202[6-9])/i.test(q)
     || /(कौन हैं|किसने कहा|कब हुआ|कहाँ हुआ|कितना है|क्या सही है|सच है या नहीं|जांच करो|जाँच करो|सत्यापित करो|verify|fact.?check)/i.test(q);
 }
 
@@ -681,7 +681,7 @@ export default {
             ...safeMessages,
           ],
           temperature: 0.3,
-          max_tokens: 2400,
+          max_tokens: 3200,
         }),
       });
     } catch {
