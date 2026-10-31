@@ -128,6 +128,7 @@
 
   window.SarathiVoice = window.SarathiVoice || {};
   window.SarathiVoice.speak = speak;
+  window.SarathiVoice.isActive = () => active;
   window.SarathiVoice.stop = stop;
   window.SarathiVoice.start = start;
 
