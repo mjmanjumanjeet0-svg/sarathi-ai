@@ -523,6 +523,22 @@ export default {
       }
     }
 
+    // ZERO-COST MODE: block Cloudflare Workers AI media generation/understanding.
+    // These model calls can consume separately billed AI credits.
+    if (url.pathname === "/api/media/image" || url.pathname === "/api/media/understand") {
+      return jsonResponse({
+        success: false,
+        zeroCostMode: true,
+        error: "Zero-Cost Mode चालू है। फोटो बनाना और फोटो/वीडियो समझना फिलहाल बंद है ताकि Workers AI का अलग खर्च न हो।"
+      }, 503);
+    }
+
+    // Limit chat requests to reduce accidental usage; this is a per-minute
+    // safety limit, not a guarantee of a free provider plan.
+    if (await isRateLimited(request, env, "chat")) {
+      return jsonResponse({ success: false, zeroCostMode: true, error: "मुफ़्त उपयोग की सुरक्षा सीमा पूरी हुई। एक मिनट बाद फिर प्रयास करें।" }, 429);
+    }
+
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const userMessage = [...messages].reverse().find(m => m?.role === "user");
     const userText = typeof userMessage?.content === "string"
