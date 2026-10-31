@@ -44,7 +44,7 @@ public class WakeWordService extends Service {
     private static final int NOTIFICATION_ID = 771;
     private static final String MODEL_NAME = "vosk-model-small-hi-0.22";
     private static final String MODEL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip";
-    private static final String WAKE_GRAMMAR = "[\"सारथी\",\"सारथी जी\",\"हेलो सारथी\",\"हैलो सारथी\",\"नमस्ते सारथी\",\"हे सारथी\",\"ठीक है सारथी\",\"ओके सारथी\",\"सरथी\",\"सारथि\",\"[unk]\"]";
+    private static final String WAKE_GRAMMAR = "[\"सारथी\",\"सारथी जी\",\"हेलो सारथी\",\"हैलो सारथी\",\"नमस्ते सारथी\",\"हे सारथी\",\"ठीक है सारथी\",\"अच्छा है सारथी\",\"ओके सारथी\",\"बाय सारथी\",\"सरथी\",\"सारथि\",\"[unk]\"]";
     private final Handler handler = new Handler(Looper.getMainLooper());
     private ExecutorService worker = Executors.newSingleThreadExecutor();
     private volatile boolean running = false;
@@ -264,9 +264,8 @@ public class WakeWordService extends Service {
         } else {
             updateStatus("आवाज़ समझ नहीं आई। कृपया फिर से ‘सारथी’ बोलें।");
         }
-        // एक आदेश के बाद केवल वेक-वर्ड मोड में लौटें; लगातार बातचीत के लिए
-        // माइक्रोफ़ोन खुला नहीं रखा जाता।
-        conversationMode = false;
+        // Keep the active conversation alive after every utterance.
+        // It ends only when the user says a supported stop phrase.
         if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
         worker.execute(() -> {
             try {
@@ -451,16 +450,36 @@ public class WakeWordService extends Service {
         boolean quietCommand = normalized.equals("ठीक है सारथी")
                 || normalized.equals("अच्छा है सारथी")
                 || normalized.equals("ओके सारथी")
+                || normalized.equals("बाय सारथी")
                 || normalized.equals("ok sarathi")
                 || normalized.equals("okay sarathi")
                 || compact.equals("ठीकहैसारथी")
-                || compact.equals("ओकेसारथी");
+                || compact.equals("ओकेसारथी")
+                || compact.equals("बायसारथी");
         if (quietCommand) {
-            updateStatus("सारथी शांत है। दोबारा बुलाने के लिए हेलो सारथी कहें।");
-            if (speechService != null) {
-                speechService.reset();
-                speechService.setPause(false);
-            }
+            // End the active conversation and return to the low-power wake phrase listener.
+            conversationMode = false;
+            awaitingCommand = false;
+            if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
+            commandTimeout = null;
+            updateStatus("बातचीत बंद। दोबारा शुरू करने के लिए ‘हेलो सारथी’ कहें।");
+            if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
+            worker.execute(() -> {
+                try {
+                    if (speechService != null) {
+                        speechService.cancel();
+                        speechService.shutdown();
+                        speechService = null;
+                    }
+                    if (recognizer != null) {
+                        recognizer.close();
+                        recognizer = null;
+                    }
+                    if (running) startWakeRecognition();
+                } catch (Exception error) {
+                    scheduleListeningRetry("वेक-वर्ड सुनना फिर शुरू नहीं हो सका");
+                }
+            });
             return;
         }
         boolean hindiWake = normalized.equals("सारथी")
