@@ -542,10 +542,6 @@ export default {
       });
     }
 
-    if (!env.GROQ_API_KEY) {
-      return jsonResponse({ success: false, error: "AI सेवा का Secret उपलब्ध नहीं है।" }, 500);
-    }
-
     const normalizedGreeting = userText
       .toLocaleLowerCase("hi-IN")
       .replace(/[!！?？.,،؛:;।॥🙏😊🙂🦚👋]+/g, " ")
@@ -572,6 +568,10 @@ export default {
         webSearch: false,
         sources: [],
       });
+    }
+
+    if (!env.GROQ_API_KEY) {
+      return jsonResponse({ success: false, error: "AI सेवा का Secret उपलब्ध नहीं है।" }, 500);
     }
 
     // Apply the per-minute chat limit only to requests that actually need AI.
