@@ -593,36 +593,93 @@ export default {
       });
     }
 
-    if (url.pathname === "/api/media/image") {
-      if (await isRateLimited(request, env, "media-image")) {
-        return jsonResponse({ success: false, error: "बहुत अधिक इमेज अनुरोध हुए। थोड़ी देर बाद प्रयास करें।" }, 429);
+    if (url.pathname === "/api/media/image" || url.pathname === "/api/media/understand") {
+      const isUnderstand = url.pathname === "/api/media/understand";
+      const action = isUnderstand ? "media-understand" : "media-image";
+      if (await isRateLimited(request, env, action)) {
+        return jsonResponse({ success: false, error: "बहुत अधिक मीडिया अनुरोध हुए। थोड़ी देर बाद प्रयास करें।" }, 429);
       }
+      if (!env.SARATHI_LOGIN_PASSWORD ||
+          !await verifyToken((request.headers.get("Authorization") || "").replace(/^Bearer\\s+/i, ""), env.SARATHI_LOGIN_PASSWORD)) {
+        return jsonResponse({ success: false, error: "सत्र समाप्त हो गया है। दोबारा लॉगिन करें।" }, 401);
+      }
+      if (!env.AI || typeof env.AI.run !== "function") {
+        return jsonResponse({ success: false, error: "Cloudflare Workers AI binding उपलब्ध नहीं है।" }, 503);
+      }
+
+      if (isUnderstand) {
+        const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "इस मीडिया में क्या दिख रहा है? हिंदी में विस्तार से बताओ।";
+        const images = Array.isArray(body.images) ? body.images.slice(0, 6) : [];
+        if (!images.length || images.some(item => typeof item !== "string" ||
+            !/^data:image\\/(png|jpeg|webp);base64,/i.test(item) || item.length > 1_800_000)) {
+          return jsonResponse({ success: false, error: "समझने के लिए 1 से 6 छोटी JPG/PNG/WEBP तस्वीरें भेजें।" }, 400);
+        }
+        try {
+          const content = [{ type: "text", text: prompt.slice(0, 3000) }];
+          for (const image of images) content.push({
+            type: "image_url",
+            image_url: { url: image }
+          });
+          const result = await env.AI.run("@cf/meta/llama-3.2-11b-vision-instruct", {
+            messages: [
+              { role: "system", content: "तुम सारथी हो। तस्वीरों में वास्तव में जो दिखता है उसी का वर्णन करो। अनिश्चित बात को अनुमान बताओ। जवाब सरल हिंदी में दो।" },
+              { role: "user", content }
+            ],
+            max_tokens: 900,
+            temperature: 0.2
+          });
+          const reply = typeof result?.response === "string" ? result.response
+            : typeof result?.result === "string" ? result.result
+            : typeof result?.description === "string" ? result.description : "";
+          if (!reply) throw new Error("Vision model returned no text");
+          return jsonResponse({ success: true, reply, model: "@cf/meta/llama-3.2-11b-vision-instruct", frames: images.length });
+        } catch (error) {
+          console.error("Media understanding failed", error?.message || error);
+          return jsonResponse({ success: false, error: "फोटो/वीडियो समझने वाली AI सेवा अभी जवाब नहीं दे सकी। मॉडल की अनुमति, Workers AI सीमा और अनुरोध जाँचें।" }, 502);
+        }
+      }
+
       const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
       const images = Array.isArray(body.images) ? body.images.slice(0, 1) : [];
       if (!prompt || prompt.length > 1200) {
         return jsonResponse({ success: false, error: "फोटो का निर्देश 1 से 1200 अक्षरों का होना चाहिए।" }, 400);
       }
-      if (images.some(item => typeof item !== "string" || !/^data:image\/(png|jpeg|webp);base64,/i.test(item) || item.length > 6_000_000)) {
+      if (images.some(item => typeof item !== "string" ||
+          !/^data:image\\/(png|jpeg|webp);base64,/i.test(item) || item.length > 6_000_000)) {
         return jsonResponse({ success: false, error: "संपादन के लिए PNG, JPG या WEBP फोटो (4 MB तक) चुनें।" }, 400);
       }
-      if (!env.AI || typeof env.AI.run !== "function") {
-        return jsonResponse({ success: false, error: "Cloudflare Worker में AI binding जोड़ना जरूरी है।" }, 503);
-      }
       try {
-        const result = await env.AI.run("openai/gpt-image-2", {
-          prompt,
-          ...(images.length ? { images } : {}),
-          quality: "medium",
-          size: "1024x1024",
-          output_format: "png"
-        });
-        const imageUrl = result?.image || result?.result?.image;
-        if (typeof imageUrl !== "string" || !/^https:\/\//i.test(imageUrl)) {
-          return jsonResponse({ success: false, error: "इमेज मॉडल से सही फोटो लिंक नहीं मिला।" }, 502);
+        const form = new FormData();
+        form.append("prompt", prompt);
+        form.append("width", "1024");
+        form.append("height", "1024");
+        if (images.length) {
+          const match = images[0].match(/^data:image\\/(png|jpeg|webp);base64,(.+)$/i);
+          const binary = atob(match[2]);
+          const bytes = new Uint8Array(binary.length);
+          for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+          const mime = images[0].slice(5, images[0].indexOf(";"));
+          form.append("input_image_0", new Blob([bytes], { type: mime }), "reference-image");
         }
-        return jsonResponse({ success: true, imageUrl, edited: images.length > 0, model: "openai/gpt-image-2" });
+        const formResponse = new Response(form);
+        const result = await env.AI.run("@cf/black-forest-labs/flux-2-klein-4b", {
+          multipart: {
+            body: formResponse.body,
+            contentType: formResponse.headers.get("content-type")
+          }
+        });
+        const image = typeof result?.image === "string" ? result.image
+          : typeof result?.result?.image === "string" ? result.result.image : "";
+        if (!image) throw new Error("Image model returned no image data");
+        return jsonResponse({
+          success: true,
+          imageUrl: "data:image/png;base64," + image,
+          edited: images.length > 0,
+          model: "@cf/black-forest-labs/flux-2-klein-4b"
+        });
       } catch (error) {
-        return jsonResponse({ success: false, error: "AI फोटो नहीं बना सकी। Workers AI binding, मॉडल उपलब्धता और खाते की सीमा जाँचें।" }, 502);
+        console.error("Image generation/edit failed", error?.message || error);
+        return jsonResponse({ success: false, error: "फोटो नहीं बन सकी। Workers AI में FLUX.2 Klein मॉडल की उपलब्धता, खाता सीमा और मॉडल की अनुमति जाँचें।" }, 502);
       }
     }
 
