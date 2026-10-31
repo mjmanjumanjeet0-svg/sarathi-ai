@@ -39,7 +39,6 @@
 
       <div class="top-title">
         <img class="top-logo" src="logo.svg" alt=""> सारथी AI
-        <small class="creator-top">निर्माता: Manjeet Kumar</small>
       </div>
 
       <div class="top-actions">
@@ -154,8 +153,6 @@
         </button>
         <button type="button" id="wakeStartMain" class="web-toggle">🦚 सुनना चालू</button>
         <button type="button" id="wakeStopMain" class="web-toggle">⏹ सुनना बंद</button>
-        <button type="button" id="mediaStudioOpen" class="web-toggle">🎨 मीडिया स्टूडियो</button>
-        <button type="button" id="projectStudioOpen" class="web-toggle">📁 प्रोजेक्ट वर्कस्पेस</button>
       </div>
       <p class="web-note control-note">इंटरनेट खोज और वेक-वर्ड को यहाँ से चालू या बंद करें।</p>
 
@@ -165,9 +162,9 @@
           type="button"
           class="icon-btn attach-btn"
           id="attachBtn"
-          title="PDF, TXT, DOCX या फोटो जोड़ें"
-          aria-label="फाइल जोड़ें">
-          📚
+          title="फोटो, वीडियो या फाइल जोड़ें"
+          aria-label="फोटो, वीडियो या फाइल जोड़ें">
+          +
         </button>
 
         <textarea
@@ -188,7 +185,7 @@
         <input
           type="file"
           id="fileInput"
-          accept="image/*,.pdf,.txt,.docx"
+          accept="image/*,video/*,.pdf,.txt,.docx"
           multiple
           hidden>
       </form>
@@ -201,8 +198,8 @@
 
 <dialog id="attachDialog">
   <div class="dialog-inner">
-    <h2>📚 फाइल और फोटो जोड़ें</h2>
-    <p class="hint">समर्थित फाइलें: PDF, TXT, DOCX और JPG, PNG या WebP फोटो। चुनी गई फाइल का पढ़ा जा सकने वाला पाठ जवाब बनाने के लिए AI सेवा को भेजा जाएगा। संवेदनशील जानकारी वाली फाइल न चुनें। कॉल, SMS या ईमेल अपने-आप नहीं भेजे जाते।</p>
+    <h2>＋ फोटो, वीडियो और फाइल जोड़ें</h2>
+    <p class="hint">समर्थित फाइलें: फोटो, वीडियो, PDF, TXT और DOCX। भेजने से पहले चुनी गई फाइल की पुष्टि करें। संवेदनशील जानकारी वाली फाइल न चुनें।</p>
 
     <button type="button" class="attach-option" id="cameraOption">
       📷 Camera — फोटो खींचें
@@ -213,7 +210,7 @@
     </button>
 
     <button type="button" class="attach-option" id="filesOption">
-      📁 Files — PDF / TXT / DOCX चुनें
+      📁 Files — वीडियो / PDF / TXT / DOCX चुनें
     </button>
 
     <div class="dialog-actions">
@@ -266,82 +263,6 @@
   </form>
 </dialog>
 
-<dialog id="mediaStudioDialog">
-  <div class="dialog-inner media-studio">
-    <h2>🎨 सारथी मीडिया स्टूडियो</h2>
-    <p class="hint">फोटो और पोस्टर की एडिटिंग इसी डिवाइस पर होती है। आपकी मूल फाइल नहीं बदलेगी।</p>
-    <div class="media-tabs">
-      <button type="button" class="primary-btn" data-media-tab="image">फोटो / पोस्टर</button>
-      <button type="button" class="secondary-btn" data-media-tab="video">वीडियो ट्रिम</button>
-    </div>
-    <section id="mediaImagePanel">
-      <label for="mediaPrompt">AI से नई फोटो बनाने का निर्देश</label>
-      <textarea id="mediaPrompt" rows="3" maxlength="1200" placeholder="जैसे: पहाड़ों के बीच सूर्योदय का सुंदर सिनेमैटिक दृश्य, वास्तविक फोटोग्राफी शैली"></textarea>
-      <button type="button" class="primary-btn" id="mediaGenerateImage">✨ AI फोटो बनाए</button>
-      <p class="hint" id="mediaAiStatus">AI फोटो के लिए Worker में Cloudflare Workers AI binding और मॉडल की सुविधा सक्रिय होनी चाहिए।</p>
-
-      <label for="mediaImageInput">फोटो चुनें</label>
-      <input id="mediaImageInput" type="file" accept="image/*">
-      <div class="media-preview"><canvas id="mediaCanvas" width="900" height="600"></canvas></div>
-      <label>फिल्टर
-        <select id="mediaFilter">
-          <option value="none">मूल</option><option value="contrast">कॉन्ट्रास्ट</option>
-          <option value="bright">उज्ज्वल</option><option value="mono">ब्लैक एंड व्हाइट</option>
-          <option value="warm">वार्म</option><option value="cool">कूल</option>
-        </select>
-      </label>
-      <label for="mediaTitle">फोटो / पोस्टर पर लिखें</label>
-      <input id="mediaTitle" type="text" maxlength="90" placeholder="अपना शीर्षक लिखें">
-      <label for="mediaSubtitle">दूसरी लाइन (वैकल्पिक)</label>
-      <input id="mediaSubtitle" type="text" maxlength="140" placeholder="पोस्ट की बाकी बात लिखें">
-      <div class="dialog-actions">
-        <button type="button" class="secondary-btn" id="mediaReset">रीसेट</button>
-        <button type="button" class="primary-btn" id="mediaDownload">फोटो डाउनलोड करें</button>
-      </div>
-    </section>
-    <section id="mediaVideoPanel" hidden>
-      <label for="mediaVideoInput">वीडियो चुनें</label>
-      <input id="mediaVideoInput" type="file" accept="video/*">
-      <video id="mediaVideo" controls playsinline></video>
-      <div class="media-time-fields">
-        <label>शुरुआत (सेकंड)<input id="videoStart" type="number" min="0" step="0.1" value="0"></label>
-        <label>अंत (सेकंड)<input id="videoEnd" type="number" min="0" step="0.1" value="10"></label>
-      </div>
-      <div class="media-time-fields">
-        <label>वीडियो फिल्टर<select id="mediaVideoFilter"><option value="none">मूल</option><option value="contrast(1.2) saturate(1.2)">कॉन्ट्रास्ट</option><option value="brightness(1.12)">उज्ज्वल</option><option value="grayscale(1)">ब्लैक एंड व्हाइट</option><option value="sepia(.3) saturate(1.2)">वार्म</option></select></label>
-        <label>प्लेबैक गति<select id="mediaVideoSpeed"><option value="0.75">धीमा 0.75x</option><option value="1" selected>सामान्य 1x</option><option value="1.25">तेज 1.25x</option><option value="1.5">तेज 1.5x</option><option value="2">तेज 2x</option></select></label>
-      </div>
-      <label for="mediaVideoTitle">वीडियो पर टेक्स्ट (वैकल्पिक)</label>
-      <input id="mediaVideoTitle" type="text" maxlength="100" placeholder="अपना टेक्स्ट लिखें">
-      <p class="hint" id="videoStatus">वीडियो चुनें। ट्रिम, फिल्टर, गति और टेक्स्ट लगाकर WebM में एक्सपोर्ट करें।</p>
-      <button type="button" class="primary-btn" id="videoExport">चुना हिस्सा एक्सपोर्ट करें</button>
-    </section>
-    <div class="dialog-actions"><button type="button" class="secondary-btn" id="mediaStudioClose">बंद करें</button></div>
-  </div>
-</dialog>
-
-<dialog id="projectStudioDialog">
-  <div class="dialog-inner project-studio">
-    <h2>📁 सारथी प्रोजेक्ट वर्कस्पेस</h2>
-    <p class="hint">अपने प्रोजेक्ट और उनकी फाइलें इस डिवाइस पर व्यवस्थित करें। सामग्री अपने-आप इंटरनेट पर अपलोड नहीं होती।</p>
-    <label>प्रोजेक्ट का नाम<input id="projectName" maxlength="70" placeholder="जैसे मेरी वेबसाइट"></label>
-    <label>प्रोजेक्ट का विवरण<input id="projectDescription" maxlength="240" placeholder="इस प्रोजेक्ट में क्या बनाना है?"></label>
-    <button type="button" class="primary-btn" id="projectCreate">＋ प्रोजेक्ट बनाएँ</button>
-    <label>मौजूदा प्रोजेक्ट<select id="projectSelect"><option value="">प्रोजेक्ट चुनें</option></select></label>
-    <label>फाइल का नाम<input id="projectFileName" maxlength="90" value="README.md" placeholder="index.html"></label>
-    <label>फाइल की सामग्री<textarea id="projectFileContent" rows="10" placeholder="यहाँ कोड, नोट्स या प्रोजेक्ट सामग्री लिखें…"></textarea></label>
-    <div class="dialog-actions">
-      <button type="button" class="secondary-btn" id="projectImportReply">आखिरी AI जवाब लाएँ</button>
-      <button type="button" class="secondary-btn" id="projectSaveFile">फाइल सेव करें</button>
-      <button type="button" class="secondary-btn" id="projectDownloadFile">फाइल डाउनलोड</button>
-      <button type="button" class="secondary-btn" id="projectDelete">प्रोजेक्ट हटाएँ</button>
-    </div>
-    <div id="projectFileList" class="project-file-list"></div>
-    <p class="hint" id="projectStatus" aria-live="polite">प्रोजेक्ट डेटा केवल इसी डिवाइस के ब्राउज़र में सेव रहेगा।</p>
-    <div class="dialog-actions"><button type="button" class="secondary-btn" id="projectStudioClose">बंद करें</button></div>
-  </div>
-</dialog>
-
 <dialog id="findDialog">
   <form method="dialog" class="dialog-inner">
     <h2>चैट में खोजें</h2>
@@ -363,8 +284,6 @@
   </form>
 </dialog>
 
-<script src="media-studio.js"></script>
-<script src="project-studio.js"></script>
 <script src="app.js"></script>
 
 </body>
