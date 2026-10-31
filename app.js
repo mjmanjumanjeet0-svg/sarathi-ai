@@ -508,12 +508,33 @@ function renderMessages() {
     body.className = "message-body";
     body.innerHTML = formatText(message.content || "");
     if (message.imageUrl) {
+      const imageWrap = document.createElement("div");
+      imageWrap.style.cssText = "position:relative;display:inline-block;max-width:100%;margin-top:10px";
       const image = document.createElement("img");
       image.src = message.imageUrl;
       image.alt = "सारथी द्वारा बनाई गई तस्वीर";
       image.loading = "lazy";
-      image.style.cssText = "display:block;max-width:100%;height:auto;border-radius:12px;margin-top:10px";
-      body.append(image);
+      image.style.cssText = "display:block;max-width:100%;height:auto;border-radius:12px";
+      const downloadButton = document.createElement("button");
+      downloadButton.type = "button";
+      downloadButton.className = "image-download-btn";
+      downloadButton.textContent = "⬇";
+      downloadButton.title = "फोटो डाउनलोड करें";
+      downloadButton.setAttribute("aria-label", "फोटो डाउनलोड करें");
+      downloadButton.style.cssText = "position:absolute;right:9px;bottom:9px;width:36px;height:36px;border:0;border-radius:50%;background:rgba(20,20,20,.78);color:#fff;font-size:21px;cursor:pointer;display:grid;place-items:center";
+      downloadButton.addEventListener("click", async () => {
+        downloadButton.disabled = true;
+        try {
+          await downloadSarathiImage(message.imageUrl, true);
+          setStatus("फोटो डाउनलोड हो गई।");
+        } catch (error) {
+          setStatus("फोटो डाउनलोड नहीं हो सकी। फोटो पर देर तक दबाकर सेव करने की कोशिश करें।");
+        } finally {
+          downloadButton.disabled = false;
+        }
+      });
+      imageWrap.append(image, downloadButton);
+      body.append(imageWrap);
     }
 
     content.append(label, body);
@@ -727,12 +748,7 @@ async function sendMessage(text) {
     try {
       const imageUrl = await requestSarathiImage(prompt, imageFile || null);
       addMessage("assistant", asksToEditImage ? "आपकी एडिट की हुई फोटो तैयार है।" : "आपकी बनाई हुई फोटो तैयार है।", imageUrl);
-      try {
-        await downloadSarathiImage(imageUrl, asksToEditImage);
-        setStatus("फोटो तैयार है और डाउनलोड शुरू हो गया है।");
-      } catch (downloadError) {
-        setStatus("फोटो चैट में तैयार है, लेकिन अपने-आप डाउनलोड नहीं हो सका।");
-      }
+      setStatus("फोटो तैयार है। फोटो के कोने में ⬇ दबाकर डाउनलोड करें।");
     } catch (error) {
       addMessage("assistant", "फोटो तैयार नहीं हो सकी: " + (error?.message || "कृपया बाद में कोशिश करें।"));
       setStatus("फोटो सेवा में समस्या आई।");
