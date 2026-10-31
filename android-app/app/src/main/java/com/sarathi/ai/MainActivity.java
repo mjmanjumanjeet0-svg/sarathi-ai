@@ -596,6 +596,15 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void endConversation() {
+            runOnUiThread(() -> {
+                Intent service = new Intent(MainActivity.this, WakeWordService.class);
+                service.setAction(WakeWordService.ACTION_END_CONVERSATION);
+                try { startService(service); } catch (Exception ignored) {}
+            });
+        }
+
+        @JavascriptInterface
         public void stopWakeWord() {
             Intent service = new Intent(MainActivity.this, WakeWordService.class);
             service.setAction(WakeWordService.ACTION_STOP);
