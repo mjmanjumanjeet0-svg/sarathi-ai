@@ -1574,7 +1574,29 @@ function bindEvents() {
    START
 ======================================== */
 
-function initApp() {
+async function initApp() {
+  // ऐप का मुख्य इंटरफ़ेस लॉगिन सफल होने के बाद ही दिखेगा।
+  document.documentElement.style.visibility = "hidden";
+  try {
+    await getAuthToken();
+  } catch (error) {
+    document.documentElement.style.visibility = "visible";
+    document.body.innerHTML = "";
+    const gate = document.createElement("main");
+    gate.style.cssText = "min-height:100vh;display:grid;place-content:center;text-align:center;padding:24px;font-family:system-ui;background:#07152e;color:white";
+    const title = document.createElement("h2");
+    title.textContent = "🔒 सारथी AI सुरक्षित लॉगिन";
+    const message = document.createElement("p");
+    message.textContent = error?.message || "लॉगिन जरूरी है।";
+    const retry = document.createElement("button");
+    retry.textContent = "दोबारा लॉगिन करें";
+    retry.style.cssText = "padding:12px 20px;border:0;border-radius:10px;font-size:16px";
+    retry.addEventListener("click", () => location.reload());
+    gate.append(title, message, retry);
+    document.body.appendChild(gate);
+    return;
+  }
+
   loadChats();
   bindEvents();
   bindEducationHub();
@@ -1588,6 +1610,7 @@ function initApp() {
 
   if ($("workerUrl")) $("workerUrl").value = settings.workerUrl || "";
   if ($("assistantName")) $("assistantName").value = settings.assistantName || "सारथी";
+  document.documentElement.style.visibility = "visible";
 }
 
 if (document.readyState === "loading") {
