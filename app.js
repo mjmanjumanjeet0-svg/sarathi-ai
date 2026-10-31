@@ -816,7 +816,7 @@ async function sendMessage(text) {
 
   if ((!prompt && !state.attachments.length) || state.busy) return;
   if (!prompt && state.attachments.length) prompt = "कृपया संलग्न फाइल/फोटो की सामग्री पढ़कर समझाओ और मेरे सवालों में मदद करो।";
-  const shouldSpeakReply = state.voiceReplyPending;
+  const shouldSpeakReply = state.voiceReplyPending || Boolean(window.SarathiVoice?.isActive?.());
   state.voiceReplyPending = false;
 
   const workerUrl = getWorkerUrl();
