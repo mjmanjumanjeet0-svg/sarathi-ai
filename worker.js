@@ -218,21 +218,37 @@ async function searchInternet(query, env) {
       return { results: [], warning, errorCode: tag, httpStatus: response.status };
     }
     const items = Array.isArray(payload?.results) ? payload.results : [];
+    const seenNewsItems = new Set();
     const results = items
       .filter(item => item && typeof item.title === "string" && typeof item.url === "string" && validHttpUrl(item.url))
-      .slice(0, 5)
       .map(item => {
         let publisher = "वेबसाइट";
-        try { publisher = new URL(item.url).hostname.replace(/^www\\./i, ""); } catch {}
+        let canonicalUrl = item.url;
+        try {
+          const parsed = new URL(item.url);
+          publisher = parsed.hostname.replace(/^www\\./i, "");
+          parsed.hash = "";
+          for (const key of [...parsed.searchParams.keys()]) {
+            if (/^(utm_|fbclid|gclid|ref$)/i.test(key)) parsed.searchParams.delete(key);
+          }
+          canonicalUrl = parsed.toString().replace(/\\/$/, "");
+        } catch {}
+        const title = cleanText(item.title).slice(0, 300);
+        const key = title.toLocaleLowerCase("hi-IN").replace(/[^\\p{L}\\p{N}]+/gu, " ").trim() || canonicalUrl;
+        if (seenNewsItems.has(key) || seenNewsItems.has(canonicalUrl)) return null;
+        seenNewsItems.add(key);
+        seenNewsItems.add(canonicalUrl);
         const highlights = Array.isArray(item.highlights) ? item.highlights.join(" ") : "";
         return {
-          title: cleanText(item.title).slice(0, 300),
+          title,
           url: item.url,
           snippet: cleanText(highlights || item.text || item.summary || "").slice(0, 1800),
           publisher,
           publishedAt: typeof item.publishedDate === "string" ? item.publishedDate : ""
         };
-      });
+      })
+      .filter(Boolean)
+      .slice(0, 5);
     return {
       results,
       warning: results.length ? "Exa से वास्तविक वेब परिणाम मिले।" : "Exa खोज में इस सवाल के लिए कोई परिणाम नहीं मिला।"
@@ -350,7 +366,7 @@ function buildSearchContext(results, query = "") {
 
   const isNewsQuery = /(खबर|समाचार|news|breaking|latest|ताज़ा|ताजा)/i.test(query);
   const newsInstruction = isNewsQuery
-    ? "\\n\\nसमाचार के निर्देश: खोज से मिले वास्तविक शीर्षक, वेबसाइट और उपलब्ध तारीख के आधार पर खबरों का सरल हिंदी में सार दो। तारीख उपलब्ध न हो तो तारीख मत बनाओ। कम खबरें मिली हों तो उतनी ही बताओ; संख्या पूरी करने के लिए खबर मत गढ़ो। पुराने समाचार को आज की खबर मत बताओ।"
+    ? "\\n\\nसमाचार के सख्त निर्देश: (1) हर अलग घटना/मुद्दे को केवल एक बार बताओ; अलग-अलग वेबसाइटों पर एक ही घटना हो तो उन्हें एक खबर में मिलाकर 1-2 प्रकाशकों के नाम बताओ। (2) खबर की प्रकाशित तारीख और घटना होने की तारीख में अंतर रखो; तारीख उपलब्ध न हो तो तारीख मत बनाओ और उसे आज की खबर कहकर पेश मत करो। (3) आज की खबरें पूछे जाने पर केवल आज या हाल के 48 घंटों में प्रकाशित/अपडेट हुई खबरें बताओ; इससे पुरानी खबर को साफ तौर पर पुरानी/पृष्ठभूमि खबर कहो या छोड़ दो। (4) दो स्रोतों में घटना, तारीख, संख्या या स्थिति अलग हो तो किसी एक को चुपचाप सही मत मानो; विरोधाभास स्पष्ट बताओ या अपुष्ट दावा छोड़ दो। (5) आरोपों को आरोप के रूप में लिखो, सिद्ध तथ्य के रूप में नहीं; संबंधित पक्ष का जवाब उपलब्ध हो तो उसका उल्लेख करो। (6) अधिकतम 5 अलग और महत्वपूर्ण खबरें, पहले भारत/राज्य फिर विश्व; परिणाम कम हों तो कम ही बताओ। (7) हर खबर में छोटा शीर्षक, 1-2 वाक्य का सार और उपलब्ध प्रकाशक/प्रकाशन तारीख लिखो; URL या लिंक मत लिखो, जब तक उपयोगकर्ता खुद न माँगे। (8) केवल दिए गए खोज परिणामों से तथ्य लो; व्यक्ति, संख्या, तारीख, घटना या उद्धरण मत गढ़ो।"
     : "";
 
   return "\\n\\nइंटरनेट खोज के परिणाम:\\n" + results.map(
