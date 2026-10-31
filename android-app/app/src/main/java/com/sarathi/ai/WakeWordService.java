@@ -250,10 +250,14 @@ public class WakeWordService extends Service {
         }
         String normalized = command.toLowerCase(Locale.ROOT)
                 .replaceAll("[^\\p{L}\\p{N}]+", " ").trim().replaceAll("\\s+", " ");
-        if (normalized.equals("ओके सारथी") || normalized.equals("ठीक है बाय")
-                || normalized.equals("अच्छा है बाय") || normalized.equals("बाय")
-                || normalized.equals("बाय सारथी") || normalized.equals("bye")
-                || normalized.equals("bye sarathi") || normalized.equals("अलविदा सारथी")) {
+        if (normalized.equals("ओके सारथी") || normalized.equals("ठीक है सारथी")
+                || normalized.equals("अच्छा है सारथी")
+                || normalized.equals("ठीक है बाय") || normalized.equals("ठीक है बाय सारथी")
+                || normalized.equals("अच्छा है बाय") || normalized.equals("अच्छा है बाय सारथी")
+                || normalized.equals("बाय") || normalized.equals("बाय सारथी")
+                || normalized.equals("बस सारथी") || normalized.equals("धन्यवाद सारथी")
+                || normalized.equals("bye") || normalized.equals("bye sarathi")
+                || normalized.equals("अलविदा सारथी")) {
             conversationMode = false;
         }
         if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
