@@ -331,7 +331,13 @@
         <label>शुरुआत (सेकंड)<input id="videoStart" type="number" min="0" step="0.1" value="0"></label>
         <label>अंत (सेकंड)<input id="videoEnd" type="number" min="0" step="0.1" value="10"></label>
       </div>
-      <p class="hint" id="videoStatus">वीडियो चुनें। समर्थित ब्राउज़र में चुना हुआ हिस्सा WebM में सेव होगा।</p>
+      <div class="media-time-fields">
+        <label>वीडियो फिल्टर<select id="mediaVideoFilter"><option value="none">मूल</option><option value="contrast(1.2) saturate(1.2)">कॉन्ट्रास्ट</option><option value="brightness(1.12)">उज्ज्वल</option><option value="grayscale(1)">ब्लैक एंड व्हाइट</option><option value="sepia(.3) saturate(1.2)">वार्म</option></select></label>
+        <label>प्लेबैक गति<select id="mediaVideoSpeed"><option value="0.75">धीमा 0.75x</option><option value="1" selected>सामान्य 1x</option><option value="1.25">तेज 1.25x</option><option value="1.5">तेज 1.5x</option><option value="2">तेज 2x</option></select></label>
+      </div>
+      <label for="mediaVideoTitle">वीडियो पर टेक्स्ट (वैकल्पिक)</label>
+      <input id="mediaVideoTitle" type="text" maxlength="100" placeholder="अपना टेक्स्ट लिखें">
+      <p class="hint" id="videoStatus">वीडियो चुनें। ट्रिम, फिल्टर, गति और टेक्स्ट लगाकर WebM में एक्सपोर्ट करें।</p>
       <button type="button" class="primary-btn" id="videoExport">चुना हिस्सा एक्सपोर्ट करें</button>
     </section>
     <div class="dialog-actions"><button type="button" class="secondary-btn" id="mediaStudioClose">बंद करें</button></div>
