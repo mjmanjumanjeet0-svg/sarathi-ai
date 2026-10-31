@@ -275,6 +275,11 @@
       <button type="button" class="secondary-btn" data-media-tab="video">वीडियो ट्रिम</button>
     </div>
     <section id="mediaImagePanel">
+      <label for="mediaPrompt">AI से नई फोटो बनाने का निर्देश</label>
+      <textarea id="mediaPrompt" rows="3" maxlength="1200" placeholder="जैसे: पहाड़ों के बीच सूर्योदय का सुंदर सिनेमैटिक दृश्य, वास्तविक फोटोग्राफी शैली"></textarea>
+      <button type="button" class="primary-btn" id="mediaGenerateImage">✨ AI फोटो बनाए</button>
+      <p class="hint" id="mediaAiStatus">AI फोटो के लिए Worker में Cloudflare Workers AI binding और मॉडल की सुविधा सक्रिय होनी चाहिए।</p>
+
       <label for="mediaImageInput">फोटो चुनें</label>
       <input id="mediaImageInput" type="file" accept="image/*">
       <div class="media-preview"><canvas id="mediaCanvas" width="900" height="600"></canvas></div>
