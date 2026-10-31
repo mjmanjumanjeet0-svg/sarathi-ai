@@ -346,6 +346,7 @@ function filterRelevantSearchResults(query, results) {
 }
 
 function dedupeNewsResults(results) {
+  // Apply deterministic, conservative headline-level event grouping before the model sees results.
   const seenUrls = new Set();
   const accepted = [];
   const stopWords = new Set([
