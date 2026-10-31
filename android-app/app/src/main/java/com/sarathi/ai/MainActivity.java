@@ -6,9 +6,6 @@ import android.content.Intent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.IntentFilter;
-import android.provider.AlarmClock;
-import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -28,7 +25,6 @@ import android.webkit.WebChromeClient;
 import android.webkit.JsResult;
 import android.webkit.ValueCallback;
 import android.webkit.WebResourceRequest;
-import android.widget.Toast;
 
 import org.json.JSONObject;
 
@@ -203,13 +199,7 @@ public class MainActivity extends Activity {
                 if ("https".equalsIgnoreCase(scheme) && APP_HOST.equalsIgnoreCase(host)) {
                     return false;
                 }
-                if (("https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme))) {
-                    try {
-                        startActivity(new Intent(Intent.ACTION_VIEW, uri));
-                    } catch (Exception ignored) {
-                        Toast.makeText(MainActivity.this, "यह लिंक नहीं खुल सका।", Toast.LENGTH_SHORT).show();
-                    }
-                }
+                // बाहरी लिंक से दूसरे ऐप/ब्राउज़र को अपने-आप नहीं खोलते।
                 return true;
             }
         });
@@ -592,188 +582,6 @@ public class MainActivity extends Activity {
                 }
             });
         }
-        @JavascriptInterface
-        public void openDialer(String phone) {
-            String raw = phone == null ? "" : phone.trim();
-            String number = raw.isEmpty() ? "" : cleanPhone(raw);
-            if (!raw.isEmpty() && number == null) {
-                notifyVoice("onError", "कॉल के लिए 7 से 15 अंकों का सही फ़ोन नंबर चाहिए।");
-                return;
-            }
-            Intent dialIntent = number.isEmpty()
-                    ? new Intent(Intent.ACTION_DIAL)
-                    : new Intent(Intent.ACTION_DIAL, Uri.fromParts("tel", number, null));
-            runOnUiThread(() -> launchExternalIntent(
-                dialIntent,
-                "डायलर नहीं खुल सका।"
-            ));
-        }
-
-        @JavascriptInterface
-        public void composeSms(String phone, String body) {
-            String number = cleanPhone(phone);
-            String message = body == null ? "" : body.trim();
-            if (number == null || message.isEmpty() || message.length() > 4000) {
-                notifyVoice("onError", "SMS के लिए सही नंबर और 1 से 4000 अक्षर का संदेश चाहिए।");
-                return;
-            }
-            runOnUiThread(() -> {
-                Intent intent = new Intent(Intent.ACTION_SENDTO, Uri.fromParts("smsto", number, null));
-                intent.putExtra("sms_body", message);
-                launchExternalIntent(intent, "SMS ऐप नहीं खुला। संदेश अपने-आप नहीं भेजा गया।");
-            });
-        }
-
-        @JavascriptInterface
-        public void composeEmail(String email, String subject, String body) {
-            String address = email == null ? "" : email.trim();
-            String title = subject == null ? "" : subject.trim();
-            String message = body == null ? "" : body.trim();
-            if (!address.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$"
-                    ) || address.length() > 254 || message.length() > 8000) {
-                notifyVoice("onError", "ईमेल पता सही नहीं है या संदेश बहुत लंबा है।");
-                return;
-            }
-            runOnUiThread(() -> {
-                Intent intent = new Intent(Intent.ACTION_SENDTO, Uri.fromParts("mailto", address, null));
-                intent.putExtra(Intent.EXTRA_SUBJECT, title);
-                intent.putExtra(Intent.EXTRA_TEXT, message);
-                launchExternalIntent(intent, "ईमेल ऐप नहीं खुला। ईमेल अपने-आप नहीं भेजा गया।");
-            });
-        }
-
-        @JavascriptInterface
-        public void setAlarm(int hour, int minute, String label) {
-            if (hour < 0 || hour > 23 || minute < 0 || minute > 59) {
-                notifyVoice("onError", "अलार्म का समय सही नहीं है।");
-                return;
-            }
-            String safeLabel = label == null ? "सारथी अलार्म" : label.trim();
-            if (safeLabel.length() > 80) safeLabel = safeLabel.substring(0, 80);
-            final String alarmLabel = safeLabel;
-            runOnUiThread(() -> {
-                Intent intent = new Intent(AlarmClock.ACTION_SET_ALARM);
-                intent.putExtra(AlarmClock.EXTRA_HOUR, hour);
-                intent.putExtra(AlarmClock.EXTRA_MINUTES, minute);
-                intent.putExtra(AlarmClock.EXTRA_MESSAGE, alarmLabel);
-                intent.putExtra(AlarmClock.EXTRA_SKIP_UI, false);
-                launchExternalIntent(intent, "घड़ी ऐप अलार्म सेट नहीं कर सका।");
-            });
-        }
-
-        @JavascriptInterface
-        public void searchYouTube(String searchText) {
-            String query = searchText == null ? "" : searchText.trim();
-            if (query.isEmpty() || query.length() > 200) {
-                notifyVoice("onError", "YouTube खोज के लिए 1 से 200 अक्षर का नाम लिखें।");
-                return;
-            }
-            Uri searchUri = Uri.parse("https://www.youtube.com/results")
-                    .buildUpon().appendQueryParameter("search_query", query).build();
-            runOnUiThread(() -> launchExternalIntent(
-                    new Intent(Intent.ACTION_VIEW, searchUri),
-                    "YouTube खोज नहीं खुल सकी।"
-            ));
-        }
-
-        @JavascriptInterface
-        public void openApp(String appName) {
-            String key = appName == null ? "" : appName.trim().toLowerCase(Locale.ROOT);
-            Intent intent = null;
-            switch (key) {
-                case "browser":
-                    intent = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_BROWSER);
-                    break;
-                case "messages":
-                    intent = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_MESSAGING);
-                    break;
-                case "email":
-                    intent = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_EMAIL);
-                    break;
-                case "calendar":
-                    intent = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_CALENDAR);
-                    break;
-                case "contacts":
-                    intent = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_CONTACTS);
-                    break;
-                case "maps":
-                    intent = new Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_APP_MAPS);
-                    break;
-                case "settings":
-                    intent = new Intent(android.provider.Settings.ACTION_SETTINGS);
-                    break;
-                case "phone":
-                case "dialer":
-                    intent = new Intent(Intent.ACTION_DIAL);
-                    break;
-                case "youtube":
-                    intent = getPackageManager().getLaunchIntentForPackage("com.google.android.youtube");
-                    if (intent == null) intent = findInstalledAppIntent("YouTube");
-                    break;
-                case "chatgpt":
-                    intent = getPackageManager().getLaunchIntentForPackage("com.openai.chatgpt");
-                    if (intent == null) intent = findInstalledAppIntent("ChatGPT");
-                    break;
-                case "whatsapp":
-                    intent = getPackageManager().getLaunchIntentForPackage("com.whatsapp");
-                    if (intent == null) intent = findInstalledAppIntent("WhatsApp");
-                    break;
-                default:
-                    intent = findInstalledAppIntent(appName);
-                    break;
-            }
-            final Intent launch = intent;
-            runOnUiThread(() -> {
-                if (launch == null) {
-                    notifyVoice("onError", "इस नाम का ऐप फ़ोन में नहीं मिला। ऐप का नाम जाँचकर फिर बोलें।");
-                } else {
-                    launchExternalIntent(launch, "ऐप नहीं खुल सका।");
-                }
-            });
-        }
-
-        private Intent findInstalledAppIntent(String requestedName) {
-            String wanted = normalizeAppName(requestedName);
-            if (wanted.isEmpty()) return null;
-
-            Intent launcherQuery = new Intent(Intent.ACTION_MAIN);
-            launcherQuery.addCategory(Intent.CATEGORY_LAUNCHER);
-            try {
-                for (ResolveInfo info : getPackageManager().queryIntentActivities(launcherQuery, 0)) {
-                    if (info.activityInfo == null) continue;
-                    CharSequence label = info.loadLabel(getPackageManager());
-                    if (label != null && wanted.equals(normalizeAppName(label.toString()))) {
-                        Intent launch = new Intent(Intent.ACTION_MAIN);
-                        launch.addCategory(Intent.CATEGORY_LAUNCHER);
-                        launch.setClassName(info.activityInfo.packageName, info.activityInfo.name);
-                        launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                        return launch;
-                    }
-                }
-            } catch (Exception ignored) {
-                return null;
-            }
-            return null;
-        }
-
-        private String normalizeAppName(String value) {
-            return value == null ? "" : value.toLowerCase(Locale.ROOT)
-                    .replaceAll("[^\\p{L}\\p{N}]", "");
-        }
-
-        private String cleanPhone(String value) {
-            String number = value == null ? "" : value.replaceAll("[^0-9+]", "");
-            return number.matches("^\\+?[0-9]{7,15}$") ? number : null;
-        }
-
-        private void launchExternalIntent(Intent intent, String errorMessage) {
-            try {
-                startActivity(intent);
-            } catch (Exception ignored) {
-                notifyVoice("onError", errorMessage);
-            }
-        }
-
         @JavascriptInterface
         public void startWakeWord() {
             runOnUiThread(() -> {
