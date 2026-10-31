@@ -239,27 +239,21 @@ public class WakeWordService extends Service {
         catch (Exception ignored) { }
         // Always notify the Activity, including an empty result. Otherwise the
         // UI can remain stuck on "बोलिए" and the user gets no explanation.
-        Intent result = new Intent(MainActivity.ACTION_WAKE_RESULT);
-        result.setPackage(getPackageName());
-        result.putExtra(MainActivity.EXTRA_WAKE_TEXT, command);
-        sendBroadcast(result);
         if (!command.isEmpty()) {
-            updateStatus("आदेश समझ लिया गया। सारथी जवाब तैयार कर रहा है…");
+            getSharedPreferences("sarathi_wake_settings", MODE_PRIVATE).edit()
+                    .putString("pending_command", command).apply();
+            Intent result = new Intent(MainActivity.ACTION_WAKE_RESULT);
+            result.setPackage(getPackageName());
+            result.putExtra(MainActivity.EXTRA_WAKE_TEXT, command);
+            sendBroadcast(result);
+            showCommandReadyNotification(command);
+            updateStatus("आदेश सुन लिया गया। सारथी ऐप खोलकर जवाब देखिए।");
         } else {
-            updateStatus("आवाज़ समझ नहीं आई। कृपया थोड़ा साफ़ और पास से बोलें।");
+            updateStatus("आवाज़ समझ नहीं आई। कृपया फिर से ‘सारथी’ बोलें।");
         }
-        String normalized = command.toLowerCase(Locale.ROOT)
-                .replaceAll("[^\\p{L}\\p{N}]+", " ").trim().replaceAll("\\s+", " ");
-        if (normalized.equals("ओके सारथी") || normalized.equals("ठीक है सारथी")
-                || normalized.equals("अच्छा है सारथी")
-                || normalized.equals("ठीक है बाय") || normalized.equals("ठीक है बाय सारथी")
-                || normalized.equals("अच्छा है बाय") || normalized.equals("अच्छा है बाय सारथी")
-                || normalized.equals("बाय") || normalized.equals("बाय सारथी")
-                || normalized.equals("बस सारथी") || normalized.equals("धन्यवाद सारथी")
-                || normalized.equals("bye") || normalized.equals("bye sarathi")
-                || normalized.equals("अलविदा सारथी")) {
-            conversationMode = false;
-        }
+        // एक आदेश के बाद केवल वेक-वर्ड मोड में लौटें; लगातार बातचीत के लिए
+        // माइक्रोफ़ोन खुला नहीं रखा जाता।
+        conversationMode = false;
         if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
         worker.execute(() -> {
             try {
@@ -510,11 +504,12 @@ public class WakeWordService extends Service {
             @Override public void onDone(String id) {
                 handler.postDelayed(() -> {
                     if (running && awaitingCommand) {
-                        Intent detected = new Intent(MainActivity.ACTION_WAKE_DETECTED);
-                        detected.setPackage(getPackageName());
-                        sendBroadcast(detected);
+                        speaking = false;
+                        awaitingCommand = false;
+                        beginCommandCapture();
+                    } else {
+                        resumeListening();
                     }
-                    resumeListening();
                 }, 350);
             }
             @Override public void onError(String id) { handler.post(WakeWordService.this::resumeListening); }
@@ -566,6 +561,20 @@ public class WakeWordService extends Service {
         getSystemService(NotificationManager.class).notify(NOTIFICATION_ID + 1,
                 builder.setSmallIcon(android.R.drawable.ic_btn_speak_now).setContentTitle("सारथी ने आपकी आवाज़ सुनी")
                         .setContentText("सारथी खोलने के लिए यहाँ दबाएँ।").setContentIntent(pending).setAutoCancel(true).build());
+    }
+
+    private void showCommandReadyNotification(String command) {
+        Intent open = new Intent(this, MainActivity.class);
+        open.setAction(MainActivity.ACTION_WAKE_COMMAND);
+        open.putExtra(MainActivity.EXTRA_WAKE_TEXT, command);
+        open.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        PendingIntent pending = PendingIntent.getActivity(this, 773, open,
+                PendingIntent.FLAG_UPDATE_CURRENT | (Build.VERSION.SDK_INT >= 23 ? PendingIntent.FLAG_IMMUTABLE : 0));
+        Notification.Builder builder = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CHANNEL) : new Notification.Builder(this);
+        getSystemService(NotificationManager.class).notify(NOTIFICATION_ID + 1,
+                builder.setSmallIcon(android.R.drawable.ic_btn_speak_now).setContentTitle("सारथी ने आदेश सुन लिया")
+                        .setContentText("जवाब पाने के लिए सूचना दबाकर सारथी खोलें।")
+                        .setContentIntent(pending).setAutoCancel(true).build());
     }
 
     private void stopListening() {
