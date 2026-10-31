@@ -649,6 +649,21 @@ async function requestSarathiImage(prompt, imageFile) {
   return data.imageUrl;
 }
 
+async function downloadSarathiImage(imageUrl, edited) {
+  const response = await fetch(imageUrl);
+  if (!response.ok) throw new Error("फोटो डाउनलोड नहीं हो सकी।");
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = objectUrl;
+  link.download = edited ? "sarathi-edited-photo.png" : "sarathi-created-photo.png";
+  link.style.display = "none";
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+}
+
 function explicitlyRequestsWebSearch(prompt) {
   return /(?:इंटरनेट|वेब|online)\s*(?:पर\s*)?(?:खोज|सर्च|search)|(?:ताज़ा|ताजा|आज की|लेटेस्ट|latest|current|breaking)\s*(?:खबर|समाचार|news|updates?)|(?:search|खोज|सर्च)\s+(?:the\s+)?(?:internet|web|online)/i.test(String(prompt || ""));
 }
@@ -712,7 +727,12 @@ async function sendMessage(text) {
     try {
       const imageUrl = await requestSarathiImage(prompt, imageFile || null);
       addMessage("assistant", asksToEditImage ? "आपकी एडिट की हुई फोटो तैयार है।" : "आपकी बनाई हुई फोटो तैयार है।", imageUrl);
-      setStatus("फोटो तैयार है। नीचे डाउनलोड बटन दबाकर सेव करें।");
+      try {
+        await downloadSarathiImage(imageUrl, asksToEditImage);
+        setStatus("फोटो तैयार है और डाउनलोड शुरू हो गया है।");
+      } catch (downloadError) {
+        setStatus("फोटो चैट में तैयार है, लेकिन अपने-आप डाउनलोड नहीं हो सका।");
+      }
     } catch (error) {
       addMessage("assistant", "फोटो तैयार नहीं हो सकी: " + (error?.message || "कृपया बाद में कोशिश करें।"));
       setStatus("फोटो सेवा में समस्या आई।");
