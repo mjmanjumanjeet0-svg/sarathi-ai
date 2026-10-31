@@ -2,13 +2,16 @@ name: Validate Sarathi AI
 
 on:
   push:
-    branches: [main]
+    branches: [main, sarathi-audit-fixes-2026-10]
     paths:
       - "app.js"
       - "worker.js"
       - "index.html"
       - "style.css"
+      - "android-app/app/src/main/AndroidManifest.xml"
       - ".github/workflows/validate.yml"
+  pull_request:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -16,7 +19,7 @@ permissions:
 
 jobs:
   syntax:
-    name: JavaScript and web asset checks
+    name: JavaScript and Android manifest checks
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -28,10 +31,15 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
       - name: Check JavaScript syntax
         run: |
           node --check app.js
-          node --check worker.js
+          node --input-type=module --check < worker.js
 
       - name: Check required web files
         run: |
@@ -41,3 +49,7 @@ jobs:
           grep -q 'id="educationHub"' index.html
           grep -q 'function parseSarathiQuiz' app.js
           grep -q 'function renderQuizCard' app.js
+
+      - name: Validate Android manifest XML
+        run: |
+          python -c "import xml.etree.ElementTree as ET; ET.parse('android-app/app/src/main/AndroidManifest.xml'); print('Android manifest XML is valid')"
