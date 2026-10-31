@@ -346,10 +346,22 @@ function filterRelevantSearchResults(query, results) {
 }
 
 function dedupeNewsResults(results) {
-  const seen = new Set();
-  return (Array.isArray(results) ? results : []).filter(item => {
-    const title = cleanText(item.title || "").toLocaleLowerCase("hi-IN")
-      .replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+  const seenUrls = new Set();
+  const accepted = [];
+  const stopWords = new Set([
+    "आज", "कल", "अब", "यह", "इस", "की", "का", "के", "से", "को", "पर", "में",
+    "और", "एक", "लिए", "बाद", "साथ", "द्वारा", "बारे", "बड़ा", "बड़ी", "बड़ी",
+    "latest", "news", "live", "update", "updates", "breaking", "india", "today",
+    "says", "said", "after", "over", "for", "the", "a", "an", "to", "of", "in",
+    "on", "at", "as", "with", "from", "by", "all", "new", "what", "how"
+  ]);
+  const tokensFor = value => new Set(
+    cleanText(value || "").toLocaleLowerCase("hi-IN")
+      .replace(/[^\p{L}\p{N}]+/gu, " ")
+      .split(/\s+/)
+      .filter(token => token.length > 1 && !stopWords.has(token))
+  );
+  for (const item of (Array.isArray(results) ? results : [])) {
     let urlKey = "";
     try {
       const u = new URL(item.url);
@@ -357,14 +369,27 @@ function dedupeNewsResults(results) {
       u.search = "";
       urlKey = u.hostname.toLowerCase().replace(/^www\./, "") + u.pathname.replace(/\/$/, "");
     } catch {}
-    const key = title || urlKey;
-    if (!key || seen.has(key) || (urlKey && seen.has("url:" + urlKey))) return false;
-    seen.add(key);
-    if (urlKey) seen.add("url:" + urlKey);
-    return true;
-  }).slice(0, 8);
+    if (urlKey && seenUrls.has(urlKey)) continue;
+    const titleTokens = tokensFor(item.title);
+    if (!titleTokens.size) continue;
+    const duplicateEvent = accepted.some(previous => {
+      const previousTokens = previous._dedupeTokens;
+      let shared = 0;
+      for (const token of titleTokens) if (previousTokens.has(token)) shared++;
+      const smaller = Math.min(titleTokens.size, previousTokens.size);
+      const overlap = smaller ? shared / smaller : 0;
+      // Conservative event-level match: require at least three meaningful shared
+      // terms and near-complete coverage of the shorter headline to avoid
+      // collapsing unrelated stories that merely mention the same institution.
+      return shared >= 3 && overlap >= 0.8;
+    });
+    if (duplicateEvent) continue;
+    if (urlKey) seenUrls.add(urlKey);
+    accepted.push({ ...item, _dedupeTokens: titleTokens });
+    if (accepted.length >= 8) break;
+  }
+  return accepted.map(({ _dedupeTokens, ...item }) => item);
 }
-
 function formatNewsPublishedAt(value) {
   if (!value) return "प्रकाशित तारीख उपलब्ध नहीं";
   const d = new Date(value);
