@@ -831,8 +831,6 @@ async function sendMessage(text) {
     }
     return;
   }
-  const asksToEditImage = /(फोटो|तस्वीर|इमेज|image|photo).{0,35}(एडिट|बदल|सुधार|edit|change|modify)|(एडिट|बदल|सुधार|edit|change|modify).{0,35}(फोटो|तस्वीर|इमेज|image|photo)/i.test(prompt);
-  const asksToGenerateImage = /(फोटो|तस्वीर|इमेज|image|picture).{0,45}(बनाओ|बनाकर|तैयार|generate|create|draw)|(बनाओ|बनाकर|तैयार|generate|create|draw).{0,45}(फोटो|तस्वीर|इमेज|image|picture)/i.test(prompt);
   if (asksToEditImage || asksToGenerateImage) {
     if (asksToEditImage && !imageFile) {
       setStatus("जिस फोटो को एडिट करना है, उसे + बटन से पहले जोड़ें।");
