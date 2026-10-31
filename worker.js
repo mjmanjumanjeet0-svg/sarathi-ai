@@ -269,7 +269,7 @@ async function searchGoogleNewsRss(query) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 10000);
   try {
-    const freshQuery = query + " when:2d";
+    const freshQuery = /(खबर|समाचार|news|breaking|latest)/i.test(query) ? "India latest news headlines today politics economy sports technology when:2d" : query + " when:2d";
     const endpoint = "https://news.google.com/rss/search?q=" +
       encodeURIComponent(freshQuery.slice(0, 400)) + "&hl=hi&gl=IN&ceid=IN:hi";
     const response = await fetch(endpoint, {
@@ -510,14 +510,17 @@ function filterRelevantSearchResults(query, results) {
   return required ? list.filter(item => required.test(textOf(item))) : list;
 }
 
-function buildSearchContext(results) {
+function buildSearchContext(results, query = "") {
   if (!results.length) return "";
+
+  const isNewsQuery = /(खबर|समाचार|news|breaking|latest)/i.test(query);
+  const newsInstruction = isNewsQuery ? "\n\nसमाचार के निर्देश: परिणामों में दिए वास्तविक शीर्षक और विवरण के आधार पर कम-से-कम 3 अलग-अलग खबरों का सरल हिंदी में सार दो। प्रकाशक और तारीख केवल उपलब्ध होने पर लिखो। केवल सामान्य होमपेज या लाइव पेज देखकर खबर मत गढ़ो। यदि वास्तविक शीर्षक/विवरण उपलब्ध नहीं हैं, साफ बताओ कि खोज में खबरें नहीं मिलीं।" : "";
 
   return "\n\nइंटरनेट खोज के परिणाम:\n" + results.map(
     (item, i) =>
 `${i + 1}. ${item.title}\nलिंक: ${item.url}\nनिकाली गई दर (यदि उपलब्ध): ${item.goldRates ? JSON.stringify(item.goldRates) : "पेज से स्पष्ट दर नहीं निकली"}\nजानकारी: ${item.snippet || "जानकारी उपलब्ध नहीं है।"}`
   ).join("\n\n") +
-  "\n\nपरिणाम पर्याप्त न हों तो स्पष्ट बताओ। तथ्य या लिंक मत गढ़ो।";
+  "\n\nपरिणाम पर्याप्त न हों तो स्पष्ट बताओ। तथ्य या लिंक मत गढ़ो।" + newsInstruction;
 }
 
 export default {
@@ -828,7 +831,7 @@ export default {
     if (searchResults.length) {
       for (let i = safeMessages.length - 1; i >= 0; i--) {
         if (safeMessages[i].role === "user") {
-          safeMessages[i].content += buildSearchContext(searchResults);
+          safeMessages[i].content += buildSearchContext(searchResults, userText);
           break;
         }
       }
