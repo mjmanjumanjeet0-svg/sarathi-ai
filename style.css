@@ -121,3 +121,45 @@ dialog{width:min(430px,calc(100% - 30px));background:var(--panel);color:var(--te
 :root{--bg:#212121;--panel:#303030;--panel2:#3a3a3a;--blue:#10a37f;--blue2:#38b995;--text:#ececec;--muted:#a7a7a7;--border:rgba(255,255,255,.10);--user:#303030}
 body,.app,.main{background:#212121}.sidebar{background:#171717}.topbar{background:#212121}.composer{background:#303030;border:1px solid #555;border-radius:26px;box-shadow:none;max-width:800px}.composer:focus-within{border-color:#888}.send-btn{background:#ececec;color:#202020;border-radius:50%;width:38px;height:38px}.chat-area{padding:28px 20px}.welcome{max-width:700px;margin:12vh auto 30px}.welcome-logo{width:64px;height:64px;border-radius:50%;box-shadow:none}.welcome h1{font-weight:650}.suggestions{max-width:650px;margin:28px auto 0}.suggestions button{background:#2a2a2a;border-color:#454545;text-align:left;border-radius:14px}.message-content{border:0;background:transparent;padding:0}.user-message .message-content{background:#303030;border-radius:18px;padding:10px 16px}.message-avatar{border-radius:50%;background:#444}.web-toggle{background:#2a2a2a;border-color:#484848}.web-toggle.active{background:#123e32;border-color:#167a60}.dropdown{background:#2d2d2d}.dialog-inner input{background:#1e1e1e}.primary-btn{background:#10a37f}
 @media(max-width:700px){.chat-area{padding:16px 12px}.welcome{margin-top:10vh}.suggestions{grid-template-columns:1fr;gap:8px}.composer-wrap{padding:8px 10px max(12px,env(safe-area-inset-bottom))}.composer{border-radius:24px}.user-message .message-content{max-width:84%}}
+
+
+/* Sarathi peacock voice-first mobile interface */
+:root{--bg:#03122f;--panel:#0b2148;--panel2:#102c5c;--blue:#087cff;--blue2:#13c5ff;--text:#f5f8ff;--muted:#b4c7e8;--border:rgba(70,151,255,.25);--user:#123d79}
+body,.app,.main{background:radial-gradient(ellipse at 50% 45%,#09265a,#041633 52%,#020d24)}
+.sidebar{background:#04122c}.topbar{min-height:76px;background:#031029;border-color:#153767;padding:0 18px}
+.top-title{font-size:22px}.top-logo{width:48px;height:48px;border-radius:13px;box-shadow:0 0 20px #087cff55}
+.chat-area{padding:18px 16px 10px}.welcome{max-width:800px;margin:3vh auto 22px}
+.hero-peacock{width:min(78vw,360px);height:min(55vw,280px);margin:0 auto 4px;display:grid;place-items:center;position:relative}
+.hero-peacock:before{content:"";position:absolute;inset:10%;border-radius:50%;background:radial-gradient(circle,#00d5ff55,transparent 68%);filter:blur(16px)}
+.hero-peacock span{font-size:clamp(125px,29vw,220px);line-height:1;filter:drop-shadow(0 0 22px #00c8ff88)}
+.welcome h1{font-size:clamp(28px,5vw,42px)}.welcome p{font-size:clamp(15px,3.4vw,21px)}
+.suggestions{gap:12px}.suggestions button{min-height:88px;display:flex;align-items:center;gap:14px;text-align:left;padding:13px 15px;border-radius:24px;background:linear-gradient(140deg,#0d2a5c,#071b3e);border:1px solid #1267d8;box-shadow:inset 0 1px #ffffff12,0 0 15px #087cff12}
+.suggestions button>span{font-size:34px;min-width:44px;text-align:center}.suggestions button b{display:block;font-size:clamp(15px,3.5vw,20px)}.suggestions button small{display:block;color:#c0d2ef;font-size:13px;margin-top:3px}
+.composer-wrap{padding:8px 16px 12px;background:linear-gradient(transparent,#03122f 22%)}
+.composer{max-width:820px;background:#0a2046;border:1px solid #2259a4;border-radius:27px;padding:9px;gap:8px;box-shadow:0 0 22px #006cff18}
+.mic-btn{width:48px;height:48px;flex:0 0 48px;border:1px solid #1679ff;border-radius:17px;background:linear-gradient(145deg,#0755c8,#087cff);color:#fff;font-size:23px}
+.mic-btn.active{background:#087e53;border-color:#25e49a;box-shadow:0 0 18px #18d88a77;animation:micPulse 1.5s infinite}
+.send-btn{width:48px;height:48px;border-radius:17px;background:#087cff;font-size:25px}
+.voice-panel{max-width:820px;margin:10px auto 8px;padding:14px 16px;display:flex;align-items:center;gap:14px;border:1px solid #1267cf;border-radius:24px;background:linear-gradient(110deg,#0b2856,#071a3b)}
+.voice-panel.hidden,.voice-wave.hidden,.voice-active-note.hidden{display:none}
+.voice-state-icon{width:58px;height:58px;border-radius:50%;display:grid;place-items:center;background:#078d59;color:white;font-size:27px;flex:0 0 58px}
+.voice-copy{flex:1;min-width:0}.voice-copy strong{display:block;color:#4dff70;font-size:19px}.voice-copy span{display:block;color:#c6d6ef;font-size:13px;margin-top:5px}
+.voice-stop{width:52px;height:52px;border:0;border-radius:50%;background:#ff243b;color:#fff;font-size:38px;line-height:1;flex:0 0 52px}.voice-stop small{display:block;font-size:10px;white-space:nowrap;color:#fff}
+.voice-wave{height:65px;max-width:820px;margin:3px auto 8px;display:flex;align-items:center;justify-content:center;gap:5px}
+.voice-wave i{width:4px;height:15px;border-radius:5px;background:linear-gradient(#10e8ff,#6d42ff);box-shadow:0 0 10px #08aaff;animation:wave 850ms ease-in-out infinite alternate}
+.voice-wave i:nth-child(3n){animation-delay:-.4s}.voice-wave i:nth-child(2n){animation-delay:-.2s}
+.voice-active-note{max-width:470px;margin:0 auto 9px;padding:11px 15px;text-align:center;border:1px solid #16d5c3;border-radius:17px;background:#071c3c;color:#e8f8ff}
+.bottom-nav{display:none}
+@keyframes wave{to{height:55px;opacity:.65}}@keyframes micPulse{50%{box-shadow:0 0 0 7px #1ce69b22,0 0 20px #18d88a77}}
+@media(max-width:700px){
+.topbar{min-height:72px;padding:0 10px}.top-title{font-size:19px}.top-logo{width:43px;height:43px}
+.chat-area{padding:10px}.welcome{margin:2vh auto 12px}.hero-peacock{height:clamp(150px,43vw,230px);width:100%}.hero-peacock span{font-size:clamp(140px,40vw,205px)}
+.welcome h1{font-size:clamp(27px,7vw,36px)}.welcome p{font-size:15px;margin-bottom:19px}
+.suggestions{gap:9px}.suggestions button{min-height:76px;padding:10px 9px;border-radius:21px;gap:8px}.suggestions button b{font-size:14px}.suggestions button small{font-size:11px}.suggestions button>span{font-size:29px;min-width:38px}
+.composer-wrap{padding:6px 9px 0}.composer{border-radius:24px;padding:7px;gap:5px}.mic-btn,.send-btn{width:44px;height:46px;flex-basis:44px;border-radius:15px}.attach-btn{width:32px}
+.voice-panel{margin:8px 2px 5px;padding:11px;border-radius:20px;gap:10px}.voice-state-icon{width:48px;height:48px;flex-basis:48px}.voice-copy strong{font-size:16px}.voice-copy span{font-size:11px}.voice-stop{width:45px;height:45px;flex-basis:45px;font-size:32px}
+.voice-wave{height:48px;margin:0 auto 5px}.voice-active-note{font-size:12px;margin-bottom:5px;padding:9px}
+.bottom-nav{height:66px;display:grid;grid-template-columns:repeat(4,1fr);background:#04142f;border-top:1px solid #1c477d;flex:0 0 66px}
+.bottom-nav button{border:0;background:transparent;color:#c1cde2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:23px}
+.bottom-nav button small{font-size:11px}.bottom-nav button.active{color:#16a6ff;font-weight:700}
+}
