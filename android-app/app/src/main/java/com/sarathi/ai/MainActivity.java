@@ -62,6 +62,8 @@ public class MainActivity extends Activity {
             if (intent == null) return;
             if (ACTION_WAKE_RESULT.equals(intent.getAction())) {
                 String command = intent.getStringExtra(EXTRA_WAKE_TEXT);
+                getSharedPreferences("sarathi_wake_settings", MODE_PRIVATE).edit()
+                        .remove("pending_command").apply();
                 wakeCommandSession = false;
                 pendingWakeResultText = command == null ? "" : command;
                 pendingWakeResult = true;
@@ -219,14 +221,32 @@ public class MainActivity extends Activity {
     private void handleWakeCommandIntent(Intent intent) {
         if (intent != null && ACTION_WAKE_COMMAND.equals(intent.getAction())) {
             intent.setAction(null);
-            pendingWakeCommand = true;
-            wakeCommandSession = true;
+            String captured = intent.getStringExtra(EXTRA_WAKE_TEXT);
+            if (captured != null && !captured.trim().isEmpty()) {
+                pendingWakeResultText = captured.trim();
+                pendingWakeResult = true;
+                getSharedPreferences("sarathi_wake_settings", MODE_PRIVATE).edit()
+                        .remove("pending_command").apply();
+            } else {
+                pendingWakeCommand = true;
+                wakeCommandSession = true;
+            }
             deliverPendingWakeEvents();
         }
     }
 
     private void deliverPendingWakeEvents() {
         if (!appInForeground || !pageLoaded) return;
+        if (!pendingWakeResult) {
+            String savedCommand = getSharedPreferences("sarathi_wake_settings", MODE_PRIVATE)
+                    .getString("pending_command", "");
+            if (savedCommand != null && !savedCommand.trim().isEmpty()) {
+                pendingWakeResultText = savedCommand.trim();
+                pendingWakeResult = true;
+                getSharedPreferences("sarathi_wake_settings", MODE_PRIVATE).edit()
+                        .remove("pending_command").apply();
+            }
+        }
         if (pendingWakeResult) {
             String command = pendingWakeResultText;
             pendingWakeResult = false;
