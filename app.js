@@ -635,8 +635,11 @@ async function sendMessage(text) {
     if (window.SarathiNative && typeof window.SarathiNative.stopSpeaking === "function") {
       window.SarathiNative.stopSpeaking();
     }
+    if (window.SarathiNative && typeof window.SarathiNative.endConversation === "function") {
+      window.SarathiNative.endConversation();
+    }
     if (window.speechSynthesis) window.speechSynthesis.cancel();
-    setStatus("ठीक है। सारथी शांत है। दोबारा बुलाने के लिए “हेलो सारथी” कहें।");
+    setStatus("ठीक है। बातचीत समाप्त। दोबारा बुलाने के लिए “हेलो सारथी” कहें।");
     const input = $("messageInput");
     if (input) { input.value = ""; input.style.height = ""; }
     return;
