@@ -6,6 +6,7 @@
   let active = false;
   let speaking = false;
   let restarting = false;
+  let paused = false;
 
   function show(activeNow, hint) {
     ["voicePanel", "voiceWave", "voiceActiveNote"].forEach(id => $(id)?.classList.toggle("hidden", !activeNow));
@@ -16,7 +17,7 @@
   }
 
   function startRecognition() {
-    if (!active || speaking || !recognition || restarting) return;
+    if (!active || speaking || paused || !recognition || restarting) return;
     restarting = true;
     try { recognition.start(); } catch (_) {}
     setTimeout(() => { restarting = false; }, 350);
@@ -53,6 +54,7 @@
       return;
     }
     speaking = true;
+    paused = true;
     try { recognition?.stop(); } catch (_) {}
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(answer);
@@ -60,6 +62,7 @@
     utterance.rate = 0.96;
     utterance.onend = utterance.onerror = () => {
       speaking = false;
+      paused = false;
       startRecognition();
     };
     window.speechSynthesis.speak(utterance);
@@ -114,7 +117,7 @@
       }
     };
     engine.onend = () => {
-      if (active && !speaking) setTimeout(startRecognition, 500);
+      if (active && !speaking && !paused) setTimeout(startRecognition, 500);
     };
     try { engine.start(); }
     catch (_) {
@@ -129,6 +132,7 @@
   window.SarathiVoice = window.SarathiVoice || {};
   window.SarathiVoice.speak = speak;
   window.SarathiVoice.isActive = () => active;
+  window.SarathiVoice.pause = () => { paused = true; try { recognition?.stop(); } catch (_) {} };
   window.SarathiVoice.stop = stop;
   window.SarathiVoice.start = start;
 
