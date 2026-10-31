@@ -620,7 +620,7 @@ export default {
             type: "image_url",
             image_url: { url: image }
           });
-          const result = await env.AI.run("@cf/meta/llama-3.2-11b-vision-instruct", {
+          const result = await env.AI.run("@cf/qwen/qwen3.8-27b", {
             messages: [
               { role: "system", content: "तुम सारथी हो। तस्वीरों में वास्तव में जो दिखता है उसी का वर्णन करो। अनिश्चित बात को अनुमान बताओ। जवाब सरल हिंदी में दो।" },
               { role: "user", content }
@@ -632,7 +632,7 @@ export default {
             : typeof result?.result === "string" ? result.result
             : typeof result?.description === "string" ? result.description : "";
           if (!reply) throw new Error("Vision model returned no text");
-          return jsonResponse({ success: true, reply, model: "@cf/meta/llama-3.2-11b-vision-instruct", frames: images.length });
+          return jsonResponse({ success: true, reply, model: "@cf/qwen/qwen3.8-27b", frames: images.length });
         } catch (error) {
           console.error("Media understanding failed", error?.message || error);
           return jsonResponse({ success: false, error: "फोटो/वीडियो समझने वाली AI सेवा अभी जवाब नहीं दे सकी। मॉडल की अनुमति, Workers AI सीमा और अनुरोध जाँचें।" }, 502);
