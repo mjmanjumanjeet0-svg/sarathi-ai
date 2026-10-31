@@ -690,6 +690,10 @@ public class MainActivity extends Activity {
                     intent = getPackageManager().getLaunchIntentForPackage("com.google.android.youtube");
                     if (intent == null) intent = findInstalledAppIntent("YouTube");
                     break;
+                case "chatgpt":
+                    intent = getPackageManager().getLaunchIntentForPackage("com.openai.chatgpt");
+                    if (intent == null) intent = findInstalledAppIntent("ChatGPT");
+                    break;
                 case "whatsapp":
                     intent = getPackageManager().getLaunchIntentForPackage("com.whatsapp");
                     if (intent == null) intent = findInstalledAppIntent("WhatsApp");
