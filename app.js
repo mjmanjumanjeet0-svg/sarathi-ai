@@ -645,6 +645,81 @@ function filterSourcesForPrompt(prompt, sources) {
   ));
 }
 
+async function fileToImageDataUrl(file, maxSide = 512) {
+  const sourceUrl = URL.createObjectURL(file);
+  try {
+    const image = await new Promise((resolve, reject) => {
+      const element = new Image();
+      element.onload = () => resolve(element);
+      element.onerror = () => reject(new Error("फोटो खोली नहीं जा सकी।"));
+      element.src = sourceUrl;
+    });
+    const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL("image/jpeg", 0.76);
+  } finally {
+    URL.revokeObjectURL(sourceUrl);
+  }
+}
+
+async function extractVideoFrames(file, count = 5) {
+  const url = URL.createObjectURL(file);
+  const video = document.createElement("video");
+  video.muted = true;
+  video.playsInline = true;
+  video.preload = "auto";
+  video.src = url;
+  try {
+    await new Promise((resolve, reject) => {
+      video.onloadedmetadata = resolve;
+      video.onerror = () => reject(new Error("यह वीडियो फ़ोन में नहीं खुल सका। MP4 या WebM वीडियो आज़माएँ।"));
+      video.load();
+    });
+    if (!Number.isFinite(video.duration) || video.duration <= 0) throw new Error("वीडियो की अवधि पढ़ी नहीं जा सकी।");
+    const total = Math.min(count, Math.max(1, Math.ceil(video.duration)));
+    const frames = [];
+    for (let i = 0; i < total; i++) {
+      const time = total === 1 ? 0 : Math.min(video.duration - 0.08, (video.duration * i) / (total - 1));
+      await new Promise((resolve, reject) => {
+        const done = () => { video.removeEventListener("seeked", done); resolve(); };
+        video.addEventListener("seeked", done, { once: true });
+        video.onerror = () => reject(new Error("वीडियो का फ्रेम पढ़ने में समस्या हुई।"));
+        video.currentTime = Math.max(0, time);
+        if (Math.abs(video.currentTime - time) < 0.02 && video.readyState >= 2) resolve();
+      });
+      const scale = Math.min(1, 512 / Math.max(video.videoWidth, video.videoHeight));
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(video.videoWidth * scale));
+      canvas.height = Math.max(1, Math.round(video.videoHeight * scale));
+      canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+      frames.push(canvas.toDataURL("image/jpeg", 0.72));
+    }
+    return frames;
+  } finally {
+    video.pause();
+    video.removeAttribute("src");
+    video.load();
+    URL.revokeObjectURL(url);
+  }
+}
+
+async function requestSarathiMediaUnderstanding(prompt, images) {
+  const token = await getAuthToken();
+  const response = await fetch(getWorkerUrl() + "/api/media/understand", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+    body: JSON.stringify({ prompt, images })
+  });
+  const data = await response.json();
+  if (!response.ok || !data.success || !data.reply) {
+    throw new Error(data.error || "फोटो/वीडियो समझा नहीं जा सका।");
+  }
+  return data.reply;
+}
+
 async function requestSarathiImage(prompt, imageFile) {
   const token = await getAuthToken();
   let images;
@@ -728,7 +803,40 @@ async function sendMessage(text) {
     return;
   }
 
+  const videoFile = state.attachments.find(file => file.type.startsWith("video/") || /\\.(mp4|webm|mov)$/i.test(file.name));
   const imageFile = state.attachments.find(file => file.type.startsWith("image/"));
+  const asksToEditImage = /(फोटो|तस्वीर|इमेज|image|photo).{0,45}(एडिट|बदल|सुधार|edit|change|modify)|(एडिट|बदल|सुधार|edit|change|modify).{0,45}(फोटो|तस्वीर|इमेज|image|photo)/i.test(prompt);
+  const asksToGenerateImage = /(फोटो|तस्वीर|इमेज|image|picture).{0,55}(बनाओ|बना दो|बना लें|बनाएं|बनाकर|तैयार|generate|create|draw)|(बनाओ|बना दो|बना लें|बनाएं|बनाकर|तैयार|generate|create|draw).{0,55}(फोटो|तस्वीर|इमेज|image|picture)/i.test(prompt);
+  if (!asksToEditImage && !asksToGenerateImage && (imageFile || videoFile)) {
+    if (!window.confirm("चुनी गई फोटो/वीडियो के चुने हुए फ्रेम इंटरनेट के ज़रिए AI को भेजे जाएँगे। क्या भेजना है?")) return;
+    addMessage("user", prompt);
+    setBusy(true);
+    try {
+      let frames;
+      if (videoFile) {
+        setStatus("वीडियो के कुछ फ्रेम पढ़े जा रहे हैं…");
+        frames = await extractVideoFrames(videoFile, 5);
+      } else {
+        setStatus("फोटो तैयार की जा रही है…");
+        frames = [await fileToImageDataUrl(imageFile)];
+      }
+      const question = prompt || (videoFile
+        ? "इस वीडियो के चुने हुए फ्रेम देखकर हिंदी में बताओ कि इसमें क्या हो रहा है।"
+        : "इस फोटो में क्या दिख रहा है? विस्तार से हिंदी में बताओ।");
+      setStatus("AI फोटो/वीडियो समझ रही है…");
+      const reply = await requestSarathiMediaUnderstanding(question, frames);
+      addMessage("assistant", reply);
+      setStatus("मीडिया का विश्लेषण पूरा हुआ।");
+      state.attachments = state.attachments.filter(file => file !== imageFile && file !== videoFile);
+      renderAttachmentPreview();
+    } catch (error) {
+      addMessage("assistant", "मीडिया समझा नहीं जा सका: " + (error?.message || "कृपया बाद में कोशिश करें।"));
+      setStatus("मीडिया समझने में समस्या आई।");
+    } finally {
+      setBusy(false);
+    }
+    return;
+  }
   const asksToEditImage = /(फोटो|तस्वीर|इमेज|image|photo).{0,35}(एडिट|बदल|सुधार|edit|change|modify)|(एडिट|बदल|सुधार|edit|change|modify).{0,35}(फोटो|तस्वीर|इमेज|image|photo)/i.test(prompt);
   const asksToGenerateImage = /(फोटो|तस्वीर|इमेज|image|picture).{0,45}(बनाओ|बनाकर|तैयार|generate|create|draw)|(बनाओ|बनाकर|तैयार|generate|create|draw).{0,45}(फोटो|तस्वीर|इमेज|image|picture)/i.test(prompt);
   if (asksToEditImage || asksToGenerateImage) {
@@ -1235,17 +1343,18 @@ function renderAttachmentPreview() {
 function addFiles(fileList) {
   if (!fileList) return;
   const allowed = Array.from(fileList).filter(file =>
-    file.size <= 10 * 1024 * 1024 &&
-    (["image/png", "image/jpeg", "image/webp"].includes(file.type) ||
+    file.size <= 20 * 1024 * 1024 &&
+    (["image/png", "image/jpeg", "image/webp", "video/mp4", "video/webm", "video/quicktime"].includes(file.type) ||
       file.type === "application/pdf" ||
       file.type === "text/plain" ||
-      file.name.toLowerCase().endsWith(".docx"))
+      file.name.toLowerCase().endsWith(".docx") ||
+      /\\.(mp4|webm|mov)$/i.test(file.name))
   );
   const files = allowed.slice(0, Math.max(0, 5 - state.attachments.length));
   state.attachments.push(...files);
   renderAttachmentPreview();
   if (files.length) setStatus("फाइल तैयार है। भेजने पर उसका पाठ AI को भेजा जाएगा।");
-  else if (fileList.length) setStatus("फाइल का प्रकार समर्थित नहीं है, या फाइल 10 MB से बड़ी है। PDF, DOCX, TXT या PNG/JPG/WEBP फोटो चुनें।");
+  else if (fileList.length) setStatus("यह फाइल समर्थित नहीं है या 20 MB से बड़ी है। JPG/PNG/WEBP, MP4/WEBM/MOV, PDF, DOCX या TXT चुनें।");
 }
 
 function loadExternalScript(src, globalName) {
