@@ -661,9 +661,12 @@ function filterSourcesForPrompt(prompt, sources) {
   }
   if (/(चांदी|चाँदी|silver)/i.test(q)) {
     const silverPattern = /(silver|चांदी|चाँदी|bullion|precious[- ]?metal)/i;
-    pattern = pattern ? {
-      test: (value) => pattern.test(value) || silverPattern.test(value)
-    } : silverPattern;
+    if (pattern) {
+      const goldPattern = pattern;
+      pattern = { test: value => goldPattern.test(value) || silverPattern.test(value) };
+    } else {
+      pattern = silverPattern;
+    }
   }
   if (/(मौसम|weather|तापमान|temperature)/i.test(q)) {
     pattern = /(weather|मौसम|temperature|forecast|तापमान)/i;
