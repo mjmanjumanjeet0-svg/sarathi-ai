@@ -39,6 +39,7 @@ public class WakeWordService extends Service {
     public static final String ACTION_PAUSE = "com.sarathi.ai.WAKE_PAUSE";
     public static final String ACTION_RESUME = "com.sarathi.ai.WAKE_RESUME";
     public static final String ACTION_CAPTURE_COMMAND = "com.sarathi.ai.WAKE_CAPTURE_COMMAND";
+    public static final String ACTION_END_CONVERSATION = "com.sarathi.ai.WAKE_END_CONVERSATION";
     private static final String CHANNEL = "sarathi_wake_channel";
     private static final int NOTIFICATION_ID = 771;
     private static final String MODEL_NAME = "vosk-model-small-hi-0.22";
@@ -82,6 +83,18 @@ public class WakeWordService extends Service {
             awaitingCommand = true;
             if (speechService != null) speechService.setPause(true);
             scheduleCommandTimeout(60000L);
+            return START_STICKY;
+        }
+        if (intent != null && ACTION_END_CONVERSATION.equals(intent.getAction())) {
+            conversationMode = false;
+            awaitingCommand = false;
+            if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
+            commandTimeout = null;
+            if (running) {
+                if (speechService != null) speechService.setPause(false);
+                resumeListening();
+                updateStatus("बातचीत समाप्त। सारथी फिर से वेक-वर्ड सुन रहा है।");
+            }
             return START_STICKY;
         }
         if (intent != null && ACTION_CAPTURE_COMMAND.equals(intent.getAction())) {
