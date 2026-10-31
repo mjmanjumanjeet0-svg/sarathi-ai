@@ -664,22 +664,25 @@ export default {
 आज की भारतीय तारीख ${dateTime.date} है।
 `;
 
-    const safeMessages = messages
-      .filter(m =>
-        m &&
-        ["user", "assistant"].includes(m.role) &&
-        typeof m.content === "string"
-      )
-      .slice(-10)
-      .map(m => ({
-        role: m.role,
-        content: m.content.slice(0, m.role === "user" ? 11000 : 4000),
-      }));
+    // Enforce a strict history budget so long chats cannot trigger provider HTTP 413.
+    const validMessages = messages
+      .filter(m => m && ["user", "assistant"].includes(m.role) && typeof m.content === "string")
+      .slice(-8);
+    const safeMessages = [];
+    let historyBudget = 6000;
+    for (let i = validMessages.length - 1; i >= 0 && historyBudget > 0; i--) {
+      const m = validMessages[i];
+      const limit = m.role === "user" ? 1800 : 1000;
+      const content = m.content.trim().slice(-Math.min(limit, historyBudget));
+      if (!content) continue;
+      safeMessages.unshift({ role: m.role, content });
+      historyBudget -= content.length;
+    }
 
     if (searchResults.length) {
       for (let i = safeMessages.length - 1; i >= 0; i--) {
         if (safeMessages[i].role === "user") {
-          safeMessages[i].content += buildSearchContext(searchResults, userText);
+          safeMessages[i].content += buildSearchContext(searchResults, userText).slice(0, 6500);
           break;
         }
       }
