@@ -7,6 +7,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -31,6 +32,7 @@ import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.Locale;
+import java.util.List;
 import java.util.Set;
 
 public class MainActivity extends Activity {
@@ -513,6 +515,63 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void launchInstalledApp(String requestedName) {
+        if (requestedName == null || requestedName.trim().isEmpty() || requestedName.length() > 60) {
+            notifyVoice("onError", "ऐप का नाम सही नहीं है।");
+            return;
+        }
+        String requested = requestedName.startsWith("custom:")
+                ? requestedName.substring("custom:".length()).trim() : requestedName.trim();
+        String target = normalizeAppLabel(requested);
+        if (target.isEmpty()) {
+            notifyVoice("onError", "ऐप का नाम समझ नहीं आया।");
+            return;
+        }
+        try {
+            Intent query = new Intent(Intent.ACTION_MAIN);
+            query.addCategory(Intent.CATEGORY_LAUNCHER);
+            List<ResolveInfo> launchable = getPackageManager().queryIntentActivities(query, 0);
+            ResolveInfo match = null;
+            for (ResolveInfo info : launchable) {
+                if (info.activityInfo == null) continue;
+                String label = normalizeAppLabel(String.valueOf(info.loadLabel(getPackageManager())));
+                if (label.equals(target)) {
+                    match = info;
+                    break;
+                }
+            }
+            if (match == null) {
+                String alias = target;
+                if (target.equals("maps")) alias = "googlemaps";
+                if (target.equals("photos")) alias = "googlephotos";
+                for (ResolveInfo info : launchable) {
+                    if (info.activityInfo == null) continue;
+                    String label = normalizeAppLabel(String.valueOf(info.loadLabel(getPackageManager())));
+                    if (label.equals(alias)) {
+                        match = info;
+                        break;
+                    }
+                }
+            }
+            if (match == null || match.activityInfo == null) {
+                notifyVoice("onError", "यह ऐप फ़ोन में इंस्टॉल नहीं है या उसका नाम नहीं मिला।");
+                return;
+            }
+            Intent launch = new Intent(Intent.ACTION_MAIN);
+            launch.addCategory(Intent.CATEGORY_LAUNCHER);
+            launch.setClassName(match.activityInfo.packageName, match.activityInfo.name);
+            launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            startActivity(launch);
+            notifyVoice("onStatus", String.valueOf(match.loadLabel(getPackageManager())) + " खुल गया।");
+        } catch (Exception error) {
+            notifyVoice("onError", "यह ऐप अभी नहीं खुल सका। फ़ोन में ऐप इंस्टॉल है या नहीं जाँचें।");
+        }
+    }
+
+    private String normalizeAppLabel(String value) {
+        return value == null ? "" : value.toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}]", "");
+    }
+
     private class SarathiBridge {
         @JavascriptInterface
         public void startListening() {
@@ -611,6 +670,12 @@ public class MainActivity extends Activity {
             service.setAction(WakeWordService.ACTION_STOP);
             startService(service);
             notifyVoice("onStatus", "वेक-वर्ड सेवा बंद करने का अनुरोध भेजा गया।");
+        }
+
+        @JavascriptInterface
+        public void launchApp(String requestedApp) {
+            final String appName = requestedApp == null ? "" : requestedApp.trim();
+            runOnUiThread(() -> launchInstalledApp(appName));
         }
 
         @JavascriptInterface
