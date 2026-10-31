@@ -247,7 +247,7 @@ async function searchBingRss(query) {
     for (const item of items) {
       if (results.length >= 5) break;
       const getTag = (tag) => {
-        const m = item.match(new RegExp("<" + tag + "[^>]*>([\\s\\S]*?)<\\/" + tag + ">", "i"));
+        const m = item.match(new RegExp("<" + tag + "[^>]*>([\s\\S]*?)<\/" + tag + ">", "i"));
         return m ? m[1].replace(/<!\[CDATA\[|\]\]>/g, "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim() : "";
       };
       const title = cleanText(getTag("title"));
@@ -283,7 +283,7 @@ async function searchGoogleNewsRss(query) {
     for (const item of items) {
       if (results.length >= 5) break;
       const tag = (name) => {
-        const match = item.match(new RegExp("<" + name + "[^>]*>([\\s\\S]*?)<\\/" + name + ">", "i"));
+        const match = item.match(new RegExp("<" + name + "[^>]*>([\s\\S]*?)<\/" + name + ">", "i"));
         return match ? match[1].replace(/<!\[CDATA\[|\]\]>/g, "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim() : "";
       };
       const title = cleanText(tag("title"));
@@ -351,7 +351,7 @@ async function searchInternet(query, env) {
   }
 
   // Google News RSS is useful for headlines, but not a reliable gold-price source.
-  const isGoldRateSearch = /(सोने|सोना|gold|bullion|22\\s*k|24\\s*k)/i.test(query);
+  const isGoldRateSearch = /(सोने|सोना|gold|bullion|22\s*k|24\s*k)/i.test(query);
   if (!isGoldRateSearch && /(खबर|समाचार|news|breaking|latest)/i.test(query)) {
     const newsFallback = await searchGoogleNewsRss(query);
     if (newsFallback.results.length) return newsFallback;
@@ -451,7 +451,7 @@ async function enrichGoldRateResults(results) {
       const combined = [item.title || "", item.snippet || "", ...contexts].join(" | ");
       const rateFor = (karat) => {
         const escaped = String(karat);
-        const re = new RegExp("(?:\\b" + escaped + "\\s*K\\b|" + escaped + "\\s*कैरेट|" + escaped + "\\s*karat)[^₹]{0,90}(?:₹|Rs\\.?|INR)\\s*([0-9,]+(?:\\.[0-9]+)?)", "i");
+        const re = new RegExp("(?:\\b" + escaped + "\s*K\\b|" + escaped + "\s*कैरेट|" + escaped + "\s*karat)[^₹]{0,90}(?:₹|Rs\\.?|INR)\s*([0-9,]+(?:\\.[0-9]+)?)", "i");
         const m = combined.match(re);
         return m ? Number(m[1].replace(/,/g, "")) : null;
       };
@@ -600,7 +600,7 @@ export default {
         return jsonResponse({ success: false, error: "बहुत अधिक मीडिया अनुरोध हुए। थोड़ी देर बाद प्रयास करें।" }, 429);
       }
       if (!env.SARATHI_LOGIN_PASSWORD ||
-          !await verifyToken((request.headers.get("Authorization") || "").replace(/^Bearer\\s+/i, ""), env.SARATHI_LOGIN_PASSWORD)) {
+          !await verifyToken((request.headers.get("Authorization") || "").replace(/^Bearer\s+/i, ""), env.SARATHI_LOGIN_PASSWORD)) {
         return jsonResponse({ success: false, error: "सत्र समाप्त हो गया है। दोबारा लॉगिन करें।" }, 401);
       }
       if (!env.AI || typeof env.AI.run !== "function") {
@@ -611,7 +611,7 @@ export default {
         const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "इस मीडिया में क्या दिख रहा है? हिंदी में विस्तार से बताओ।";
         const images = Array.isArray(body.images) ? body.images.slice(0, 6) : [];
         if (!images.length || images.some(item => typeof item !== "string" ||
-            !/^data:image\\/(png|jpeg|webp);base64,/i.test(item) || item.length > 1_800_000)) {
+            !/^data:image\/(png|jpeg|webp);base64,/i.test(item) || item.length > 1_800_000)) {
           return jsonResponse({ success: false, error: "समझने के लिए 1 से 6 छोटी JPG/PNG/WEBP तस्वीरें भेजें।" }, 400);
         }
         try {
@@ -645,7 +645,7 @@ export default {
         return jsonResponse({ success: false, error: "फोटो का निर्देश 1 से 1200 अक्षरों का होना चाहिए।" }, 400);
       }
       if (images.some(item => typeof item !== "string" ||
-          !/^data:image\\/(png|jpeg|webp);base64,/i.test(item) || item.length > 6_000_000)) {
+          !/^data:image\/(png|jpeg|webp);base64,/i.test(item) || item.length > 6_000_000)) {
         return jsonResponse({ success: false, error: "संपादन के लिए PNG, JPG या WEBP फोटो (4 MB तक) चुनें।" }, 400);
       }
       try {
@@ -654,7 +654,7 @@ export default {
         form.append("width", "1024");
         form.append("height", "1024");
         if (images.length) {
-          const match = images[0].match(/^data:image\\/(png|jpeg|webp);base64,(.+)$/i);
+          const match = images[0].match(/^data:image\/(png|jpeg|webp);base64,(.+)$/i);
           const binary = atob(match[2]);
           const bytes = new Uint8Array(binary.length);
           for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
