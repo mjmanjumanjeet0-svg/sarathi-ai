@@ -234,7 +234,7 @@ async function searchInternet(query, env) {
           canonicalUrl = parsed.toString().replace(/\\/$/, "");
         } catch {}
         const title = cleanText(item.title).slice(0, 300);
-        const key = title.toLocaleLowerCase("hi-IN").replace(/[^\\p{L}\\p{N}]+/gu, " ").trim() || canonicalUrl;
+        const key = title.toLocaleLowerCase("hi-IN").replace(/[^a-z0-9\u0900-\u097F]+/gi, " ").trim() || canonicalUrl;
         if (seenNewsItems.has(key) || seenNewsItems.has(canonicalUrl)) return null;
         seenNewsItems.add(key);
         seenNewsItems.add(canonicalUrl);
