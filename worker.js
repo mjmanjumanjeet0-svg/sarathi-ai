@@ -585,7 +585,7 @@ export default {
       });
     }
 
-    if (url.pathname === "/api/image") {
+    if (url.pathname === "/api/media/image") {
       if (await isRateLimited(request, env, "image")) {
         return jsonResponse({ success: false, error: "बहुत अधिक अनुरोध हुए। थोड़ी देर बाद प्रयास करो।" }, 429);
       }
