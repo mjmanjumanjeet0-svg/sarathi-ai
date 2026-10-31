@@ -101,3 +101,13 @@ dialog{width:min(430px,calc(100% - 30px));background:var(--panel);color:var(--te
 #mediaStudioDialog .dialog-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
 #mediaStudioDialog [hidden]{display:none!important}
 @media(max-width:700px){.media-studio{padding:14px}.media-time-fields{grid-template-columns:1fr 1fr}}
+
+
+/* Local project workspace */
+.project-studio{width:min(760px,94vw);max-height:88vh;overflow:auto}
+.project-studio label{display:flex;flex-direction:column;gap:6px;margin:10px 0;color:var(--muted);font-size:13px}
+.project-studio input,.project-studio textarea,.project-studio select{width:100%;padding:10px;border-radius:9px;border:1px solid var(--border);background:#06132a;color:var(--text);font:inherit;min-width:0}
+.project-studio textarea{font-family:ui-monospace,monospace;font-size:12px;line-height:1.5}
+.project-file-list{display:grid;gap:6px;margin:12px 0}
+.project-file-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;background:var(--panel2)}
+.project-file-row button{background:transparent;border:0;color:var(--text);text-align:left;overflow-wrap:anywhere}
