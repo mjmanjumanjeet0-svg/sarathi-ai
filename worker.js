@@ -182,8 +182,8 @@ async function searchInternet(query, env) {
       const isNewsQuery = /(खबर|समाचार|news|breaking|latest|ताज़ा|ताजा)/i.test(searchQuery);
       const requestBody = {
         query: searchQuery,
-        type: "auto",
-        numResults: 8,
+        type: "instant",
+        numResults: 5,
         contents: { highlights: true }
       };
       if (isNewsQuery) {
