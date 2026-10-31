@@ -799,13 +799,28 @@ function resolveSarathiAppCommand(prompt) {
     { id: "chrome", label: "Chrome", names: ["chrome", "क्रोम"] },
     { id: "gmail", label: "Gmail", names: ["gmail", "जीमेल"] },
     { id: "photos", label: "Google Photos", names: ["google photos", "photos", "गूगल फोटो", "फोटो गैलरी", "गैलरी"] },
-    { id: "playstore", label: "Play Store", names: ["play store", "playstore", "प्ले स्टोर"] }
+    { id: "playstore", label: "Play Store", names: ["play store", "playstore", "प्ले स्टोर"] },
+    { id: "instagram", label: "Instagram", names: ["instagram", "इंस्टाग्राम"] },
+    { id: "facebook", label: "Facebook", names: ["facebook", "फेसबुक"] },
+    { id: "telegram", label: "Telegram", names: ["telegram", "टेलीग्राम"] },
+    { id: "spotify", label: "Spotify", names: ["spotify", "स्पॉटिफाई"] },
+    { id: "camera", label: "Camera", names: ["camera", "कैमरा"] },
+    { id: "calculator", label: "Calculator", names: ["calculator", "कैलकुलेटर", "गणक"] },
+    { id: "settings", label: "Settings", names: ["settings", "सेटिंग्स", "सेटिंग"] },
+    { id: "phone", label: "Phone", names: ["phone", "फोन", "डायलर"] },
+    { id: "contacts", label: "Contacts", names: ["contacts", "कॉन्टैक्ट", "संपर्क"] },
+    { id: "calendar", label: "Calendar", names: ["calendar", "कैलेंडर"] },
+    { id: "clock", label: "Clock", names: ["clock", "घड़ी"] },
+    { id: "files", label: "Files", names: ["files", "file manager", "फाइल", "फाइल मैनेजर"] },
+    { id: "messages", label: "Messages", names: ["messages", "मैसेज", "संदेश"] }
   ];
   const normalized = value.toLocaleLowerCase("hi-IN").replace(/[.!?,।]/g, " ");
   const known = apps.find(app => app.names.some(name => normalized.includes(name.toLocaleLowerCase("hi-IN"))));
   if (known) return known;
-  const cleaned = value.replace(/^(?:सारथी|कृपया|please)\s+/i, "")
-    .replace(/\s+(?:खोल दो|खोलो|खोल|चालू करो|open|launch|start)\s*$/i, "")
+  const cleaned = value
+    .replace(/^(?:(?:सारथी|कृपया|please)\\s+)?(?:open|launch|start)\\s+/i, "")
+    .replace(/^(?:सारथी|कृपया|please)\\s+/i, "")
+    .replace(/\\s+(?:खोल दो|खोलो|खोल|चालू करो|open|launch|start)\\s*$/i, "")
     .trim();
   if (cleaned && cleaned.length <= 45 && !/[?？]/.test(cleaned)) {
     return { id: "custom:" + cleaned, label: cleaned };
