@@ -169,158 +169,37 @@ function validHttpUrl(value) {
   }
 }
 
-function decodeXmlEntities(value) {
-  return String(value || "")
-    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
-    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
-    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&apos;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">");
-}
-
-function readRssTag(block, name) {
-  const match = block.match(new RegExp("<" + name + "(?:\\s[^>]*)?>([\\s\\S]*?)<\\/" + name + ">", "i"));
-  return match ? cleanText(decodeXmlEntities(match[1])) : "";
-}
-
-async function fetchRssFeed(feedUrl, publisherName, maxAgeHours = 72) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 9000);
-  try {
-    const response = await fetch(feedUrl, {
-      headers: {
-        "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml",
-        "User-Agent": "Mozilla/5.0 (compatible; SarathiAI/1.0)"
-      },
-      signal: controller.signal,
-      redirect: "follow"
-    });
-    if (!response.ok) return [];
-    const xml = await response.text();
-    if (!/<rss[\s>]|<feed[\s>]/i.test(xml)) return [];
-    const entries = xml.match(/<(?:item|entry)(?:\s[^>]*)?>[\s\S]*?<\/(?:item|entry)>/gi) || [];
-    const results = [];
-    for (const entry of entries) {
-      if (results.length >= 8) break;
-      const title = readRssTag(entry, "title");
-      const description = readRssTag(entry, "description") || readRssTag(entry, "summary") || readRssTag(entry, "content");
-      let link = readRssTag(entry, "link");
-      if (!link) {
-        const href = entry.match(/<link[^>]+href=["']([^"']+)["']/i);
-        link = href ? decodeXmlEntities(href[1]) : "";
-      }
-      const dateText = readRssTag(entry, "pubDate") || readRssTag(entry, "published") || readRssTag(entry, "updated");
-      const timestamp = dateText ? Date.parse(dateText) : NaN;
-      if (!title || !validHttpUrl(link)) continue;
-      if (Number.isFinite(timestamp)) {
-        const age = Date.now() - timestamp;
-        if (age < -3600000 || age > maxAgeHours * 3600000) continue;
-      }
-      results.push({
-        title: title.slice(0, 300),
-        url: link,
-        snippet: description.slice(0, 1400),
-        publisher: publisherName,
-        publishedAt: Number.isFinite(timestamp) ? new Date(timestamp).toISOString() : ""
-      });
-    }
-    return results;
-  } catch {
-    return [];
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-async function searchGoogleNewsRss(query) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 12000);
-  try {
-    const endpoint = "https://news.google.com/rss/search?q=" +
-      encodeURIComponent(query.slice(0, 500)) + "&hl=hi&gl=IN&ceid=IN:hi";
-    const response = await fetch(endpoint, {
-      headers: {
-        "Accept": "application/rss+xml, application/xml, text/xml",
-        "User-Agent": "Mozilla/5.0 (compatible; SarathiAI/1.0)"
-      },
-      signal: controller.signal
-    });
-    if (!response.ok) return { results: [], warning: "Google News RSS ने HTTP " + response.status + " लौटाया।" };
-    const xml = await response.text();
-    if (!/<rss[\s>]/i.test(xml)) return { results: [], warning: "Google News ने मान्य RSS फ़ीड नहीं लौटाई।" };
-    const items = xml.match(/<item(?:\s[^>]*)?>[\s\S]*?<\/item>/gi) || [];
-    const results = [];
-    const seen = new Set();
-    for (const item of items) {
-      if (results.length >= 8) break;
-      const title = readRssTag(item, "title");
-      const url = readRssTag(item, "link");
-      const snippet = readRssTag(item, "description");
-      const publisher = readRssTag(item, "source");
-      const publishedText = readRssTag(item, "pubDate");
-      const publishedAt = publishedText ? Date.parse(publishedText) : NaN;
-      if (!title || !validHttpUrl(url) || seen.has(url)) continue;
-      if (Number.isFinite(publishedAt)) {
-        const age = Date.now() - publishedAt;
-        if (age < -3600000 || age > 72 * 60 * 60 * 1000) continue;
-      }
-      seen.add(url);
-      results.push({
-        title: title.slice(0, 300),
-        url,
-        snippet: snippet.slice(0, 1400),
-        publisher: publisher.slice(0, 100) || "Google News",
-        publishedAt: Number.isFinite(publishedAt) ? new Date(publishedAt).toISOString() : ""
-      });
-    }
-    return {
-      results,
-      warning: results.length ? "Google News RSS से वास्तविक समाचार शीर्षक मिले।" : "Google News RSS में इस प्रश्न के लिए समाचार नहीं मिले।"
-    };
-  } catch {
-    return { results: [], warning: "Google News RSS से संपर्क नहीं हो सका।" };
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
 async function searchInternet(query, env) {
-  const isNewsSearch = /(खबर|समाचार|news|breaking|latest|ताज़ा|ताजा)/i.test(query);
-  if (isNewsSearch) {
-    // RSS news search: actual dated headlines, not publisher homepages.
-    const googleNews = await searchGoogleNewsRss(query);
-    if (googleNews.results.length) return googleNews;
-
-    // Independent publisher RSS feeds are used only as a real-feed fallback.
-    const feeds = [
-      ["https://feeds.bbci.co.uk/hindi/rss.xml", "BBC Hindi"],
-      ["https://indianexpress.com/section/india/feed/", "The Indian Express"],
-      ["https://www.thehindu.com/news/national/feeder/default.rss", "The Hindu"]
-    ];
-    const batches = await Promise.all(feeds.map(([url, name]) => fetchRssFeed(url, name, 48)));
-    const all = batches.flat();
-    const terms = query.toLocaleLowerCase("hi-IN").split(/\s+/).filter(word => word.length > 3 && !/^(india|latest|news|today|when|खबर|समाचार|ताजा|ताज़ा)$/i.test(word));
-    const relevant = all.filter(item => {
-      const haystack = (item.title + " " + item.snippet).toLocaleLowerCase("hi-IN");
-      return !terms.length || terms.some(term => haystack.includes(term));
-    }).slice(0, 8);
-    return {
-      results: relevant,
-      warning: relevant.length
-        ? "Google News उपलब्ध नहीं था; प्रकाशकों की वास्तविक RSS फ़ीड से खबरें मिलीं।"
-        : "Google News और प्रकाशक RSS फ़ीड से इस प्रश्न के लिए खबरें नहीं मिलीं।"
-    };
+  if (!env.AI || typeof env.AI.websearch !== "function") {
+    return { results: [], warning: "Cloudflare Web Search उपलब्ध नहीं है। Worker के AI binding और खाते की सुविधा जाँचें।" };
   }
-
-  return {
-    results: [],
-    warning: "सामान्य वेब खोज के लिए कोई अन्य Search API अभी कॉन्फ़िगर नहीं है। समाचार खोज RSS से उपलब्ध है।"
-  };
+  try {
+    const response = await env.AI.websearch({
+      gatewayId: "default",
+      query: String(query || "").trim().slice(0, 1024),
+      limit: 8
+    });
+    if (!response.ok) return { results: [], warning: "वेब खोज सेवा ने HTTP " + response.status + " लौटाया।" };
+    const payload = await response.json();
+    const items = Array.isArray(payload?.items) ? payload.items : [];
+    const results = items.filter(item => item && typeof item.title === "string" && typeof item.url === "string" && validHttpUrl(item.url))
+      .slice(0, 8).map(item => {
+        let publisher = "वेबसाइट";
+        try { publisher = new URL(item.url).hostname.replace(/^www\\./i, ""); } catch {}
+        return {
+          title: cleanText(item.title).slice(0, 300),
+          url: item.url,
+          snippet: cleanText(item.description || "").slice(0, 1600),
+          publisher,
+          publishedAt: typeof item.publishedDate === "string" ? item.publishedDate : (typeof item.published_at === "string" ? item.published_at : "")
+        };
+      });
+    return { results, warning: results.length ? "Cloudflare Web Search से वास्तविक वेब परिणाम मिले।" : "वेब खोज में इस सवाल के लिए कोई परिणाम नहीं मिला।" };
+  } catch (error) {
+    console.error("Web search failed", error?.message || error);
+    return { results: [], warning: "Cloudflare Web Search से संपर्क नहीं हो सका।" };
+  }
 }
-
 async function enrichGoldRateResults(results) {
   const candidates = (Array.isArray(results) ? results : []).slice(0, 4);
   return await Promise.all(candidates.map(async item => {
@@ -423,7 +302,7 @@ function buildSearchContext(results, query = "") {
 
   const isNewsQuery = /(खबर|समाचार|news|breaking|latest|ताज़ा|ताजा)/i.test(query);
   const newsInstruction = isNewsQuery
-    ? "\\n\\nसमाचार के निर्देश: RSS फ़ीड से मिले वास्तविक शीर्षक, प्रकाशक और तारीख के आधार पर खबरों का सरल हिंदी में सार दो। हर खबर के साथ स्रोत और उपलब्ध तारीख बताओ। कम खबरें मिली हों तो उतनी ही बताओ; संख्या पूरी करने के लिए खबर मत गढ़ो। पुराने समाचार को आज की खबर मत बताओ।"
+    ? "\\n\\nसमाचार के निर्देश: खोज से मिले वास्तविक शीर्षक, वेबसाइट और उपलब्ध तारीख के आधार पर खबरों का सरल हिंदी में सार दो। तारीख उपलब्ध न हो तो तारीख मत बनाओ। कम खबरें मिली हों तो उतनी ही बताओ; संख्या पूरी करने के लिए खबर मत गढ़ो। पुराने समाचार को आज की खबर मत बताओ।"
     : "";
 
   return "\\n\\nइंटरनेट खोज के परिणाम:\\n" + results.map(
@@ -672,7 +551,7 @@ export default {
       if (searchResults.length === 0) {
         return jsonResponse({
           success: true,
-          reply: "मैंने इंटरनेट पर खोजने की कोशिश की, लेकिन अभी भरोसेमंद परिणाम नहीं मिले। इसलिए ताज़ा खबर या वर्तमान जानकारी का अनुमान लगाकर नहीं बताऊँगा। थोड़ी देर बाद फिर कोशिश करें या सवाल को दूसरे शब्दों में पूछें।",
+          reply: "मैंने वेब पर खोजने की कोशिश की, लेकिन अभी भरोसेमंद परिणाम नहीं मिले। इसलिए कोई तथ्य या लिंक गढ़कर नहीं बताऊँगा। थोड़ी देर बाद फिर कोशिश करें या सवाल को दूसरे शब्दों में पूछें।",
           ...dateTime,
           webSearch: false,
           searchAttempted: true,
@@ -694,7 +573,7 @@ export default {
 - सीधे सवाल का सीधा उत्तर पहले दो। फिर जरूरत के अनुसार कारण और कदम समझाओ।\n- यदि उपयोगकर्ता केवल हेलो, नमस्ते, नमस्कार या साधारण अभिवादन करे, तो छोटा स्वाभाविक अभिवादन देकर पूछो कि किस मदद की जरूरत है। ऐसे अभिवादन पर किसी पुराने विषय, खरीदारी, समाचार या वेब खोज के परिणामों का उत्तर मत दो।\n- हमेशा नवीनतम उपयोगकर्ता संदेश को प्राथमिकता दो; पुरानी बातचीत तभी जारी रखो जब संदेश उसी का संदर्भ देता हो।
 - केवल एक पंक्ति में जवाब मत समेटो जब सवाल में विस्तार, तुलना या समाधान माँगा गया हो। उपयोगी उदाहरण दो, लेकिन अनावश्यक दोहराव न करो।
 - उपयोगकर्ता पहले ही जो जानकारी दे चुका है, वह दोबारा मत पूछो।
-- जहाँ अनिश्चितता हो, साफ बताओ; अनुमान को तथ्य मत बनाओ और नकली स्रोत/लिंक मत दो।
+- जहाँ अनिश्चितता हो, साफ बताओ; अनुमान को तथ्य मत बनाओ और नकली स्रोत/लिंक मत दो। अस्पष्ट या गोलमोल शब्दों से बचो; आसान और सटीक हिंदी में जवाब दो।
 - सामान्य स्थायी ज्ञान के आसान सवालों का उत्तर बिना वेब खोज के दो। यदि सवाल ताज़ा, बदलती, स्थानीय, आधिकारिक या तथ्य-जाँच माँगता हो, तो उपलब्ध इंटरनेट खोज अपने-आप करो; केवल उपयोगकर्ता के वेब बटन पर निर्भर मत रहो।
 - यदि खोज के परिणाम पर्याप्त, विश्वसनीय या एक-दूसरे से मेल खाते न हों, तो स्पष्ट कहो कि पुष्टि नहीं हो पाई। खोज न कर पाने पर भी इंटरनेट पर खोज लेने का दावा मत करो।
 - वर्तमान सोने/चाँदी के भाव, शेयर, मौसम, ट्रेन स्थिति या अन्य बदलती जानकारी पूछी जाए और इंटरनेट खोज के परिणाम मिले हों, तो केवल उन्हीं परिणामों में स्पष्ट रूप से दिए गए ताज़ा आँकड़े बताओ। स्रोत में तारीख/दर स्पष्ट न हो या परिणाम आपस में न मिलें, तो कोई संख्या या तारीख अनुमान से मत बनाओ; साफ कहो कि उपलब्ध स्रोत से आज का सही भाव सत्यापित नहीं हो पाया।
