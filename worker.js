@@ -534,7 +534,8 @@ export default {
         status: "running",
         endpoints: {
           login: "POST /api/login",
-          chat: "POST /api/chat"
+          chat: "POST /api/chat",
+          image: "POST /api/media/image (Cloudflare Workers AI binding required)"
         }
       });
     }
@@ -543,7 +544,7 @@ export default {
       return jsonResponse({ success: false, error: "अनुरोध उपलब्ध नहीं है। API के लिए POST अनुरोध भेजें।" }, 405);
     }
 
-    if (url.pathname !== "/api/login" && url.pathname !== "/api/chat") {
+    if (url.pathname !== "/api/login" && url.pathname !== "/api/chat" && url.pathname !== "/api/media/image") {
       return jsonResponse({ success: false, error: "API रास्ता उपलब्ध नहीं है।" }, 404);
     }
 
@@ -599,6 +600,43 @@ export default {
 
     if (!await verifyToken(token, env.SARATHI_LOGIN_PASSWORD)) {
       return jsonResponse({ success: false, error: "पहले सही पासवर्ड से लॉगिन करो।" }, 401);
+    }
+
+    if (url.pathname === "/api/media/image") {
+      if (await isRateLimited(request, env, "media-image")) {
+        return jsonResponse({ success: false, error: "बहुत अधिक इमेज अनुरोध हुए। थोड़ी देर बाद प्रयास करें।" }, 429);
+      }
+      const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+      if (!prompt || prompt.length > 1200) {
+        return jsonResponse({ success: false, error: "फोटो बनाने का निर्देश 1 से 1200 अक्षरों का होना चाहिए।" }, 400);
+      }
+      if (!env.AI || typeof env.AI.run !== "function") {
+        return jsonResponse({
+          success: false,
+          error: "Cloudflare Workers AI binding उपलब्ध नहीं है। Worker में AI binding जोड़कर Workers AI इस्तेमाल सक्षम करें।"
+        }, 503);
+      }
+      try {
+        const generated = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", {
+          prompt,
+          steps: 4
+        });
+        const imageData = generated?.image || generated?.data?.[0]?.b64_json || generated?.data;
+        if (typeof imageData !== "string" || !imageData.length) {
+          return jsonResponse({ success: false, error: "इमेज मॉडल से पहचानने योग्य फोटो डेटा नहीं मिला।" }, 502);
+        }
+        return jsonResponse({
+          success: true,
+          mimeType: "image/jpeg",
+          image: imageData,
+          model: "@cf/black-forest-labs/flux-1-schnell"
+        });
+      } catch (error) {
+        return jsonResponse({
+          success: false,
+          error: "AI फोटो जनरेशन असफल हुई। Workers AI मॉडल/बिलिंग सेटिंग जाँचें।"
+        }, 502);
+      }
     }
 
     const messages = Array.isArray(body.messages) ? body.messages : [];
