@@ -585,6 +585,38 @@ export default {
       });
     }
 
+    if (url.pathname === "/api/image") {
+      if (await isRateLimited(request, env, "image")) {
+        return jsonResponse({ success: false, error: "बहुत अधिक अनुरोध हुए। थोड़ी देर बाद प्रयास करो।" }, 429);
+      }
+      const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+      if (!prompt || prompt.length > 1200) {
+        return jsonResponse({ success: false, error: "फोटो का विवरण खाली है या बहुत लंबा है।" }, 400);
+      }
+      if (!env.AI || typeof env.AI.run !== "function") {
+        return jsonResponse({
+          success: false,
+          error: "AI फोटो सेवा अभी Worker में जुड़ी नहीं है। Cloudflare Worker Settings > Bindings में AI नाम का Workers AI binding जोड़ें।"
+        }, 503);
+      }
+      try {
+        const generated = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", {
+          prompt: prompt.slice(0, 1200),
+          num_steps: 4
+        });
+        const imageData = generated?.image;
+        if (typeof imageData !== "string" || !imageData.length) {
+          return jsonResponse({ success: false, error: "AI फोटो सेवा से मान्य इमेज नहीं मिली।" }, 502);
+        }
+        return jsonResponse({ success: true, mimeType: "image/jpeg", image: imageData });
+      } catch (error) {
+        return jsonResponse({
+          success: false,
+          error: "AI फोटो बन नहीं सकी। Cloudflare AI binding, उपलब्धता और खाते की सीमा जाँचें।"
+        }, 502);
+      }
+    }
+
     if (await isRateLimited(request, env, "chat")) {
       return jsonResponse({ success: false, error: "बहुत अधिक अनुरोध हुए। थोड़ी देर बाद प्रयास करो।" }, 429);
     }
