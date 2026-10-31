@@ -329,6 +329,12 @@ function filterRelevantSearchResults(query, results) {
     });
   }
 
+  // Combined gold + silver queries must retain results for both metals.
+  if (/(सोने|सोना|gold|22\\s*k|24\\s*k|bullion)/i.test(q) && /(चांदी|चाँदी|silver)/i.test(q)) {
+    const preciousMetal = /(gold|सोना|सोने|sone|bullion|22\\s*k|24\\s*k|gold[- ]?rate|gold[- ]?price|sona|silver|चांदी|चाँदी|silver[- ]?(rate|price)|चांदी[- ]?(भाव|कीमत))/i;
+    return list.filter(item => preciousMetal.test(textOf(item)));
+  }
+
   let required = null;
   if (/(प्रधानमंत्री|prime minister|president|राष्ट्रपति|मुख्यमंत्री|chief minister)/i.test(q)) {
     required = /(prime minister|प्रधानमंत्री|narendra modi|नरेंद्र मोदी|president|राष्ट्रपति|chief minister|मुख्यमंत्री)/i;
@@ -539,6 +545,17 @@ export default {
         ...dateTime,
         webSearch: false,
         sources: [],
+      });
+    }
+
+    // Stable, unambiguous general knowledge should not depend on Groq availability.
+    if (/(भारत|इंडिया|india).{0,35}(राजधानी|capital)|(राजधानी|capital).{0,35}(भारत|इंडिया|india)/i.test(userText)) {
+      return jsonResponse({
+        success: true,
+        reply: "भारत की राजधानी नई दिल्ली है।",
+        ...dateTime,
+        webSearch: false,
+        sources: []
       });
     }
 
