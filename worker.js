@@ -437,7 +437,7 @@ export default {
       return jsonResponse({ success: false, error: "अनुरोध उपलब्ध नहीं है। API के लिए POST अनुरोध भेजें।" }, 405);
     }
 
-    if (url.pathname !== "/api/login" && url.pathname !== "/api/chat" && url.pathname !== "/api/media/image") {
+    if (url.pathname !== "/api/login" && url.pathname !== "/api/chat" && url.pathname !== "/api/media/image" && url.pathname !== "/api/media/understand") {
       return jsonResponse({ success: false, error: "API रास्ता उपलब्ध नहीं है।" }, 404);
     }
 
