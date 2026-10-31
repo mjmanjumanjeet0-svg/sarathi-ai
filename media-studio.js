@@ -117,6 +117,58 @@
   function selectTab(tab) {
     $("mediaImagePanel").hidden = tab !== "image";
     $("mediaVideoPanel").hidden = tab !== "video";
+    $("mediaGeneratePanel").hidden = tab !== "image";
+    $("mediaProjectPanel").hidden = tab !== "project";
+  }
+
+  let generatedImageUrl = "";
+  async function generateAIImage() {
+    const prompt = ($("aiImagePrompt")?.value || "").trim();
+    if (!prompt) { $("aiImageStatus").textContent = "पहले फोटो का विवरण लिखें।"; return; }
+    const base = String(JSON.parse(localStorage.getItem("sarathi_ai_settings_v1") || "{}").workerUrl || "").trim().replace(/\\/+$/, "");
+    if (!base) { $("aiImageStatus").textContent = "पहले सेटिंग्स में Worker URL भरें।"; return; }
+    $("aiImageGenerate").disabled = true;
+    $("aiImageStatus").textContent = "AI फोटो बनाई जा रही है…";
+    try {
+      let token = localStorage.getItem("sarathi_ai_auth_token_v1");
+      if (!token) {
+        const password = window.prompt("अपना Sarathi AI लॉगिन पासवर्ड लिखें:");
+        if (!password) throw new Error("लॉगिन पासवर्ड जरूरी है।");
+        const login = await fetch(base + "/api/login", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({password}) });
+        const loginData = await login.json();
+        if (!login.ok || !loginData.token) throw new Error(loginData.error || "लॉगिन नहीं हो सका।");
+        token = loginData.token;
+        localStorage.setItem("sarathi_ai_auth_token_v1", token);
+      }
+      const response = await fetch(base + "/api/image", {
+        method:"POST", headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+        body:JSON.stringify({prompt})
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success || !data.image) throw new Error(data.error || "फोटो नहीं बन सकी।");
+      if (generatedImageUrl) URL.revokeObjectURL(generatedImageUrl);
+      const binary = atob(data.image);
+      const bytes = new Uint8Array(binary.length);
+      for (let i=0;i<binary.length;i++) bytes[i]=binary.charCodeAt(i);
+      generatedImageUrl = URL.createObjectURL(new Blob([bytes], {type:data.mimeType || "image/jpeg"}));
+      $("aiImageResult").src = generatedImageUrl;
+      $("aiImageResult").hidden = false;
+      $("aiImageDownload").hidden = false;
+      $("aiImageStatus").textContent = "फोटो तैयार है।";
+    } catch(error) {
+      $("aiImageStatus").textContent = error.message || "AI फोटो सेवा उपलब्ध नहीं है।";
+    } finally { $("aiImageGenerate").disabled = false; }
+  }
+
+  function saveProjectFile() {
+    const name = ($("projectFileName").value || "project.txt").trim().replace(/[\\\\/:*?"<>|]/g, "_").slice(0,100);
+    const content = $("projectCode").value || "";
+    if (!name || !content) { $("projectStatus").textContent = "फाइल का नाम और सामग्री लिखें।"; return; }
+    const blob = new Blob([content], {type:"text/plain;charset=utf-8"});
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a"); a.href=url; a.download=name; a.click();
+    setTimeout(()=>URL.revokeObjectURL(url),1500);
+    $("projectStatus").textContent = "फाइल आपके डिवाइस में सेव करने के लिए डाउनलोड हुई।";
   }
 
   function loadVideo(file) {
@@ -207,6 +259,13 @@
       $("mediaFilter").value = "none"; $("mediaTitle").value = ""; $("mediaSubtitle").value = ""; drawImage();
     });
     $("mediaDownload")?.addEventListener("click", downloadCanvas);
+    $("aiImageGenerate")?.addEventListener("click", generateAIImage);
+    $("aiImageDownload")?.addEventListener("click", () => {
+      if (!generatedImageUrl) return;
+      const a=document.createElement("a"); a.href=generatedImageUrl; a.download="sarathi-ai-image.jpg"; a.click();
+    });
+    $("projectNew")?.addEventListener("click", () => { $("projectFileName").value="new-project.txt"; $("projectCode").value=""; $("projectStatus").textContent="नई फाइल तैयार है।"; });
+    $("projectSave")?.addEventListener("click", saveProjectFile);
     $("mediaVideoInput")?.addEventListener("change", event => loadVideo(event.target.files?.[0]));
     $("videoExport")?.addEventListener("click", exportVideoClip);
   });
