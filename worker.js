@@ -336,6 +336,8 @@ function filterRelevantSearchResults(query, results) {
     required = /(gold|सोना|सोने|sone|bullion|22\s*k|24\s*k|gold[- ]?rate|gold[- ]?price|sona|ज्वेलरी|jewellery)/i;
   } else if (/(चांदी|चाँदी|silver)/i.test(q)) {
     required = /(silver|चांदी|चाँदी|bullion|silver[- ]?(rate|price)|चांदी[- ]?(भाव|कीमत))/i;
+  } else if (/(हीरा|हीरे|हीरों|diamond)/i.test(q)) {
+    required = /(diamond|हीरा|हीरे|carat|4cs|clarity|cut|color)/i;
   } else if (/(मौसम|weather|तापमान|temperature)/i.test(q)) {
     required = /(weather|मौसम|temperature|forecast|तापमान)/i;
   } else if (/(ट्रेन|रेल|train|railway|पीएनआर|pnr)/i.test(q)) {
@@ -571,13 +573,17 @@ export default {
     if (wantsSearch) {
       const isCurrentNewsQuestion = /(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(userText);
       const isGoldRateQuestion = /(सोने|सोना|gold|22\s*k|24\s*k|bullion)/i.test(userText);
+      const isSilverRateQuestion = /(चांदी|चाँदी|silver)/i.test(userText);
+      const isDiamondPriceQuestion = /(हीरा|हीरे|हीरों|diamond)/i.test(userText);
       const indiaToday = new Intl.DateTimeFormat("en-CA", { timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
       const isOfficialEducationQuestion = /(सिलेबस|पाठ्यक्रम|परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|परिणाम|आवेदन|फॉर्म|फीस|पात्रता|नियम|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(userText);
       const searchQuery = isCurrentNewsQuestion
         ? "India latest news when:2d " + indiaToday
-        : isGoldRateQuestion
-          ? "India 22K 24K gold rate today per gram 10 gram " + indiaToday
-          : isOfficialEducationQuestion
+        : isGoldRateQuestion || isSilverRateQuestion
+          ? "India today " + (isGoldRateQuestion ? "22K 24K gold" : "") + (isGoldRateQuestion && isSilverRateQuestion ? " and " : "") + (isSilverRateQuestion ? "silver" : "") + " rate per gram and per 10 gram " + indiaToday
+          : isDiamondPriceQuestion
+            ? "India diamond price today per carat natural diamond 4Cs price range " + indiaToday
+            : isOfficialEducationQuestion
             ? userText + " official website government university board site:gov.in OR site:ac.in"
             : userText;
       const search = await searchInternet(searchQuery, env);
@@ -603,6 +609,17 @@ export default {
           sources: [],
         });
       }
+    }
+
+    const broadExamQuestion = /(कौन.?कौन.?सी? परीक्षा|कौन.?कौन.?सा परीक्षा|कवन.?कवन.?सा परीक्षा|किन.?किन.?परीक्षा|किस.?किस.?परीक्षा|कौन.?सी.?परीक्षा.*तैयारी|परीक्षा.*तैयारी.*करा सकते)/i.test(userText);
+    if (broadExamQuestion) {
+      return jsonResponse({
+        success: true,
+        reply: "हाँ, मैं कई तरह की परीक्षाओं की तैयारी में मदद कर सकता हूँ—सिर्फ RTO की नहीं।\n\n1. स्कूल: कक्षा 1–12 और बोर्ड परीक्षाएँ।\n2. कॉलेज: BA, BSc, BCom और अन्य स्नातक/स्नातकोत्तर विषय।\n3. सरकारी नौकरी: UPSC, BPSC, SSC, रेलवे, बैंकिंग और पुलिस भर्ती।\n4. प्रवेश परीक्षाएँ: JEE, NEET, CUET और राज्य स्तरीय प्रवेश परीक्षाएँ।\n5. शिक्षक भर्ती: CTET, STET और संबंधित परीक्षाएँ।\n6. कौशल/लाइसेंस: कंप्यूटर, ड्राइविंग लाइसेंस और अन्य व्यावसायिक परीक्षाएँ।\n\nमैं नोट्स, आसान व्याख्या, महत्वपूर्ण अभ्यास प्रश्न, मॉक टेस्ट और पढ़ाई की योजना बना सकता हूँ। परीक्षा का आधिकारिक सिलेबस, तारीख, फीस और पात्रता बदल सकती है—उन्हें आधिकारिक वेबसाइट से जाँचना होगा।",
+        ...dateTime,
+        webSearch: false,
+        sources: []
+      });
     }
 
     const systemPrompt = `
