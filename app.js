@@ -1298,16 +1298,6 @@ window.SarathiVoice = {
   }
 };
 
-function startVoiceInput() {
-  if (window.SarathiNative && typeof window.SarathiNative.startListening === "function") {
-    setStatus("माइक्रोफ़ोन अनुमति दें और हिन्दी या English चुनें। कुछ फ़ोनों में आवाज़ पहचान इंटरनेट सेवा से हो सकती है।");
-    window.SarathiNative.startListening();
-    return;
-  }
-
-  setStatus("गोपनीयता के लिए ब्राउज़र की संभावित ऑनलाइन आवाज़ पहचान बंद है। ऑफ़लाइन आवाज़ के लिए Android ऐप इस्तेमाल करें।");
-}
-
 /* ========================================
    ATTACHMENTS
 ======================================== */
@@ -1692,7 +1682,6 @@ function bindEvents() {
   $("cameraOption")?.addEventListener("click", openCamera);
   $("photosOption")?.addEventListener("click", choosePhotos);
   $("filesOption")?.addEventListener("click", chooseFiles);
-  $("micBtn")?.addEventListener("click", startVoiceInput);
   $("webToggle")?.addEventListener("click", toggleWebSearch);
   const startWakeWord = () => {
     if (window.SarathiNative?.startWakeWord) window.SarathiNative.startWakeWord();
