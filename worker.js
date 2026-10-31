@@ -179,7 +179,19 @@ async function searchInternet(query, env) {
       query: String(query || "").trim().slice(0, 1024),
       limit: 8
     });
-    if (!response.ok) return { results: [], warning: "वेब खोज सेवा ने HTTP " + response.status + " लौटाया।" };
+    if (!response.ok) {
+      let errorCode = "";
+      try {
+        const errorPayload = await response.json();
+        errorCode = String(errorPayload?.errors?.[0]?.code || errorPayload?.code || "").slice(0, 80);
+      } catch {}
+      const status = Number(response.status) || 0;
+      let warning = "वेब खोज सेवा ने HTTP " + status + " लौटाया।";
+      if (status === 402) warning = "Cloudflare AI Gateway में सर्च के लिए क्रेडिट उपलब्ध नहीं हैं। क्रेडिट जोड़ें या प्रदाता की API Key सेट करें।";
+      else if (status === 401 || status === 403) warning = "Cloudflare AI Gateway ने अनुमति अस्वीकार की। AI Gateway और Workers AI की अनुमति जाँचें।";
+      else if (status === 400) warning = "Cloudflare Web Search ने अनुरोध अस्वीकार किया। अनुरोध या Gateway सेटिंग जाँचें।";
+      return { results: [], warning, errorCode, httpStatus: status };
+    }
     const payload = await response.json();
     const items = Array.isArray(payload?.items) ? payload.items : [];
     const results = items.filter(item => item && typeof item.title === "string" && typeof item.url === "string" && validHttpUrl(item.url))
@@ -196,8 +208,15 @@ async function searchInternet(query, env) {
       });
     return { results, warning: results.length ? "Cloudflare Web Search से वास्तविक वेब परिणाम मिले।" : "वेब खोज में इस सवाल के लिए कोई परिणाम नहीं मिला।" };
   } catch (error) {
-    console.error("Web search failed", error?.message || error);
-    return { results: [], warning: "Cloudflare Web Search से संपर्क नहीं हो सका।" };
+    console.error("Web search failed", error?.code || "", error?.message || error);
+    const code = String(error?.code || "").slice(0, 80);
+    const message = String(error?.message || "").slice(0, 240);
+    return {
+      results: [],
+      warning: code ? "Cloudflare Web Search त्रुटि: " + code : "Cloudflare Web Search से संपर्क नहीं हो सका।",
+      errorCode: code,
+      errorMessage: message
+    };
   }
 }
 async function enrichGoldRateResults(results) {
@@ -543,7 +562,7 @@ export default {
       }
       searchWarning = searchResults.length
         ? search.warning
-        : "खोज में आपके सवाल से मेल खाते भरोसेमंद परिणाम नहीं मिले। गलत या असंबंधित स्रोत नहीं दिखाए गए।";
+        : (search.warning || "खोज में आपके सवाल से मेल खाते भरोसेमंद परिणाम नहीं मिले। गलत या असंबंधित स्रोत नहीं दिखाए गए।");
 
       // Never let the model pretend it has current web information when every
       // search provider returned no usable results.
