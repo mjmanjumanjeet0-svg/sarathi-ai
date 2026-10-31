@@ -157,6 +157,11 @@
       </div>
       <p class="web-note control-note">इंटरनेट खोज और वेक-वर्ड को यहाँ से चालू या बंद करें।</p>
 
+      <div class="web-row control-row" aria-label="अतिरिक्त कार्यस्थान">
+        <button type="button" class="web-toggle" id="mediaStudioOpen">🖼️ मीडिया स्टूडियो</button>
+        <button type="button" class="web-toggle" id="projectStudioOpen">📁 प्रोजेक्ट कार्यस्थान</button>
+      </div>
+
       <form class="composer" id="chatForm">
 
         <button
@@ -267,25 +272,90 @@
 <dialog id="findDialog">
   <form method="dialog" class="dialog-inner">
     <h2>चैट में खोजें</h2>
-
-    <input
-      id="findInput"
-      type="search"
-      placeholder="शब्द लिखें...">
-
+    <input id="findInput" type="search" placeholder="शब्द लिखें...">
     <div class="dialog-actions">
       <button class="secondary-btn">बंद करें</button>
-
-      <button type="button" class="primary-btn" id="findNext">
-        खोजें
-      </button>
+      <button type="button" class="primary-btn" id="findNext">खोजें</button>
     </div>
-
     <p id="findResult" class="hint"></p>
   </form>
 </dialog>
 
+<dialog id="mediaStudioDialog">
+  <div class="dialog-inner media-studio">
+    <h2>🖼️ सारथी मीडिया स्टूडियो</h2>
+    <div class="media-tabs">
+      <button type="button" data-media-tab="image">फोटो / पोस्टर</button>
+      <button type="button" data-media-tab="video">वीडियो ट्रिम</button>
+    </div>
+    <section id="mediaImagePanel">
+      <label>अपने डिवाइस से फोटो चुनें
+        <input id="mediaImageInput" type="file" accept="image/*">
+      </label>
+      <label>AI से फोटो बनाने या चुनी फोटो में बदलाव का निर्देश
+        <textarea id="mediaPrompt" rows="3" placeholder="उदाहरण: पहाड़ों के बीच सुंदर सूर्योदय का दृश्य बनाओ।"></textarea>
+      </label>
+      <button type="button" class="primary-btn" id="mediaGenerateImage">AI फोटो बनाएँ</button>
+      <p id="mediaAiStatus" class="hint" aria-live="polite"></p>
+      <div class="media-preview"><canvas id="mediaCanvas" width="900" height="600"></canvas></div>
+      <label>फोटो फ़िल्टर
+        <select id="mediaFilter">
+          <option value="none">मूल</option><option value="contrast">कॉन्ट्रास्ट</option>
+          <option value="bright">उजला</option><option value="mono">ब्लैक एंड व्हाइट</option>
+          <option value="warm">गर्म रंग</option><option value="cool">ठंडा रंग</option>
+        </select>
+      </label>
+      <label>पोस्टर का शीर्षक <input id="mediaTitle" type="text" maxlength="100"></label>
+      <label>उपशीर्षक <input id="mediaSubtitle" type="text" maxlength="140"></label>
+      <div class="dialog-actions">
+        <button type="button" class="secondary-btn" id="mediaReset">रीसेट</button>
+        <button type="button" class="primary-btn" id="mediaDownload">फोटो सेव करें</button>
+      </div>
+    </section>
+    <section id="mediaVideoPanel" hidden>
+      <label>वीडियो चुनें <input id="mediaVideoInput" type="file" accept="video/*"></label>
+      <video id="mediaVideo" controls playsinline></video>
+      <div class="media-time-fields">
+        <label>शुरुआत (सेकंड) <input id="videoStart" type="number" min="0" step="0.1" value="0"></label>
+        <label>अंत (सेकंड) <input id="videoEnd" type="number" min="0" step="0.1" value="0"></label>
+      </div>
+      <p id="videoStatus" class="hint" aria-live="polite"></p>
+      <button type="button" class="primary-btn" id="videoExport">चुना हिस्सा सेव करें</button>
+    </section>
+    <div class="dialog-actions">
+      <button type="button" class="secondary-btn" id="mediaStudioClose">बंद करें</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="projectStudioDialog">
+  <div class="dialog-inner project-studio">
+    <h2>📁 सारथी प्रोजेक्ट कार्यस्थान</h2>
+    <label>नया प्रोजेक्ट नाम <input id="projectName" type="text" maxlength="70" placeholder="मेरी वेबसाइट"></label>
+    <label>विवरण <textarea id="projectDescription" rows="2" maxlength="240"></textarea></label>
+    <button type="button" class="primary-btn" id="projectCreate">प्रोजेक्ट बनाएँ</button>
+    <label>मौजूदा प्रोजेक्ट
+      <select id="projectSelect"><option value="">प्रोजेक्ट चुनें</option></select>
+    </label>
+    <div id="projectFileList" class="project-file-list"></div>
+    <label>फाइल का नाम <input id="projectFileName" type="text" placeholder="index.html"></label>
+    <label>फाइल की सामग्री <textarea id="projectFileContent" rows="9" spellcheck="false"></textarea></label>
+    <div class="dialog-actions">
+      <button type="button" class="secondary-btn" id="projectImportReply">आखिरी जवाब जोड़ें</button>
+      <button type="button" class="primary-btn" id="projectSaveFile">फाइल सेव करें</button>
+      <button type="button" class="secondary-btn" id="projectDownloadFile">डाउनलोड</button>
+      <button type="button" class="secondary-btn" id="projectDelete">प्रोजेक्ट हटाएँ</button>
+    </div>
+    <p id="projectStatus" class="hint" aria-live="polite"></p>
+    <div class="dialog-actions">
+      <button type="button" class="secondary-btn" id="projectStudioClose">बंद करें</button>
+    </div>
+  </div>
+</dialog>
+
 <script src="app.js"></script>
+<script src="media-studio.js"></script>
+<script src="project-studio.js"></script>
 
 </body>
 </html>
