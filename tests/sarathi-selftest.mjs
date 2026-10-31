@@ -76,6 +76,13 @@ await test("Hindi greeting is answered locally without provider calls", async ()
   assert.match(r.data.reply, /नमस्ते/);
   assert.equal(calls.length, before);
 });
+await test("India capital is answered locally without Groq quota", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "भारत की राजधानी कहाँ है?" }] }, token);
+  assert.equal(r.status, 200);
+  assert.match(r.data.reply, /नई दिल्ली/);
+  assert.equal(calls.length, before);
+});
 await test("general knowledge reaches the AI provider", async () => {
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "इतिहास क्या है?" }] }, token);
   assert.equal(r.status, 200);
