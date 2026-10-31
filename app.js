@@ -1010,18 +1010,6 @@ async function sendMessage(text) {
       window.SarathiNative.speak(cleanAnswer);
     }
 
-    const relevantSources = filterSourcesForPrompt(prompt, data.sources);
-
-    // Keep source links out of ordinary answers. Show them only when the user
-    // explicitly asked Sarathi to search the internet.
-    if (explicitlyRequestsWebSearch(prompt) && useWebSearch && relevantSources.length) {
-      const sourceText = relevantSources.map((source, index) =>
-        `${index + 1}. ${source.title}\n${source.url}`
-      ).join("\n\n");
-
-      addMessage("assistant", "🌐 इंटरनेट से मिले स्रोत:\n\n" + sourceText);
-    }
-
     if (useWebSearch && data.searchWarning) {
       setStatus("इंटरनेट खोज: " + data.searchWarning);
     } else {
