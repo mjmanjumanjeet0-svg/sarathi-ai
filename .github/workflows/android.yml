@@ -5,6 +5,12 @@ name: Build Sarathi AI Android APK
   push:
     paths:
       - 'android-app/**'
+      - 'index.html'
+      - 'style.css'
+      - 'app.js'
+      - 'media-studio.js'
+      - 'project-studio.js'
+      - 'worker.js'
       - '.github/workflows/android.yml'
 
 jobs:
