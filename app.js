@@ -1016,14 +1016,21 @@ async function sendMessage(text) {
       setStatus("");
     }
   } catch (error) {
-    const message = error?.message || "कनेक्शन में समस्या हुई।";
+    const rawMessage = String(error?.message || "");
+    const isNetworkError = /networkerror|failed to fetch|load failed|network request failed/i.test(rawMessage);
+    const isRateLimit = /429|बहुत अधिक अनुरोध|अनुरोध सीमा/i.test(rawMessage);
+    const message = isNetworkError
+      ? "इंटरनेट या सर्वर से संपर्क नहीं हो पा रहा। अपना कनेक्शन जाँचें और थोड़ी देर बाद फिर कोशिश करें।"
+      : isRateLimit
+        ? "AI सेवा पर अभी बहुत अधिक अनुरोध हैं। 30–60 सेकंड बाद दोबारा पूछें।"
+        : (rawMessage || "अस्थायी तकनीकी समस्या हुई।");
 
     addMessage(
       "assistant",
-      "माफ करना, अभी जवाब नहीं मिल पाया।\n\nसमस्या: " + message
+      "माफ़ कीजिए, अभी जवाब नहीं मिल पाया।\n\nकारण: " + message
     );
 
-    setStatus("कनेक्शन की समस्या");
+    setStatus(isNetworkError ? "इंटरनेट कनेक्शन जाँचें" : isRateLimit ? "AI सेवा व्यस्त है" : "अस्थायी समस्या");
     if (shouldSpeakReply && !state.voiceStopRequested && window.SarathiNative && typeof window.SarathiNative.speak === "function") {
       window.SarathiNative.speak("माफ़ कीजिए, अभी जवाब नहीं मिल पाया। " + message);
     }
