@@ -484,14 +484,16 @@ function filterRelevantSearchResults(query, results) {
 function buildSearchContext(results, query = "") {
   if (!results.length) return "";
 
-  const isNewsQuery = /(खबर|समाचार|news|breaking|latest)/i.test(query);
-  const newsInstruction = isNewsQuery ? "\n\nसमाचार के निर्देश: परिणामों में दिए वास्तविक शीर्षक और विवरण के आधार पर कम-से-कम 3 अलग-अलग खबरों का सरल हिंदी में सार दो। प्रकाशक और तारीख केवल उपलब्ध होने पर लिखो। केवल सामान्य होमपेज या लाइव पेज देखकर खबर मत गढ़ो। यदि वास्तविक शीर्षक/विवरण उपलब्ध नहीं हैं, साफ बताओ कि खोज में खबरें नहीं मिलीं।" : "";
+  const isNewsQuery = /(खबर|समाचार|news|breaking|latest|ताज़ा|ताजा)/i.test(query);
+  const newsInstruction = isNewsQuery
+    ? "\\n\\nसमाचार के निर्देश: RSS फ़ीड से मिले वास्तविक शीर्षक, प्रकाशक और तारीख के आधार पर खबरों का सरल हिंदी में सार दो। हर खबर के साथ स्रोत और उपलब्ध तारीख बताओ। कम खबरें मिली हों तो उतनी ही बताओ; संख्या पूरी करने के लिए खबर मत गढ़ो। पुराने समाचार को आज की खबर मत बताओ।"
+    : "";
 
-  return "\n\nइंटरनेट खोज के परिणाम:\n" + results.map(
+  return "\\n\\nइंटरनेट खोज के परिणाम:\\n" + results.map(
     (item, i) =>
-`${i + 1}. ${item.title}\nलिंक: ${item.url}\nनिकाली गई दर (यदि उपलब्ध): ${item.goldRates ? JSON.stringify(item.goldRates) : "पेज से स्पष्ट दर नहीं निकली"}\nजानकारी: ${item.snippet || "जानकारी उपलब्ध नहीं है।"}`
-  ).join("\n\n") +
-  "\n\nपरिणाम पर्याप्त न हों तो स्पष्ट बताओ। तथ्य या लिंक मत गढ़ो।" + newsInstruction;
+`${i + 1}. ${item.title}\\nप्रकाशक: ${item.publisher || "उपलब्ध नहीं"}\\nप्रकाशित: ${item.publishedAt || "तारीख उपलब्ध नहीं"}\\nलिंक: ${item.url}\\nनिकाली गई दर (यदि उपलब्ध): ${item.goldRates ? JSON.stringify(item.goldRates) : "पेज से स्पष्ट दर नहीं निकली"}\\nजानकारी: ${item.snippet || "जानकारी उपलब्ध नहीं है।"}`
+  ).join("\\n\\n") +
+  "\\n\\nपरिणाम पर्याप्त न हों तो स्पष्ट बताओ। तथ्य या लिंक मत गढ़ो।" + newsInstruction;
 }
 
 export default {
@@ -861,6 +863,8 @@ export default {
       sources: searchResults.map(item => ({
         title: item.title,
         url: item.url,
+        publisher: item.publisher || "",
+        publishedAt: item.publishedAt || "",
       })),
     });
   },
