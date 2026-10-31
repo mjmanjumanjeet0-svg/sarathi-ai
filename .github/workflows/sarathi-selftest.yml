@@ -19,3 +19,17 @@ jobs:
           node-version: 22
       - name: Run Worker conversation tests
         run: node tests/sarathi-selftest.mjs
+      - name: Check deployed live Worker health
+        run: |
+          node --input-type=module <<'NODE'
+          const url = "https://sarathi-ai.mjmanjumanjeet0.workers.dev/";
+          const response = await fetch(url, { signal: AbortSignal.timeout(15000) });
+          const body = await response.json();
+          if (!response.ok || body.status !== "running" || body.service !== "Sarathi AI Worker") {
+            throw new Error("Live Worker health check failed: HTTP " + response.status);
+          }
+          console.log("LIVE WORKER HEALTH: PASS");
+          console.log("Service:", body.service);
+          console.log("Status:", body.status);
+          console.log("Chat endpoint:", body.endpoints?.chat);
+          NODE
