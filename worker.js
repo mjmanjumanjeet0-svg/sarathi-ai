@@ -273,7 +273,6 @@ function filterRelevantSearchResults(query, results) {
         const headline = `${item.title || ""} ${item.snippet || ""}`;
         // Do not treat astrology or calendar pages as current news.
         if (/(राशिफल|राशि फल|पंचांग|मुहूर्त|राहु.?काल|horoscope|zodiac|astrology|panchang)/i.test(headline)) return false;
-        // Google News RSS links are wrappers around publisher stories.
         return trustedNewsHost.test(host);
       } catch {
         return false;
