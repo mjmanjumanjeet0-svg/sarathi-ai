@@ -60,22 +60,26 @@
     <section class="chat-area" id="chatArea">
 
       <div class="welcome" id="welcome">
-        <img class="welcome-logo" src="logo.svg" alt="सारथी AI लोगो">
+        <div class="hero-peacock"><span>🦚</span></div>
 
         <h1>नमस्ते! मैं सारथी हूँ।</h1>
         <p>बताइए, आज मैं आपकी क्या सहायता कर सकता हूँ?</p>
 
         <div class="suggestions">
-          <button data-prompt="आज की ताज़ा खबरें इंटरनेट पर खोजकर बताओ।">🌐 ताज़ा खबरें खोजें</button>
-          <button data-prompt="मुझे यह विषय आसान भाषा में समझाओ।">💬 कोई सवाल पूछें</button>
-          <button data-prompt="इस विषय की जानकारी भरोसेमंद स्रोतों से खोजो।">🔎 जानकारी खोजें</button>
-        </div>
+<button data-prompt="आज की ताज़ा खबरें इंटरनेट पर खोजकर बताओ।"><span>🌐</span><b>इंटरनेट खोजें<small>ताज़ा जानकारी पाएँ</small></b></button>
+<button data-prompt="मुझे अंग्रेज़ी बिल्कुल शुरुआत से आसान हिंदी में सिखाओ।"><span>📖</span><b>अंग्रेज़ी सीखें<small>आसान तरीके से</small></b></button>
+<button data-prompt="मुझसे बातचीत करो और मेरे सवालों के जवाब दो।"><span>💬</span><b>मुझसे बात करें<small>कोई भी विषय पूछें</small></b></button>
+<button data-prompt="इस विषय की सही और स्पष्ट जानकारी समझाओ।"><span>💡</span><b>जानकारी खोजें<small>सही और स्पष्ट उत्तर</small></b></button>
+</div>
       </div><div class="messages" id="messages"></div>
     </section>
 
     <div class="composer-wrap">
 
       <div class="status" id="status" aria-live="polite"></div>
+<section class="voice-panel hidden" id="voicePanel"><div class="voice-state-icon">◖))</div><div class="voice-copy"><strong id="voiceTitle">सारथी सुन रहा है...</strong><span id="voiceHint">अब आप मुझसे कुछ भी पूछ सकते हैं।</span></div><button type="button" class="voice-stop" id="voiceStop">×<small>बंद करें</small></button></section>
+<div class="voice-wave hidden" id="voiceWave"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+<div class="voice-active-note hidden" id="voiceActiveNote">✓ सारथी सक्रिय है! अब आप जो चाहें, बोलें या पूछें...</div>
       <div class="web-row"><button type="button" id="webToggle" class="web-toggle" aria-pressed="false">🌐 इंटरनेट खोज: बंद</button></div>
 
 <form class="composer" id="chatForm">
@@ -95,9 +99,7 @@
           placeholder="सारथी से कुछ पूछिए..."
           aria-label="अपना संदेश लिखें"></textarea>
 
-        <button
-          type="submit"
-          class="send-btn"
+        <button type="button" class="mic-btn" id="micBtn" aria-label="माइक">🎙</button><button type="submit" class="send-btn"
           id="sendBtn"
           title="भेजें"
           aria-label="भेजें">
@@ -115,7 +117,7 @@
       <div id="attachmentPreview" class="attachment-preview hidden"></div>
     </div>
 
-  </main>
+  <nav class="bottom-nav"><button class="active" data-nav="home">⌂<small>होम</small></button><button data-nav="chat">●<small>बातचीत</small></button><button data-nav="search">◎<small>खोज</small></button><button data-nav="settings">⚙<small>सेटिंग्स</small></button></nav></main>
 </div>
 
 <dialog id="attachDialog">
