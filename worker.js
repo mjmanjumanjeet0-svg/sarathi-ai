@@ -169,68 +169,6 @@ function validHttpUrl(value) {
   }
 }
 
-function decodeSearchUrl(value) {
-  try {
-    const url = new URL(value, "https://html.duckduckgo.com");
-
-    if (url.hostname.endsWith("duckduckgo.com") && url.pathname === "/l/") {
-      const destination = url.searchParams.get("uddg");
-      return destination && validHttpUrl(destination) ? destination : "";
-    }
-
-    return validHttpUrl(url.href) ? url.href : "";
-  } catch {
-    return "";
-  }
-}
-
-async function searchDuckDuckGoHtml(query) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
-  try {
-    const endpoint = "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(query.slice(0, 600));
-    const response = await fetch(endpoint, {
-      headers: {
-        "Accept": "text/html",
-        "User-Agent": "Mozilla/5.0 (compatible; SarathiAI/1.0)",
-      },
-      signal: controller.signal,
-    });
-    if (!response.ok) {
-      return { results: [], warning: "वैकल्पिक वेब खोज अभी उपलब्ध नहीं है।" };
-    }
-
-    const html = await response.text();
-    const blocks = html.match(/<div[^>]+class=["'][^"']*\bresult\b[^"']*["'][\s\S]*?(?=<div[^>]+class=["'][^"']*\bresult\b|$)/gi) || [];
-    const results = [];
-    const seen = new Set();
-
-    for (const block of blocks) {
-      if (results.length >= 5) break;
-      const linkMatch = block.match(/<a[^>]+class=["'][^"']*result__a[^"']*["'][^>]+href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/i)
-        || block.match(/<a[^>]+href=["']([^"']+)["'][^>]+class=["'][^"']*result__a[^"']*["'][^>]*>([\s\S]*?)<\/a>/i);
-      if (!linkMatch) continue;
-
-      const url = decodeSearchUrl(linkMatch[1].replace(/&amp;/g, "&"));
-      const title = cleanText(linkMatch[2].replace(/<[^>]*>/g, " "));
-      if (!url || !title || seen.has(url)) continue;
-
-      const snippetMatch = block.match(/<[^>]+class=["'][^"']*result__snippet[^"']*["'][^>]*>([\s\S]*?)<\/[^>]+>/i);
-      const snippet = snippetMatch ? cleanText(snippetMatch[1].replace(/<[^>]*>/g, " ")) : "";
-      seen.add(url);
-      results.push({ title: title.slice(0, 300), url, snippet: snippet.slice(0, 1800) });
-    }
-
-    return results.length
-      ? { results, warning: "वैकल्पिक DuckDuckGo HTML खोज इस्तेमाल हुई है; कुछ ताज़ा या विशेष जानकारी अधूरी हो सकती है।" }
-      : { results: [], warning: "वैकल्पिक खोज से परिणाम नहीं मिले। प्रश्न को अलग शब्दों में पूछें या बाद में कोशिश करें।" };
-  } catch {
-    return { results: [], warning: "वैकल्पिक इंटरनेट खोज उपलब्ध नहीं है।" };
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
 function decodeXmlEntities(value) {
   return String(value || "")
     .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
@@ -377,11 +315,10 @@ async function searchInternet(query, env) {
     };
   }
 
-  // General web search fallback for non-news questions.
-  const htmlSearch = await searchDuckDuckGoHtml(query);
-  return htmlSearch.results.length
-    ? htmlSearch
-    : { results: [], warning: htmlSearch.warning || "वेब खोज में परिणाम नहीं मिले।" };
+  return {
+    results: [],
+    warning: "सामान्य वेब खोज के लिए कोई अन्य Search API अभी कॉन्फ़िगर नहीं है। समाचार खोज RSS से उपलब्ध है।"
+  };
 }
 
 async function enrichGoldRateResults(results) {
