@@ -746,6 +746,7 @@ async function requestSarathiMediaUnderstanding(prompt, images) {
     body: JSON.stringify({ prompt, images })
   });
   const data = await response.json();
+  if (data.zeroCostMode) throw new Error("सारथी में फोटो/वीडियो समझने की सुविधा अभी बंद है। यह लॉगिन की गलती नहीं है।");
   if (!response.ok || !data.success || !data.reply) {
     throw new Error(data.error || "फोटो/वीडियो समझा नहीं जा सका।");
   }
@@ -767,6 +768,7 @@ async function requestSarathiImage(prompt, imageFile) {
     body: JSON.stringify({ prompt, ...(images ? { images } : {}) })
   });
   const data = await response.json();
+  if (data.zeroCostMode) throw new Error("सारथी में AI फोटो बनाना अभी बंद है। यह लॉगिन की गलती नहीं है।");
   if (!response.ok || !data.imageUrl) throw new Error(data.error || "फोटो तैयार नहीं हो सकी।");
   return data.imageUrl;
 }
@@ -784,6 +786,35 @@ async function downloadSarathiImage(imageUrl, edited) {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
+}
+
+function buildBoundedChatMessages(messages, maxTotalChars = 9000) {
+  const valid = (Array.isArray(messages) ? messages : [])
+    .filter(item => item && ["user", "assistant"].includes(item.role) && typeof item.content === "string")
+    .slice(-8);
+  const kept = [];
+  let remaining = maxTotalChars;
+
+  // Keep the newest turn intact first, then add recent context while budget remains.
+  for (let i = valid.length - 1; i >= 0 && remaining > 0; i--) {
+    const item = valid[i];
+    const perMessageLimit = item.role === "user" ? 2200 : 1400;
+    const content = item.content.trim();
+    if (!content) continue;
+    const clipped = content.slice(-Math.min(perMessageLimit, remaining));
+    if (!clipped) continue;
+    kept.unshift({ role: item.role, content: clipped });
+    remaining -= clipped.length;
+  }
+  return kept;
+}
+
+function buildChatRequestPayload(prompt, webSearch) {
+  return {
+    message: String(prompt || "").slice(0, 4000),
+    messages: buildBoundedChatMessages(activeChat()?.messages || []),
+    webSearch: Boolean(webSearch)
+  };
 }
 
 async function postChatWithRetry(url, token, payload) {
@@ -963,14 +994,8 @@ async function sendMessage(text) {
   try {
     let token = await getAuthToken();
 
-    let response = await postChatWithRetry(workerUrl + "/api/chat", token, {
-        message: prompt,
-        messages: activeChat().messages
-          .filter(item => item.role === "user" || item.role === "assistant")
-          .slice(-20)
-          .map(item => ({ role: item.role, content: item.content })),
-        webSearch: useWebSearch
-      });
+    const chatPayload = buildChatRequestPayload(prompt, useWebSearch);
+    let response = await postChatWithRetry(workerUrl + "/api/chat", token, chatPayload);
 
     let data;
 
@@ -984,14 +1009,7 @@ async function sendMessage(text) {
       localStorage.removeItem(AUTH_TOKEN_KEY);
       token = await loginWorker();
 
-      response = await postChatWithRetry(workerUrl + "/api/chat", token, {
-        message: prompt,
-        messages: activeChat().messages
-          .filter(item => item.role === "user" || item.role === "assistant")
-          .slice(-20)
-          .map(item => ({ role: item.role, content: item.content })),
-        webSearch: useWebSearch
-      });
+      response = await postChatWithRetry(workerUrl + "/api/chat", token, chatPayload);
 
       data = await response.json();
     }
