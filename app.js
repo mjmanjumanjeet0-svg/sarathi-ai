@@ -513,27 +513,7 @@ function renderMessages() {
       image.alt = "सारथी द्वारा बनाई गई तस्वीर";
       image.loading = "lazy";
       image.style.cssText = "display:block;max-width:100%;height:auto;border-radius:12px;margin-top:10px";
-      const download = document.createElement("button");
-      download.type = "button";
-      download.className = "speak-btn";
-      download.textContent = "⬇️ फोटो डाउनलोड करें";
-      download.addEventListener("click", async () => {
-        try {
-          const response = await fetch(message.imageUrl);
-          if (!response.ok) throw new Error("डाउनलोड उपलब्ध नहीं है।");
-          const blob = await response.blob();
-          const url = URL.createObjectURL(blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = "sarathi-ai-image.png";
-          link.click();
-          setTimeout(() => URL.revokeObjectURL(url), 1500);
-        } catch (error) {
-          window.open(message.imageUrl, "_blank", "noopener");
-          setStatus("फोटो नए टैब में खुली है; वहाँ से सेव करें।");
-        }
-      });
-      body.append(image, download);
+      body.append(image);
     }
 
     content.append(label, body);
