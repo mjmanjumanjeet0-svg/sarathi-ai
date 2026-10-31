@@ -984,8 +984,9 @@ async function sendMessage(text) {
   const isTinyFollowUp = prompt.trim().length <= 8 && !needsCurrentInfo && !explicitlyRequestsWebSearch(prompt);
   // Never search merely because the web toggle was left on.
   // Search only when the user explicitly asks for the internet, or a current fact is needed.
+  const isBasicLearningQuestion = /(?:विज्ञान की उत्पत्ति|मानव शरीर|कंकाल|के बारे में (?:बताओ|जानकारी)|की जानकारी दो|क्या है|कौन थे|कौन थे\?|जीवन मंत्र|गांधी जी|गौतम बुद्ध|बुध ग्रह|समझाओ|परिभाषा|इतिहास बताओ)/i.test(prompt);
   const useWebSearch = !isSimpleGreeting(prompt) && !isStableGeneralKnowledge && !isTinyFollowUp &&
-    (explicitlyRequestsWebSearch(prompt) || needsCurrentInfo || state.webEnabled);
+    (explicitlyRequestsWebSearch(prompt) || needsCurrentInfo || (state.webEnabled && !isBasicLearningQuestion));
 
   addMessage("user", prompt);
   setBusy(true);
