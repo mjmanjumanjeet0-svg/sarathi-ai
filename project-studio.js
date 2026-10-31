@@ -80,6 +80,15 @@
       render();
     }
   }
+  function importLatestReply() {
+    const chat = typeof activeChat === "function" ? activeChat() : null;
+    const latest = chat && [...chat.messages].reverse().find(message => message.role === "assistant" && typeof message.content === "string");
+    if (!latest) { $("projectStatus").textContent = "इस चैट में अभी सारथी का कोई जवाब नहीं है।"; return; }
+    const fileName = $("projectFileName").value.trim() || "sarathi-notes.md";
+    $("projectFileName").value = fileName;
+    $("projectFileContent").value = latest.content;
+    $("projectStatus").textContent = "आखिरी AI जवाब एडिटर में आ गया है। सेव करें दबाकर प्रोजेक्ट में रखें।";
+  }
   function downloadFile() {
     const name = $("projectFileName").value.trim();
     const content = $("projectFileContent").value;
@@ -105,6 +114,7 @@
     $("projectStudioClose")?.addEventListener("click", () => $("projectStudioDialog").close());
     $("projectCreate")?.addEventListener("click", create);
     $("projectSaveFile")?.addEventListener("click", saveFile);
+    $("projectImportReply")?.addEventListener("click", importLatestReply);
     $("projectDownloadFile")?.addEventListener("click", downloadFile);
     $("projectDelete")?.addEventListener("click", remove);
     $("projectSelect")?.addEventListener("change", event => {
