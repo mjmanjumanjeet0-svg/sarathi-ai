@@ -186,7 +186,7 @@ async function searchInternet(query, env) {
     const requestBody = {
       query: searchQuery,
       type: "instant",
-      numResults: 5,
+      numResults: isNewsQuery ? 8 : 5,
       contents: { highlights: true }
     };
     if (isNewsQuery) {
@@ -362,7 +362,7 @@ function dedupeNewsResults(results) {
     seen.add(key);
     if (urlKey) seen.add("url:" + urlKey);
     return true;
-  }).slice(0, 5);
+  }).slice(0, 8);
 }
 
 function formatNewsPublishedAt(value) {
@@ -378,16 +378,7 @@ function formatNewsPublishedAt(value) {
 function buildNewsFallback(results, dateTime) {
   const items = dedupeNewsResults(results);
   if (!items.length) return "आज की खबरों के लिए पर्याप्त भरोसेमंद सामग्री नहीं मिली।";
-  const lines = items.map((item, i) => {
-    const detail = cleanText(item.snippet || "");
-    return (i + 1) + ". " + cleanText(item.title) +
-      (detail ? "\n" + detail.slice(0, 650) : "\nइस खबर का पर्याप्त विवरण उपलब्ध परिणामों में नहीं मिला।") +
-      "\nस्रोत: " + (item.publisher || "उपलब्ध नहीं") +
-      " | प्रकाशित: " + formatNewsPublishedAt(item.publishedAt);
-  });
-  return "आज की प्रमुख खबरें (" + dateTime.date + ")\n\n" +
-    lines.join("\n\n") +
-    "\n\nनोट: ये उपलब्ध खोज परिणामों के आधार पर संक्षेप हैं। जहाँ स्वतंत्र पुष्टि उपलब्ध नहीं है, वहाँ खबर को अंतिम रूप से सत्यापित न मानें।";
+  return "आज की खबरों की खोज में " + items.length + " स्रोत मिले, लेकिन उनका भरोसेमंद हिंदी सार तैयार नहीं हो पाया। इसलिए अंग्रेज़ी लेखों को ज्यों-का-त्यों दिखाने या अधूरी जानकारी को खबर बताने के बजाय मैं इस बार अपुष्ट सार नहीं दे रहा हूँ। कृपया थोड़ी देर बाद फिर पूछें।";
 }
 
 function buildSearchContext(results, query = "") {
@@ -395,7 +386,7 @@ function buildSearchContext(results, query = "") {
 
   const isNewsQuery = /(खबर|समाचार|news|breaking|latest|ताज़ा|ताजा)/i.test(query);
   const newsInstruction = isNewsQuery
-    ? "\n\nसमाचार के सख्त निर्देश: एक ही घटना को केवल एक बार बताओ; समान रिपोर्ट को जोड़ो, लेकिन अलग घटनाओं को मत मिलाओ। प्रकाशित तारीख केवल प्रकाशित फ़ील्ड से लो; घटना की तारीख केवल खबर के पाठ से लो। तारीख उपलब्ध न हो तो अनुमान मत लगाओ। आज की खबरों में आज या पिछले 48 घंटों में प्रकाशित खबरों को प्राथमिकता दो। एक ही एजेंसी की कॉपी को स्वतंत्र पुष्टि मत मानो। राजनीतिक आरोपों को आरोप के रूप में ही लिखो। अधिकतम 5 अलग और महत्वपूर्ण खबरें बताओ। हर खबर में 2–4 वाक्य का स्वाभाविक विवरण, प्रकाशक और प्रकाशित तारीख दो। हिंदी सवाल पर पूरा उत्तर सहज देवनागरी हिंदी में दो; अंग्रेज़ी शीर्षक या मेटाडेटा मत छोड़ो। URL मत लिखो और कोई तथ्य मत गढ़ो।"
+    ? "\n\nसमाचार के सख्त निर्देश: एक ही घटना को केवल एक बार बताओ; समान रिपोर्ट को जोड़ो, लेकिन अलग घटनाओं को मत मिलाओ। प्रकाशित तारीख केवल प्रकाशित फ़ील्ड से लो; घटना की तारीख केवल खबर के पाठ से लो। तारीख उपलब्ध न हो तो अनुमान मत लगाओ। आज की खबरों में आज या पिछले 48 घंटों में प्रकाशित खबरों को प्राथमिकता दो। एक ही एजेंसी की कॉपी को स्वतंत्र पुष्टि मत मानो। राजनीतिक आरोपों को आरोप के रूप में ही लिखो। उपलब्ध परिणामों में से अधिकतम 8 अलग और महत्वपूर्ण खबरें चुनो। हर खबर में 2–4 छोटे वाक्यों का स्वाभाविक हिंदी विवरण, प्रकाशक और प्रकाशित तारीख दो। हिंदी सवाल पर पूरा उत्तर सहज देवनागरी हिंदी में दो; अंग्रेज़ी शीर्षक, अंग्रेज़ी लेख का अंश या मेटाडेटा ज्यों-का-त्यों बिल्कुल मत छोड़ो। अंग्रेज़ी स्रोत को समझकर अपने शब्दों में हिंदी में सार लिखो। कम से कम 2 उपयोगी परिणाम न हों तो खबरों की संख्या बढ़ाकर मत दिखाओ। URL मत लिखो और कोई तथ्य मत गढ़ो।"
     : "";
 
   return "\n\nइंटरनेट खोज के परिणाम:\n" + results.map(
@@ -722,10 +713,12 @@ export default {
 
     const isCurrentNewsReply = /(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(userText);
     const rawReply = reply.trim();
-    const metadataOnlyReply = isCurrentNewsReply &&
-      /(प्रकाशित|published|event)\s*:/i.test(rawReply) &&
-      !/(^|\n)\s*(?:[1-5][.)]|[-•])\s*[^\n]{12,}/m.test(rawReply);
-    const finalReply = metadataOnlyReply
+    const newsListCount = (rawReply.match(/(^|\n)\s*(?:[1-8][.)]|[-•])\s*[^\n]{12,}/gm) || []).length;
+    const looksLikeRawEnglishArticle = isCurrentNewsReply &&
+      /\b(Updated:|By:|India News Live Updates|Published:|Read more|Breaking News)\b/i.test(rawReply);
+    const malformedNewsReply = isCurrentNewsReply && searchResults.length > 0 &&
+      (newsListCount < Math.min(2, searchResults.length) || looksLikeRawEnglishArticle);
+    const finalReply = malformedNewsReply
       ? buildNewsFallback(searchResults, dateTime)
       : rawReply;
 
