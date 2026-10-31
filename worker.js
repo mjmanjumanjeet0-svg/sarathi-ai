@@ -594,88 +594,35 @@ export default {
     }
 
     if (url.pathname === "/api/media/image") {
-      if (await isRateLimited(request, env, "image")) {
-        return jsonResponse({ success: false, error: "बहुत अधिक अनुरोध हुए। थोड़ी देर बाद प्रयास करो।" }, 429);
-      }
-      const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
-      if (!prompt || prompt.length > 1200) {
-        return jsonResponse({ success: false, error: "फोटो का विवरण खाली है या बहुत लंबा है।" }, 400);
-      }
-      if (!env.AI || typeof env.AI.run !== "function") {
-        return jsonResponse({
-          success: false,
-          error: "AI फोटो सेवा अभी Worker में जुड़ी नहीं है। Cloudflare Worker Settings > Bindings में AI नाम का Workers AI binding जोड़ें।"
-        }, 503);
-      }
-      try {
-        const generated = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", {
-          prompt: prompt.slice(0, 1200),
-          num_steps: 4
-        });
-        const imageData = generated?.image;
-        if (typeof imageData !== "string" || !imageData.length) {
-          return jsonResponse({ success: false, error: "AI फोटो सेवा से मान्य इमेज नहीं मिली।" }, 502);
-        }
-        return jsonResponse({ success: true, mimeType: "image/jpeg", image: imageData });
-      } catch (error) {
-        return jsonResponse({
-          success: false,
-          error: "AI फोटो बन नहीं सकी। Cloudflare AI binding, उपलब्धता और खाते की सीमा जाँचें।"
-        }, 502);
-      }
-    }
-
-    if (await isRateLimited(request, env, "chat")) {
-      return jsonResponse({ success: false, error: "बहुत अधिक अनुरोध हुए। थोड़ी देर बाद प्रयास करो।" }, 429);
-    }
-
-    if (!env.SARATHI_LOGIN_PASSWORD) {
-      return jsonResponse({ success: false, error: "लॉगिन Secret सेट नहीं है।" }, 500);
-    }
-
-    const authorization = request.headers.get("Authorization") || "";
-    const token = authorization.startsWith("Bearer ")
-      ? authorization.slice(7)
-      : "";
-
-    if (!await verifyToken(token, env.SARATHI_LOGIN_PASSWORD)) {
-      return jsonResponse({ success: false, error: "पहले सही पासवर्ड से लॉगिन करो।" }, 401);
-    }
-
-    if (url.pathname === "/api/media/image") {
       if (await isRateLimited(request, env, "media-image")) {
         return jsonResponse({ success: false, error: "बहुत अधिक इमेज अनुरोध हुए। थोड़ी देर बाद प्रयास करें।" }, 429);
       }
       const prompt = typeof body.prompt === "string" ? body.prompt.trim() : "";
+      const images = Array.isArray(body.images) ? body.images.slice(0, 1) : [];
       if (!prompt || prompt.length > 1200) {
-        return jsonResponse({ success: false, error: "फोटो बनाने का निर्देश 1 से 1200 अक्षरों का होना चाहिए।" }, 400);
+        return jsonResponse({ success: false, error: "फोटो का निर्देश 1 से 1200 अक्षरों का होना चाहिए।" }, 400);
+      }
+      if (images.some(item => typeof item !== "string" || !/^data:image\/(png|jpeg|webp);base64,/i.test(item) || item.length > 6_000_000)) {
+        return jsonResponse({ success: false, error: "संपादन के लिए PNG, JPG या WEBP फोटो (4 MB तक) चुनें।" }, 400);
       }
       if (!env.AI || typeof env.AI.run !== "function") {
-        return jsonResponse({
-          success: false,
-          error: "Cloudflare Workers AI binding उपलब्ध नहीं है। Worker में AI binding जोड़कर Workers AI इस्तेमाल सक्षम करें।"
-        }, 503);
+        return jsonResponse({ success: false, error: "Cloudflare Worker में AI binding जोड़ना जरूरी है।" }, 503);
       }
       try {
-        const generated = await env.AI.run("@cf/black-forest-labs/flux-1-schnell", {
+        const result = await env.AI.run("openai/gpt-image-2", {
           prompt,
-          steps: 4
+          ...(images.length ? { images } : {}),
+          quality: "medium",
+          size: "1024x1024",
+          output_format: "png"
         });
-        const imageData = generated?.image || generated?.data?.[0]?.b64_json || generated?.data;
-        if (typeof imageData !== "string" || !imageData.length) {
-          return jsonResponse({ success: false, error: "इमेज मॉडल से पहचानने योग्य फोटो डेटा नहीं मिला।" }, 502);
+        const imageUrl = result?.image || result?.result?.image;
+        if (typeof imageUrl !== "string" || !/^https:\/\//i.test(imageUrl)) {
+          return jsonResponse({ success: false, error: "इमेज मॉडल से सही फोटो लिंक नहीं मिला।" }, 502);
         }
-        return jsonResponse({
-          success: true,
-          mimeType: "image/jpeg",
-          image: imageData,
-          model: "@cf/black-forest-labs/flux-1-schnell"
-        });
+        return jsonResponse({ success: true, imageUrl, edited: images.length > 0, model: "openai/gpt-image-2" });
       } catch (error) {
-        return jsonResponse({
-          success: false,
-          error: "AI फोटो जनरेशन असफल हुई। Workers AI मॉडल/बिलिंग सेटिंग जाँचें।"
-        }, 502);
+        return jsonResponse({ success: false, error: "AI फोटो नहीं बना सकी। Workers AI binding, मॉडल उपलब्धता और खाते की सीमा जाँचें।" }, 502);
       }
     }
 
