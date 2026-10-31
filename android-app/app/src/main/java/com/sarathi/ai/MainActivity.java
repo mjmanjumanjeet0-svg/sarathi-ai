@@ -513,7 +513,8 @@ public class MainActivity extends Activity {
         }
     }
 
-    @JavascriptInterface
+    private class SarathiBridge {
+        @JavascriptInterface
         public void startListening() {
             runOnUiThread(() -> MainActivity.this.startListening());
         }
