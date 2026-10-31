@@ -510,12 +510,6 @@ export default {
       }, 503);
     }
 
-    // Limit chat requests to reduce accidental usage; this is a per-minute
-    // safety limit, not a guarantee of a free provider plan.
-    if (await isRateLimited(request, env, "chat")) {
-      return jsonResponse({ success: false, zeroCostMode: true, error: "मुफ़्त उपयोग की सुरक्षा सीमा पूरी हुई। एक मिनट बाद फिर प्रयास करें।" }, 429);
-    }
-
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const userMessage = [...messages].reverse().find(m => m?.role === "user");
     const userText = typeof userMessage?.content === "string"
@@ -567,6 +561,27 @@ export default {
       greetingWords.length > 0 &&
       greetingWords.length <= 6 &&
       greetingWords.every(word => greetingVocabulary.has(word));
+
+    // Greetings are answered locally: they must not consume AI quota or fail
+    // when Groq is rate-limited/unavailable.
+    if (isGreetingOnly) {
+      return jsonResponse({
+        success: true,
+        reply: "नमस्ते! 🦚 मैं सारथी हूँ। बताइए, आज मैं आपकी क्या मदद करूँ?",
+        ...dateTime,
+        webSearch: false,
+        sources: [],
+      });
+    }
+
+    // Apply the per-minute chat limit only to requests that actually need AI.
+    if (await isRateLimited(request, env, "chat")) {
+      return jsonResponse({
+        success: false,
+        zeroCostMode: true,
+        error: "सारथी की उपयोग सीमा अभी पूरी हुई है। लगभग एक मिनट बाद फिर प्रयास करें।"
+      }, 429);
+    }
 
     // Never search the web for a simple greeting, even if the browser toggle is on.
     const wantsSearch = !isGreetingOnly &&
