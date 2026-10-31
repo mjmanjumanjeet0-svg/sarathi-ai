@@ -1,0 +1,21 @@
+name: Sarathi AI self-test
+on:
+  push:
+    branches: [main]
+    paths:
+      - "worker.js"
+      - "tests/sarathi-selftest.mjs"
+      - ".github/workflows/sarathi-selftest.yml"
+  workflow_dispatch:
+jobs:
+  worker-self-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Run Worker conversation tests
+        run: node tests/sarathi-selftest.mjs
