@@ -70,6 +70,45 @@
     if (el) el.textContent = message;
   }
 
+  async function generateAiImage() {
+    const prompt = ($("mediaPrompt")?.value || "").trim();
+    const statusEl = $("mediaAiStatus");
+    if (!prompt) { if (statusEl) statusEl.textContent = "पहले फोटो का विवरण लिखें।"; return; }
+    const button = $("mediaGenerateImage");
+    button.disabled = true;
+    if (statusEl) statusEl.textContent = "AI फोटो तैयार हो रही है…";
+    try {
+      if (typeof getAuthToken !== "function" || typeof getWorkerUrl !== "function") {
+        throw new Error("सारथी लॉगिन सेवा उपलब्ध नहीं है।");
+      }
+      const token = await getAuthToken();
+      const response = await fetch(getWorkerUrl() + "/api/media/image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
+        body: JSON.stringify({ prompt })
+      });
+      const data = await response.json();
+      if (!response.ok || !data.success || !data.image) {
+        throw new Error(data.error || "AI फोटो नहीं बन पाई।");
+      }
+      const next = new Image();
+      next.onload = () => {
+        image = next;
+        $("mediaFilter").value = "none";
+        $("mediaTitle").value = "";
+        $("mediaSubtitle").value = "";
+        drawImage();
+        if (statusEl) statusEl.textContent = "AI फोटो तैयार है। अब टेक्स्ट/फिल्टर लगाकर डाउनलोड कर सकते हैं।";
+      };
+      next.onerror = () => { throw new Error("AI से मिली फोटो पढ़ी नहीं जा सकी।"); };
+      next.src = "data:image/jpeg;base64," + data.image;
+    } catch (error) {
+      if (statusEl) statusEl.textContent = error.message || "AI फोटो सेवा में समस्या है।";
+    } finally {
+      button.disabled = false;
+    }
+  }
+
   function openStudio() {
     const dialog = $("mediaStudioDialog");
     if (dialog && !dialog.open) dialog.showModal();
@@ -149,6 +188,7 @@
 
   document.addEventListener("DOMContentLoaded", () => {
     $("mediaStudioOpen")?.addEventListener("click", openStudio);
+    $("mediaGenerateImage")?.addEventListener("click", generateAiImage);
     $("mediaStudioClose")?.addEventListener("click", () => $("mediaStudioDialog")?.close());
     document.querySelectorAll("[data-media-tab]").forEach(button =>
       button.addEventListener("click", () => selectTab(button.dataset.mediaTab)));
