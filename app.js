@@ -1435,13 +1435,12 @@ function bindStudyProgress() {
 
 function bindEducationHub() {
   loadStudyProfile();
-  $("examCenterToggle")?.addEventListener("click", () => {
+  $("examCenterMenuBtn")?.addEventListener("click", () => {
     const hub = $("educationHub");
     if (!hub) return;
-    const opening = hub.classList.contains("hidden");
-    hub.classList.toggle("hidden", !opening);
-    $("examCenterToggle")?.setAttribute("aria-expanded", String(opening));
-    if (opening) hub.scrollIntoView({ behavior: "smooth", block: "start" });
+    hub.classList.remove("hidden");
+    closeSidebar();
+    hub.scrollIntoView({ behavior: "smooth", block: "start" });
   });
   $("educationHub")?.addEventListener("click", event => {
     const button = event.target.closest("[data-study]");
