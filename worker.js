@@ -233,8 +233,8 @@ async function searchDuckDuckGoHtml(query) {
 
 function decodeXmlEntities(value) {
   return String(value || "")
-    .replace(/<!\\[CDATA\\[([\\s\\S]*?)\\]\\]>/g, "$1")
-    .replace(/&#(\\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
     .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
     .replace(/&amp;/g, "&")
     .replace(/&quot;/g, '"')
@@ -262,8 +262,8 @@ async function fetchRssFeed(feedUrl, publisherName, maxAgeHours = 72) {
     });
     if (!response.ok) return [];
     const xml = await response.text();
-    if (!/<rss[\\s>]|<feed[\\s>]/i.test(xml)) return [];
-    const entries = xml.match(/<(?:item|entry)(?:\\s[^>]*)?>[\\s\\S]*?<\\/(?:item|entry)>/gi) || [];
+    if (!/<rss[\s>]|<feed[\s>]/i.test(xml)) return [];
+    const entries = xml.match(/<(?:item|entry)(?:\s[^>]*)?>[\s\S]*?<\/(?:item|entry)>/gi) || [];
     const results = [];
     for (const entry of entries) {
       if (results.length >= 8) break;
@@ -312,8 +312,8 @@ async function searchGoogleNewsRss(query) {
     });
     if (!response.ok) return { results: [], warning: "Google News RSS ने HTTP " + response.status + " लौटाया।" };
     const xml = await response.text();
-    if (!/<rss[\\s>]/i.test(xml)) return { results: [], warning: "Google News ने मान्य RSS फ़ीड नहीं लौटाई।" };
-    const items = xml.match(/<item(?:\\s[^>]*)?>[\\s\\S]*?<\\/item>/gi) || [];
+    if (!/<rss[\s>]/i.test(xml)) return { results: [], warning: "Google News ने मान्य RSS फ़ीड नहीं लौटाई।" };
+    const items = xml.match(/<item(?:\s[^>]*)?>[\s\S]*?<\/item>/gi) || [];
     const results = [];
     const seen = new Set();
     for (const item of items) {
@@ -364,7 +364,7 @@ async function searchInternet(query, env) {
     ];
     const batches = await Promise.all(feeds.map(([url, name]) => fetchRssFeed(url, name, 48)));
     const all = batches.flat();
-    const terms = query.toLocaleLowerCase("hi-IN").split(/\\s+/).filter(word => word.length > 3 && !/^(india|latest|news|today|when|खबर|समाचार|ताजा|ताज़ा)$/i.test(word));
+    const terms = query.toLocaleLowerCase("hi-IN").split(/\s+/).filter(word => word.length > 3 && !/^(india|latest|news|today|when|खबर|समाचार|ताजा|ताज़ा)$/i.test(word));
     const relevant = all.filter(item => {
       const haystack = (item.title + " " + item.snippet).toLocaleLowerCase("hi-IN");
       return !terms.length || terms.some(term => haystack.includes(term));
