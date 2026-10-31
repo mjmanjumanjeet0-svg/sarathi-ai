@@ -308,7 +308,41 @@ async function searchGoogleNewsRss(query) {
   }
 }
 
+async function searchBraveWeb(query, env) {
+  if (!env.BRAVE_SEARCH_API_KEY) return { results: [], warning: "Brave Search API key सेट नहीं है।" };
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
+  try {
+    const isNews = /(खबर|समाचार|news|breaking|latest)/i.test(query);
+    const endpoint = "https://api.search.brave.com/res/v1/web/search?q=" +
+      encodeURIComponent(query.slice(0, 600)) +
+      "&count=8&country=IN&search_lang=hi" + (isNews ? "&freshness=pd" : "");
+    const response = await fetch(endpoint, {
+      headers: { "Accept": "application/json", "X-Subscription-Token": env.BRAVE_SEARCH_API_KEY },
+      signal: controller.signal
+    });
+    if (!response.ok) return { results: [], warning: "Brave Web Search ने HTTP " + response.status + " लौटाया।" };
+    const data = await response.json();
+    const raw = Array.isArray(data.web?.results) ? data.web.results : [];
+    const results = raw.slice(0, 8).map(item => {
+      const url = item.url || "";
+      const title = cleanText(item.title || "");
+      if (!title || !validHttpUrl(url)) return null;
+      return { title: title.slice(0, 300), url, snippet: cleanText(item.description || "").slice(0, 1800), publishedAt: item.page_age || item.age || "" };
+    }).filter(Boolean);
+    return { results, warning: results.length ? "Brave Search से वेब परिणाम मिले।" : "Brave Search में उपयोगी परिणाम नहीं मिले।" };
+  } catch {
+    return { results: [], warning: "Brave Web Search से संपर्क नहीं हो सका।" };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function searchInternet(query, env) {
+  // Primary general-purpose web search. The API key remains a Worker secret.
+  const brave = await searchBraveWeb(query, env);
+  if (brave.results.length) return brave;
+
   // Preferred path: Cloudflare Web Search binding. No provider key is exposed
   // to the browser; provider billing/configuration is handled by Cloudflare AI Gateway.
   if (env.AI && typeof env.AI.websearch === "function") {
