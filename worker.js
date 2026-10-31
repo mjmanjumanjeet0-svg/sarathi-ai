@@ -345,6 +345,51 @@ function filterRelevantSearchResults(query, results) {
   return required ? list.filter(item => required.test(textOf(item))) : list;
 }
 
+function dedupeNewsResults(results) {
+  const seen = new Set();
+  return (Array.isArray(results) ? results : []).filter(item => {
+    const title = cleanText(item.title || "").toLocaleLowerCase("hi-IN")
+      .replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+    let urlKey = "";
+    try {
+      const u = new URL(item.url);
+      u.hash = "";
+      u.search = "";
+      urlKey = u.hostname.toLowerCase().replace(/^www\./, "") + u.pathname.replace(/\/$/, "");
+    } catch {}
+    const key = title || urlKey;
+    if (!key || seen.has(key) || (urlKey && seen.has("url:" + urlKey))) return false;
+    seen.add(key);
+    if (urlKey) seen.add("url:" + urlKey);
+    return true;
+  }).slice(0, 5);
+}
+
+function formatNewsPublishedAt(value) {
+  if (!value) return "प्रकाशित तारीख उपलब्ध नहीं";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return "प्रकाशित तारीख उपलब्ध नहीं";
+  return new Intl.DateTimeFormat("hi-IN", {
+    timeZone: INDIA_TIME_ZONE, day: "2-digit", month: "long",
+    year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true
+  }).format(d) + " (भारतीय समय)";
+}
+
+function buildNewsFallback(results, dateTime) {
+  const items = dedupeNewsResults(results);
+  if (!items.length) return "आज की खबरों के लिए पर्याप्त भरोसेमंद सामग्री नहीं मिली।";
+  const lines = items.map((item, i) => {
+    const detail = cleanText(item.snippet || "");
+    return (i + 1) + ". " + cleanText(item.title) +
+      (detail ? "\n" + detail.slice(0, 650) : "\nइस खबर का पर्याप्त विवरण उपलब्ध परिणामों में नहीं मिला।") +
+      "\nस्रोत: " + (item.publisher || "उपलब्ध नहीं") +
+      " | प्रकाशित: " + formatNewsPublishedAt(item.publishedAt);
+  });
+  return "आज की प्रमुख खबरें (" + dateTime.date + ")\n\n" +
+    lines.join("\n\n") +
+    "\n\nनोट: ये उपलब्ध खोज परिणामों के आधार पर संक्षेप हैं। जहाँ स्वतंत्र पुष्टि उपलब्ध नहीं है, वहाँ खबर को अंतिम रूप से सत्यापित न मानें।";
+}
+
 function buildSearchContext(results, query = "") {
   if (!results.length) return "";
 
@@ -603,6 +648,7 @@ export default {
             : userText;
       const search = await searchInternet(searchQuery, env);
       searchResults = filterRelevantSearchResults(userText, search.results);
+      if (isCurrentNewsQuestion) searchResults = dedupeNewsResults(searchResults);
       if (isGoldRateQuestion && searchResults.length) {
         searchResults = await enrichGoldRateResults(searchResults);
       }
@@ -642,6 +688,7 @@ export default {
 - यदि खोज के परिणाम पर्याप्त, विश्वसनीय या एक-दूसरे से मेल खाते न हों, तो स्पष्ट कहो कि पुष्टि नहीं हो पाई। खोज न कर पाने पर भी इंटरनेट पर खोज लेने का दावा मत करो।
 - वर्तमान सोने/चाँदी के भाव, शेयर, मौसम, ट्रेन स्थिति या अन्य बदलती जानकारी पूछी जाए और इंटरनेट खोज के परिणाम मिले हों, तो केवल उन्हीं परिणामों में स्पष्ट रूप से दिए गए ताज़ा आँकड़े बताओ। स्रोत में तारीख/दर स्पष्ट न हो या परिणाम आपस में न मिलें, तो कोई संख्या या तारीख अनुमान से मत बनाओ; साफ कहो कि उपलब्ध स्रोत से आज का सही भाव सत्यापित नहीं हो पाया।
 - खोज परिणामों में पुरानी तारीख वाला भाव हो तो उसे आज का भाव बताकर प्रस्तुत मत करो। भारत के सोने के भाव में 22K और 24K की दर, प्रति ग्राम/10 ग्राम की इकाई और स्रोत की तारीख स्पष्ट करो, केवल जब स्रोत में ये जानकारी उपलब्ध हो।
+- समाचार/ताज़ा खबर के लिए विशेष अनिवार्य प्रारूप: सबसे पहले वास्तविक हेडलाइन लिखो, फिर हर खबर का 1–3 वाक्य में अर्थ/विवरण दो, अंत में स्रोत और प्रकाशित तारीख भारतीय समय में दो। केवल वेबसाइट का नाम, प्रकाशित तारीख, Event तारीख या तकनीकी मेटाडेटा दिखाकर उत्तर कभी पूरा मत मानो। एक ही खबर/घटना दोहराना सख्त मना है। उपलब्ध परिणामों में शीर्षक और विवरण न हों तो साफ कहो कि विवरण उपलब्ध नहीं; खबर की सामग्री खुद से मत बनाओ। तारीख को ISO/UTC रूप (जैसे 2026-10-31T12:31:02.000Z) में उपयोगकर्ता को मत दिखाओ; भारतीय समय में बदलो। प्रकाशित तारीख और घटना की तारीख को अलग रखो। पांच से कम उपयोगी खबरें हों तो उतनी ही दो।
 - इंटरनेट खोज के परिणामों से तथ्य लेकर अपने शब्दों में सीधा जवाब दो। उपयोगकर्ता ने स्पष्ट रूप से लिंक या स्रोत न माँगे हों तो मुख्य जवाब में URL, वेबसाइट लिंक या लिंक की सूची बिल्कुल मत लिखो। स्रोत का नाम केवल तभी बताओ जब भरोसा जाँचने के लिए जरूरी हो। खोज के URL को आंतरिक संदर्भ समझो, उत्तर का हिस्सा नहीं।
 - सोने के भाव के लिए हर स्रोत की दर अलग रखो। दो स्रोतों के भाव अलग हों तो उन्हें मिलाकर एक औसत या एक पक्का राष्ट्रीय भाव मत बनाओ; स्रोत, तारीख और इकाई सहित अलग-अलग बताओ और अंतर का कारण निश्चित न हो तो स्पष्ट कहो कि स्रोतों में अंतर है। जिस स्रोत से 22K/24K की संख्या स्पष्ट न निकली हो, उसके लिए संख्या मत बनाओ। प्रति 10 ग्राम की कीमत केवल प्रति ग्राम × 10 से निकालो और उसे गणना बताओ।
 फ़ॉर्मेट:
@@ -733,9 +780,18 @@ export default {
       return jsonResponse({ success: false, error: "AI सेवा से खाली उत्तर मिला।" }, 502);
     }
 
+    const isCurrentNewsReply = /(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(userText);
+    const rawReply = reply.trim();
+    const metadataOnlyReply = isCurrentNewsReply &&
+      /(प्रकाशित|published|event)\s*:/i.test(rawReply) &&
+      !/(^|\n)\s*(?:[1-5][.)]|[-•])\s*[^\n]{12,}/m.test(rawReply);
+    const finalReply = metadataOnlyReply
+      ? buildNewsFallback(searchResults, dateTime)
+      : rawReply;
+
     return jsonResponse({
       success: true,
-      reply: reply.trim(),
+      reply: finalReply,
       ...dateTime,
       webSearch: searchResults.length > 0,
       searchAttempted: wantsSearch,
