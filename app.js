@@ -921,7 +921,7 @@ async function sendMessage(text) {
   // Never search merely because the web toggle was left on.
   // Search only when the user explicitly asks for the internet, or a current fact is needed.
   const useWebSearch = !isSimpleGreeting(prompt) && !isStableGeneralKnowledge && !isTinyFollowUp &&
-    (explicitlyRequestsWebSearch(prompt) || (state.webEnabled && needsCurrentInfo));
+    (explicitlyRequestsWebSearch(prompt) || needsCurrentInfo || state.webEnabled);
 
   addMessage("user", prompt);
   setBusy(true);
