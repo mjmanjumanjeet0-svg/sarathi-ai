@@ -283,6 +283,7 @@ function loadChats() {
         title: chat.title || "नई बातचीत",
         messages: Array.isArray(chat.messages) ? chat.messages : [],
         pinned: Boolean(chat.pinned),
+        project: typeof chat.project === "string" ? chat.project.slice(0, 60) : "",
         createdAt: chat.createdAt || Date.now(),
         updatedAt: chat.updatedAt || Date.now()
       }));
@@ -317,7 +318,8 @@ function renderHistory() {
     const button = document.createElement("button");
     button.type = "button";
     button.className = "history-item";
-    button.textContent = (chat.pinned ? "📌 " : "") + chat.title;
+    button.textContent = (chat.pinned ? "📌 " : "") +
+      (chat.project ? "📁 " + chat.project + " · " : "") + chat.title;
     button.title = chat.title;
 
     if (chat.id === state.activeId) button.classList.add("active");
@@ -1130,6 +1132,24 @@ function toggleMoreMenu() {
   menu.setAttribute("aria-hidden", String(isClosed));
 }
 
+function assignCurrentChatToProject() {
+  const chat = activeChat();
+  if (!chat) return;
+  const current = chat.project || "";
+  const entered = window.prompt(
+    "इस बातचीत को किस प्रोजेक्ट में रखना है?\nखाली नाम देने पर प्रोजेक्ट से हटा दिया जाएगा।",
+    current
+  );
+  if (entered === null) return;
+  chat.project = entered.trim().slice(0, 60);
+  chat.updatedAt = Date.now();
+  saveChats();
+  renderHistory();
+  setStatus(chat.project
+    ? "बातचीत “" + chat.project + "” प्रोजेक्ट में रखी गई।"
+    : "बातचीत प्रोजेक्ट से हटा दी गई।");
+}
+
 function handleNewChat() {
   createChat();
   closeSidebar();
@@ -1688,6 +1708,12 @@ function bindEvents() {
   $("wakeStopMain")?.addEventListener("click", stopWakeWord);
 
   $("messageInput")?.addEventListener("input", resizeMessageInput);
+  $("messageInput")?.addEventListener("keydown", event => {
+    if (event.key === "Enter" && !event.shiftKey && !event.isComposing) {
+      event.preventDefault();
+      sendMessage();
+    }
+  });
   $("welcome")?.addEventListener("click", handlePromptClick);
   $("findNext")?.addEventListener("click", findInCurrentChat);
 
@@ -1725,10 +1751,10 @@ function bindEvents() {
         openSettings();
         break;
       case "home":
-        window.location.href = "/";
+        window.location.href = new URL("./", window.location.href).href;
         break;
       case "project":
-        setStatus("प्रोजेक्ट सुविधा अभी उपलब्ध नहीं है।");
+        assignCurrentChatToProject();
         closeMoreMenu();
         break;
       default:
