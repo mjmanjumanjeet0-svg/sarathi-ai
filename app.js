@@ -788,60 +788,6 @@ function explicitlyRequestsWebSearch(prompt) {
   return /(?:इंटरनेट|वेब|online)\s*(?:पर\s*)?(?:खोज|सर्च|search)|(?:ताज़ा|ताजा|आज की|लेटेस्ट|latest|current|breaking)\s*(?:खबर|समाचार|news|updates?)|(?:search|खोज|सर्च)\s+(?:the\s+)?(?:internet|web|online)/i.test(String(prompt || ""));
 }
 
-function resolveSarathiAppCommand(prompt) {
-  const value = String(prompt || "").trim();
-  if (!/(?:खोल|खोलो|खोल दो|चालू करो|open|launch|start)/i.test(value)) return null;
-  const apps = [
-    { id: "youtube", label: "YouTube", names: ["youtube", "you tube", "यूट्यूब", "यू ट्यूब"] },
-    { id: "chatgpt", label: "ChatGPT", names: ["chatgpt", "chat gpt", "चैटजीपीटी", "चैट जीपीटी", "चैट जिपिटी"] },
-    { id: "whatsapp", label: "WhatsApp", names: ["whatsapp", "whats app", "व्हाट्सएप", "व्हाट्स ऐप"] },
-    { id: "maps", label: "Google Maps", names: ["google maps", "maps", "गूगल मैप", "गूगल मैप्स", "मैप"] },
-    { id: "chrome", label: "Chrome", names: ["chrome", "क्रोम"] },
-    { id: "gmail", label: "Gmail", names: ["gmail", "जीमेल"] },
-    { id: "photos", label: "Google Photos", names: ["google photos", "photos", "गूगल फोटो", "फोटो गैलरी", "गैलरी"] },
-    { id: "playstore", label: "Play Store", names: ["play store", "playstore", "प्ले स्टोर"] },
-    { id: "instagram", label: "Instagram", names: ["instagram", "इंस्टाग्राम"] },
-    { id: "facebook", label: "Facebook", names: ["facebook", "फेसबुक"] },
-    { id: "telegram", label: "Telegram", names: ["telegram", "टेलीग्राम"] },
-    { id: "spotify", label: "Spotify", names: ["spotify", "स्पॉटिफाई"] },
-    { id: "camera", label: "Camera", names: ["camera", "कैमरा"] },
-    { id: "calculator", label: "Calculator", names: ["calculator", "कैलकुलेटर", "गणक"] },
-    { id: "settings", label: "Settings", names: ["settings", "सेटिंग्स", "सेटिंग"] },
-    { id: "phone", label: "Phone", names: ["phone", "फोन", "डायलर"] },
-    { id: "contacts", label: "Contacts", names: ["contacts", "कॉन्टैक्ट", "संपर्क"] },
-    { id: "calendar", label: "Calendar", names: ["calendar", "कैलेंडर"] },
-    { id: "clock", label: "Clock", names: ["clock", "घड़ी"] },
-    { id: "files", label: "Files", names: ["files", "file manager", "फाइल", "फाइल मैनेजर"] },
-    { id: "messages", label: "Messages", names: ["messages", "मैसेज", "संदेश"] }
-  ];
-  const normalized = value.toLocaleLowerCase("hi-IN").replace(/[.!?,।]/g, " ");
-  const known = apps.find(app => app.names.some(name => normalized.includes(name.toLocaleLowerCase("hi-IN"))));
-  if (known) return known;
-  const cleaned = value
-    .replace(/^(?:(?:सारथी|कृपया|please)\\s+)?(?:open|launch|start)\\s+/i, "")
-    .replace(/^(?:सारथी|कृपया|please)\\s+/i, "")
-    .replace(/\\s+(?:खोल दो|खोलो|खोल|चालू करो|open|launch|start)\\s*$/i, "")
-    .trim();
-  if (cleaned && cleaned.length <= 45 && !/[?？]/.test(cleaned)) {
-    return { id: "custom:" + cleaned, label: cleaned };
-  }
-  return null;
-}
-
-function openSarathiApp(appId, label, webUrl) {
-  if (window.SarathiNative && typeof window.SarathiNative.launchApp === "function") {
-    window.SarathiNative.launchApp(appId);
-    setStatus(label + " खोलने का अनुरोध भेजा गया।");
-    return;
-  }
-  if (webUrl) {
-    window.open(webUrl, "_blank", "noopener,noreferrer");
-    setStatus(label + " वेबसाइट खोली जा रही है।");
-  } else {
-    setStatus("किसी भी इंस्टॉल किए गए Android ऐप को खोलने के लिए Sarathi AI Android ऐप इस्तेमाल करें।");
-  }
-}
-
 /* ========================================
    SEND MESSAGE
 ======================================== */
@@ -870,31 +816,6 @@ async function sendMessage(text) {
 
   if ((!prompt && !state.attachments.length) || state.busy) return;
   if (!prompt && state.attachments.length) prompt = "कृपया संलग्न फाइल/फोटो की सामग्री पढ़कर समझाओ और मेरे सवालों में मदद करो।";
-  const appCommand = resolveSarathiAppCommand(prompt);
-  if (appCommand) {
-    const shouldSpeakAppConfirmation = state.voiceReplyPending;
-    state.voiceReplyPending = false;
-    addMessage("user", prompt);
-    const confirmation = appCommand.label + " खोलने का अनुरोध भेज दिया है।";
-    addMessage("assistant", confirmation);
-    const appUrls = {
-      youtube: "https://www.youtube.com/",
-      chatgpt: "https://chatgpt.com/",
-      whatsapp: "https://web.whatsapp.com/",
-      maps: "https://maps.google.com/",
-      chrome: "https://www.google.com/",
-      gmail: "https://mail.google.com/",
-      photos: "https://photos.google.com/",
-      playstore: "https://play.google.com/store"
-    };
-    openSarathiApp(appCommand.id, appCommand.label, appUrls[appCommand.id] || "");
-    if (shouldSpeakAppConfirmation && window.SarathiNative?.speak) {
-      window.SarathiNative.speak(confirmation);
-    }
-    const commandInput = $("messageInput");
-    if (commandInput) { commandInput.value = ""; commandInput.style.height = ""; }
-    return;
-  }
   const shouldSpeakReply = state.voiceReplyPending;
   state.voiceReplyPending = false;
 
