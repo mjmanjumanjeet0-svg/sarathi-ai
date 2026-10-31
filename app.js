@@ -1389,6 +1389,8 @@ function runStudyAction(action) {
   const prompt = "मेरी पढ़ाई में मदद करो।\n" + (context || "मेरे स्तर के अनुसार पहले जरूरी जानकारी पूछो।") +
     "\nकाम: " + (tasks[action] || tasks.explain) +
     "\nआधिकारिक सिलेबस, परीक्षा तिथि या पुस्तक के तथ्य उपलब्ध स्रोत से सत्यापित करो; जानकारी न हो तो साफ बताओ, अनुमान मत लगाओ।";
+  $("educationHub")?.classList.add("hidden");
+  $("examCenterToggle")?.setAttribute("aria-expanded", "false");
   sendMessage(prompt);
 }
 
@@ -1433,6 +1435,14 @@ function bindStudyProgress() {
 
 function bindEducationHub() {
   loadStudyProfile();
+  $("examCenterToggle")?.addEventListener("click", () => {
+    const hub = $("educationHub");
+    if (!hub) return;
+    const opening = hub.classList.contains("hidden");
+    hub.classList.toggle("hidden", !opening);
+    $("examCenterToggle")?.setAttribute("aria-expanded", String(opening));
+    if (opening) hub.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
   $("educationHub")?.addEventListener("click", event => {
     const button = event.target.closest("[data-study]");
     if (button) runStudyAction(button.dataset.study);
