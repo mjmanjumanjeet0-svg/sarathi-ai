@@ -727,13 +727,7 @@ async function requestSarathiImage(prompt, imageFile) {
     if (!/^image\/(png|jpeg|webp)$/i.test(imageFile.type) || imageFile.size > 4 * 1024 * 1024) {
       throw new Error("फोटो PNG/JPG/WEBP में और 4 MB तक होनी चाहिए।");
     }
-    const dataUrl = await new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result || ""));
-      reader.onerror = () => reject(new Error("फोटो पढ़ी नहीं जा सकी।"));
-      reader.readAsDataURL(imageFile);
-    });
-    images = [dataUrl];
+    images = [await fileToImageDataUrl(imageFile, 500)];
   }
   const response = await fetch(getWorkerUrl() + "/api/media/image", {
     method: "POST",
