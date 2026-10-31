@@ -1016,9 +1016,7 @@ async function sendMessage(text) {
 
     // Only speak automatically for a reply triggered by the wake-word voice command.
     // Typed messages stay silent; the user can still tap the per-message speaker button.
-    if (shouldSpeakReply && !state.voiceStopRequested && window.SarathiNative && typeof window.SarathiNative.speak === "function") {
-      window.SarathiNative.speak(cleanAnswer);
-    }
+    if (shouldSpeakReply && window.SarathiVoice && typeof window.SarathiVoice.speak === "function") window.SarathiVoice.speak(cleanAnswer);
 
     if (useWebSearch && data.searchWarning) {
       setStatus("इंटरनेट खोज: " + data.searchWarning);
@@ -1041,9 +1039,7 @@ async function sendMessage(text) {
     );
 
     setStatus(isNetworkError ? "इंटरनेट कनेक्शन जाँचें" : isRateLimit ? "AI सेवा व्यस्त है" : "अस्थायी समस्या");
-    if (shouldSpeakReply && !state.voiceStopRequested && window.SarathiNative && typeof window.SarathiNative.speak === "function") {
-      window.SarathiNative.speak("माफ़ कीजिए, अभी जवाब नहीं मिल पाया। " + message);
-    }
+    if (shouldSpeakReply && window.SarathiVoice && typeof window.SarathiVoice.speak === "function") window.SarathiVoice.speak("माफ़ कीजिए, अभी जवाब नहीं मिल पाया। " + message);
   } finally {
     setBusy(false);
     if (input) {
