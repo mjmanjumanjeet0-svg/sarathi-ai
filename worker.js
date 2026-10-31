@@ -267,38 +267,40 @@ async function searchBingRss(query) {
 
 async function searchGoogleNewsRss(query) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
+  const timeout = setTimeout(() => controller.abort(), 12000);
   try {
-    const freshQuery = /(खबर|समाचार|news|breaking|latest)/i.test(query) ? "India latest news headlines today politics economy sports technology when:2d" : query + " when:2d";
-    const endpoint = "https://news.google.com/rss/search?q=" +
-      encodeURIComponent(freshQuery.slice(0, 400)) + "&hl=hi&gl=IN&ceid=IN:hi";
+    const freshQuery = /(खबर|समाचार|news|breaking|latest)/i.test(query) ? "India when:1d" : query + " when:1d";
+    const endpoint = "https://news.google.com/rss/search?q=" + encodeURIComponent(freshQuery.slice(0, 400)) + "&hl=hi&gl=IN&ceid=IN:hi";
     const response = await fetch(endpoint, {
-      headers: { "Accept": "application/rss+xml, application/xml, text/xml" },
+      headers: { "Accept": "application/rss+xml, application/xml, text/xml", "User-Agent": "Mozilla/5.0 (compatible; SarathiAI/1.0)" },
       signal: controller.signal,
     });
     if (!response.ok) return { results: [], warning: "Google News RSS खोज उपलब्ध नहीं है।" };
     const xml = await response.text();
-    const items = xml.match(/<item[\s>][\s\S]*?<\/item>/gi) || [];
+    if (!/<rss[\s>]|<feed[\s>]/i.test(xml)) return { results: [], warning: "Google News ने मान्य RSS समाचार फ़ीड नहीं लौटाई।" };
+    const items = xml.match(/<item(?:\s[^>]*)?>[\s\S]*?<\/item>/gi) || [];
     const results = [];
+    const seen = new Set();
     for (const item of items) {
-      if (results.length >= 5) break;
+      if (results.length >= 8) break;
       const tag = (name) => {
-        const match = item.match(new RegExp("<" + name + "[^>]*>([\s\\S]*?)<\/" + name + ">", "i"));
-        return match ? match[1].replace(/<!\[CDATA\[|\]\]>/g, "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">").trim() : "";
+        const match = item.match(new RegExp("<" + name + "(?:\\s[^>]*)?>([\\s\\S]*?)<\\/" + name + ">", "i"));
+        if (!match) return "";
+        return cleanText(match[1].replace(/<!\[CDATA\[|\]\]>/g, "").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#39;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">"));
       };
-      const title = cleanText(tag("title"));
+      const title = tag("title");
       const url = tag("link");
-      const snippet = cleanText(tag("description"));
+      const snippet = tag("description");
+      const publisher = tag("source");
       const publishedText = tag("pubDate");
       const publishedAt = publishedText ? Date.parse(publishedText) : NaN;
-      // Exclude dated stories older than 48 hours from a current-news feed.
-      if (title && validHttpUrl(url) && Number.isFinite(publishedAt) &&
-          Date.now() - publishedAt <= 48 * 60 * 60 * 1000 &&
-          publishedAt <= Date.now() + 60 * 60 * 1000) {
-        results.push({ title: title.slice(0, 300), url, snippet: snippet.slice(0, 1800), publishedAt: new Date(publishedAt).toISOString() });
-      }
+      if (!title || !validHttpUrl(url) || seen.has(url) || !Number.isFinite(publishedAt)) continue;
+      const age = Date.now() - publishedAt;
+      if (age < -3600000 || age > 48 * 60 * 60 * 1000) continue;
+      seen.add(url);
+      results.push({ title: title.slice(0, 300), url, snippet: snippet.slice(0, 1200), publisher: publisher.slice(0, 100), publishedAt: new Date(publishedAt).toISOString() });
     }
-    return { results, warning: results.length ? "Google News RSS से पिछले 48 घंटों के परिणाम मिले।" : "पिछले 48 घंटों की तारीख वाले परिणाम नहीं मिले।" };
+    return { results, warning: results.length ? "Google News RSS से पिछले 48 घंटों के समाचार मिले।" : "Google News RSS में पिछले 48 घंटों के मान्य समाचार नहीं मिले।" };
   } catch {
     return { results: [], warning: "Google News RSS खोज अभी उपलब्ध नहीं है।" };
   } finally {
@@ -350,21 +352,26 @@ async function searchInternet(query, env) {
     }
   }
 
-  // Google News RSS is useful for headlines, but not a reliable gold-price source.
+  const isNewsSearch = /(खबर|समाचार|news|breaking|latest)/i.test(query);
   const isGoldRateSearch = /(सोने|सोना|gold|bullion|22\s*k|24\s*k)/i.test(query);
-  if (!isGoldRateSearch && /(खबर|समाचार|news|breaking|latest)/i.test(query)) {
+
+  // Current news must come from headline feeds, never generic homepage links.
+  if (isNewsSearch) {
     const newsFallback = await searchGoogleNewsRss(query);
     if (newsFallback.results.length) return newsFallback;
+    const bingNewsFallback = await searchBingRss(query);
+    if (bingNewsFallback.results.length) {
+      const usable = bingNewsFallback.results.filter(item => item.title && item.snippet);
+      if (usable.length) return { results: usable, warning: "Bing RSS से समाचार शीर्षक और विवरण मिले।" };
+    }
+    return { results: [], warning: "समाचार RSS स्रोतों से वास्तविक शीर्षक नहीं मिले।" };
   }
 
-  // Full-search fallbacks must also run when the Cloudflare AI binding is absent.
-  // DuckDuckGo Instant Answer is only the last resort because it often misses news.
-  const htmlFallback = await searchDuckDuckGoHtml(query);
-  if (htmlFallback.results.length) return htmlFallback;
-
+  // For non-news queries, prefer structured RSS results over HTML scraping.
   const bingFallback = await searchBingRss(query);
   if (bingFallback.results.length) return bingFallback;
-
+  const htmlFallback = await searchDuckDuckGoHtml(query);
+  if (htmlFallback.results.length) return htmlFallback;
   // Explicitly mark the legacy fallback as limited; DuckDuckGo Instant Answer
   // is not a full web-search API and often has no results for current prices/news.
   const controller = new AbortController();
