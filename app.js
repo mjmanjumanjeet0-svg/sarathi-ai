@@ -939,11 +939,23 @@ async function sendMessage(text) {
   if (shouldSpeakReply) window.SarathiVoice?.pause?.();
   state.voiceReplyPending = false;
 
+  // Any early exit after a spoken wake-word request must release the paused
+  // listener. Speaking a short explanation lets native TTS resume it onDone.
+  const finishVoiceEarly = (message) => {
+    if (!shouldSpeakReply) return;
+    if (message && typeof window.SarathiVoice?.speak === "function") {
+      window.SarathiVoice.speak(message);
+    } else {
+      window.SarathiNative?.resumeWakeWord?.();
+    }
+  };
+
   const workerUrl = getWorkerUrl();
 
   if (!workerUrl) {
     setStatus("सेटिंग्स में Worker URL भरें।");
     openSettings();
+    finishVoiceEarly("सारथी की सेटिंग्स में सर्वर पता भरना जरूरी है। कृपया सेटिंग्स जाँचें।");
     return;
   }
 
@@ -952,7 +964,10 @@ async function sendMessage(text) {
   const asksToEditImage = /(फोटो|तस्वीर|इमेज|image|photo).{0,45}(एडिट|बदल|सुधार|सुंदर|बैकग्राउंड|पृष्ठभूमि|रंग|हटाओ|जोड़ो|edit|change|modify|background)|(एडिट|बदल|सुधार|सुंदर|बैकग्राउंड|पृष्ठभूमि|रंग|हटाओ|जोड़ो|edit|change|modify|background).{0,45}(फोटो|तस्वीर|इमेज|image|photo)/i.test(prompt);
   const asksToGenerateImage = /(फोटो|तस्वीर|इमेज|image|picture).{0,55}(बनाओ|बना दो|बना लें|बनाएं|बनाकर|तैयार|generate|create|draw)|(बनाओ|बना दो|बना लें|बनाएं|बनाकर|तैयार|generate|create|draw).{0,55}(फोटो|तस्वीर|इमेज|image|picture)/i.test(prompt);
   if (!asksToEditImage && !asksToGenerateImage && (imageFile || videoFile)) {
-    if (!window.confirm("चुनी गई फोटो/वीडियो के चुने हुए फ्रेम इंटरनेट के ज़रिए AI को भेजे जाएँगे। क्या भेजना है?")) return;
+    if (!window.confirm("चुनी गई फोटो/वीडियो के चुने हुए फ्रेम इंटरनेट के ज़रिए AI को भेजे जाएँगे। क्या भेजना है?")) {
+      finishVoiceEarly("ठीक है, फोटो या वीडियो अभी नहीं भेजा गया।");
+      return;
+    }
     addMessage("user", prompt);
     setBusy(true);
     try {
@@ -971,11 +986,14 @@ async function sendMessage(text) {
       const reply = await requestSarathiMediaUnderstanding(question, frames);
       addMessage("assistant", reply);
       setStatus("मीडिया का विश्लेषण पूरा हुआ।");
+      finishVoiceEarly(reply);
       state.attachments = state.attachments.filter(file => file !== imageFile && file !== videoFile);
       renderAttachmentPreview();
     } catch (error) {
-      addMessage("assistant", "मीडिया समझा नहीं जा सका: " + (error?.message || "कृपया बाद में कोशिश करें।"));
+      const message = "मीडिया समझा नहीं जा सका: " + (error?.message || "कृपया बाद में कोशिश करें।");
+      addMessage("assistant", message);
       setStatus("मीडिया समझने में समस्या आई।");
+      finishVoiceEarly(message);
     } finally {
       setBusy(false);
     }
@@ -984,10 +1002,12 @@ async function sendMessage(text) {
   if (asksToEditImage || asksToGenerateImage) {
     if (asksToEditImage && !imageFile) {
       setStatus("जिस फोटो को एडिट करना है, उसे + बटन से पहले जोड़ें।");
+      finishVoiceEarly("जिस फोटो को एडिट करना है, उसे पहले जोड़ें।");
       return;
     }
     if (imageFile && !asksToEditImage) {
       setStatus("फोटो एडिट करने के लिए लिखें: इस फोटो का बैकग्राउंड बदल दो।");
+      finishVoiceEarly("फोटो एडिट करने के लिए बताइए कि इसमें क्या बदलना है।");
       return;
     }
     addMessage("user", prompt);
@@ -997,11 +1017,15 @@ async function sendMessage(text) {
     setStatus(asksToEditImage ? "फोटो एडिट हो रही है…" : "नई फोटो बनाई जा रही है…");
     try {
       const imageUrl = await requestSarathiImage(prompt, imageFile || null);
-      addMessage("assistant", asksToEditImage ? "आपकी एडिट की हुई फोटो तैयार है।" : "आपकी बनाई हुई फोटो तैयार है।", imageUrl);
+      const message = asksToEditImage ? "आपकी एडिट की हुई फोटो तैयार है।" : "आपकी बनाई हुई फोटो तैयार है।";
+      addMessage("assistant", message, imageUrl);
       setStatus("फोटो तैयार है। फोटो के कोने में ⬇ दबाकर डाउनलोड करें।");
+      finishVoiceEarly(message);
     } catch (error) {
-      addMessage("assistant", "फोटो तैयार नहीं हो सकी: " + (error?.message || "कृपया बाद में कोशिश करें।"));
+      const message = "फोटो तैयार नहीं हो सकी: " + (error?.message || "कृपया बाद में कोशिश करें।");
+      addMessage("assistant", message);
       setStatus("फोटो सेवा में समस्या आई।");
+      finishVoiceEarly(message);
     } finally {
       setBusy(false);
     }
@@ -1017,7 +1041,10 @@ async function sendMessage(text) {
 
   let attachmentContext = "";
   if (state.attachments.length) {
-    if (!window.confirm("चुनी गई फाइलों से निकाला गया पाठ इंटरनेट के जरिए AI सेवा को भेजा जाएगा। क्या भेजना है?")) return;
+    if (!window.confirm("चुनी गई फाइलों से निकाला गया पाठ इंटरनेट के जरिए AI सेवा को भेजा जाएगा। क्या भेजना है?")) {
+      finishVoiceEarly("ठीक है, फाइल अभी नहीं भेजी गई।");
+      return;
+    }
     setBusy(true);
     try {
       attachmentContext = await extractAttachmentsText(state.attachments);
@@ -1027,7 +1054,9 @@ async function sendMessage(text) {
       renderAttachmentPreview();
     } catch (error) {
       setBusy(false);
-      setStatus("फाइल नहीं पढ़ी जा सकी: " + (error?.message || "अज्ञात त्रुटि"));
+      const message = "फाइल नहीं पढ़ी जा सकी: " + (error?.message || "अज्ञात त्रुटि");
+      setStatus(message);
+      finishVoiceEarly(message);
       return;
     }
     setBusy(false);
