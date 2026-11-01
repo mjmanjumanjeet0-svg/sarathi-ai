@@ -1,0 +1,45 @@
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+
+const app = await readFile(new URL("../app.js", import.meta.url), "utf8");
+const start = app.indexOf("function detectAppLaunchCommand(prompt) {");
+const end = app.indexOf("\n}\n\n/* ========================================\n   SEND MESSAGE", start);
+assert.ok(start >= 0 && end > start, "app launch parser must exist");
+const parserSource = app.slice(start, end + 2);
+const detect = new Function(parserSource + "\nreturn detectAppLaunchCommand;")();
+
+const cases = [
+  ["यूट्यूब खोलो", "youtube"],
+  ["youtube open", "youtube"],
+  ["चैट जीपीटी खोलो", "chatgpt"],
+  ["व्हाट्सऐप खोलो", "whatsapp"],
+  ["क्रोम खोलो", "chrome"],
+  ["गूगल मैप्स खोलो", "maps"],
+  ["जीमेल खोलो", "gmail"],
+  ["इंस्टाग्राम खोलो", "instagram"],
+  ["टेलीग्राम खोलो", "telegram"],
+  ["आज यूट्यूब पर क्या है", null],
+  ["कोई ऐप खोलो", null],
+  ["", null]
+];
+for (const [input, expected] of cases) {
+  assert.equal(detect(input), expected, "parser mismatch for: " + input);
+}
+
+const java = await readFile(new URL("../android-app/app/src/main/java/com/sarathi/ai/MainActivity.java", import.meta.url), "utf8");
+const manifest = await readFile(new URL("../android-app/app/src/main/AndroidManifest.xml", import.meta.url), "utf8");
+const packages = [
+  "com.google.android.youtube",
+  "com.openai.chatgpt",
+  "com.whatsapp",
+  "com.android.chrome",
+  "com.google.android.apps.maps",
+  "com.google.android.gm",
+  "com.instagram.android",
+  "org.telegram.messenger"
+];
+for (const name of packages) {
+  assert.ok(java.includes('"' + name + '"'), "Android launch allowlist missing " + name);
+  assert.ok(manifest.includes('android:name="' + name + '"'), "Manifest package query missing " + name);
+}
+console.log("APP LAUNCH SELF-TEST: " + cases.length + " parser cases and " + packages.length + " Android package mappings passed");
