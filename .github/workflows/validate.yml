@@ -5,6 +5,8 @@ on:
     branches: [main, sarathi-audit-fixes-2026-10]
     paths:
       - "app.js"
+      - "tests/app-launch-selftest.mjs"
+      - "android-app/app/src/main/java/com/sarathi/ai/MainActivity.java"
       - "voice.js"
       - "worker.js"
       - "index.html"
@@ -42,6 +44,7 @@ jobs:
           node --check app.js
           node --check voice.js
           node --input-type=module --check < worker.js
+          node tests/app-launch-selftest.mjs
 
       - name: Check required web files
         run: |
