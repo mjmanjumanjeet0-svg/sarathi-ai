@@ -69,6 +69,14 @@ await test("login issues a session token", async () => {
   assert.ok(r.data.token);
   token = r.data.token;
 });
+await test("chat rejects requests without a bearer token", async () => {
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "हेलो सारथी" }] });
+  assert.equal(r.status, 401);
+});
+await test("chat rejects a malformed or forged bearer token", async () => {
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "हेलो सारथी" }] }, "forged.token");
+  assert.equal(r.status, 401);
+});
 await test("Hindi greeting is answered locally without provider calls", async () => {
   const before = calls.length;
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "हेलो सारथी" }] }, token);
