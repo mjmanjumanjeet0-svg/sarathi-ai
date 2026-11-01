@@ -35,7 +35,7 @@ assert.ok(
 );
 
 const trustedUrlStart = activity.indexOf("private boolean isTrustedAppUrl(Uri uri)");
-const trustedUrlEnd = activity.indexOf("\\n    private void handleWakeCommandIntent", trustedUrlStart);
+const trustedUrlEnd = activity.indexOf("\n    private void handleWakeCommandIntent", trustedUrlStart);
 assert.ok(trustedUrlStart >= 0 && trustedUrlEnd > trustedUrlStart, "WebView trusted URL policy must exist");
 const trustedUrlCode = activity.slice(trustedUrlStart, trustedUrlEnd);
 assert.ok(
@@ -43,7 +43,7 @@ assert.ok(
   trustedUrlCode.includes("APP_HOST.equalsIgnoreCase(uri.getHost())") &&
   trustedUrlCode.includes("uri.getPort() != -1 && uri.getPort() != 443") &&
   trustedUrlCode.includes("uri.getUserInfo() != null") &&
-  trustedUrlCode.includes('"/sarathi-ai/"'.replaceAll("/", "\\/")),
+  trustedUrlCode.includes('"/sarathi-ai/"'),
   "WebView bridge must be limited to HTTPS, default port, no user-info and Sarathi app paths"
 );
 assert.ok(
