@@ -865,7 +865,7 @@ function explicitlyRequestsWebSearch(prompt) {
   return /(?:इंटरनेट|वेब|online)\s*(?:पर\s*)?(?:खोज|सर्च|search)|(?:ताज़ा|ताजा|आज की|लेटेस्ट|latest|current|breaking)\s*(?:खबर|समाचार|news|updates?)|(?:search|खोज|सर्च)\s+(?:the\s+)?(?:internet|web|online)/i.test(String(prompt || ""));
 }
 
-function detectAppLaunchCommand(prompt) {
+function detectAppLaunchCommand(prompt, installedApps = []) {
   const value = String(prompt || "").trim().toLowerCase().replace(/[।.!?]+$/g, "").trim();
   const commands = [
     ["youtube", /^(?:कृपया\s*)?(?:यूट्यूब|youtube)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
@@ -877,7 +877,16 @@ function detectAppLaunchCommand(prompt) {
     ["instagram", /^(?:कृपया\s*)?(?:इंस्टाग्राम|instagram)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
     ["telegram", /^(?:कृपया\s*)?(?:टेलीग्राम|telegram)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i]
   ];
-  return commands.find(([, pattern]) => pattern.test(value))?.[0] || null;
+  const known = commands.find(([, pattern]) => pattern.test(value));
+  if (known) return { type: "known", key: known[0] };
+
+  const match = value.match(/^(?:कृपया\\s*)?(.+?)(?:\\s+ऐप)?\\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i);
+  if (!match) return null;
+  const requested = match[1].trim().replace(/\\s+/g, " ");
+  const normalize = text => String(text || "").toLowerCase().normalize("NFKC").replace(/[^\\p{L}\\p{N}]+/gu, "");
+  const wanted = normalize(requested);
+  const found = installedApps.find(item => normalize(item.label) === wanted);
+  return found && found.packageName ? { type: "package", packageName: found.packageName, label: found.label } : null;
 }
 
 /* ========================================
@@ -908,14 +917,26 @@ async function sendMessage(text) {
 
   if ((!prompt && !state.attachments.length) || state.busy) return;
 
-  const appKey = detectAppLaunchCommand(prompt);
-  if (appKey) {
+  let installedApps = [];
+  if (window.SarathiNative?.getInstalledApps) {
+    try {
+      const rawApps = window.SarathiNative.getInstalledApps();
+      installedApps = JSON.parse(rawApps || "[]");
+      if (!Array.isArray(installedApps)) installedApps = [];
+    } catch (_) { installedApps = []; }
+  }
+  const appCommand = detectAppLaunchCommand(prompt, installedApps);
+  if (appCommand) {
     const input = $("messageInput");
     if (input) { input.value = ""; input.style.height = ""; }
     addMessage("user", prompt);
-    if (window.SarathiNative?.openApp) {
-      window.SarathiNative.openApp(appKey);
-      addMessage("assistant", "मैंने ऐप खोलने की कोशिश की है। अगर ऐप इंस्टॉल है और Android अनुमति देता है, तो वह खुल जाएगा।");
+    if (window.SarathiNative) {
+      if (appCommand.type === "known" && window.SarathiNative.openApp) {
+        window.SarathiNative.openApp(appCommand.key);
+      } else if (appCommand.type === "package" && window.SarathiNative.openAppPackage) {
+        window.SarathiNative.openAppPackage(appCommand.packageName);
+      }
+      addMessage("assistant", "मैंने " + (appCommand.label || appCommand.key || "ऐप") + " खोलने की कोशिश की है।");
     } else {
       addMessage("assistant", "ऐप खोलने की सुविधा अभी Android सारथी ऐप में उपलब्ध है।");
     }
