@@ -865,6 +865,21 @@ function explicitlyRequestsWebSearch(prompt) {
   return /(?:इंटरनेट|वेब|online)\s*(?:पर\s*)?(?:खोज|सर्च|search)|(?:ताज़ा|ताजा|आज की|लेटेस्ट|latest|current|breaking)\s*(?:खबर|समाचार|news|updates?)|(?:search|खोज|सर्च)\s+(?:the\s+)?(?:internet|web|online)/i.test(String(prompt || ""));
 }
 
+function detectAppLaunchCommand(prompt) {
+  const value = String(prompt || "").trim().toLowerCase().replace(/[।.!?]+$/g, "").trim();
+  const commands = [
+    ["youtube", /^(?:कृपया\s*)?(?:यूट्यूब|youtube)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
+    ["chatgpt", /^(?:कृपया\s*)?(?:चैट\s*जीपीटी|chatgpt)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
+    ["whatsapp", /^(?:कृपया\s*)?(?:व्हाट्सऐप|व्हाट्सएप|whatsapp)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
+    ["chrome", /^(?:कृपया\s*)?(?:क्रोम|chrome)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
+    ["maps", /^(?:कृपया\s*)?(?:गूगल\s*मैप्स|google\s*maps|maps)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
+    ["gmail", /^(?:कृपया\s*)?(?:जीमेल|gmail)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
+    ["instagram", /^(?:कृपया\s*)?(?:इंस्टाग्राम|instagram)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
+    ["telegram", /^(?:कृपया\s*)?(?:टेलीग्राम|telegram)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i]
+  ];
+  return commands.find(([, pattern]) => pattern.test(value))?.[0] || null;
+}
+
 /* ========================================
    SEND MESSAGE
 ======================================== */
@@ -892,6 +907,22 @@ async function sendMessage(text) {
   }
 
   if ((!prompt && !state.attachments.length) || state.busy) return;
+
+  const appKey = detectAppLaunchCommand(prompt);
+  if (appKey) {
+    const input = $("messageInput");
+    if (input) { input.value = ""; input.style.height = ""; }
+    addMessage("user", prompt);
+    if (window.SarathiNative?.openApp) {
+      window.SarathiNative.openApp(appKey);
+      addMessage("assistant", "ठीक है, ऐप खोलने का अनुरोध भेज दिया है।");
+    } else {
+      addMessage("assistant", "ऐप खोलने की सुविधा अभी Android सारथी ऐप में उपलब्ध है।");
+    }
+    setStatus("");
+    return;
+  }
+
   if (!prompt && state.attachments.length) prompt = "कृपया संलग्न फाइल/फोटो की सामग्री पढ़कर समझाओ और मेरे सवालों में मदद करो।";
   const shouldSpeakReply = state.voiceReplyPending || Boolean(window.SarathiVoice?.isActive?.());
   if (shouldSpeakReply) window.SarathiVoice?.pause?.();
