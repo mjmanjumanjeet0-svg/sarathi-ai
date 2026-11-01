@@ -12,6 +12,16 @@ const [wake, activity, app, worker, wakeService, indexHtml] = await Promise.all(
   readFile(new URL("../index.html", import.meta.url), "utf8"),
 ]);
 
+const loginPromptStart = activity.indexOf("public boolean onJsPrompt");
+const loginPromptEnd = activity.indexOf("public boolean onJsConfirm", loginPromptStart);
+assert.ok(loginPromptStart >= 0 && loginPromptEnd > loginPromptStart, "Android WebView login prompt handler must exist");
+const loginPromptCode = activity.slice(loginPromptStart, loginPromptEnd);
+assert.ok(
+  loginPromptCode.includes("isTrustedAppUrl(Uri.parse(url == null ? \"\" : url))") &&
+  loginPromptCode.includes("result.cancel()"),
+  "Android native login prompt must reject untrusted page origins"
+);
+
 const helperStart = wake.indexOf("private boolean isConversationEndPhrase");
 const helperEnd = wake.indexOf("\n    private void endConversationAndResumeWakeWord", helperStart);
 assert.ok(helperStart >= 0 && helperEnd > helperStart, "Android stop-phrase helper must exist");
