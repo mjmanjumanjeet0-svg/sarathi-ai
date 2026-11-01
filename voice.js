@@ -7,6 +7,7 @@
   let speaking = false;
   let restarting = false;
   let paused = false;
+  let nativeManualListening = false;
 
   function show(activeNow, hint) {
     ["voicePanel", "voiceWave", "voiceActiveNote"].forEach(id => $(id)?.classList.toggle("hidden", !activeNow));
@@ -32,8 +33,13 @@
       recognition = null;
     }
     if (window.speechSynthesis) window.speechSynthesis.cancel();
-    if (window.SarathiNative?.stopSpeaking) window.SarathiNative.stopSpeaking();
-    if (window.SarathiNative?.stopWakeWord) window.SarathiNative.stopWakeWord();
+    if (nativeManualListening) {
+      nativeManualListening = false;
+      try { window.SarathiNative?.stopListening?.(); } catch (_) {}
+    } else {
+      if (window.SarathiNative?.stopSpeaking) window.SarathiNative.stopSpeaking();
+      if (window.SarathiNative?.stopWakeWord) window.SarathiNative.stopWakeWord();
+    }
     show(false);
     const status = $("status");
     if (status) status.textContent = "सारथी की आवाज़ बंद कर दी गई है।";
@@ -77,6 +83,24 @@
   }
 
   function start() {
+    // Android WebView does not consistently expose the browser Web Speech API.
+    // Prefer the app's native SpeechRecognizer when its bridge is available.
+    if (window.SarathiNative?.startListening) {
+      if (active) return;
+      active = true;
+      nativeManualListening = true;
+      show(true, "माइक्रोफ़ोन शुरू हो रहा है…");
+      try {
+        window.SarathiNative.startListening();
+      } catch (_) {
+        nativeManualListening = false;
+        active = false;
+        show(false);
+        const status = $("status");
+        if (status) status.textContent = "फ़ोन का माइक्रोफ़ोन शुरू नहीं हो सका।";
+      }
+      return;
+    }
     if (!Recognition) {
       const status = $("status");
       if (status) status.textContent = "माइक इस ब्राउज़र में उपलब्ध नहीं है। Chrome में खोलकर माइक्रोफोन अनुमति दें।";
@@ -144,6 +168,12 @@
     speaking = false;
     paused = false;
     if (active) startRecognition();
+  };
+  window.SarathiVoice.onNativeRecognitionDone = () => {
+    if (!nativeManualListening) return;
+    nativeManualListening = false;
+    active = false;
+    show(false, "आवाज़ पहचान पूरी हुई।");
   };
   window.SarathiVoice.speak = speak;
   window.SarathiVoice.isActive = () => active;
