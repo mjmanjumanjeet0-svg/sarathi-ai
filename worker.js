@@ -676,6 +676,7 @@ export default {
 - केवल एक पंक्ति में जवाब मत समेटो जब सवाल में विस्तार, तुलना या समाधान माँगा गया हो। उपयोगी उदाहरण दो, लेकिन अनावश्यक दोहराव न करो।
 - उपयोगकर्ता पहले ही जो जानकारी दे चुका है, वह दोबारा मत पूछो।
 - जहाँ अनिश्चितता हो, साफ बताओ; अनुमान को तथ्य मत बनाओ और नकली स्रोत/लिंक मत दो। अस्पष्ट या गोलमोल शब्दों से बचो; आसान और सटीक हिंदी में जवाब दो।\n- किसी व्यक्ति का पूरा नाम, जन्म-मृत्यु तिथि, पद, घटना या ऐतिहासिक वर्ष लिखने से पहले संदर्भ जाँचो; नाम/तिथि याद न हो तो गढ़ो मत। उदाहरण: महात्मा गांधी का नाम मोहनदास करमचंद गांधी है, मोहम्मद करमचंद नहीं।\n- शिक्षा/परीक्षा की सहायता केवल RTO तक सीमित नहीं है। स्कूल, कॉलेज, स्नातक, स्नातकोत्तर और प्रतियोगी परीक्षाओं के विषयों में भी मदद करो।\n- उत्तर अधूरा, केवल शीर्षक, खाली सूची, टूटे Markdown या असंबंधित सामग्री के रूप में कभी मत भेजो। सवाल समझ न आए तो एक छोटा स्पष्टीकरण पूछो।
+- यदि एक संदेश में कई क्रमांकित सवाल, सूची या कई अलग-अलग काम दिए हों, तो हर सवाल को मूल क्रम में अलग-अलग पहचानो और किसी शुरुआती सवाल को छोड़ो मत। जितने सवाल पूछे गए हैं, उतने ही क्रमांकित उत्तर दो। बहुत सारे सवाल हों तो हर उत्तर संक्षिप्त रखो, लेकिन सूची के अंत तक पहुँचो; उत्तर सीमा के कारण सबका उत्तर न दे सको तो साफ बताओ कि कहाँ तक पूरा हुआ और शेष के लिए अगला भाग माँगो।
 - सामान्य स्थायी ज्ञान के आसान सवालों का उत्तर बिना वेब खोज के दो। यदि सवाल ताज़ा, बदलती, स्थानीय, आधिकारिक या तथ्य-जाँच माँगता हो, तो उपलब्ध इंटरनेट खोज अपने-आप करो; केवल उपयोगकर्ता के वेब बटन पर निर्भर मत रहो।
 - यदि खोज के परिणाम पर्याप्त, विश्वसनीय या एक-दूसरे से मेल खाते न हों, तो स्पष्ट कहो कि पुष्टि नहीं हो पाई। खोज न कर पाने पर भी इंटरनेट पर खोज लेने का दावा मत करो।
 - वर्तमान सोने/चाँदी के भाव, शेयर, मौसम, ट्रेन स्थिति या अन्य बदलती जानकारी पूछी जाए और इंटरनेट खोज के परिणाम मिले हों, तो केवल उन्हीं परिणामों में स्पष्ट रूप से दिए गए ताज़ा आँकड़े बताओ। स्रोत में तारीख/दर स्पष्ट न हो या परिणाम आपस में न मिलें, तो कोई संख्या या तारीख अनुमान से मत बनाओ; साफ कहो कि उपलब्ध स्रोत से आज का सही भाव सत्यापित नहीं हो पाया।
@@ -718,19 +719,27 @@ export default {
 आज की भारतीय तारीख ${dateTime.date} है।
 `;
 
-    // Enforce a strict history budget so long chats cannot trigger provider HTTP 413.
+    // Preserve the complete latest user request. Older history is budgeted separately:
+    // truncating the START of the latest message silently drops numbered questions.
     const validMessages = messages
       .filter(m => m && ["user", "assistant"].includes(m.role) && typeof m.content === "string")
       .slice(-8);
+    const latestUserIndex = validMessages.map(m => m.role).lastIndexOf("user");
     const safeMessages = [];
-    let historyBudget = 6000;
-    for (let i = validMessages.length - 1; i >= 0 && historyBudget > 0; i--) {
-      const m = validMessages[i];
-      const limit = m.role === "user" ? 1800 : 1000;
-      const content = m.content.trim().slice(-Math.min(limit, historyBudget));
-      if (!content) continue;
-      safeMessages.unshift({ role: m.role, content });
-      historyBudget -= content.length;
+    if (latestUserIndex >= 0) {
+      const latestUserText = validMessages[latestUserIndex].content.trim();
+      // userText is already validated against the 12,000-character request limit above.
+      const history = validMessages.slice(0, latestUserIndex);
+      let historyBudget = 4500;
+      const safeHistory = [];
+      for (let i = history.length - 1; i >= 0 && historyBudget > 0; i--) {
+        const m = history[i];
+        const content = m.content.trim().slice(-Math.min(700, historyBudget));
+        if (!content) continue;
+        safeHistory.unshift({ role: m.role, content });
+        historyBudget -= content.length;
+      }
+      safeMessages.push(...safeHistory, { role: "user", content: latestUserText });
     }
 
     if (searchResults.length) {
@@ -758,7 +767,7 @@ export default {
             ...safeMessages,
           ],
           temperature: 0.3,
-          max_tokens: 3200,
+          max_tokens: 6000,
         }),
       });
     } catch {
