@@ -102,13 +102,26 @@ async function loginWorker() {
     throw new Error("लॉगिन पासवर्ड जरूरी है।");
   }
 
-  const response = await fetch(getWorkerUrl() + "/api/login", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ password })
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  let response;
+  try {
+    response = await fetch(getWorkerUrl() + "/api/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ password }),
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error("लॉगिन सर्वर से जवाब आने में 20 सेकंड से अधिक लगे। इंटरनेट जाँचकर फिर कोशिश करें।");
+    }
+    throw new Error("लॉगिन सर्वर से संपर्क नहीं हो पाया। इंटरनेट कनेक्शन जाँचें।");
+  } finally {
+    clearTimeout(timeout);
+  }
 
   let data;
 
