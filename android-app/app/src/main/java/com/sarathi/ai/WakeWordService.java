@@ -508,9 +508,9 @@ public class WakeWordService extends Service {
                 || compact.equals("ओकेसारथी")
                 || compact.equals("बायसारथी");
         if (quietCommand) {
-            // Use the same guarded cleanup for spoken and UI-triggered exits.
-            // This also blocks duplicate partial/final recognition callbacks.
-            endActiveConversation();
+            // This callback belongs to the wake-word recognizer, not the
+            // full conversation recognizer. Ignore exit phrases while idle;
+            // restarting the wake recognizer here would create duplicate listeners.
             return;
         }
         boolean hindiWake = normalized.equals("सारथी")
