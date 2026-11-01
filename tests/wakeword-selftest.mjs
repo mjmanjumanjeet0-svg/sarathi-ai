@@ -65,7 +65,7 @@ assert.ok(
 
 
 const loginStart = app.indexOf("async function loginWorker()");
-const loginEnd = app.indexOf("\nfunction getAuthToken", loginStart);
+const loginEnd = app.indexOf("\nasync function getAuthToken", loginStart);
 assert.ok(loginStart >= 0 && loginEnd > loginStart, "Worker login function must exist");
 const loginCode = app.slice(loginStart, loginEnd);
 assert.ok(
