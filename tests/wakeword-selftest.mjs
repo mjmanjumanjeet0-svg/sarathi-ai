@@ -41,6 +41,14 @@ assert.ok(
   "Ending conversation from the app must tear down the continuous recognizer and restart wake-word listening"
 );
 
+const quietWakeStart = wake.indexOf("if (quietCommand)");
+const quietWakeEnd = wake.indexOf("\n        boolean hindiWake", quietWakeStart);
+assert.ok(quietWakeStart >= 0 && quietWakeEnd > quietWakeStart, "Wake recognizer stop-phrase branch must exist");
+assert.ok(
+  wake.slice(quietWakeStart, quietWakeEnd).includes("endConversationAndResumeWakeWord();"),
+  "Wake-recognizer stop phrases must use the shared cleanup path, including notification cancellation"
+);
+
 
 const trustedUrlStart = activity.indexOf("private boolean isTrustedAppUrl(Uri uri)");
 const trustedUrlEnd = activity.indexOf("\n    private void handleWakeCommandIntent", trustedUrlStart);
