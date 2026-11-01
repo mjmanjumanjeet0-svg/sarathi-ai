@@ -119,6 +119,18 @@ assert.ok(
 );
 
 
+const stopWakeBridgeStart = activity.indexOf("public void stopWakeWord()");
+const stopWakeBridgeEnd = activity.indexOf("\n        @JavascriptInterface", stopWakeBridgeStart);
+assert.ok(stopWakeBridgeStart >= 0 && stopWakeBridgeEnd > stopWakeBridgeStart, "Native stop-wake bridge must exist");
+const stopWakeBridge = activity.slice(stopWakeBridgeStart, stopWakeBridgeEnd);
+assert.ok(
+  stopWakeBridge.includes("runOnUiThread") &&
+  stopWakeBridge.includes("try {") &&
+  stopWakeBridge.includes("catch (Exception error)") &&
+  stopWakeBridge.includes("notifyVoice(\"onError\""),
+  "Stopping the foreground microphone service must handle Android background/service errors without crashing the bridge"
+);
+
 const serviceStart = wakeService.indexOf("public int onStartCommand(Intent intent, int flags, int startId)");
 const serviceEnd = wakeService.indexOf("\n    private void createChannel()", serviceStart);
 assert.ok(serviceStart >= 0 && serviceEnd > serviceStart, "Wake-word service command handler must exist");
