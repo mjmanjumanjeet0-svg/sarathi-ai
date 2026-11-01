@@ -229,7 +229,7 @@ async function searchInternet(query, env) {
       .slice(0, isNewsQuery ? 8 : 5)
       .map(item => {
         let publisher = "वेबसाइट";
-        try { publisher = new URL(item.url).hostname.replace(/^www\\./i, ""); } catch {}
+        try { publisher = new URL(item.url).hostname.replace(/^www\./i, ""); } catch {}
         const highlights = Array.isArray(item.highlights) ? item.highlights.join(" ") : "";
         return {
           title: cleanText(item.title).slice(0, 300),
@@ -348,8 +348,8 @@ function filterRelevantSearchResults(query, results) {
   }
 
   // Combined gold + silver queries must retain results for both metals.
-  if (/(सोने|सोना|gold|22\\s*k|24\\s*k|bullion)/i.test(q) && /(चांदी|चाँदी|silver)/i.test(q)) {
-    const preciousMetal = /(gold|सोना|सोने|sone|bullion|22\\s*k|24\\s*k|gold[- ]?rate|gold[- ]?price|sona|silver|चांदी|चाँदी|silver[- ]?(rate|price)|चांदी[- ]?(भाव|कीमत))/i;
+  if (/(सोने|सोना|gold|22\s*k|24\s*k|bullion)/i.test(q) && /(चांदी|चाँदी|silver)/i.test(q)) {
+    const preciousMetal = /(gold|सोना|सोने|sone|bullion|22\s*k|24\s*k|gold[- ]?rate|gold[- ]?price|sona|silver|चांदी|चाँदी|silver[- ]?(rate|price)|चांदी[- ]?(भाव|कीमत))/i;
     return list.filter(item => preciousMetal.test(textOf(item)));
   }
 
@@ -437,7 +437,7 @@ function buildSearchContext(results, query = "") {
   if (!results.length) return "";
 
   const isNewsQuery = /(खबर|समाचार|news|breaking|latest|ताज़ा|ताजा)/i.test(query);
-  const isPreciousMetalQuery = /(सोने|सोना|gold|चांदी|चाँदी|silver|bullion|22\\s*k|24\\s*k)/i.test(query);
+  const isPreciousMetalQuery = /(सोने|सोना|gold|चांदी|चाँदी|silver|bullion|22\s*k|24\s*k)/i.test(query);
   const newsInstruction = isNewsQuery
     ? "\\n\\nसमाचार के सख्त निर्देश: एक ही घटना को केवल एक बार बताओ; समान रिपोर्ट को जोड़ो, लेकिन अलग घटनाओं को मत मिलाओ। प्रकाशित तारीख केवल प्रकाशित फ़ील्ड से लो; घटना की तारीख केवल खबर के पाठ से लो। तारीख उपलब्ध न हो तो अनुमान मत लगाओ। आज की खबरों में आज या पिछले 48 घंटों में प्रकाशित खबरों को प्राथमिकता दो। एक ही एजेंसी की कॉपी को स्वतंत्र पुष्टि मत मानो। राजनीतिक आरोपों को आरोप के रूप में ही लिखो। उपलब्ध परिणामों में से अधिकतम 8 अलग और महत्वपूर्ण खबरें चुनो। हर खबर में 2–4 छोटे वाक्यों का स्वाभाविक हिंदी विवरण, प्रकाशक और प्रकाशित तारीख दो। हिंदी सवाल पर पूरा उत्तर सहज देवनागरी हिंदी में दो; अंग्रेज़ी शीर्षक, अंग्रेज़ी लेख का अंश या मेटाडेटा ज्यों-का-त्यों बिल्कुल मत छोड़ो। अंग्रेज़ी स्रोत को समझकर अपने शब्दों में हिंदी में सार लिखो। कम से कम 2 उपयोगी परिणाम न हों तो खबरों की संख्या बढ़ाकर मत दिखाओ। URL मत लिखो और कोई तथ्य मत गढ़ो।"
     : "";
@@ -662,7 +662,7 @@ export default {
         const seenPublishers = new Set();
         searchResults = searchResults.filter(item => {
           let publisher = String(item.publisher || "").toLowerCase();
-          try { publisher = new URL(item.url).hostname.toLowerCase().replace(/^www\\./, ""); } catch {}
+          try { publisher = new URL(item.url).hostname.toLowerCase().replace(/^www\./, ""); } catch {}
           if (!publisher || seenPublishers.has(publisher)) return false;
           seenPublishers.add(publisher);
           return true;
