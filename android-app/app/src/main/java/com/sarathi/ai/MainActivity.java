@@ -24,6 +24,9 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebChromeClient;
 import android.webkit.JsResult;
+import android.webkit.JsPromptResult;
+import android.widget.EditText;
+import android.text.InputType;
 import android.webkit.ValueCallback;
 import android.webkit.WebResourceRequest;
 
@@ -151,6 +154,31 @@ public class MainActivity extends Activity {
 
         webView.addJavascriptInterface(new SarathiBridge(), "SarathiNative");
         webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onJsPrompt(WebView view, String url, String message,
+                    String defaultValue, JsPromptResult result) {
+                Uri pageUri = Uri.parse(url == null ? "" : url);
+                if (!"https".equalsIgnoreCase(pageUri.getScheme())
+                        || !APP_HOST.equalsIgnoreCase(pageUri.getHost())) {
+                    result.cancel();
+                    return true;
+                }
+                EditText passwordInput = new EditText(MainActivity.this);
+                passwordInput.setSingleLine(true);
+                passwordInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+                passwordInput.setHint("लॉगिन पासवर्ड");
+                new android.app.AlertDialog.Builder(MainActivity.this)
+                        .setTitle("सारथी AI लॉगिन")
+                        .setMessage(message == null ? "अपना लॉगिन पासवर्ड लिखें:" : message)
+                        .setView(passwordInput)
+                        .setPositiveButton("लॉगिन", (dialog, which) ->
+                                result.confirm(passwordInput.getText().toString()))
+                        .setNegativeButton("रद्द करें", (dialog, which) -> result.cancel())
+                        .setOnCancelListener(dialog -> result.cancel())
+                        .show();
+                return true;
+            }
+
             @Override
             public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
                 new android.app.AlertDialog.Builder(MainActivity.this)
