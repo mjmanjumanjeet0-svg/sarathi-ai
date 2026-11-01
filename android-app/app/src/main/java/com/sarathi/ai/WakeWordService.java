@@ -589,29 +589,9 @@ public class WakeWordService extends Service {
         String compact = normalized.replaceAll("[^\\p{L}\\p{N}]", "");
         boolean quietCommand = isConversationEndPhrase(recognized);
         if (quietCommand) {
-            // End the active conversation and return to the low-power wake phrase listener.
-            conversationMode = false;
-            awaitingCommand = false;
-            if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
-            commandTimeout = null;
-            updateStatus("बातचीत बंद। दोबारा शुरू करने के लिए ‘हेलो सारथी’ कहें।");
-            if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
-            worker.execute(() -> {
-                try {
-                    if (speechService != null) {
-                        speechService.cancel();
-                        speechService.shutdown();
-                        speechService = null;
-                    }
-                    if (recognizer != null) {
-                        recognizer.close();
-                        recognizer = null;
-                    }
-                    if (running) startWakeRecognition();
-                } catch (Exception error) {
-                    scheduleListeningRetry("वेक-वर्ड सुनना फिर शुरू नहीं हो सका");
-                }
-            });
+            // Use the same teardown path as app-triggered and conversation-mode
+            // stop phrases so flags, timeout, and the secondary notification stay in sync.
+            endConversationAndResumeWakeWord();
             return;
         }
         boolean hindiWake = normalized.equals("सारथी")
