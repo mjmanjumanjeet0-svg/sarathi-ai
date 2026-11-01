@@ -119,7 +119,13 @@ public class WakeWordService extends Service {
             stopSelf();
             return START_NOT_STICKY;
         }
-        if (intent == null && !prefs.getBoolean("enabled", false)) {
+        if (intent == null) {
+            // Android may recreate a sticky microphone foreground service after
+            // process death while the app is in the background. Android 14+
+            // restricts starting microphone FGS without a visible activity.
+            // Do not attempt a forbidden background restart; require the user
+            // to reopen Sarathi and explicitly enable wake listening again.
+            prefs.edit().putBoolean("enabled", false).apply();
             stopSelf();
             return START_NOT_STICKY;
         }
