@@ -167,7 +167,7 @@ function cleanText(value) {
 function validHttpUrl(value) {
   try {
     const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:";
+    return url.protocol === "https:" && !url.username && !url.password && !url.port;
   } catch {
     return false;
   }
