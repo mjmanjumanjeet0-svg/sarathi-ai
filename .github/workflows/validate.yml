@@ -43,6 +43,7 @@ jobs:
           node --check app.js
           node --check voice.js
           node --input-type=module --check < worker.js
+          node tests/voice-selftest.mjs
 
       - name: Check required web files
         run: |
