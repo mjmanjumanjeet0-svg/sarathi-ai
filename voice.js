@@ -72,14 +72,16 @@
   }
 
   function start() {
+    // Prefer Android's native recognizer inside the app. WebView browser
+    // recognition support varies by device and can silently route to a provider.
+    if (window.SarathiNative?.startListening) {
+      active = true;
+      nativeMode = true;
+      show(true, "बोलिए। Android की आवाज़ पहचान सुविधा आपकी बात लिखेगी।");
+      window.SarathiNative.startListening();
+      return;
+    }
     if (!Recognition) {
-      if (window.SarathiNative?.startListening) {
-        active = true;
-        nativeMode = true;
-        show(true, "बोलिए। Android की आवाज़ पहचान सुविधा आपकी बात लिखेगी।");
-        window.SarathiNative.startListening();
-        return;
-      }
       const status = $("status");
       if (status) status.textContent = "माइक इस ब्राउज़र में उपलब्ध नहीं है। Chrome में खोलकर माइक्रोफोन अनुमति दें।";
       return;
