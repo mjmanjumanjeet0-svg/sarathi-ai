@@ -238,7 +238,21 @@ public class MainActivity extends Activity {
                 if ("https".equalsIgnoreCase(scheme) && APP_HOST.equalsIgnoreCase(host)) {
                     return false;
                 }
-                // बाहरी लिंक से दूसरे ऐप/ब्राउज़र को अपने-आप नहीं खोलते।
+                // केवल उपयोगकर्ता के टैप किए हुए सामान्य वेब लिंक बाहरी ब्राउज़र में खोलें।
+                // javascript:, file:, intent: और अन्य schemes हमेशा रोकें।
+                if (request.hasGesture()
+                        && ("https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme))) {
+                    try {
+                        Intent external = new Intent(Intent.ACTION_VIEW, uri);
+                        if (external.resolveActivity(getPackageManager()) != null) {
+                            startActivity(external);
+                        } else {
+                            Toast.makeText(MainActivity.this, "लिंक खोलने के लिए ब्राउज़र उपलब्ध नहीं है।", Toast.LENGTH_SHORT).show();
+                        }
+                    } catch (Exception error) {
+                        Toast.makeText(MainActivity.this, "लिंक नहीं खुल सका।", Toast.LENGTH_SHORT).show();
+                    }
+                }
                 return true;
             }
         });
