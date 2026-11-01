@@ -193,6 +193,17 @@ await test("missing Exa key never fabricates current web results", async () => {
   assert.equal(calls.length, before, "missing search credentials must not call external providers");
   env.EXA_API_KEY = previousKey;
 });
+await test("gold-rate page enrichment only fetches public HTTPS URLs without following redirects", async () => {
+  const before = calls.length;
+  await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज सोने का भाव बताओ" }] }, token);
+  const pageFetches = calls.slice(before).filter(x => !x.url.includes("api.exa.ai/search") && !x.url.includes("api.groq.com"));
+  assert.ok(pageFetches.length > 0, "gold-rate results should be eligible for page enrichment");
+  for (const call of pageFetches) {
+    assert.equal(new URL(call.url).protocol, "https:");
+    assert.equal(call.init.redirect, "manual", "untrusted redirects must not be followed");
+  }
+});
+
 await test("Exa rate-limit is handled without crashing the Worker", async () => {
   exaMode = "429";
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज सोने का भाव बताओ" }] }, token);
