@@ -632,7 +632,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void openAppPackage(String requestedPackage) {
             final String packageName = requestedPackage == null ? "" : requestedPackage.trim();
-            if (!packageName.matches("[A-Za-z0-9_]+(\\\\.[A-Za-z0-9_]+)+")) {
+            if (!packageName.matches("[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)+")) {
                 notifyVoice("onError", "ऐप का नाम मान्य नहीं है।");
                 return;
             }
