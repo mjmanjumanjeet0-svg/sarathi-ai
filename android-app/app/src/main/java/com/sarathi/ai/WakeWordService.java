@@ -44,7 +44,7 @@ public class WakeWordService extends Service {
     private static final int NOTIFICATION_ID = 771;
     private static final String MODEL_NAME = "vosk-model-small-hi-0.22";
     private static final String MODEL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip";
-    private static final String WAKE_GRAMMAR = "[\"सारथी\",\"सारथी जी\",\"हेलो सारथी\",\"हैलो सारथी\",\"नमस्ते सारथी\",\"हे सारथी\",\"ठीक है सारथी\",\"अच्छा है सारथी\",\"ओके सारथी\",\"बाय सारथी\",\"सरथी\",\"सारथि\",\"hello sarathi\",\"helo sarathi\",\"hey sarathi\",\"hi sarathi\",\"namaste sarathi\",\"sarathi\",\"sarthi\",\"bye sarathi\",\"ok sarathi\",\"okay sarathi\",\"[unk]\"]";
+    private static final String WAKE_GRAMMAR = "[\"सारथी\",\"सारथी जी\",\"हेलो सारथी\",\"हैलो सारथी\",\"नमस्ते सारथी\",\"हे सारथी\",\"ठीक है सारथी\",\"अच्छा है सारथी\",\"ओके सारथी\",\"बाय सारथी\",\"बस सारथी\",\"धन्यवाद सारथी\",\"अलविदा सारथी\",\"ठीक है बाय\",\"अच्छा है बाय\",\"सरथी\",\"सारथि\",\"hello sarathi\",\"helo sarathi\",\"hey sarathi\",\"hi sarathi\",\"namaste sarathi\",\"sarathi\",\"sarthi\",\"bye sarathi\",\"ok sarathi\",\"okay sarathi\",\"[unk]\"]";
     private final Handler handler = new Handler(Looper.getMainLooper());
     private ExecutorService worker = Executors.newSingleThreadExecutor();
     private volatile boolean running = false;
@@ -298,12 +298,22 @@ public class WakeWordService extends Service {
                 || normalized.equals("अच्छा है सारथी")
                 || normalized.equals("ओके सारथी")
                 || normalized.equals("बाय सारथी")
+                || normalized.equals("बस सारथी")
+                || normalized.equals("धन्यवाद सारथी")
+                || normalized.equals("अलविदा सारथी")
+                || normalized.equals("ठीक है बाय")
+                || normalized.equals("अच्छा है बाय")
                 || normalized.equals("ok sarathi")
                 || normalized.equals("okay sarathi")
                 || normalized.equals("bye sarathi")
                 || compact.equals("ठीकहैसारथी")
                 || compact.equals("ओकेसारथी")
-                || compact.equals("बायसारथी");
+                || compact.equals("बायसारथी")
+                || compact.equals("बससारथी")
+                || compact.equals("धन्यवादसारथी")
+                || compact.equals("अलविदासारथी")
+                || compact.equals("ठीकहैबाय")
+                || compact.equals("अच्छाहैबाय");
     }
 
     private void endConversationAndResumeWakeWord() {
@@ -496,15 +506,7 @@ public class WakeWordService extends Service {
                 .replace("सरथी", "सारथी")
                 ;
         String compact = normalized.replaceAll("[^\\p{L}\\p{N}]", "");
-        boolean quietCommand = normalized.equals("ठीक है सारथी")
-                || normalized.equals("अच्छा है सारथी")
-                || normalized.equals("ओके सारथी")
-                || normalized.equals("बाय सारथी")
-                || normalized.equals("ok sarathi")
-                || normalized.equals("okay sarathi")
-                || compact.equals("ठीकहैसारथी")
-                || compact.equals("ओकेसारथी")
-                || compact.equals("बायसारथी");
+        boolean quietCommand = isConversationEndPhrase(recognized);
         if (quietCommand) {
             // End the active conversation and return to the low-power wake phrase listener.
             conversationMode = false;
