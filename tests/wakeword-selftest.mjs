@@ -101,7 +101,7 @@ assert.ok(
 
 
 const sendStart = app.indexOf("async function sendMessage(text)");
-const sendEnd = app.indexOf("\\n/* ========================================\\n   SETTINGS", sendStart);
+const sendEnd = app.indexOf("\n/* ========================================\n   SETTINGS", sendStart);
 assert.ok(sendStart >= 0 && sendEnd > sendStart, "Send message function must exist");
 const sendCode = app.slice(sendStart, sendEnd);
 assert.ok(
@@ -120,7 +120,7 @@ assert.ok(
 
 
 const serviceStart = wakeService.indexOf("public int onStartCommand(Intent intent, int flags, int startId)");
-const serviceEnd = wakeService.indexOf("\\n    private void createChannel()", serviceStart);
+const serviceEnd = wakeService.indexOf("\n    private void createChannel()", serviceStart);
 assert.ok(serviceStart >= 0 && serviceEnd > serviceStart, "Wake-word service command handler must exist");
 const serviceCommandCode = wakeService.slice(serviceStart, serviceEnd);
 assert.ok(
