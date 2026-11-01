@@ -654,6 +654,8 @@ public class MainActivity extends Activity {
                 return new Intent(android.provider.Settings.ACTION_SETTINGS);
             case "phone":
                 return new Intent(Intent.ACTION_DIAL);
+            case "camera":
+                return new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
             default:
                 return null;
         }
