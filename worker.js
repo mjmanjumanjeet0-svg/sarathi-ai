@@ -251,9 +251,26 @@ async function searchInternet(query, env) {
     clearTimeout(timeout);
   }
 }
+function safePublicHttpsFetchUrl(value) {
+  try {
+    const url = new URL(value);
+    const hostname = url.hostname.toLowerCase().replace(/\\.$/, "");
+    if (url.protocol !== "https:" || url.username || url.password) return false;
+    if (url.port && url.port !== "443") return false;
+    // Do not fetch IP literals or local/private-style hostnames from search results.
+    if (!hostname.includes(".") || hostname.startsWith("[") ||
+        /^(?:localhost|.*\\.localhost|.*\\.local|.*\\.internal|.*\\.test)$/i.test(hostname)) return false;
+    if (/^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(hostname) || hostname.includes(":")) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function enrichGoldRateResults(results) {
   const candidates = (Array.isArray(results) ? results : []).slice(0, 6);
   return await Promise.all(candidates.map(async item => {
+    if (!item || !safePublicHttpsFetchUrl(item.url)) return item;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 7000);
     try {
@@ -263,7 +280,7 @@ async function enrichGoldRateResults(results) {
           "User-Agent": "Mozilla/5.0 (compatible; SarathiAI/1.0)"
         },
         signal: controller.signal,
-        redirect: "follow"
+        redirect: "manual"
       });
       if (!response.ok) return item;
       const html = (await response.text()).slice(0, 1200000);
