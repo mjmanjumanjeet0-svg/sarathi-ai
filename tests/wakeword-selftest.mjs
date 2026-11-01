@@ -177,6 +177,13 @@ assert.ok(
   serviceCommandCode.includes("return START_NOT_STICKY;"),
   "Microphone foreground service must not attempt a sticky background restart after process death"
 );
+assert.ok(
+  serviceCommandCode.includes("catch (SecurityException error)") &&
+  serviceCommandCode.includes("stopForeground(true);") &&
+  serviceCommandCode.includes("stopSelf();"),
+  "Foreground promotion must fail closed if microphone permission is revoked during service startup"
+);
+
 
 
 assert.ok(
