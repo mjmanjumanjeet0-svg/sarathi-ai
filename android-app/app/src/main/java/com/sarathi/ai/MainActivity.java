@@ -59,6 +59,7 @@ public class MainActivity extends Activity {
     private boolean pendingWakeStart = false;
     private boolean pageLoaded = false;
     private boolean appInForeground = false;
+    private boolean activityDestroyed = false;
     private boolean wakeReceiverRegistered = false;
     private final BroadcastReceiver wakeDetectedReceiver = new BroadcastReceiver() {
         @Override public void onReceive(Context context, Intent intent) {
@@ -340,6 +341,10 @@ public class MainActivity extends Activity {
     }
 
     private void resumeWakeWordAfterCommand() {
+        // Never start a new Service from callbacks arriving after Activity teardown.
+        // If speech is interrupted by teardown, WakeWordService's pause timeout
+        // safely resumes listening on its own.
+        if (activityDestroyed) return;
         Intent service = new Intent(this, WakeWordService.class);
         service.setAction(WakeWordService.ACTION_RESUME);
         try { startService(service); } catch (Exception ignored) {}
@@ -828,6 +833,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        activityDestroyed = true;
         appInForeground = false;
         if (wakeReceiverRegistered) {
             try { unregisterReceiver(wakeDetectedReceiver); } catch (Exception ignored) {}
@@ -843,7 +849,6 @@ public class MainActivity extends Activity {
             textToSpeech.shutdown();
             textToSpeech = null;
         }
-        resumeWakeWordAfterCommand();
         if (filePathCallback != null) {
             filePathCallback.onReceiveValue(null);
             filePathCallback = null;
