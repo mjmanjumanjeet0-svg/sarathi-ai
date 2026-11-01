@@ -24,8 +24,12 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebChromeClient;
 import android.webkit.JsResult;
+import android.webkit.JsPromptResult;
 import android.webkit.ValueCallback;
 import android.webkit.WebResourceRequest;
+import android.text.InputType;
+import android.widget.EditText;
+import android.widget.Toast;
 
 import org.json.JSONObject;
 
@@ -39,6 +43,8 @@ public class MainActivity extends Activity {
     public static final String ACTION_WAKE_RESULT = "com.sarathi.ai.WAKE_RESULT";
     public static final String EXTRA_WAKE_TEXT = "wake_text";
     private static final int REQUEST_RECORD_AUDIO = 1201;
+    private static final int REQUEST_POST_NOTIFICATIONS = 1203;
+    private boolean pendingNotificationWakeStart = false;
     private static final String APP_HOST = "mjmanjumanjeet0-svg.github.io";
     private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
@@ -53,6 +59,7 @@ public class MainActivity extends Activity {
     private boolean pendingWakeStart = false;
     private boolean pageLoaded = false;
     private boolean appInForeground = false;
+    private boolean activityDestroyed = false;
     private boolean wakeReceiverRegistered = false;
     private final BroadcastReceiver wakeDetectedReceiver = new BroadcastReceiver() {
         @Override public void onReceive(Context context, Intent intent) {
@@ -143,14 +150,59 @@ public class MainActivity extends Activity {
                 }
             } else {
                 ttsReady = false;
+                pendingSpeechText = null;
+                notifyVoice("onNativeSpeechDone", "");
                 notifyVoice("onError", "फ़ोन की Text-to-Speech सेवा शुरू नहीं हो सकी। Android में टेक्स्ट-टू-स्पीच इंजन जाँचें।");
+                resumeWakeWordAfterCommand();
             }
         });
 
         webView.addJavascriptInterface(new SarathiBridge(), "SarathiNative");
         webView.setWebChromeClient(new WebChromeClient() {
             @Override
+            public boolean onJsPrompt(WebView view, String url, String message,
+                    String defaultValue, JsPromptResult result) {
+                // Only the trusted Sarathi Pages origin may open the native password dialog.
+                if (!isTrustedAppUrl(Uri.parse(url == null ? "" : url))) {
+                    result.cancel();
+                    return true;
+                }
+                // app.js uses window.prompt() to collect the Worker login password.
+                // Handle it explicitly because WebView does not guarantee a prompt
+                // dialog unless the host WebChromeClient implements this callback.
+                EditText input = new EditText(MainActivity.this);
+                input.setSingleLine(true);
+                input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+                input.setText(defaultValue == null ? "" : defaultValue);
+                input.setSelection(input.length());
+
+                android.app.AlertDialog dialog = new android.app.AlertDialog.Builder(MainActivity.this)
+                        .setTitle("सारथी AI लॉगिन")
+                        .setMessage(message == null ? "अपना लॉगिन पासवर्ड लिखें:" : message)
+                        .setView(input)
+                        .setPositiveButton("लॉगिन", (d, which) -> result.confirm(input.getText().toString()))
+                        .setNegativeButton("रद्द करें", (d, which) -> result.cancel())
+                        .create();
+                dialog.setOnCancelListener(d -> result.cancel());
+                dialog.setOnShowListener(d -> {
+                    input.requestFocus();
+                    input.post(() -> {
+                        android.view.Window window = dialog.getWindow();
+                        if (window != null) {
+                            window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+                        }
+                    });
+                });
+                dialog.show();
+                return true;
+            }
+
+            @Override
             public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
+                if (!isTrustedAppUrl(Uri.parse(url == null ? "" : url))) {
+                    result.cancel();
+                    return true;
+                }
                 new android.app.AlertDialog.Builder(MainActivity.this)
                         .setTitle("सारथी AI की अनुमति")
                         .setMessage(message == null ? "क्या यह कार्रवाई करनी है?" : message)
@@ -186,6 +238,19 @@ public class MainActivity extends Activity {
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
+            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                // The JavaScript bridge is privileged. Never allow a redirect or
+                // unexpected top-level navigation to load an untrusted origin.
+                Uri uri = Uri.parse(url == null ? "" : url);
+                if (!isTrustedAppUrl(uri)) {
+                    view.stopLoading();
+                    Toast.makeText(MainActivity.this, "सुरक्षा के कारण बाहरी पेज ऐप के अंदर नहीं खोला गया।", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                super.onPageStarted(view, url, favicon);
+            }
+
+            @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 pageLoaded = true;
@@ -196,17 +261,44 @@ public class MainActivity extends Activity {
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
                 String scheme = uri.getScheme();
-                String host = uri.getHost();
-                if ("https".equalsIgnoreCase(scheme) && APP_HOST.equalsIgnoreCase(host)) {
+                if (isTrustedAppUrl(uri)) {
                     return false;
                 }
-                // बाहरी लिंक से दूसरे ऐप/ब्राउज़र को अपने-आप नहीं खोलते।
+                // केवल उपयोगकर्ता के टैप किए हुए सामान्य वेब लिंक बाहरी ब्राउज़र में खोलें।
+                // javascript:, file:, intent: और अन्य schemes हमेशा रोकें।
+                if (request.hasGesture()
+                        && ("https".equalsIgnoreCase(scheme) || "http".equalsIgnoreCase(scheme))) {
+                    try {
+                        Intent external = new Intent(Intent.ACTION_VIEW, uri);
+                        if (external.resolveActivity(getPackageManager()) != null) {
+                            startActivity(external);
+                        } else {
+                            Toast.makeText(MainActivity.this, "लिंक खोलने के लिए ब्राउज़र उपलब्ध नहीं है।", Toast.LENGTH_SHORT).show();
+                        }
+                    } catch (Exception error) {
+                        Toast.makeText(MainActivity.this, "लिंक नहीं खुल सका।", Toast.LENGTH_SHORT).show();
+                    }
+                }
                 return true;
             }
         });
 
         webView.loadUrl("https://" + APP_HOST + "/sarathi-ai/");
         handleWakeCommandIntent(getIntent());
+    }
+
+    private boolean isTrustedAppUrl(Uri uri) {
+        if (uri == null
+                || !"https".equalsIgnoreCase(uri.getScheme())
+                || !APP_HOST.equalsIgnoreCase(uri.getHost())
+                || (uri.getPort() != -1 && uri.getPort() != 443)
+                || uri.getUserInfo() != null) {
+            return false;
+        }
+        String path = uri.getPath();
+        return "/sarathi-ai".equals(path)
+                || "/sarathi-ai/".equals(path)
+                || "/sarathi-ai/index.html".equals(path);
     }
 
     private void handleWakeCommandIntent(Intent intent) {
@@ -250,13 +342,28 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void requestNotificationPermissionOrStartWakeWord() {
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            pendingNotificationWakeStart = true;
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_POST_NOTIFICATIONS);
+            notifyVoice("onStatus", "वेक-वर्ड के लिए नोटिफिकेशन अनुमति पूछी जा रही है।");
+            return;
+        }
+        startWakeWordService();
+    }
+
     private void startWakeWordService() {
         try {
             Intent service = new Intent(this, WakeWordService.class);
             service.setAction(WakeWordService.ACTION_START);
             if (Build.VERSION.SDK_INT >= 26) startForegroundService(service);
             else startService(service);
-            notifyVoice("onStatus", "हिंदी ऑफ़लाइन मॉडल तैयार किया जा रहा है। पहली बार इंटरनेट से लगभग 42 MB डाउनलोड होगा; इसके बाद आवाज़ पहचान फ़ोन पर ही होगी।");
+            boolean notificationsAllowed = Build.VERSION.SDK_INT < 33
+                    || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+            notifyVoice("onStatus", notificationsAllowed
+                    ? "हिंदी ऑफ़लाइन मॉडल तैयार किया जा रहा है। पहली बार इंटरनेट से लगभग 42 MB डाउनलोड होगा; इसके बाद आवाज़ पहचान फ़ोन पर ही होगी।"
+                    : "वेक-वर्ड सेवा शुरू हो रही है। नोटिफिकेशन अनुमति बंद है, इसलिए सूचना से ऐप खोलने की सुविधा सीमित हो सकती है।");
         } catch (Exception error) {
             notifyVoice("onError", "वेक-वर्ड सेवा शुरू नहीं हो सकी।");
         }
@@ -269,6 +376,10 @@ public class MainActivity extends Activity {
     }
 
     private void resumeWakeWordAfterCommand() {
+        // Never start a new Service from callbacks arriving after Activity teardown.
+        // If speech is interrupted by teardown, WakeWordService's pause timeout
+        // safely resumes listening on its own.
+        if (activityDestroyed) return;
         Intent service = new Intent(this, WakeWordService.class);
         service.setAction(WakeWordService.ACTION_RESUME);
         try { startService(service); } catch (Exception ignored) {}
@@ -337,10 +448,12 @@ public class MainActivity extends Activity {
                 .setNegativeButton("रद्द करें", (dialog, which) -> {
                     wakeCommandSession = false;
                     notifyVoice("onError", "ऑनलाइन आवाज़ पहचान रद्द कर दी गई। आपकी आवाज़ नहीं सुनी गई।");
+                    notifyVoice("onNativeRecognitionDone", "");
                     resumeWakeWordAfterCommand();
                 })
                 .setOnCancelListener(dialog -> {
                     wakeCommandSession = false;
+                    notifyVoice("onNativeRecognitionDone", "");
                     resumeWakeWordAfterCommand();
                 })
                 .setCancelable(true)
@@ -388,6 +501,7 @@ public class MainActivity extends Activity {
             if (!SpeechRecognizer.isRecognitionAvailable(this)) {
                 wakeCommandSession = false;
                 notifyVoice("onError", "इस फ़ोन में कोई आवाज़ पहचान सेवा उपलब्ध नहीं मिली। Google ऐप या Speech Services इंस्टॉल/अपडेट करें और फिर कोशिश करें।");
+                notifyVoice("onNativeRecognitionDone", "");
                 resumeWakeWordAfterCommand();
                 return;
             }
@@ -404,10 +518,13 @@ public class MainActivity extends Activity {
                 speechRecognizer = SpeechRecognizer.createOnDeviceSpeechRecognizer(this);
             } else {
                 notifyVoice("onError", "ऑफ़लाइन आवाज़ पहचान उपलब्ध नहीं है।");
+                notifyVoice("onNativeRecognitionDone", "");
+                resumeWakeWordAfterCommand();
                 return;
             }
 
-            speechRecognizer.setRecognitionListener(new RecognitionListener() {
+            final SpeechRecognizer activeRecognizer = speechRecognizer;
+            activeRecognizer.setRecognitionListener(new RecognitionListener() {
                 @Override public void onReadyForSpeech(Bundle params) {
                     String languageLabel = "en-IN".equals(selectedSpeechLanguage)
                             ? "English" : ("auto".equals(selectedSpeechLanguage) ? "हिन्दी + English" : "हिन्दी");
@@ -422,11 +539,13 @@ public class MainActivity extends Activity {
                     notifyVoice("onStatus", "आवाज़ समझी जा रही है…");
                 }
                 @Override public void onError(int error) {
+                    if (speechRecognizer != activeRecognizer) return;
                     if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS
                             && !hasMicrophonePermission()) {
                         pendingListen = false;
                         wakeCommandSession = false;
                         notifyVoice("onError", "Android ने माइक्रोफ़ोन अनुमति नहीं दी। सेटिंग में Sarathi AI → माइक्रोफ़ोन → केवल ऐप इस्तेमाल करते समय अनुमति चुनें।");
+                        notifyVoice("onNativeRecognitionDone", "");
                         resumeWakeWordAfterCommand();
                     } else if (!useOnlineService) {
                         // If the offline provider fails (including provider-side error 9),
@@ -439,10 +558,12 @@ public class MainActivity extends Activity {
                     } else if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
                         wakeCommandSession = false;
                         notifyVoice("onError", "Sarathi AI की माइक्रोफ़ोन अनुमति चालू है, लेकिन फ़ोन की ऑनलाइन स्पीच सेवा ने अनुमति त्रुटि (कोड 9) दी। यह स्पीच सेवा/फ़ोन की समस्या है; आवाज़ इंटरनेट पर भेजने की अनुमति देने से भी यह सेवा ठीक होना निश्चित नहीं है।");
+                        notifyVoice("onNativeRecognitionDone", "");
                         resumeWakeWordAfterCommand();
                     } else {
                         wakeCommandSession = false;
                         notifyVoice("onError", getSpeechErrorMessage(error, true));
+                        notifyVoice("onNativeRecognitionDone", "");
                         resumeWakeWordAfterCommand();
                     }
                     if (speechRecognizer != null) {
@@ -451,6 +572,7 @@ public class MainActivity extends Activity {
                     }
                 }
                 @Override public void onResults(Bundle results) {
+                    if (speechRecognizer != activeRecognizer) return;
                     ArrayList<String> matches = results == null ? null
                         : results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                     if (matches != null && !matches.isEmpty()) {
@@ -464,6 +586,7 @@ public class MainActivity extends Activity {
                         wakeCommandSession = false;
                         notifyVoice("onError", "आवाज़ से शब्द समझ नहीं आए। फिर बोलकर देखें।");
                     }
+                    notifyVoice("onNativeRecognitionDone", "");
                     resumeWakeWordAfterCommand();
                 }
                 @Override public void onPartialResults(Bundle partialResults) {}
@@ -484,10 +607,11 @@ public class MainActivity extends Activity {
             }
             intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, !useOnlineService);
             intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);
-            speechRecognizer.startListening(intent);
+            activeRecognizer.startListening(intent);
         } catch (Exception error) {
             wakeCommandSession = false;
             notifyVoice("onError", "माइक्रोफ़ोन शुरू नहीं हो सका।");
+            notifyVoice("onNativeRecognitionDone", "");
             resumeWakeWordAfterCommand();
         }
     }
@@ -495,6 +619,15 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_POST_NOTIFICATIONS) {
+            boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            if (pendingNotificationWakeStart) {
+                pendingNotificationWakeStart = false;
+                startWakeWordService();
+                if (!granted) notifyVoice("onStatus", "नोटिफिकेशन अनुमति नहीं मिली। वेक-वर्ड सेवा चल सकती है, लेकिन लॉक स्क्रीन/सूचना से सारथी खोलना सीमित हो सकता है। ऐप खोलकर आदेश देख सकते हैं।");
+            }
+            return;
+        }
         if (requestCode == REQUEST_RECORD_AUDIO) {
             boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
             if (granted && pendingListen) {
@@ -502,26 +635,137 @@ public class MainActivity extends Activity {
                 beginListeningWithSelectedLanguage();
             } else if (granted && pendingWakeStart) {
                 pendingWakeStart = false;
-                startWakeWordService();
+                requestNotificationPermissionOrStartWakeWord();
             } else {
                 pendingListen = false;
                 pendingWakeStart = false;
                 wakeCommandSession = false;
                 notifyVoice("onError", "माइक्रोफ़ोन अनुमति नहीं मिली। अनुमति के बिना आवाज़ नहीं सुनी जाएगी।");
+                notifyVoice("onNativeRecognitionDone", "");
                 resumeWakeWordAfterCommand();
             }
         }
     }
 
+    private Intent getAllowedAppLaunchIntent(String appId) {
+        switch (appId == null ? "" : appId.trim().toLowerCase(Locale.ROOT)) {
+            case "youtube":
+                return getPackageManager().getLaunchIntentForPackage("com.google.android.youtube");
+            case "chrome":
+                return getPackageManager().getLaunchIntentForPackage("com.android.chrome");
+            case "chatgpt":
+                return getPackageManager().getLaunchIntentForPackage("com.openai.chatgpt");
+            case "whatsapp":
+                return getPackageManager().getLaunchIntentForPackage("com.whatsapp");
+            case "maps":
+                return getPackageManager().getLaunchIntentForPackage("com.google.android.apps.maps");
+            case "settings":
+                return new Intent(android.provider.Settings.ACTION_SETTINGS);
+            case "phone":
+                return new Intent(Intent.ACTION_DIAL);
+            case "camera":
+                return new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);
+            default:
+                return null;
+        }
+    }
+
+    private String normalizeAppLabel(CharSequence label) {
+        return label == null ? "" : label.toString().toLowerCase(Locale.ROOT)
+                .replaceAll("[^\\p{L}\\p{N}]+", "");
+    }
+
+    private Intent getLaunchIntentForAppName(String appName) {
+        String target = normalizeAppLabel(appName);
+        if (target.isEmpty() || target.length() > 64) return null;
+
+        Intent query = new Intent(Intent.ACTION_MAIN);
+        query.addCategory(Intent.CATEGORY_LAUNCHER);
+        java.util.List<android.content.pm.ResolveInfo> candidates =
+                getPackageManager().queryIntentActivities(query, 0);
+        android.content.pm.ResolveInfo match = null;
+        for (android.content.pm.ResolveInfo candidate : candidates) {
+            if (candidate.activityInfo == null
+                    || !target.equals(normalizeAppLabel(candidate.loadLabel(getPackageManager())))) {
+                continue;
+            }
+            if (match != null
+                    && !match.activityInfo.packageName.equals(candidate.activityInfo.packageName)) {
+                // Do not guess when two installed apps have the same visible name.
+                return null;
+            }
+            match = candidate;
+        }
+        if (match == null) return null;
+
+        Intent launch = new Intent(Intent.ACTION_MAIN);
+        launch.addCategory(Intent.CATEGORY_LAUNCHER);
+        launch.setClassName(match.activityInfo.packageName, match.activityInfo.name);
+        return launch;
+    }
+
     private class SarathiBridge {
+        @JavascriptInterface
+        public boolean openApp(String appId) {
+            if (appId == null || appId.length() > 32) return false;
+            Intent launchIntent = getAllowedAppLaunchIntent(appId);
+            if (launchIntent == null || launchIntent.resolveActivity(getPackageManager()) == null) return false;
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            runOnUiThread(() -> {
+                try {
+                    startActivity(launchIntent);
+                } catch (Exception error) {
+                    notifyVoice("onError", "यह ऐप Android से नहीं खुल सका।");
+                }
+            });
+            return true;
+        }
+
+        @JavascriptInterface
+        public boolean openAppByName(String appName) {
+            if (appName == null || appName.length() > 64) return false;
+            Intent launchIntent = getLaunchIntentForAppName(appName);
+            if (launchIntent == null) return false;
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            runOnUiThread(() -> {
+                try {
+                    startActivity(launchIntent);
+                } catch (Exception error) {
+                    notifyVoice("onError", "यह ऐप Android से नहीं खुल सका।");
+                }
+            });
+            return true;
+        }
+
         @JavascriptInterface
         public void startListening() {
             runOnUiThread(() -> MainActivity.this.startListening());
         }
 
         @JavascriptInterface
+        public void stopListening() {
+            runOnUiThread(() -> {
+                pendingListen = false;
+                wakeCommandSession = false;
+                SpeechRecognizer current = speechRecognizer;
+                speechRecognizer = null;
+                if (current != null) {
+                    try { current.cancel(); } catch (Exception ignored) {}
+                    try { current.destroy(); } catch (Exception ignored) {}
+                }
+                resumeWakeWordAfterCommand();
+                notifyVoice("onStatus", "आवाज़ पहचान रोक दी गई।");
+            });
+        }
+
+        @JavascriptInterface
         public void pauseWakeWord() {
             runOnUiThread(MainActivity.this::pauseWakeWordForCommand);
+        }
+
+        @JavascriptInterface
+        public void resumeWakeWord() {
+            runOnUiThread(MainActivity.this::resumeWakeWordAfterCommand);
         }
 
         @JavascriptInterface
@@ -545,9 +789,11 @@ public class MainActivity extends Activity {
                     int languageResult = textToSpeech.setLanguage(language);
                     if (languageResult == TextToSpeech.LANG_MISSING_DATA
                             || languageResult == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        notifyVoice("onNativeSpeechDone", "");
                         notifyVoice("onError", hindiText
                                 ? "फ़ोन में हिंदी बोलने की आवाज़ उपलब्ध नहीं है। Android की Text-to-Speech सेटिंग में हिंदी आवाज़ इंस्टॉल करें।"
                                 : "फ़ोन में English बोलने की आवाज़ उपलब्ध नहीं है। Android की Text-to-Speech सेटिंग में English आवाज़ इंस्टॉल करें।");
+                        resumeWakeWordAfterCommand();
                         return;
                     }
 
@@ -560,24 +806,33 @@ public class MainActivity extends Activity {
                     textToSpeech.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                         @Override public void onStart(String utteranceId) {}
                         @Override public void onDone(String utteranceId) {
-                            mainHandler.post(MainActivity.this::resumeWakeWordAfterCommand);
+                            mainHandler.post(() -> {
+                                notifyVoice("onNativeSpeechDone", "");
+                                resumeWakeWordAfterCommand();
+                            });
                         }
                         @Override public void onError(String utteranceId) {
                             mainHandler.post(() -> {
+                                notifyVoice("onNativeSpeechDone", "");
                                 notifyVoice("onError", "जवाब बोलने में समस्या हुई। फ़ोन की Text-to-Speech आवाज़ और मीडिया वॉल्यूम जाँचें।");
                                 resumeWakeWordAfterCommand();
                             });
                         }
                         @Override public void onStop(String utteranceId, boolean interrupted) {
-                            mainHandler.post(MainActivity.this::resumeWakeWordAfterCommand);
+                            mainHandler.post(() -> {
+                                notifyVoice("onNativeSpeechDone", "");
+                                resumeWakeWordAfterCommand();
+                            });
                         }
                     });
                     int result = textToSpeech.speak(toSpeak, TextToSpeech.QUEUE_FLUSH, null, "sarathi-local-voice");
                     if (result == TextToSpeech.ERROR) {
+                        notifyVoice("onNativeSpeechDone", "");
                         notifyVoice("onError", "जवाब बोलना शुरू नहीं हुआ। फ़ोन की Text-to-Speech सेटिंग जाँचें।");
                         resumeWakeWordAfterCommand();
                     }
                 } catch (Exception error) {
+                    notifyVoice("onNativeSpeechDone", "");
                     resumeWakeWordAfterCommand();
                     notifyVoice("onError", "जवाब बोलना शुरू नहीं हो सका। फ़ोन की Text-to-Speech सेटिंग जाँचें।");
                 }
@@ -592,7 +847,7 @@ public class MainActivity extends Activity {
                     notifyVoice("onStatus", "वेक-वर्ड चालू करने के लिए माइक्रोफ़ोन अनुमति दें।");
                     return;
                 }
-                startWakeWordService();
+                requestNotificationPermissionOrStartWakeWord();
             });
         }
 
@@ -607,10 +862,16 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void stopWakeWord() {
-            Intent service = new Intent(MainActivity.this, WakeWordService.class);
-            service.setAction(WakeWordService.ACTION_STOP);
-            startService(service);
-            notifyVoice("onStatus", "वेक-वर्ड सेवा बंद करने का अनुरोध भेजा गया।");
+            runOnUiThread(() -> {
+                Intent service = new Intent(MainActivity.this, WakeWordService.class);
+                service.setAction(WakeWordService.ACTION_STOP);
+                try {
+                    startService(service);
+                    notifyVoice("onStatus", "वेक-वर्ड सेवा बंद करने का अनुरोध भेजा गया।");
+                } catch (Exception error) {
+                    notifyVoice("onError", "वेक-वर्ड सेवा बंद नहीं हो सकी। सारथी ऐप खोलकर दोबारा कोशिश करें।");
+                }
+            });
         }
 
         @JavascriptInterface
@@ -665,6 +926,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        activityDestroyed = true;
         appInForeground = false;
         if (wakeReceiverRegistered) {
             try { unregisterReceiver(wakeDetectedReceiver); } catch (Exception ignored) {}
@@ -680,7 +942,6 @@ public class MainActivity extends Activity {
             textToSpeech.shutdown();
             textToSpeech = null;
         }
-        resumeWakeWordAfterCommand();
         if (filePathCallback != null) {
             filePathCallback.onReceiveValue(null);
             filePathCallback = null;

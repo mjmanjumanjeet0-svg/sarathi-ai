@@ -1,7 +1,7 @@
 name: Sarathi AI self-test
 on:
   push:
-    branches: [main]
+    branches: [main, fix/android-webview-login-prompt]
     paths:
       - "worker.js"
       - "tests/sarathi-selftest.mjs"

@@ -7,6 +7,7 @@
   let speaking = false;
   let restarting = false;
   let paused = false;
+  let nativeManualListening = false;
 
   function show(activeNow, hint) {
     ["voicePanel", "voiceWave", "voiceActiveNote"].forEach(id => $(id)?.classList.toggle("hidden", !activeNow));
@@ -32,8 +33,13 @@
       recognition = null;
     }
     if (window.speechSynthesis) window.speechSynthesis.cancel();
-    if (window.SarathiNative?.stopSpeaking) window.SarathiNative.stopSpeaking();
-    if (window.SarathiNative?.stopWakeWord) window.SarathiNative.stopWakeWord();
+    if (nativeManualListening) {
+      nativeManualListening = false;
+      try { window.SarathiNative?.stopListening?.(); } catch (_) {}
+    } else {
+      if (window.SarathiNative?.stopSpeaking) window.SarathiNative.stopSpeaking();
+      if (window.SarathiNative?.stopWakeWord) window.SarathiNative.stopWakeWord();
+    }
     show(false);
     const status = $("status");
     if (status) status.textContent = "सारथी की आवाज़ बंद कर दी गई है।";
@@ -41,18 +47,26 @@
 
   function speak(text) {
     const answer = String(text || "").replaceAll("*", " ").replaceAll("#", " ").slice(0, 4500);
-    if (!active || !answer) return;
-    if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
-      if (window.SarathiNative?.speak) {
-        speaking = true;
-        window.SarathiNative.speak(answer);
-        setTimeout(() => { speaking = false; startRecognition(); }, Math.min(30000, Math.max(2500, answer.length * 65)));
-      } else {
-        const status = $("status");
-        if (status) status.textContent = "इस ब्राउज़र में आवाज़ में जवाब उपलब्ध नहीं है।";
-      }
+    if (!answer) return;
+
+    // Android's native TTS is also used for wake-word replies when the
+    // browser microphone session is not active. The native bridge resumes
+    // the wake-word service from its real TTS completion callback.
+    if (window.SarathiNative?.speak) {
+      speaking = true;
+      paused = true;
+      try { recognition?.stop(); } catch (_) {}
+      window.SarathiNative.speak(answer);
       return;
     }
+
+    if (!active) return;
+    if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
+      const status = $("status");
+      if (status) status.textContent = "इस ब्राउज़र में आवाज़ में जवाब उपलब्ध नहीं है।";
+      return;
+    }
+
     speaking = true;
     paused = true;
     try { recognition?.stop(); } catch (_) {}
@@ -69,6 +83,24 @@
   }
 
   function start() {
+    // Android WebView does not consistently expose the browser Web Speech API.
+    // Prefer the app's native SpeechRecognizer when its bridge is available.
+    if (window.SarathiNative?.startListening) {
+      if (active) return;
+      active = true;
+      nativeManualListening = true;
+      show(true, "माइक्रोफ़ोन शुरू हो रहा है…");
+      try {
+        window.SarathiNative.startListening();
+      } catch (_) {
+        nativeManualListening = false;
+        active = false;
+        show(false);
+        const status = $("status");
+        if (status) status.textContent = "फ़ोन का माइक्रोफ़ोन शुरू नहीं हो सका।";
+      }
+      return;
+    }
     if (!Recognition) {
       const status = $("status");
       if (status) status.textContent = "माइक इस ब्राउज़र में उपलब्ध नहीं है। Chrome में खोलकर माइक्रोफोन अनुमति दें।";
@@ -130,6 +162,19 @@
   }
 
   window.SarathiVoice = window.SarathiVoice || {};
+  // Native Android TTS reports its real completion; clear the JS speaking
+  // state so a later manual microphone session is not blocked.
+  window.SarathiVoice.onNativeSpeechDone = () => {
+    speaking = false;
+    paused = false;
+    if (active) startRecognition();
+  };
+  window.SarathiVoice.onNativeRecognitionDone = () => {
+    if (!nativeManualListening) return;
+    nativeManualListening = false;
+    active = false;
+    show(false, "आवाज़ पहचान पूरी हुई।");
+  };
   window.SarathiVoice.speak = speak;
   window.SarathiVoice.isActive = () => active;
   window.SarathiVoice.pause = () => { paused = true; try { recognition?.stop(); } catch (_) {} };

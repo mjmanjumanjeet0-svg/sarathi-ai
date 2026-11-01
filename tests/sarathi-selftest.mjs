@@ -9,12 +9,39 @@ const { default: worker } = await import(moduleUrl);
 const calls = [];
 let groqMode = "success";
 let exaMode = "success";
+let exaResultsMode = "normal";
 let groqReply = "यह सारथी का परीक्षण उत्तर है।";
 globalThis.fetch = async (input, init = {}) => {
   const url = String(input);
   calls.push({ url, init });
   if (url.includes("api.exa.ai/search")) {
+    if (exaResultsMode === "insecure-search-links") {
+      return Response.json({ results: [
+        { title: "Insecure HTTP news result", url: "http://insecure.example/news", highlights: ["This result must be excluded."] },
+        { title: "Secure HTTPS news result", url: "https://reuters.com/world/india/secure-news", highlights: ["This secure result may be included."] }
+      ] });
+    }
     if (exaMode === "429") return Response.json({ error: "rate limited" }, { status: 429 });
+    const searchBody = JSON.parse(init.body || "{}");
+    if (/(ट्रेन|रेल|train|railway)/i.test(searchBody.query || "")) {
+      return Response.json({ results: [
+        { title: "Indian Railways train running status and schedule", url: "https://www.indianrail.gov.in/test-train-status", highlights: ["Train running status and scheduled departure information for Indian Railways."] }
+      ] });
+    }
+    if (/India latest news/i.test(searchBody.query || "")) {
+      return Response.json({ results: [
+        { title: "India announces new national education initiative", url: "https://www.reuters.com/world/india/test-education-update/", highlights: ["Government officials announced a new national education initiative for schools."], publishedDate: new Date().toISOString() },
+        { title: "Heavy rainfall alert issued for eastern India", url: "https://indianexpress.com/article/india/test-rainfall-alert/", highlights: ["Weather authorities issued a rainfall alert for parts of eastern India."], publishedDate: new Date().toISOString() }
+      ] });
+    }
+    if (exaResultsMode === "unsafe-gold-urls") {
+      return Response.json({ results: [
+        { title: "Gold rate localhost page", url: "https://metadata.localhost/gold-rate", highlights: ["Gold rate information."] },
+        { title: "Gold rate private IP page", url: "https://10.0.0.1/gold-rate", highlights: ["Gold rate information."] },
+        { title: "Gold rate loopback IP page", url: "https://127.0.0.1/gold-rate", highlights: ["Gold rate information."] },
+        { title: "Gold rate test domain", url: "https://rates.example.test/gold-rate", highlights: ["Gold rate information."] }
+      ] });
+    }
     return Response.json({
       results: [
         { title: "भारत में सोने का भाव", url: "https://example.com/gold-rate", highlights: ["24K gold rate ₹7800 per gram and 22K gold rate ₹7150 per gram in India."] },
@@ -58,6 +85,15 @@ await test("health endpoint", async () => {
   assert.equal(r.status, 200);
   assert.equal(r.data.status, "running");
 });
+await test("CORS is restricted to the official GitHub Pages app origin", async () => {
+  const r = await worker.fetch(new Request("https://sarathi.test/api/login", {
+    method: "OPTIONS",
+    headers: { Origin: "https://mjmanjumanjeet0-svg.github.io", "Access-Control-Request-Method": "POST" }
+  }), env);
+  assert.equal(r.status, 204);
+  assert.equal(r.headers.get("Access-Control-Allow-Origin"), "https://mjmanjumanjeet0-svg.github.io");
+  assert.equal(r.headers.get("X-Content-Type-Options"), "nosniff");
+});
 await test("rejects wrong login password", async () => {
   const r = await request("/api/login", "POST", { password: "wrong" });
   assert.equal(r.status, 401);
@@ -68,6 +104,31 @@ await test("login issues a session token", async () => {
   assert.equal(r.status, 200);
   assert.ok(r.data.token);
   token = r.data.token;
+});
+await test("chat rejects requests without a login token", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "इतिहास क्या है?" }] });
+  assert.equal(r.status, 401);
+  assert.equal(calls.length, before, "unauthenticated requests must not reach providers");
+});
+await test("chat rejects an invalid login token", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "इतिहास क्या है?" }] }, "not-a-valid-token");
+  assert.equal(r.status, 401);
+  assert.equal(calls.length, before, "invalid-token requests must not reach providers");
+});
+async function makeSignedToken(payload, password) {
+  const data = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
+  return data + "." + Buffer.from(signature).toString("base64url");
+}
+await test("chat rejects an expired but correctly signed token", async () => {
+  const before = calls.length;
+  const expired = await makeSignedToken({ iat: 1, exp: 2 }, env.SARATHI_LOGIN_PASSWORD);
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "इतिहास क्या है?" }] }, expired);
+  assert.equal(r.status, 401);
+  assert.equal(calls.length, before, "expired-token requests must not reach providers");
 });
 await test("Hindi greeting is answered locally without provider calls", async () => {
   const before = calls.length;
@@ -106,6 +167,46 @@ await test("current price query invokes web search and AI", async () => {
   assert.match(enrichedUserPrompt, /179 × 1000 = 1,79,000/);
   assert.match(enrichedUserPrompt, /विसंगति बताओ/);
 });
+await test("Hindi train timing question automatically searches railway information", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "04007 ट्रेन सीवान से कब चलती है?" }] }, token);
+  assert.equal(r.status, 200);
+  const exaCall = calls.slice(before).find(x => x.url.includes("api.exa.ai/search"));
+  assert.ok(exaCall, "train timing should automatically trigger web search");
+  const groqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
+  assert.ok(groqCall, "relevant railway results should reach Groq");
+  const prompt = JSON.parse(groqCall.init.body || "{}").messages?.at(-1)?.content || "";
+  assert.match(prompt, /Indian Railways|indianrail\.gov\.in/);
+});
+await test("web search excludes insecure HTTP result links", async () => {
+  exaResultsMode = "insecure-search-links";
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज की ताजा खबरें बताओ" }] }, token);
+  assert.equal(r.status, 200);
+  const groqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
+  assert.ok(groqCall, "valid HTTPS search results should still reach the AI");
+  const prompt = JSON.parse(groqCall.init.body || "{}").messages?.at(-1)?.content || "";
+  assert.doesNotMatch(prompt, /insecure\.example/);
+  assert.match(prompt, /reuters\.com/);
+  exaResultsMode = "normal";
+});
+
+await test("Hindi current-news request automatically searches trusted news sources", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज की ताजा खबरें बताओ" }] }, token);
+  assert.equal(r.status, 200);
+  const exaCall = calls.slice(before).find(x => x.url.includes("api.exa.ai/search"));
+  assert.ok(exaCall, "current-news request should automatically call Exa");
+  const exaBody = JSON.parse(exaCall.init.body || "{}");
+  assert.equal(exaBody.category, "news");
+  const groqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
+  assert.ok(groqCall, "trusted news results should be sent to Groq");
+  const groqBody = JSON.parse(groqCall.init.body || "{}");
+  const enrichedPrompt = groqBody.messages?.at(-1)?.content || "";
+  assert.match(enrichedPrompt, /समाचार के सख्त निर्देश/);
+  assert.match(enrichedPrompt, /Reuters|reuters\.com/);
+  assert.match(enrichedPrompt, /Indian Express|indianexpress\.com/);
+});
 await test("long numbered prompts reach Groq without losing their beginning or ending", async () => {
   const longPrompt = Array.from({ length: 50 }, (_, i) => `${i + 1}. सवाल ${i + 1}: सामान्य ज्ञान का छोटा परीक्षण`).join("\n");
   const before = calls.length;
@@ -119,6 +220,45 @@ await test("long numbered prompts reach Groq without losing their beginning or e
   assert.ok(sentPrompt.includes("50. सवाल 50:"), "last question must be preserved");
   assert.equal(groqBody.max_tokens, 6000, "output budget should support longer answer lists");
 });
+await test("missing Exa key never fabricates current web results", async () => {
+  const previousKey = env.EXA_API_KEY;
+  env.EXA_API_KEY = "";
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज की ताजा खबरें बताओ" }] }, token);
+  assert.equal(r.status, 200);
+  assert.match(r.data.reply, /भरोसेमंद परिणाम नहीं मिले/);
+  assert.equal(calls.length, before, "missing search credentials must not call external providers");
+  env.EXA_API_KEY = previousKey;
+});
+await test("a 22K-only gold-rate question triggers rate enrichment", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "22K का भाव बताओ" }] }, token);
+  assert.equal(r.status, 200);
+  const pageFetches = calls.slice(before).filter(x => !x.url.includes("api.exa.ai/search") && !x.url.includes("api.groq.com"));
+  assert.ok(pageFetches.length > 0, "22K-only queries should activate gold-rate page enrichment");
+});
+
+await test("gold-rate page enrichment only fetches public HTTPS URLs without following redirects", async () => {
+  const before = calls.length;
+  await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज सोने का भाव बताओ" }] }, token);
+  const pageFetches = calls.slice(before).filter(x => !x.url.includes("api.exa.ai/search") && !x.url.includes("api.groq.com"));
+  assert.ok(pageFetches.length > 0, "gold-rate results should be eligible for page enrichment");
+  for (const call of pageFetches) {
+    assert.equal(new URL(call.url).protocol, "https:");
+    assert.equal(call.init.redirect, "manual", "untrusted redirects must not be followed");
+  }
+});
+
+await test("gold-rate enrichment refuses localhost, private IP, loopback IP, and test-domain URLs", async () => {
+  exaResultsMode = "unsafe-gold-urls";
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज सोने का भाव बताओ" }] }, token);
+  assert.equal(r.status, 200);
+  const outbound = calls.slice(before).filter(x => !x.url.includes("api.exa.ai/search") && !x.url.includes("api.groq.com"));
+  assert.equal(outbound.length, 0, "unsafe search-result URLs must never be fetched");
+  exaResultsMode = "normal";
+});
+
 await test("Exa rate-limit is handled without crashing the Worker", async () => {
   exaMode = "429";
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज सोने का भाव बताओ" }] }, token);

@@ -5,9 +5,13 @@ const GROQ_MODEL = "openai/gpt-oss-20b";
 const SESSION_SECONDS = 12 * 60 * 60;
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
+  // The production web app and Android WebView both load this exact GitHub Pages origin.
+  // Restrict browser access to that origin; API authentication remains separately required.
+  "Access-Control-Allow-Origin": "https://mjmanjumanjeet0-svg.github.io",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Vary": "Origin",
+  "X-Content-Type-Options": "nosniff",
   "Cache-Control": "no-store",
 };
 
@@ -163,7 +167,7 @@ function cleanText(value) {
 function validHttpUrl(value) {
   try {
     const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:";
+    return url.protocol === "https:" && !url.username && !url.password && !url.port;
   } catch {
     return false;
   }
@@ -225,7 +229,7 @@ async function searchInternet(query, env) {
       .slice(0, isNewsQuery ? 8 : 5)
       .map(item => {
         let publisher = "वेबसाइट";
-        try { publisher = new URL(item.url).hostname.replace(/^www\\./i, ""); } catch {}
+        try { publisher = new URL(item.url).hostname.replace(/^www\./i, ""); } catch {}
         const highlights = Array.isArray(item.highlights) ? item.highlights.join(" ") : "";
         return {
           title: cleanText(item.title).slice(0, 300),
@@ -251,9 +255,26 @@ async function searchInternet(query, env) {
     clearTimeout(timeout);
   }
 }
+function safePublicHttpsFetchUrl(value) {
+  try {
+    const url = new URL(value);
+    const hostname = url.hostname.toLowerCase().replace(/\.$/, "");
+    if (url.protocol !== "https:" || url.username || url.password) return false;
+    if (url.port && url.port !== "443") return false;
+    // Do not fetch IP literals or local/private-style hostnames from search results.
+    if (!hostname.includes(".") || hostname.startsWith("[") ||
+        /^(?:localhost|.*\.localhost|.*\.local|.*\.internal|.*\.test)$/i.test(hostname)) return false;
+    if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname) || hostname.includes(":")) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 async function enrichGoldRateResults(results) {
   const candidates = (Array.isArray(results) ? results : []).slice(0, 6);
   return await Promise.all(candidates.map(async item => {
+    if (!item || !safePublicHttpsFetchUrl(item.url)) return item;
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 7000);
     try {
@@ -263,7 +284,7 @@ async function enrichGoldRateResults(results) {
           "User-Agent": "Mozilla/5.0 (compatible; SarathiAI/1.0)"
         },
         signal: controller.signal,
-        redirect: "follow"
+        redirect: "manual"
       });
       if (!response.ok) return item;
       const html = (await response.text()).slice(0, 1200000);
@@ -283,7 +304,7 @@ async function enrichGoldRateResults(results) {
       if (!contexts.length) return item;
       const combined = [item.title || "", item.snippet || "", ...contexts].join(" | ");
       const rateFor = (karat) => {
-        const re = new RegExp("(?:\\b" + karat + "\\s*(?:K|karat|carat)|" + karat + "\\s*कैरेट)[^₹]{0,120}(?:₹|Rs\\.?|INR)\\s*([0-9,]+(?:\\.[0-9]+)?)", "i");
+        const re = new RegExp("(?:\\b" + karat + "\\s*(?:K|karat|carat)|" + karat + "\\s*कैरेट)[^₹]{0,120}(?:₹|Rs\.?|INR)\\s*([0-9,]+(?:\.[0-9]+)?)", "i");
         const m = combined.match(re);
         return m ? Number(m[1].replace(/,/g, "")) : null;
       };
@@ -311,6 +332,21 @@ function filterRelevantSearchResults(query, results) {
   const textOf = (item) => `${item.title || ""} ${item.url || ""} ${item.snippet || ""}`.toLocaleLowerCase("hi-IN");
   const list = Array.isArray(results) ? results : [];
 
+  // For exam dates, results, forms, fees and eligibility, accept only official
+  // Indian government or recognized academic domains. Search ranking alone
+  // must not make an unofficial coaching/blog page look authoritative.
+  if (/(सिलेबस|पाठ्यक्रम|परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|परिणाम|आवेदन|फॉर्म|फीस|पात्रता|नियम|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(q)) {
+    const officialHost = /(?:^|\.)(?:gov\.in|nic\.in|ac\.in|edu\.in)$/i;
+    return list.filter(item => {
+      try {
+        const host = new URL(item.url).hostname.toLowerCase().replace(/^www\./, "");
+        return officialHost.test(host);
+      } catch {
+        return false;
+      }
+    });
+  }
+
   if (/(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(q)) {
     const trustedNewsHost = /(^|\.)(indianexpress\.com|thehindu\.com|ndtv\.com|hindustantimes\.com|bbc\.com|reuters\.com|apnews\.com|news18\.com|aajtak\.in|abplive\.com|amarujala\.com|jagran\.com|zeenews\.india\.com|indiatoday\.in|theprint\.in|livemint\.com|timesofindia\.indiatimes\.com|pti\.in|aninews\.in)$/;
     return list.filter(item => {
@@ -327,8 +363,8 @@ function filterRelevantSearchResults(query, results) {
   }
 
   // Combined gold + silver queries must retain results for both metals.
-  if (/(सोने|सोना|gold|22\\s*k|24\\s*k|bullion)/i.test(q) && /(चांदी|चाँदी|silver)/i.test(q)) {
-    const preciousMetal = /(gold|सोना|सोने|sone|bullion|22\\s*k|24\\s*k|gold[- ]?rate|gold[- ]?price|sona|silver|चांदी|चाँदी|silver[- ]?(rate|price)|चांदी[- ]?(भाव|कीमत))/i;
+  if (/(सोने|सोना|gold|22\s*k|24\s*k|bullion)/i.test(q) && /(चांदी|चाँदी|silver)/i.test(q)) {
+    const preciousMetal = /(gold|सोना|सोने|sone|bullion|22\s*k|24\s*k|gold[- ]?rate|gold[- ]?price|sona|silver|चांदी|चाँदी|silver[- ]?(rate|price)|चांदी[- ]?(भाव|कीमत))/i;
     return list.filter(item => preciousMetal.test(textOf(item)));
   }
 
@@ -416,7 +452,7 @@ function buildSearchContext(results, query = "") {
   if (!results.length) return "";
 
   const isNewsQuery = /(खबर|समाचार|news|breaking|latest|ताज़ा|ताजा)/i.test(query);
-  const isPreciousMetalQuery = /(सोने|सोना|gold|चांदी|चाँदी|silver|bullion|22\\s*k|24\\s*k)/i.test(query);
+  const isPreciousMetalQuery = /(सोने|सोना|gold|चांदी|चाँदी|silver|bullion|22\s*k|24\s*k)/i.test(query);
   const newsInstruction = isNewsQuery
     ? "\\n\\nसमाचार के सख्त निर्देश: एक ही घटना को केवल एक बार बताओ; समान रिपोर्ट को जोड़ो, लेकिन अलग घटनाओं को मत मिलाओ। प्रकाशित तारीख केवल प्रकाशित फ़ील्ड से लो; घटना की तारीख केवल खबर के पाठ से लो। तारीख उपलब्ध न हो तो अनुमान मत लगाओ। आज की खबरों में आज या पिछले 48 घंटों में प्रकाशित खबरों को प्राथमिकता दो। एक ही एजेंसी की कॉपी को स्वतंत्र पुष्टि मत मानो। राजनीतिक आरोपों को आरोप के रूप में ही लिखो। उपलब्ध परिणामों में से अधिकतम 8 अलग और महत्वपूर्ण खबरें चुनो। हर खबर में 2–4 छोटे वाक्यों का स्वाभाविक हिंदी विवरण, प्रकाशक और प्रकाशित तारीख दो। हिंदी सवाल पर पूरा उत्तर सहज देवनागरी हिंदी में दो; अंग्रेज़ी शीर्षक, अंग्रेज़ी लेख का अंश या मेटाडेटा ज्यों-का-त्यों बिल्कुल मत छोड़ो। अंग्रेज़ी स्रोत को समझकर अपने शब्दों में हिंदी में सार लिखो। कम से कम 2 उपयोगी परिणाम न हों तो खबरों की संख्या बढ़ाकर मत दिखाओ। URL मत लिखो और कोई तथ्य मत गढ़ो।"
     : "";
@@ -515,6 +551,13 @@ export default {
         zeroCostMode: true,
         error: "AI फोटो बनाना और फोटो/वीडियो समझना फिलहाल बंद है। यह लॉगिन की समस्या नहीं है।"
       }, 503);
+    }
+
+    // Require a valid signed session before any chat response or paid provider use.
+    const authHeader = request.headers.get("Authorization") || "";
+    const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
+    if (!env.SARATHI_LOGIN_PASSWORD || !await verifyToken(bearerToken, env.SARATHI_LOGIN_PASSWORD)) {
+      return jsonResponse({ success: false, error: "लॉगिन सत्र मान्य नहीं है। कृपया दोबारा लॉगिन करें।" }, 401);
     }
 
     const messages = Array.isArray(body.messages) ? body.messages : [];
@@ -634,7 +677,7 @@ export default {
         const seenPublishers = new Set();
         searchResults = searchResults.filter(item => {
           let publisher = String(item.publisher || "").toLowerCase();
-          try { publisher = new URL(item.url).hostname.toLowerCase().replace(/^www\\./, ""); } catch {}
+          try { publisher = new URL(item.url).hostname.toLowerCase().replace(/^www\./, ""); } catch {}
           if (!publisher || seenPublishers.has(publisher)) return false;
           seenPublishers.add(publisher);
           return true;

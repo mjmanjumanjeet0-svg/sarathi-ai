@@ -102,13 +102,26 @@ async function loginWorker() {
     throw new Error("लॉगिन पासवर्ड जरूरी है।");
   }
 
-  const response = await fetch(getWorkerUrl() + "/api/login", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({ password })
-  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 20000);
+  let response;
+  try {
+    response = await fetch(getWorkerUrl() + "/api/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ password }),
+      signal: controller.signal
+    });
+  } catch (error) {
+    if (error?.name === "AbortError") {
+      throw new Error("लॉगिन सर्वर से जवाब आने में 20 सेकंड से अधिक लगे। इंटरनेट जाँचकर फिर कोशिश करें।");
+    }
+    throw new Error("लॉगिन सर्वर से संपर्क नहीं हो पाया। इंटरनेट कनेक्शन जाँचें।");
+  } finally {
+    clearTimeout(timeout);
+  }
 
   let data;
 
@@ -519,7 +532,8 @@ function renderMessages() {
       for (const source of message.sources) {
         try {
           const url = new URL(source.url);
-          if (!["http:", "https:"].includes(url.protocol)) continue;
+          // Search citations must be HTTPS; block insecure legacy links in saved chats too.
+          if (url.protocol !== "https:" || url.username || url.password) continue;
           const item = document.createElement("li");
           const link = document.createElement("a");
           link.href = url.href;
@@ -606,7 +620,7 @@ function addMessage(role, content, imageUrl, sources) {
     role,
     content: String(content || ""),
     ...(imageUrl ? { imageUrl: String(imageUrl) } : {}),
-    ...(Array.isArray(sources) && sources.length ? { sources: sources.filter(source => source && typeof source.title === "string" && (String(source.url || "").startsWith("https://") || String(source.url || "").startsWith("http://"))).slice(0, 8).map(source => ({ title: source.title.slice(0, 240), url: source.url, publisher: String(source.publisher || "").slice(0, 100), publishedAt: String(source.publishedAt || "").slice(0, 80) })) } : {}),
+    ...(Array.isArray(sources) && sources.length ? { sources: sources.filter(source => source && typeof source.title === "string" && (String(source.url || "").startsWith("https://"))).slice(0, 8).map(source => ({ title: source.title.slice(0, 240), url: source.url, publisher: String(source.publisher || "").slice(0, 100), publishedAt: String(source.publishedAt || "").slice(0, 80) })) } : {}),
     createdAt: Date.now()
   });
 
@@ -891,17 +905,86 @@ async function sendMessage(text) {
     return;
   }
 
-  if ((!prompt && !state.attachments.length) || state.busy) return;
+  if (!prompt && !state.attachments.length) return;
+  if (state.busy) {
+    const incomingVoice = state.voiceReplyPending || Boolean(window.SarathiVoice?.isActive?.());
+    if (incomingVoice) {
+      state.voiceReplyPending = false;
+      window.SarathiVoice?.pause?.();
+      if (typeof window.SarathiVoice?.speak === "function") {
+        window.SarathiVoice.speak("सारथी अभी पिछले काम में व्यस्त है। कृपया थोड़ी देर बाद बोलें।");
+      } else {
+        window.SarathiNative?.resumeWakeWord?.();
+      }
+    }
+    return;
+  }
+
+  // Open only a small, explicit set of installed Android apps. Arbitrary
+  // package names or shell commands are never accepted from the webpage.
+  const appOpenMatch = prompt.match(/^(?:(?:सारथी)\s+)?(.+?)\s+(?:ऐप\s+)?(?:खोलो|खोल\s+दो|ओपन\s+करो|open|launch)(?:\s+ऐप)?[.!?।]*$/i)
+    || prompt.match(/^(?:खोलो|open)\s+(.+?)[.!?।]*$/i);
+  if (appOpenMatch && !state.attachments.length && window.SarathiNative?.openApp) {
+    const requested = String(appOpenMatch[1] || "").toLocaleLowerCase("hi-IN")
+      .replace(/\b(app|ऐप)\b/g, " ").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
+    const aliases = [
+      { id: "youtube", names: ["यूट्यूब", "youtube"] },
+      { id: "chrome", names: ["क्रोम", "chrome"] },
+      { id: "chatgpt", names: ["चैट जीपीटी", "चैटजीपीटी", "chat gpt", "chatgpt"] },
+      { id: "whatsapp", names: ["व्हाट्सएप", "व्हाट्स ऐप", "whatsapp"] },
+      { id: "maps", names: ["गूगल मैप", "गूगल मैप्स", "google maps", "maps"] },
+      { id: "settings", names: ["सेटिंग", "सेटिंग्स", "settings"] },
+      { id: "phone", names: ["फोन", "डायलर", "phone", "dialer"] },
+      { id: "camera", names: ["कैमरा", "camera", "फोटो कैमरा"] }
+    ];
+    const match = aliases.find(item => item.names.some(name => requested === name));
+    if (match || typeof window.SarathiNative.openAppByName === "function") {
+      // A wake-word request has already paused listening. Clear its pending
+      // spoken-reply flag so it cannot leak into the next unrelated message.
+      const cameFromVoice = state.voiceReplyPending || Boolean(window.SarathiVoice?.isActive?.());
+      state.voiceReplyPending = false;
+      if (cameFromVoice) {
+        window.SarathiVoice?.pause?.();
+        // The wake-word service was paused while processing this spoken command.
+        // Resume it before leaving the WebView for another Android app.
+        window.SarathiNative?.resumeWakeWord?.();
+      }
+      const accepted = match
+        ? window.SarathiNative.openApp(match.id)
+        : window.SarathiNative.openAppByName(requested);
+      addMessage("user", prompt);
+      addMessage("assistant", accepted
+        ? "ऐप खोलने का अनुरोध भेज दिया है।"
+        : "यह ऐप फ़ोन में इंस्टॉल नहीं है या खोला नहीं जा सका।");
+      setStatus(accepted ? "ऐप खोलने का अनुरोध भेजा गया।" : "ऐप नहीं खुल सका।");
+      const input = $("messageInput");
+      if (input) { input.value = ""; input.style.height = ""; }
+      return;
+    }
+  }
+
   if (!prompt && state.attachments.length) prompt = "कृपया संलग्न फाइल/फोटो की सामग्री पढ़कर समझाओ और मेरे सवालों में मदद करो।";
   const shouldSpeakReply = state.voiceReplyPending || Boolean(window.SarathiVoice?.isActive?.());
   if (shouldSpeakReply) window.SarathiVoice?.pause?.();
   state.voiceReplyPending = false;
+
+  // Any early exit after a spoken wake-word request must release the paused
+  // listener. Speaking a short explanation lets native TTS resume it onDone.
+  const finishVoiceEarly = (message) => {
+    if (!shouldSpeakReply) return;
+    if (message && typeof window.SarathiVoice?.speak === "function") {
+      window.SarathiVoice.speak(message);
+    } else {
+      window.SarathiNative?.resumeWakeWord?.();
+    }
+  };
 
   const workerUrl = getWorkerUrl();
 
   if (!workerUrl) {
     setStatus("सेटिंग्स में Worker URL भरें।");
     openSettings();
+    finishVoiceEarly("सारथी की सेटिंग्स में सर्वर पता भरना जरूरी है। कृपया सेटिंग्स जाँचें।");
     return;
   }
 
@@ -910,7 +993,10 @@ async function sendMessage(text) {
   const asksToEditImage = /(फोटो|तस्वीर|इमेज|image|photo).{0,45}(एडिट|बदल|सुधार|सुंदर|बैकग्राउंड|पृष्ठभूमि|रंग|हटाओ|जोड़ो|edit|change|modify|background)|(एडिट|बदल|सुधार|सुंदर|बैकग्राउंड|पृष्ठभूमि|रंग|हटाओ|जोड़ो|edit|change|modify|background).{0,45}(फोटो|तस्वीर|इमेज|image|photo)/i.test(prompt);
   const asksToGenerateImage = /(फोटो|तस्वीर|इमेज|image|picture).{0,55}(बनाओ|बना दो|बना लें|बनाएं|बनाकर|तैयार|generate|create|draw)|(बनाओ|बना दो|बना लें|बनाएं|बनाकर|तैयार|generate|create|draw).{0,55}(फोटो|तस्वीर|इमेज|image|picture)/i.test(prompt);
   if (!asksToEditImage && !asksToGenerateImage && (imageFile || videoFile)) {
-    if (!window.confirm("चुनी गई फोटो/वीडियो के चुने हुए फ्रेम इंटरनेट के ज़रिए AI को भेजे जाएँगे। क्या भेजना है?")) return;
+    if (!window.confirm("चुनी गई फोटो/वीडियो के चुने हुए फ्रेम इंटरनेट के ज़रिए AI को भेजे जाएँगे। क्या भेजना है?")) {
+      finishVoiceEarly("ठीक है, फोटो या वीडियो अभी नहीं भेजा गया।");
+      return;
+    }
     addMessage("user", prompt);
     setBusy(true);
     try {
@@ -929,11 +1015,14 @@ async function sendMessage(text) {
       const reply = await requestSarathiMediaUnderstanding(question, frames);
       addMessage("assistant", reply);
       setStatus("मीडिया का विश्लेषण पूरा हुआ।");
+      finishVoiceEarly(reply);
       state.attachments = state.attachments.filter(file => file !== imageFile && file !== videoFile);
       renderAttachmentPreview();
     } catch (error) {
-      addMessage("assistant", "मीडिया समझा नहीं जा सका: " + (error?.message || "कृपया बाद में कोशिश करें।"));
+      const message = "मीडिया समझा नहीं जा सका: " + (error?.message || "कृपया बाद में कोशिश करें।");
+      addMessage("assistant", message);
       setStatus("मीडिया समझने में समस्या आई।");
+      finishVoiceEarly(message);
     } finally {
       setBusy(false);
     }
@@ -942,10 +1031,12 @@ async function sendMessage(text) {
   if (asksToEditImage || asksToGenerateImage) {
     if (asksToEditImage && !imageFile) {
       setStatus("जिस फोटो को एडिट करना है, उसे + बटन से पहले जोड़ें।");
+      finishVoiceEarly("जिस फोटो को एडिट करना है, उसे पहले जोड़ें।");
       return;
     }
     if (imageFile && !asksToEditImage) {
       setStatus("फोटो एडिट करने के लिए लिखें: इस फोटो का बैकग्राउंड बदल दो।");
+      finishVoiceEarly("फोटो एडिट करने के लिए बताइए कि इसमें क्या बदलना है।");
       return;
     }
     addMessage("user", prompt);
@@ -955,11 +1046,15 @@ async function sendMessage(text) {
     setStatus(asksToEditImage ? "फोटो एडिट हो रही है…" : "नई फोटो बनाई जा रही है…");
     try {
       const imageUrl = await requestSarathiImage(prompt, imageFile || null);
-      addMessage("assistant", asksToEditImage ? "आपकी एडिट की हुई फोटो तैयार है।" : "आपकी बनाई हुई फोटो तैयार है।", imageUrl);
+      const message = asksToEditImage ? "आपकी एडिट की हुई फोटो तैयार है।" : "आपकी बनाई हुई फोटो तैयार है।";
+      addMessage("assistant", message, imageUrl);
       setStatus("फोटो तैयार है। फोटो के कोने में ⬇ दबाकर डाउनलोड करें।");
+      finishVoiceEarly(message);
     } catch (error) {
-      addMessage("assistant", "फोटो तैयार नहीं हो सकी: " + (error?.message || "कृपया बाद में कोशिश करें।"));
+      const message = "फोटो तैयार नहीं हो सकी: " + (error?.message || "कृपया बाद में कोशिश करें।");
+      addMessage("assistant", message);
       setStatus("फोटो सेवा में समस्या आई।");
+      finishVoiceEarly(message);
     } finally {
       setBusy(false);
     }
@@ -975,7 +1070,10 @@ async function sendMessage(text) {
 
   let attachmentContext = "";
   if (state.attachments.length) {
-    if (!window.confirm("चुनी गई फाइलों से निकाला गया पाठ इंटरनेट के जरिए AI सेवा को भेजा जाएगा। क्या भेजना है?")) return;
+    if (!window.confirm("चुनी गई फाइलों से निकाला गया पाठ इंटरनेट के जरिए AI सेवा को भेजा जाएगा। क्या भेजना है?")) {
+      finishVoiceEarly("ठीक है, फाइल अभी नहीं भेजी गई।");
+      return;
+    }
     setBusy(true);
     try {
       attachmentContext = await extractAttachmentsText(state.attachments);
@@ -985,7 +1083,9 @@ async function sendMessage(text) {
       renderAttachmentPreview();
     } catch (error) {
       setBusy(false);
-      setStatus("फाइल नहीं पढ़ी जा सकी: " + (error?.message || "अज्ञात त्रुटि"));
+      const message = "फाइल नहीं पढ़ी जा सकी: " + (error?.message || "अज्ञात त्रुटि");
+      setStatus(message);
+      finishVoiceEarly(message);
       return;
     }
     setBusy(false);
@@ -1044,10 +1144,12 @@ async function sendMessage(text) {
       throw new Error("AI से खाली जवाब मिला। Worker को जाँचना होगा।");
     }
 
-    // Never display stray or unrelated links in ordinary conversation.
-    // Sources are shown only when the user explicitly asks for an internet search.
+    // Keep answers and citations aligned with the actual search result.
+    // The Worker may search automatically for trains, prices, schedules, etc.
+    const hasSearchSources = Array.isArray(data.sources) && data.sources.length > 0;
+    const searchedForAnswer = useWebSearch || hasSearchSources;
     let cleanAnswer = answer.trim();
-    if (!explicitlyRequestsWebSearch(prompt)) {
+    if (!searchedForAnswer) {
       cleanAnswer = cleanAnswer
         // Remove common source/reference sections, including English headings.
         .replace(/\n{0,2}\s*(?:🌐\s*)?(?:इंटरनेट से मिले स्रोत|स्रोत(?: सूची)?|references?|sources?|वेबसाइट(?:ें)?|लिंक(?:\s*सूची)?)\s*[:：]?\s*[\s\S]*$/i, "")
@@ -1077,12 +1179,15 @@ async function sendMessage(text) {
         addMessage("assistant", "टेस्ट का प्रारूप सही नहीं मिला। कृपया MCQ टेस्ट फिर से शुरू करें।\n\n" + answer.trim());
       }
     } else {
-      addMessage("assistant", cleanAnswer, null, useWebSearch ? filterSourcesForPrompt(prompt, data.sources || []) : []);
+      addMessage("assistant", cleanAnswer, null, searchedForAnswer ? filterSourcesForPrompt(prompt, data.sources || []) : []);
     }
 
     // Only speak automatically for a reply triggered by the wake-word voice command.
     // Typed messages stay silent; the user can still tap the per-message speaker button.
-    if (shouldSpeakReply && window.SarathiVoice && typeof window.SarathiVoice.speak === "function") window.SarathiVoice.speak(cleanAnswer);
+    if (shouldSpeakReply) {
+      if (typeof window.SarathiVoice?.speak === "function") window.SarathiVoice.speak(cleanAnswer);
+      else window.SarathiNative?.resumeWakeWord?.();
+    }
 
     if (useWebSearch && data.searchWarning) {
       setStatus("इंटरनेट खोज: " + data.searchWarning);
@@ -1092,10 +1197,13 @@ async function sendMessage(text) {
   } catch (error) {
     const rawMessage = String(error?.message || "");
     const isNetworkError = /networkerror|failed to fetch|load failed|network request failed/i.test(rawMessage);
+    const isTimeout = /समय अधिक लगा|timed out|timeout/i.test(rawMessage);
     const isRateLimit = /429|बहुत अधिक अनुरोध|अनुरोध सीमा/i.test(rawMessage);
-    const message = isNetworkError
-      ? "इंटरनेट या सर्वर से संपर्क नहीं हो पा रहा। अपना कनेक्शन जाँचें और थोड़ी देर बाद फिर कोशिश करें।"
-      : isRateLimit
+    const message = isTimeout
+      ? "सर्वर से जवाब आने में 45 सेकंड से अधिक लगे। थोड़ी देर बाद फिर कोशिश करें।"
+      : isNetworkError
+        ? "इंटरनेट या सर्वर से संपर्क नहीं हो पा रहा। अपना कनेक्शन जाँचें और थोड़ी देर बाद फिर कोशिश करें।"
+        : isRateLimit
         ? "AI सेवा पर अभी बहुत अधिक अनुरोध हैं। 30–60 सेकंड बाद दोबारा पूछें।"
         : (rawMessage || "अस्थायी तकनीकी समस्या हुई।");
 
@@ -1104,8 +1212,8 @@ async function sendMessage(text) {
       "माफ़ कीजिए, अभी जवाब नहीं मिल पाया।\n\nकारण: " + message
     );
 
-    setStatus(isNetworkError ? "इंटरनेट कनेक्शन जाँचें" : isRateLimit ? "AI सेवा व्यस्त है" : "अस्थायी समस्या");
-    if (shouldSpeakReply && window.SarathiVoice && typeof window.SarathiVoice.speak === "function") window.SarathiVoice.speak("माफ़ कीजिए, अभी जवाब नहीं मिल पाया। " + message);
+    setStatus(isTimeout ? "सर्वर से जवाब आने में देर हुई" : isNetworkError ? "इंटरनेट कनेक्शन जाँचें" : isRateLimit ? "AI सेवा व्यस्त है" : "अस्थायी समस्या");
+    finishVoiceEarly("माफ़ कीजिए, अभी जवाब नहीं मिल पाया। " + message);
   } finally {
     setBusy(false);
     if (input) {
@@ -1337,6 +1445,7 @@ window.SarathiVoice = {
       input.focus();
       setStatus("आवाज़ लिख दी गई है। भेजने से पहले संदेश जाँच लें।");
     }
+    window.SarathiVoice?.onNativeRecognitionDone?.();
   },
   onWakeCommandResult(transcript) {
     if (transcript && String(transcript).trim()) {
@@ -1358,6 +1467,7 @@ window.SarathiVoice = {
     }
   },
   onError(message) {
+    window.SarathiVoice?.onNativeRecognitionDone?.();
     setStatus(message || "ऑफ़लाइन आवाज़ सुविधा अभी उपलब्ध नहीं है।");
   },
   onStatus(message) {

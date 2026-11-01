@@ -43,8 +43,11 @@ public class WakeWordService extends Service {
     private static final String CHANNEL = "sarathi_wake_channel";
     private static final int NOTIFICATION_ID = 771;
     private static final String MODEL_NAME = "vosk-model-small-hi-0.22";
+    private static final long MAX_MODEL_ARCHIVE_BYTES = 100L * 1024L * 1024L;
+    private static final long MAX_MODEL_EXPANDED_BYTES = 300L * 1024L * 1024L;
+    private static final int MAX_MODEL_ARCHIVE_ENTRIES = 20000;
     private static final String MODEL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip";
-    private static final String WAKE_GRAMMAR = "[\"सारथी\",\"सारथी जी\",\"हेलो सारथी\",\"हैलो सारथी\",\"नमस्ते सारथी\",\"हे सारथी\",\"ठीक है सारथी\",\"अच्छा है सारथी\",\"ओके सारथी\",\"बाय सारथी\",\"सरथी\",\"सारथि\",\"[unk]\"]";
+    private static final String WAKE_GRAMMAR = "[\"सारथी\",\"सारथी जी\",\"हेलो सारथी\",\"हैलो सारथी\",\"नमस्ते सारथी\",\"हे सारथी\",\"ठीक है सारथी\",\"अच्छा है सारथी\",\"ओके सारथी\",\"बाय सारथी\",\"बस सारथी\",\"धन्यवाद सारथी\",\"अलविदा सारथी\",\"ठीक है बाय\",\"अच्छा है बाय\",\"सरथी\",\"सारथि\",\"hello sarathi\",\"helo sarathi\",\"hey sarathi\",\"hi sarathi\",\"namaste sarathi\",\"sarathi\",\"sarthi\",\"bye sarathi\",\"ok sarathi\",\"okay sarathi\",\"[unk]\"]";
     private final Handler handler = new Handler(Looper.getMainLooper());
     private ExecutorService worker = Executors.newSingleThreadExecutor();
     private volatile boolean running = false;
@@ -71,6 +74,7 @@ public class WakeWordService extends Service {
         if (intent != null && ACTION_STOP.equals(intent.getAction())) {
             prefs.edit().putBoolean("enabled", false).apply();
             stopListening();
+            getSystemService(NotificationManager.class).cancel(NOTIFICATION_ID + 1);
             stopForeground(true);
             stopSelf();
             return START_NOT_STICKY;
@@ -86,14 +90,20 @@ public class WakeWordService extends Service {
             return START_STICKY;
         }
         if (intent != null && ACTION_END_CONVERSATION.equals(intent.getAction())) {
-            conversationMode = false;
-            awaitingCommand = false;
-            if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
-            commandTimeout = null;
             if (running) {
-                if (speechService != null) speechService.setPause(false);
-                resumeListening();
-                updateStatus("बातचीत समाप्त। सारथी फिर से वेक-वर्ड सुन रहा है।");
+                // Tear down the continuous-conversation recognizer and create
+                // a fresh wake-phrase recognizer, just like a spoken stop phrase.
+                endConversationAndResumeWakeWord();
+            } else {
+                conversationMode = false;
+                awaitingCommand = false;
+                commandMode = false;
+                commandDelivered = true;
+                if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
+                commandTimeout = null;
+                getSystemService(NotificationManager.class).cancel(NOTIFICATION_ID + 1);
+                stopSelf();
+                return START_NOT_STICKY;
             }
             return START_STICKY;
         }
@@ -119,7 +129,13 @@ public class WakeWordService extends Service {
             stopSelf();
             return START_NOT_STICKY;
         }
-        if (intent == null && !prefs.getBoolean("enabled", false)) {
+        if (intent == null) {
+            // Android may recreate a sticky microphone foreground service after
+            // process death while the app is in the background. Android 14+
+            // restricts starting microphone FGS without a visible activity.
+            // Do not attempt a forbidden background restart; require the user
+            // to reopen Sarathi and explicitly enable wake listening again.
+            prefs.edit().putBoolean("enabled", false).apply();
             stopSelf();
             return START_NOT_STICKY;
         }
@@ -130,7 +146,17 @@ public class WakeWordService extends Service {
                 stopSelf();
                 return START_NOT_STICKY;
             }
-            startForeground(NOTIFICATION_ID, buildNotification("पहली बार हिंदी मॉडल डाउनलोड हो रहा है…"));
+            try {
+                startForeground(NOTIFICATION_ID, buildNotification("पहली बार हिंदी मॉडल डाउनलोड हो रहा है…"));
+            } catch (SecurityException error) {
+                // Permission can be revoked between the microphone check and
+                // foreground promotion. Fail closed instead of crashing the service.
+                prefs.edit().putBoolean("enabled", false).apply();
+                running = false;
+                stopForeground(true);
+                stopSelf();
+                return START_NOT_STICKY;
+            }
             running = true;
             if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
             worker.execute(this::prepareModelAndListen);
@@ -170,10 +196,22 @@ public class WakeWordService extends Service {
             if (!marker.isFile()) {
                 updateStatus("हिंदी मॉडल डाउनलोड हो रहा है (लगभग 42 MB)…");
                 File zipFile = new File(modelsDir, MODEL_NAME + ".zip");
-                downloadModel(zipFile);
-                updateStatus("हिंदी मॉडल तैयार किया जा रहा है…");
-                unzipModel(zipFile, modelsDir);
-                zipFile.delete();
+                File stagingDir = new File(modelsDir, MODEL_NAME + ".staging");
+                try {
+                    downloadModel(zipFile);
+                    if (!running) return;
+                    updateStatus("हिंदी मॉडल तैयार किया जा रहा है…");
+                    deleteModelFiles(stagingDir);
+                    unzipModel(zipFile, stagingDir);
+                    if (!running) return;
+                    File stagedMarker = new File(stagingDir, MODEL_NAME + "/am/final.mdl");
+                    if (!stagedMarker.isFile()) throw new Exception("हिंदी मॉडल ZIP अधूरा है");
+                    deleteModelFiles(modelDir);
+                    if (!stagingDir.renameTo(modelDir)) throw new Exception("तैयार मॉडल सुरक्षित रूप से सेव नहीं हुआ");
+                } finally {
+                    zipFile.delete();
+                    if (stagingDir.exists()) deleteModelFiles(stagingDir);
+                }
             }
             if (!running) return;
             if (!marker.isFile()) throw new Exception("हिंदी मॉडल अधूरा है");
@@ -288,12 +326,77 @@ public class WakeWordService extends Service {
         });
     }
 
+    private boolean isConversationEndPhrase(String recognized) {
+        if (recognized == null) return false;
+        String normalized = recognized.toLowerCase(Locale.ROOT)
+                .replaceAll("[^\\p{L}\\p{N}]+", " ").trim().replaceAll("\\s+", " ");
+        normalized = normalized.replace("सारथि", "सारथी").replace("सरथी", "सारथी");
+        String compact = normalized.replaceAll("[^\\p{L}\\p{N}]", "");
+        return normalized.equals("ठीक है सारथी")
+                || normalized.equals("अच्छा है सारथी")
+                || normalized.equals("ओके सारथी")
+                || normalized.equals("बाय सारथी")
+                || normalized.equals("बस सारथी")
+                || normalized.equals("धन्यवाद सारथी")
+                || normalized.equals("अलविदा सारथी")
+                || normalized.equals("ठीक है बाय")
+                || normalized.equals("अच्छा है बाय")
+                || normalized.equals("बाय")
+                || normalized.equals("bye")
+                || normalized.equals("अलविदा")
+                || normalized.equals("ok sarathi")
+                || normalized.equals("okay sarathi")
+                || normalized.equals("bye sarathi")
+                || compact.equals("ठीकहैसारथी")
+                || compact.equals("ओकेसारथी")
+                || compact.equals("बायसारथी")
+                || compact.equals("बससारथी")
+                || compact.equals("धन्यवादसारथी")
+                || compact.equals("अलविदासारथी")
+                || compact.equals("ठीकहैबाय")
+                || compact.equals("अच्छाहैबाय")
+                || compact.equals("बाय")
+                || compact.equals("अलविदा");
+    }
+
+    private void endConversationAndResumeWakeWord() {
+        commandDelivered = true;
+        commandMode = false;
+        conversationMode = false;
+        awaitingCommand = false;
+        if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
+        commandTimeout = null;
+        getSystemService(NotificationManager.class).cancel(NOTIFICATION_ID + 1);
+        updateStatus("बातचीत बंद। दोबारा शुरू करने के लिए ‘हेलो सारथी’ कहें।");
+        if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
+        worker.execute(() -> {
+            try {
+                if (speechService != null) {
+                    speechService.cancel();
+                    speechService.shutdown();
+                    speechService = null;
+                }
+                if (recognizer != null) {
+                    recognizer.close();
+                    recognizer = null;
+                }
+                if (running) startWakeRecognition();
+            } catch (Exception error) {
+                scheduleListeningRetry("वेक-वर्ड सुनना फिर शुरू नहीं हो सका");
+            }
+        });
+    }
+
     private void handleConversationUtterance(String json) {
         if (!running || !conversationMode || awaitingCommand || commandDelivered || json == null) return;
         String text = "";
         try { text = new JSONObject(json).optString("text", "").trim(); }
         catch (Exception ignored) { }
         if (text.isEmpty()) return;
+        if (isConversationEndPhrase(text)) {
+            endConversationAndResumeWakeWord();
+            return;
+        }
         commandMode = true;
         finishCommand(json);
     }
@@ -369,31 +472,52 @@ public class WakeWordService extends Service {
         HttpURLConnection connection = (HttpURLConnection) new URL(MODEL_URL).openConnection();
         connection.setConnectTimeout(20000);
         connection.setReadTimeout(60000);
-        connection.setInstanceFollowRedirects(true);
-        connection.connect();
+        connection.setInstanceFollowRedirects(false);
+        File temp = new File(destination.getParentFile(), destination.getName() + ".part");
+        boolean completed = false;
         try {
+            connection.connect();
             if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) throw new Exception("मॉडल डाउनलोड नहीं हुआ");
-            File temp = new File(destination.getParentFile(), destination.getName() + ".part");
+            long expectedBytes = connection.getContentLengthLong();
+            if (expectedBytes > MAX_MODEL_ARCHIVE_BYTES) throw new SecurityException("मॉडल फ़ाइल तय सीमा से बड़ी है");
+            long downloadedBytes = 0L;
             try (InputStream input = new BufferedInputStream(connection.getInputStream());
                  FileOutputStream output = new FileOutputStream(temp)) {
                 byte[] buffer = new byte[16384];
                 int count;
-                while (running && (count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+                while (running && (count = input.read(buffer)) != -1) {
+                    downloadedBytes += count;
+                    if (downloadedBytes > MAX_MODEL_ARCHIVE_BYTES) {
+                        throw new SecurityException("मॉडल डाउनलोड तय सीमा से बड़ा हो गया");
+                    }
+                    output.write(buffer, 0, count);
+                }
                 output.getFD().sync();
             }
-            if (!running) { temp.delete(); return; }
+            if (!running) return;
+            if (downloadedBytes == 0L || (expectedBytes >= 0L && downloadedBytes != expectedBytes)) {
+                throw new Exception("मॉडल डाउनलोड अधूरा है");
+            }
             if (!temp.renameTo(destination)) throw new Exception("डाउनलोड फ़ाइल सेव नहीं हुई");
+            completed = true;
         } finally {
             connection.disconnect();
+            if (!completed && temp.exists()) temp.delete();
         }
     }
 
     private void unzipModel(File zipFile, File destination) throws Exception {
+        if (!destination.exists() && !destination.mkdirs()) throw new Exception("अस्थायी मॉडल फ़ोल्डर नहीं बन पाया");
         String root = destination.getCanonicalPath() + File.separator;
+        long expandedBytes = 0L;
+        int entryCount = 0;
         try (ZipInputStream zip = new ZipInputStream(new BufferedInputStream(new java.io.FileInputStream(zipFile)))) {
             ZipEntry entry;
             byte[] buffer = new byte[16384];
             while (running && (entry = zip.getNextEntry()) != null) {
+                if (++entryCount > MAX_MODEL_ARCHIVE_ENTRIES) {
+                    throw new SecurityException("मॉडल ZIP में बहुत अधिक फ़ाइलें हैं");
+                }
                 File output = new File(destination, entry.getName());
                 if (!output.getCanonicalPath().startsWith(root)) throw new SecurityException("Invalid model archive path");
                 if (entry.isDirectory()) {
@@ -403,12 +527,31 @@ public class WakeWordService extends Service {
                     if (!parent.exists() && !parent.mkdirs()) throw new Exception("मॉडल फ़ोल्डर नहीं बन पाया");
                     try (FileOutputStream stream = new FileOutputStream(output)) {
                         int count;
-                        while ((count = zip.read(buffer)) != -1) stream.write(buffer, 0, count);
+                        while (running && (count = zip.read(buffer)) != -1) {
+                            expandedBytes += count;
+                            if (expandedBytes > MAX_MODEL_EXPANDED_BYTES) {
+                                throw new SecurityException("खुला हुआ मॉडल तय स्टोरेज सीमा से बड़ा है");
+                            }
+                            stream.write(buffer, 0, count);
+                        }
                     }
                 }
                 zip.closeEntry();
+                if (!running) throw new InterruptedException("मॉडल extraction रोक दिया गया");
             }
+            if (!running) throw new InterruptedException("मॉडल extraction रोक दिया गया");
+            if (entryCount == 0) throw new Exception("मॉडल ZIP खाली है");
         }
+    }
+
+    private void deleteModelFiles(File file) throws Exception {
+        if (file == null || !file.exists()) return;
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children == null) throw new Exception("पुराना मॉडल फ़ोल्डर साफ़ नहीं हो पाया");
+            for (File child : children) deleteModelFiles(child);
+        }
+        if (!file.delete()) throw new Exception("पुराना मॉडल डेटा साफ़ नहीं हो पाया");
     }
 
     private Recognizer createWakeRecognizer() throws Exception {
@@ -447,39 +590,11 @@ public class WakeWordService extends Service {
                 .replace("सरथी", "सारथी")
                 ;
         String compact = normalized.replaceAll("[^\\p{L}\\p{N}]", "");
-        boolean quietCommand = normalized.equals("ठीक है सारथी")
-                || normalized.equals("अच्छा है सारथी")
-                || normalized.equals("ओके सारथी")
-                || normalized.equals("बाय सारथी")
-                || normalized.equals("ok sarathi")
-                || normalized.equals("okay sarathi")
-                || compact.equals("ठीकहैसारथी")
-                || compact.equals("ओकेसारथी")
-                || compact.equals("बायसारथी");
+        boolean quietCommand = isConversationEndPhrase(recognized);
         if (quietCommand) {
-            // End the active conversation and return to the low-power wake phrase listener.
-            conversationMode = false;
-            awaitingCommand = false;
-            if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
-            commandTimeout = null;
-            updateStatus("बातचीत बंद। दोबारा शुरू करने के लिए ‘हेलो सारथी’ कहें।");
-            if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
-            worker.execute(() -> {
-                try {
-                    if (speechService != null) {
-                        speechService.cancel();
-                        speechService.shutdown();
-                        speechService = null;
-                    }
-                    if (recognizer != null) {
-                        recognizer.close();
-                        recognizer = null;
-                    }
-                    if (running) startWakeRecognition();
-                } catch (Exception error) {
-                    scheduleListeningRetry("वेक-वर्ड सुनना फिर शुरू नहीं हो सका");
-                }
-            });
+            // Use the same teardown path as app-triggered and conversation-mode
+            // stop phrases so flags, timeout, and the secondary notification stay in sync.
+            endConversationAndResumeWakeWord();
             return;
         }
         boolean hindiWake = normalized.equals("सारथी")
@@ -517,20 +632,20 @@ public class WakeWordService extends Service {
                     if (languageStatus == TextToSpeech.LANG_MISSING_DATA
                             || languageStatus == TextToSpeech.LANG_NOT_SUPPORTED) {
                         updateStatus("फ़ोन में हिंदी बोलने की आवाज़ उपलब्ध नहीं है; Text-to-Speech में हिंदी आवाज़ जोड़ें");
-                        resumeListening();
+                        resumeAfterSpeechFailure();
                         return;
                     }
                     speakGreeting();
                 } else {
                     updateStatus("फ़ोन की बोलने वाली सेवा शुरू नहीं हुई; Text-to-Speech जाँचें");
-                    resumeListening();
+                    resumeAfterSpeechFailure();
                 }
             });
         } else speakGreeting();
     }
 
     private void speakGreeting() {
-        if (!running || textToSpeech == null) { resumeListening(); return; }
+        if (!running || textToSpeech == null) { resumeAfterSpeechFailure(); return; }
         textToSpeech.setOnUtteranceProgressListener(new UtteranceProgressListener() {
             @Override public void onStart(String id) {}
             @Override public void onDone(String id) {
@@ -544,11 +659,24 @@ public class WakeWordService extends Service {
                     }
                 }, 350);
             }
-            @Override public void onError(String id) { handler.post(WakeWordService.this::resumeListening); }
+            @Override public void onError(String id) { handler.post(WakeWordService.this::resumeAfterSpeechFailure); }
         });
         int result = textToSpeech.speak("जी, बताइए।", TextToSpeech.QUEUE_FLUSH, null, "sarathi_wake_reply");
         if (result == TextToSpeech.ERROR) {
             updateStatus("सारथी का जवाब बोलना शुरू नहीं हुआ; फ़ोन की TTS आवाज़ जाँचें");
+            resumeAfterSpeechFailure();
+        }
+    }
+
+    // If TTS cannot speak, do not leave the wake-word recognizer paused
+    // until the 20-second command timeout. Return directly to wake listening.
+    private void resumeAfterSpeechFailure() {
+        speaking = false;
+        awaitingCommand = false;
+        if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
+        commandTimeout = null;
+        if (running) {
+            getSystemService(NotificationManager.class).cancel(NOTIFICATION_ID + 1);
             resumeListening();
         }
     }
@@ -624,6 +752,11 @@ public class WakeWordService extends Service {
         if (textToSpeech != null) { textToSpeech.stop(); textToSpeech.shutdown(); textToSpeech = null; }
     }
 
-    @Override public void onDestroy() { stopListening(); super.onDestroy(); }
+    @Override public void onDestroy() {
+        stopListening();
+        // This notification is independent of the foreground-service notification.
+        getSystemService(NotificationManager.class).cancel(NOTIFICATION_ID + 1);
+        super.onDestroy();
+    }
     @Override public IBinder onBind(Intent intent) { return null; }
 }
