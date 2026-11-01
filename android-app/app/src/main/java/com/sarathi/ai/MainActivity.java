@@ -199,6 +199,10 @@ public class MainActivity extends Activity {
 
             @Override
             public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
+                if (!isTrustedAppUrl(Uri.parse(url == null ? "" : url))) {
+                    result.cancel();
+                    return true;
+                }
                 new android.app.AlertDialog.Builder(MainActivity.this)
                         .setTitle("सारथी AI की अनुमति")
                         .setMessage(message == null ? "क्या यह कार्रवाई करनी है?" : message)
