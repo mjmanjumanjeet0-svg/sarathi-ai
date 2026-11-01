@@ -213,5 +213,21 @@ assert.ok(
   unzipCode.includes("getCanonicalPath().startsWith(root)"),
   "Model extraction must limit expanded size and entry count and prevent ZIP path traversal"
 );
+assert.ok(
+  wakeService.includes('new File(modelsDir, MODEL_NAME + ".staging")') &&
+  wakeService.includes('new File(stagingDir, MODEL_NAME + "/am/final.mdl")') &&
+  wakeService.includes("stagingDir.renameTo(modelDir)") &&
+  wakeService.includes("deleteModelFiles(stagingDir)"),
+  "Model extraction must stage files, validate the complete model marker, then promote the folder and clean failed staging data"
+);
+assert.ok(
+  unzipCode.includes("while (running && (count = zip.read(buffer)) != -1)") &&
+  unzipCode.includes('throw new InterruptedException("मॉडल extraction रोक दिया गया")'),
+  "Stopping the service during extraction must interrupt the operation instead of accepting partial model data"
+);
+assert.ok(
+  wakeService.includes("cancel(NOTIFICATION_ID + 1);"),
+  "Stopping wake-word service must also clear its secondary wake/command notification"
+);
 
 console.log("Sarathi Android wake-word self-test: stop phrases, resume and early-exit checks passed.");
