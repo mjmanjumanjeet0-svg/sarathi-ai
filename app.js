@@ -1375,6 +1375,7 @@ window.SarathiVoice = {
       input.focus();
       setStatus("आवाज़ लिख दी गई है। भेजने से पहले संदेश जाँच लें।");
     }
+    window.SarathiVoice?.onNativeRecognitionDone?.();
   },
   onWakeCommandResult(transcript) {
     if (transcript && String(transcript).trim()) {
@@ -1396,6 +1397,7 @@ window.SarathiVoice = {
     }
   },
   onError(message) {
+    window.SarathiVoice?.onNativeRecognitionDone?.();
     setStatus(message || "ऑफ़लाइन आवाज़ सुविधा अभी उपलब्ध नहीं है।");
   },
   onStatus(message) {
