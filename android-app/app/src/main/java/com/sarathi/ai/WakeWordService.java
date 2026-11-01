@@ -44,7 +44,7 @@ public class WakeWordService extends Service {
     private static final int NOTIFICATION_ID = 771;
     private static final String MODEL_NAME = "vosk-model-small-hi-0.22";
     private static final String MODEL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip";
-    private static final String WAKE_GRAMMAR = "[\"सारथी\",\"सारथी जी\",\"हेलो सारथी\",\"हैलो सारथी\",\"नमस्ते सारथी\",\"हे सारथी\",\"ठीक है सारथी\",\"अच्छा है सारथी\",\"ओके सारथी\",\"बाय सारथी\",\"सरथी\",\"सारथि\",\"[unk]\"]";
+    private static final String WAKE_GRAMMAR = "[\"सारथी\",\"सारथी जी\",\"हेलो सारथी\",\"हैलो सारथी\",\"नमस्ते सारथी\",\"हे सारथी\",\"ठीक है सारथी\",\"अच्छा है सारथी\",\"ओके सारथी\",\"बाय सारथी\",\"ok sarathi\",\"okay sarathi\",\"bye sarathi\",\"सरथी\",\"सारथि\",\"[unk]\"]";
     private final Handler handler = new Handler(Looper.getMainLooper());
     private ExecutorService worker = Executors.newSingleThreadExecutor();
     private volatile boolean running = false;
@@ -315,6 +315,7 @@ public class WakeWordService extends Service {
                 || normalized.equals("बाय सारथी")
                 || normalized.equals("ok sarathi")
                 || normalized.equals("okay sarathi")
+                || normalized.equals("bye sarathi")
                 || compact.equals("ठीकहैसारथी")
                 || compact.equals("ओकेसारथी")
                 || compact.equals("बायसारथी");
@@ -502,6 +503,7 @@ public class WakeWordService extends Service {
                 || normalized.equals("बाय सारथी")
                 || normalized.equals("ok sarathi")
                 || normalized.equals("okay sarathi")
+                || normalized.equals("bye sarathi")
                 || compact.equals("ठीकहैसारथी")
                 || compact.equals("ओकेसारथी")
                 || compact.equals("बायसारथी");
