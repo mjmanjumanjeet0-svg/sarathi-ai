@@ -142,7 +142,17 @@ public class WakeWordService extends Service {
                 stopSelf();
                 return START_NOT_STICKY;
             }
-            startForeground(NOTIFICATION_ID, buildNotification("पहली बार हिंदी मॉडल डाउनलोड हो रहा है…"));
+            try {
+                startForeground(NOTIFICATION_ID, buildNotification("पहली बार हिंदी मॉडल डाउनलोड हो रहा है…"));
+            } catch (SecurityException error) {
+                // Permission can be revoked between the microphone check and
+                // foreground promotion. Fail closed instead of crashing the service.
+                prefs.edit().putBoolean("enabled", false).apply();
+                running = false;
+                stopForeground(true);
+                stopSelf();
+                return START_NOT_STICKY;
+            }
             running = true;
             if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
             worker.execute(this::prepareModelAndListen);
