@@ -70,6 +70,15 @@ await test("health endpoint", async () => {
   assert.equal(r.status, 200);
   assert.equal(r.data.status, "running");
 });
+await test("CORS is restricted to the official GitHub Pages app origin", async () => {
+  const r = await worker.fetch(new Request("https://sarathi.test/api/login", {
+    method: "OPTIONS",
+    headers: { Origin: "https://mjmanjumanjeet0-svg.github.io", "Access-Control-Request-Method": "POST" }
+  }), env);
+  assert.equal(r.status, 204);
+  assert.equal(r.headers.get("Access-Control-Allow-Origin"), "https://mjmanjumanjeet0-svg.github.io");
+  assert.equal(r.headers.get("X-Content-Type-Options"), "nosniff");
+});
 await test("rejects wrong login password", async () => {
   const r = await request("/api/login", "POST", { password: "wrong" });
   assert.equal(r.status, 401);
