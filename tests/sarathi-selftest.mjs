@@ -16,6 +16,11 @@ globalThis.fetch = async (input, init = {}) => {
   if (url.includes("api.exa.ai/search")) {
     if (exaMode === "429") return Response.json({ error: "rate limited" }, { status: 429 });
     const searchBody = JSON.parse(init.body || "{}");
+    if (/(ट्रेन|रेल|train|railway)/i.test(searchBody.query || "")) {
+      return Response.json({ results: [
+        { title: "Indian Railways train running status and schedule", url: "https://www.indianrail.gov.in/test-train-status", highlights: ["Train running status and scheduled departure information for Indian Railways."] }
+      ] });
+    }
     if (/India latest news/i.test(searchBody.query || "")) {
       return Response.json({ results: [
         { title: "India announces new national education initiative", url: "https://www.reuters.com/world/india/test-education-update/", highlights: ["Government officials announced a new national education initiative for schools."], publishedDate: new Date().toISOString() },
@@ -137,6 +142,17 @@ await test("current price query invokes web search and AI", async () => {
   assert.match(enrichedUserPrompt, /13,888 × 10 = 1,38,880/);
   assert.match(enrichedUserPrompt, /179 × 1000 = 1,79,000/);
   assert.match(enrichedUserPrompt, /विसंगति बताओ/);
+});
+await test("Hindi train timing question automatically searches railway information", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "04007 ट्रेन सीवान से कब चलती है?" }] }, token);
+  assert.equal(r.status, 200);
+  const exaCall = calls.slice(before).find(x => x.url.includes("api.exa.ai/search"));
+  assert.ok(exaCall, "train timing should automatically trigger web search");
+  const groqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
+  assert.ok(groqCall, "relevant railway results should reach Groq");
+  const prompt = JSON.parse(groqCall.init.body || "{}").messages?.at(-1)?.content || "";
+  assert.match(prompt, /Indian Railways|indianrail\.gov\.in/);
 });
 await test("Hindi current-news request automatically searches trusted news sources", async () => {
   const before = calls.length;
