@@ -211,6 +211,14 @@ await test("missing Exa key never fabricates current web results", async () => {
   assert.equal(calls.length, before, "missing search credentials must not call external providers");
   env.EXA_API_KEY = previousKey;
 });
+await test("a 22K-only gold-rate question triggers rate enrichment", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "22K का भाव बताओ" }] }, token);
+  assert.equal(r.status, 200);
+  const pageFetches = calls.slice(before).filter(x => !x.url.includes("api.exa.ai/search") && !x.url.includes("api.groq.com"));
+  assert.ok(pageFetches.length > 0, "22K-only queries should activate gold-rate page enrichment");
+});
+
 await test("gold-rate page enrichment only fetches public HTTPS URLs without following redirects", async () => {
   const before = calls.length;
   await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज सोने का भाव बताओ" }] }, token);
