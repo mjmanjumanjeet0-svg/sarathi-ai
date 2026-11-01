@@ -892,7 +892,20 @@ async function sendMessage(text) {
     return;
   }
 
-  if ((!prompt && !state.attachments.length) || state.busy) return;
+  if (!prompt && !state.attachments.length) return;
+  if (state.busy) {
+    const incomingVoice = state.voiceReplyPending || Boolean(window.SarathiVoice?.isActive?.());
+    if (incomingVoice) {
+      state.voiceReplyPending = false;
+      window.SarathiVoice?.pause?.();
+      if (typeof window.SarathiVoice?.speak === "function") {
+        window.SarathiVoice.speak("सारथी अभी पिछले काम में व्यस्त है। कृपया थोड़ी देर बाद बोलें।");
+      } else {
+        window.SarathiNative?.resumeWakeWord?.();
+      }
+    }
+    return;
+  }
 
   // Open only a small, explicit set of installed Android apps. Arbitrary
   // package names or shell commands are never accepted from the webpage.
