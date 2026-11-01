@@ -581,6 +581,7 @@ public class MainActivity extends Activity {
                     int languageResult = textToSpeech.setLanguage(language);
                     if (languageResult == TextToSpeech.LANG_MISSING_DATA
                             || languageResult == TextToSpeech.LANG_NOT_SUPPORTED) {
+                        notifyVoice("onNativeSpeechDone", "");
                         notifyVoice("onError", hindiText
                                 ? "फ़ोन में हिंदी बोलने की आवाज़ उपलब्ध नहीं है। Android की Text-to-Speech सेटिंग में हिंदी आवाज़ इंस्टॉल करें।"
                                 : "फ़ोन में English बोलने की आवाज़ उपलब्ध नहीं है। Android की Text-to-Speech सेटिंग में English आवाज़ इंस्टॉल करें।");
@@ -617,10 +618,12 @@ public class MainActivity extends Activity {
                     });
                     int result = textToSpeech.speak(toSpeak, TextToSpeech.QUEUE_FLUSH, null, "sarathi-local-voice");
                     if (result == TextToSpeech.ERROR) {
+                        notifyVoice("onNativeSpeechDone", "");
                         notifyVoice("onError", "जवाब बोलना शुरू नहीं हुआ। फ़ोन की Text-to-Speech सेटिंग जाँचें।");
                         resumeWakeWordAfterCommand();
                     }
                 } catch (Exception error) {
+                    notifyVoice("onNativeSpeechDone", "");
                     resumeWakeWordAfterCommand();
                     notifyVoice("onError", "जवाब बोलना शुरू नहीं हो सका। फ़ोन की Text-to-Speech सेटिंग जाँचें।");
                 }
