@@ -83,14 +83,14 @@ assert.ok(
 
 
 const searchFilterStart = worker.indexOf("function filterRelevantSearchResults");
-const searchFilterEnd = worker.indexOf("\\nfunction dedupeNewsResults", searchFilterStart);
+const searchFilterEnd = worker.indexOf("\nfunction dedupeNewsResults", searchFilterStart);
 assert.ok(searchFilterStart >= 0 && searchFilterEnd > searchFilterStart, "Search result relevance filter must exist");
 const searchFilter = worker.slice(searchFilterStart, searchFilterEnd);
 assert.ok(
-  searchFilter.includes("gov\\\\.in") &&
-  searchFilter.includes("nic\\\\.in") &&
-  searchFilter.includes("ac\\\\.in") &&
-  searchFilter.includes("edu\\\\.in"),
+  searchFilter.includes("gov\\.in") &&
+  searchFilter.includes("nic\\.in") &&
+  searchFilter.includes("ac\\.in") &&
+  searchFilter.includes("edu\\.in"),
   "Official education questions must be restricted to government and academic domains"
 );
 assert.ok(
