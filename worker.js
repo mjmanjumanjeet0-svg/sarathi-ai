@@ -258,13 +258,13 @@ async function searchInternet(query, env) {
 function safePublicHttpsFetchUrl(value) {
   try {
     const url = new URL(value);
-    const hostname = url.hostname.toLowerCase().replace(/\\.$/, "");
+    const hostname = url.hostname.toLowerCase().replace(/\.$/, "");
     if (url.protocol !== "https:" || url.username || url.password) return false;
     if (url.port && url.port !== "443") return false;
     // Do not fetch IP literals or local/private-style hostnames from search results.
     if (!hostname.includes(".") || hostname.startsWith("[") ||
-        /^(?:localhost|.*\\.localhost|.*\\.local|.*\\.internal|.*\\.test)$/i.test(hostname)) return false;
-    if (/^(?:\\d{1,3}\\.){3}\\d{1,3}$/.test(hostname) || hostname.includes(":")) return false;
+        /^(?:localhost|.*\.localhost|.*\.local|.*\.internal|.*\.test)$/i.test(hostname)) return false;
+    if (/^(?:\d{1,3}\.){3}\d{1,3}$/.test(hostname) || hostname.includes(":")) return false;
     return true;
   } catch {
     return false;
