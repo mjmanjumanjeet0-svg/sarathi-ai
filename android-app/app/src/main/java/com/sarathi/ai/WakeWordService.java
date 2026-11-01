@@ -517,20 +517,20 @@ public class WakeWordService extends Service {
                     if (languageStatus == TextToSpeech.LANG_MISSING_DATA
                             || languageStatus == TextToSpeech.LANG_NOT_SUPPORTED) {
                         updateStatus("फ़ोन में हिंदी बोलने की आवाज़ उपलब्ध नहीं है; Text-to-Speech में हिंदी आवाज़ जोड़ें");
-                        resumeListening();
+                        resumeAfterSpeechFailure();
                         return;
                     }
                     speakGreeting();
                 } else {
                     updateStatus("फ़ोन की बोलने वाली सेवा शुरू नहीं हुई; Text-to-Speech जाँचें");
-                    resumeListening();
+                    resumeAfterSpeechFailure();
                 }
             });
         } else speakGreeting();
     }
 
     private void speakGreeting() {
-        if (!running || textToSpeech == null) { resumeListening(); return; }
+        if (!running || textToSpeech == null) { resumeAfterSpeechFailure(); return; }
         textToSpeech.setOnUtteranceProgressListener(new UtteranceProgressListener() {
             @Override public void onStart(String id) {}
             @Override public void onDone(String id) {
@@ -544,11 +544,24 @@ public class WakeWordService extends Service {
                     }
                 }, 350);
             }
-            @Override public void onError(String id) { handler.post(WakeWordService.this::resumeListening); }
+            @Override public void onError(String id) { handler.post(WakeWordService.this::resumeAfterSpeechFailure); }
         });
         int result = textToSpeech.speak("जी, बताइए।", TextToSpeech.QUEUE_FLUSH, null, "sarathi_wake_reply");
         if (result == TextToSpeech.ERROR) {
             updateStatus("सारथी का जवाब बोलना शुरू नहीं हुआ; फ़ोन की TTS आवाज़ जाँचें");
+            resumeAfterSpeechFailure();
+        }
+    }
+
+    // If TTS cannot speak, do not leave the wake-word recognizer paused
+    // until the 20-second command timeout. Return directly to wake listening.
+    private void resumeAfterSpeechFailure() {
+        speaking = false;
+        awaitingCommand = false;
+        if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
+        commandTimeout = null;
+        if (running) {
+            getSystemService(NotificationManager.class).cancel(NOTIFICATION_ID + 1);
             resumeListening();
         }
     }
