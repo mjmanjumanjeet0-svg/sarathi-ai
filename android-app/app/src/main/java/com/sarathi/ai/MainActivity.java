@@ -27,7 +27,7 @@ import android.webkit.JsResult;
 import android.webkit.ValueCallback;
 import android.webkit.WebResourceRequest;
 
-import org.json.JSONObject;
+import org.json.JSONObject;\nimport org.json.JSONArray;
 
 import java.util.ArrayList;
 import java.util.Locale;
@@ -610,6 +610,48 @@ public class MainActivity extends Activity {
                 }
             });
         }
+        @JavascriptInterface
+        public String getInstalledApps() {
+            JSONArray apps = new JSONArray();
+            try {
+                Intent launcherIntent = new Intent(Intent.ACTION_MAIN);
+                launcherIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+                for (android.content.pm.ResolveInfo info : getPackageManager().queryIntentActivities(launcherIntent, 0)) {
+                    if (info == null || info.activityInfo == null) continue;
+                    String packageName = info.activityInfo.packageName;
+                    if (packageName == null || packageName.equals(getPackageName())) continue;
+                    JSONObject item = new JSONObject();
+                    item.put("label", String.valueOf(info.loadLabel(getPackageManager())));
+                    item.put("packageName", packageName);
+                    apps.put(item);
+                }
+            } catch (Exception ignored) {}
+            return apps.toString();
+        }
+
+        @JavascriptInterface
+        public void openAppPackage(String requestedPackage) {
+            final String packageName = requestedPackage == null ? "" : requestedPackage.trim();
+            if (!packageName.matches("[A-Za-z0-9_]+(\\\\.[A-Za-z0-9_]+)+")) {
+                notifyVoice("onError", "ऐप का नाम मान्य नहीं है।");
+                return;
+            }
+            runOnUiThread(() -> {
+                try {
+                    Intent launch = getPackageManager().getLaunchIntentForPackage(packageName);
+                    if (launch == null) {
+                        notifyVoice("onError", "यह ऐप फ़ोन में इंस्टॉल नहीं है या खुल नहीं सका।");
+                        return;
+                    }
+                    launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(launch);
+                    notifyVoice("onStatus", "ऐप खोला जा रहा है।");
+                } catch (Exception error) {
+                    notifyVoice("onError", "ऐप नहीं खुल सका।");
+                }
+            });
+        }
+
         @JavascriptInterface
         public void openApp(String appKey) {
             final String key = appKey == null ? "" : appKey.trim().toLowerCase(Locale.ROOT);
