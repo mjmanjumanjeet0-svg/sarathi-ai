@@ -2,6 +2,16 @@ name: Build Sarathi AI Android APK
 
 'on':
   workflow_dispatch:
+  pull_request:
+    paths:
+      - 'android-app/**'
+      - 'index.html'
+      - 'style.css'
+      - 'app.js'
+      - 'media-studio.js'
+      - 'project-studio.js'
+      - 'worker.js'
+      - '.github/workflows/android.yml'
   push:
     paths:
       - 'android-app/**'
