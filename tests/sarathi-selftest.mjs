@@ -9,6 +9,7 @@ const { default: worker } = await import(moduleUrl);
 const calls = [];
 let groqMode = "success";
 let exaMode = "success";
+let exaResultsMode = "normal";
 let groqReply = "यह सारथी का परीक्षण उत्तर है।";
 globalThis.fetch = async (input, init = {}) => {
   const url = String(input);
@@ -25,6 +26,14 @@ globalThis.fetch = async (input, init = {}) => {
       return Response.json({ results: [
         { title: "India announces new national education initiative", url: "https://www.reuters.com/world/india/test-education-update/", highlights: ["Government officials announced a new national education initiative for schools."], publishedDate: new Date().toISOString() },
         { title: "Heavy rainfall alert issued for eastern India", url: "https://indianexpress.com/article/india/test-rainfall-alert/", highlights: ["Weather authorities issued a rainfall alert for parts of eastern India."], publishedDate: new Date().toISOString() }
+      ] });
+    }
+    if (exaResultsMode === "unsafe-gold-urls") {
+      return Response.json({ results: [
+        { title: "Gold rate localhost page", url: "https://metadata.localhost/gold-rate", highlights: ["Gold rate information."] },
+        { title: "Gold rate private IP page", url: "https://10.0.0.1/gold-rate", highlights: ["Gold rate information."] },
+        { title: "Gold rate loopback IP page", url: "https://127.0.0.1/gold-rate", highlights: ["Gold rate information."] },
+        { title: "Gold rate test domain", url: "https://rates.example.test/gold-rate", highlights: ["Gold rate information."] }
       ] });
     }
     return Response.json({
@@ -211,6 +220,16 @@ await test("gold-rate page enrichment only fetches public HTTPS URLs without fol
     assert.equal(new URL(call.url).protocol, "https:");
     assert.equal(call.init.redirect, "manual", "untrusted redirects must not be followed");
   }
+});
+
+await test("gold-rate enrichment refuses localhost, private IP, loopback IP, and test-domain URLs", async () => {
+  exaResultsMode = "unsafe-gold-urls";
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज सोने का भाव बताओ" }] }, token);
+  assert.equal(r.status, 200);
+  const outbound = calls.slice(before).filter(x => !x.url.includes("api.exa.ai/search") && !x.url.includes("api.groq.com"));
+  assert.equal(outbound.length, 0, "unsafe search-result URLs must never be fetched");
+  exaResultsMode = "normal";
 });
 
 await test("Exa rate-limit is handled without crashing the Worker", async () => {
