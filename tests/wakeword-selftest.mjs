@@ -63,4 +63,21 @@ assert.ok(
   "Activity teardown must not restart the wake-word service"
 );
 
+
+const loginStart = app.indexOf("async function loginWorker()");
+const loginEnd = app.indexOf("\nfunction getAuthToken", loginStart);
+assert.ok(loginStart >= 0 && loginEnd > loginStart, "Worker login function must exist");
+const loginCode = app.slice(loginStart, loginEnd);
+assert.ok(
+  loginCode.includes("new AbortController()") &&
+  loginCode.includes("setTimeout(() => controller.abort(), 20000)") &&
+  loginCode.includes("clearTimeout(timeout)"),
+  "Worker login request must have a bounded timeout and always clear its timer"
+);
+assert.ok(
+  loginCode.includes("लॉगिन सर्वर से जवाब आने में 20 सेकंड से अधिक लगे") &&
+  loginCode.includes("लॉगिन सर्वर से संपर्क नहीं हो पाया"),
+  "Login timeout and network failures must show clear Hindi errors"
+);
+
 console.log("Sarathi Android wake-word self-test: stop phrases, resume and early-exit checks passed.");
