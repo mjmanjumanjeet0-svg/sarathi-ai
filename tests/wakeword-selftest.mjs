@@ -167,7 +167,7 @@ assert.ok(
   "Wake-word model download and extraction must have explicit size and entry-count limits"
 );
 const downloadStart = wakeService.indexOf("private void downloadModel(File destination)");
-const downloadEnd = wakeService.indexOf("\\n    private void unzipModel", downloadStart);
+const downloadEnd = wakeService.indexOf("\n    private void unzipModel", downloadStart);
 assert.ok(downloadStart >= 0 && downloadEnd > downloadStart, "Bounded model download method must exist");
 const downloadCode = wakeService.slice(downloadStart, downloadEnd);
 assert.ok(
@@ -177,7 +177,7 @@ assert.ok(
   "Model download must reject oversized/incomplete files and remove partial downloads"
 );
 const unzipStart = wakeService.indexOf("private void unzipModel(File zipFile, File destination)");
-const unzipEnd = wakeService.indexOf("\\n    private Recognizer createWakeRecognizer", unzipStart);
+const unzipEnd = wakeService.indexOf("\n    private Recognizer createWakeRecognizer", unzipStart);
 assert.ok(unzipStart >= 0 && unzipEnd > unzipStart, "Model extraction method must exist");
 const unzipCode = wakeService.slice(unzipStart, unzipEnd);
 assert.ok(
