@@ -104,7 +104,7 @@ await test("current price query invokes web search and AI", async () => {
   assert.match(enrichedUserPrompt, /999 शुद्धता/);
 });
 await test("long numbered prompts reach Groq without losing their beginning or ending", async () => {
-  const longPrompt = Array.from({ length: 50 }, (_, i) => `${i + 1}. सवाल ${i + 1}: सामान्य ज्ञान का छोटा परीक्षण`).join("\\n");
+  const longPrompt = Array.from({ length: 50 }, (_, i) => `${i + 1}. सवाल ${i + 1}: सामान्य ज्ञान का छोटा परीक्षण`).join("\n");
   const before = calls.length;
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: longPrompt }] }, token);
   assert.equal(r.status, 200);
