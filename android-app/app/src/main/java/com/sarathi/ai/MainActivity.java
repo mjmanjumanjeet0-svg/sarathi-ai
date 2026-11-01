@@ -575,40 +575,24 @@ public class MainActivity extends Activity {
         }
     }
 
-    private boolean launchAllowedApp(String appId) {
-        Intent launchIntent;
+    private Intent getAllowedAppLaunchIntent(String appId) {
         switch (appId == null ? "" : appId.trim().toLowerCase(Locale.ROOT)) {
             case "youtube":
-                launchIntent = getPackageManager().getLaunchIntentForPackage("com.google.android.youtube");
-                break;
+                return getPackageManager().getLaunchIntentForPackage("com.google.android.youtube");
             case "chrome":
-                launchIntent = getPackageManager().getLaunchIntentForPackage("com.android.chrome");
-                break;
+                return getPackageManager().getLaunchIntentForPackage("com.android.chrome");
             case "chatgpt":
-                launchIntent = getPackageManager().getLaunchIntentForPackage("com.openai.chatgpt");
-                break;
+                return getPackageManager().getLaunchIntentForPackage("com.openai.chatgpt");
             case "whatsapp":
-                launchIntent = getPackageManager().getLaunchIntentForPackage("com.whatsapp");
-                break;
+                return getPackageManager().getLaunchIntentForPackage("com.whatsapp");
             case "maps":
-                launchIntent = getPackageManager().getLaunchIntentForPackage("com.google.android.apps.maps");
-                break;
+                return getPackageManager().getLaunchIntentForPackage("com.google.android.apps.maps");
             case "settings":
-                launchIntent = new Intent(android.provider.Settings.ACTION_SETTINGS);
-                break;
+                return new Intent(android.provider.Settings.ACTION_SETTINGS);
             case "phone":
-                launchIntent = new Intent(Intent.ACTION_DIAL);
-                break;
+                return new Intent(Intent.ACTION_DIAL);
             default:
-                return false;
-        }
-        if (launchIntent == null || launchIntent.resolveActivity(getPackageManager()) == null) return false;
-        launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-        try {
-            startActivity(launchIntent);
-            return true;
-        } catch (Exception error) {
-            return false;
+                return null;
         }
     }
 
@@ -616,12 +600,17 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public boolean openApp(String appId) {
             if (appId == null || appId.length() > 32) return false;
-            final boolean[] launched = {false};
-            runOnUiThread(() -> launched[0] = launchAllowedApp(appId));
-            // JavaScript bridge calls execute off the UI thread; report that the
-            // request was accepted only for IDs in the explicit allowlist.
-            return Set.of("youtube", "chrome", "chatgpt", "whatsapp", "maps", "settings", "phone")
-                    .contains(appId.trim().toLowerCase(Locale.ROOT));
+            Intent launchIntent = getAllowedAppLaunchIntent(appId);
+            if (launchIntent == null || launchIntent.resolveActivity(getPackageManager()) == null) return false;
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            runOnUiThread(() -> {
+                try {
+                    startActivity(launchIntent);
+                } catch (Exception error) {
+                    notifyVoice("onError", "यह ऐप Android से नहीं खुल सका।");
+                }
+            });
+            return true;
         }
 
         @JavascriptInterface
