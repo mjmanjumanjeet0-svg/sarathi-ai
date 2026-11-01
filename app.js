@@ -934,7 +934,8 @@ async function sendMessage(text) {
       { id: "whatsapp", names: ["व्हाट्सएप", "व्हाट्स ऐप", "whatsapp"] },
       { id: "maps", names: ["गूगल मैप", "गूगल मैप्स", "google maps", "maps"] },
       { id: "settings", names: ["सेटिंग", "सेटिंग्स", "settings"] },
-      { id: "phone", names: ["फोन", "डायलर", "phone", "dialer"] }
+      { id: "phone", names: ["फोन", "डायलर", "phone", "dialer"] },
+      { id: "camera", names: ["कैमरा", "camera", "फोटो कैमरा"] }
     ];
     const match = aliases.find(item => item.names.some(name => requested === name));
     if (match) {
