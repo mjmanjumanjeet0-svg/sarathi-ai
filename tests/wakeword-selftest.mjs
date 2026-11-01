@@ -98,4 +98,23 @@ assert.ok(
   "Exam and result searches must reject non-official domains"
 );
 
+
+const sendStart = app.indexOf("async function sendMessage(text)");
+const sendEnd = app.indexOf("\\n/* ========================================\\n   SETTINGS", sendStart);
+assert.ok(sendStart >= 0 && sendEnd > sendStart, "Send message function must exist");
+const sendCode = app.slice(sendStart, sendEnd);
+assert.ok(
+  sendCode.includes('const isTimeout = /समय अधिक लगा|timed out|timeout/i.test(rawMessage)') &&
+  sendCode.includes('45 सेकंड से अधिक लगे'),
+  "Chat request timeouts must have a distinct Hindi explanation"
+);
+assert.ok(
+  sendCode.includes('finishVoiceEarly("माफ़ कीजिए, अभी जवाब नहीं मिल पाया। " + message)'),
+  "Voice-triggered failures must release the paused wake-word listener"
+);
+assert.ok(
+  sendCode.includes('else window.SarathiNative?.resumeWakeWord?.();'),
+  "Successful voice replies must resume wake-word listening when speech playback is unavailable"
+);
+
 console.log("Sarathi Android wake-word self-test: stop phrases, resume and early-exit checks passed.");
