@@ -304,7 +304,7 @@ async function enrichGoldRateResults(results) {
       if (!contexts.length) return item;
       const combined = [item.title || "", item.snippet || "", ...contexts].join(" | ");
       const rateFor = (karat) => {
-        const re = new RegExp("(?:\\b" + karat + "\\s*(?:K|karat|carat)|" + karat + "\\s*कैरेट)[^₹]{0,120}(?:₹|Rs\\.?|INR)\\s*([0-9,]+(?:\\.[0-9]+)?)", "i");
+        const re = new RegExp("(?:\\b" + karat + "\\s*(?:K|karat|carat)|" + karat + "\\s*कैरेट)[^₹]{0,120}(?:₹|Rs\.?|INR)\\s*([0-9,]+(?:\.[0-9]+)?)", "i");
         const m = combined.match(re);
         return m ? Number(m[1].replace(/,/g, "")) : null;
       };
@@ -336,10 +336,10 @@ function filterRelevantSearchResults(query, results) {
   // Indian government or recognized academic domains. Search ranking alone
   // must not make an unofficial coaching/blog page look authoritative.
   if (/(सिलेबस|पाठ्यक्रम|परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|परिणाम|आवेदन|फॉर्म|फीस|पात्रता|नियम|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(q)) {
-    const officialHost = /(?:^|\\.)(?:gov\\.in|nic\\.in|ac\\.in|edu\\.in)$/i;
+    const officialHost = /(?:^|\.)(?:gov\.in|nic\.in|ac\.in|edu\.in)$/i;
     return list.filter(item => {
       try {
-        const host = new URL(item.url).hostname.toLowerCase().replace(/^www\\./, "");
+        const host = new URL(item.url).hostname.toLowerCase().replace(/^www\./, "");
         return officialHost.test(host);
       } catch {
         return false;
