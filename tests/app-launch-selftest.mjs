@@ -23,7 +23,8 @@ const cases = [
   ["", null]
 ];
 for (const [input, expected] of cases) {
-  const actual = detect(input);\n  assert.equal(actual?.key || null, expected, "parser mismatch for: " + input);
+  const actual = detect(input);
+  assert.equal(actual?.key || null, expected, "parser mismatch for: " + input);
 }
 
 const java = await readFile(new URL("../android-app/app/src/main/java/com/sarathi/ai/MainActivity.java", import.meta.url), "utf8");
@@ -42,4 +43,13 @@ for (const name of packages) {
   assert.ok(java.includes('"' + name + '"'), "Android launch allowlist missing " + name);
   assert.ok(manifest.includes('android:name="' + name + '"'), "Manifest package query missing " + name);
 }
-const dynamicApps = [{label:"Calculator", packageName:"com.android.calculator2"}, {label:"Files", packageName:"com.google.android.documentsui"}];\nassert.deepEqual(detect("calculator खोलो", dynamicApps), {type:"package", packageName:"com.android.calculator2", label:"Calculator"});\nassert.deepEqual(detect("Files खोलो", dynamicApps), {type:"package", packageName:"com.google.android.documentsui", label:"Files"});\nassert.equal(detect("unknown app खोलो", dynamicApps), null);\nassert.ok(java.includes("getInstalledApps()") && java.includes("openAppPackage(String requestedPackage)"));\nconsole.log("APP LAUNCH SELF-TEST: " + cases.length + " fixed parser cases, 3 dynamic app cases and " + packages.length + " fixed Android mappings passed");
+const dynamicApps = [
+  {label:"Calculator", packageName:"com.android.calculator2"},
+  {label:"Files", packageName:"com.google.android.documentsui"}
+];
+assert.deepEqual(detect("calculator खोलो", dynamicApps), {type:"package", packageName:"com.android.calculator2", label:"Calculator"});
+assert.deepEqual(detect("Files खोलो", dynamicApps), {type:"package", packageName:"com.google.android.documentsui", label:"Files"});
+assert.equal(detect("unknown app खोलो", dynamicApps), null);
+assert.ok(java.includes("getInstalledApps()") && java.includes("openAppPackage(String requestedPackage)"));
+assert.ok(manifest.includes('android.intent.category.LAUNCHER'));
+console.log("APP LAUNCH SELF-TEST: " + cases.length + " fixed parser cases, 3 dynamic app cases and " + packages.length + " fixed Android mappings passed");
