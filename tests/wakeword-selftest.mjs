@@ -33,7 +33,7 @@ const confirmStart = activity.indexOf("public boolean onJsConfirm");
 const confirmEnd = activity.indexOf("public boolean onShowFileChooser", confirmStart);
 assert.ok(confirmStart >= 0 && confirmEnd > confirmStart, "Android WebView confirmation handler must exist");
 const confirmCode = activity.slice(confirmStart, confirmEnd);
-assert.ok(confirmCode.includes("isTrustedAppUrl(Uri.parse(url == null ? \\"\\" : url))") &&
+assert.ok(confirmCode.includes('isTrustedAppUrl(Uri.parse(url == null ? "" : url))') &&
   confirmCode.includes("result.cancel()"),
   "Android native confirmation dialog must reject untrusted page origins");
 
