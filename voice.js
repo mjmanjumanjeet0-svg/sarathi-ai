@@ -138,6 +138,13 @@
   }
 
   window.SarathiVoice = window.SarathiVoice || {};
+  // Native Android TTS reports its real completion; clear the JS speaking
+  // state so a later manual microphone session is not blocked.
+  window.SarathiVoice.onNativeSpeechDone = () => {
+    speaking = false;
+    paused = false;
+    if (active) startRecognition();
+  };
   window.SarathiVoice.speak = speak;
   window.SarathiVoice.isActive = () => active;
   window.SarathiVoice.pause = () => { paused = true; try { recognition?.stop(); } catch (_) {} };
