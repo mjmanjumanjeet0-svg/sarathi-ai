@@ -44,7 +44,7 @@ async function request(path, method = "GET", body, token) {
   }), env);
   let data = {};
   try { data = await response.json(); } catch {}
-  return { status: response.status, data };
+  return { status: response.status, data, headers: response.headers };
 }
 let passed = 0;
 async function test(name, fn) {
@@ -57,6 +57,8 @@ await test("health endpoint", async () => {
   const r = await request("/");
   assert.equal(r.status, 200);
   assert.equal(r.data.status, "running");
+  assert.equal(r.headers.get("Access-Control-Allow-Origin"), "https://mjmanjumanjeet0-svg.github.io");
+  assert.notEqual(r.headers.get("Access-Control-Allow-Origin"), "*");
 });
 await test("rejects wrong login password", async () => {
   const r = await request("/api/login", "POST", { password: "wrong" });
