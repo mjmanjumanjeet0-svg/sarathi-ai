@@ -1181,7 +1181,10 @@ async function sendMessage(text) {
 
     // Only speak automatically for a reply triggered by the wake-word voice command.
     // Typed messages stay silent; the user can still tap the per-message speaker button.
-    if (shouldSpeakReply && window.SarathiVoice && typeof window.SarathiVoice.speak === "function") window.SarathiVoice.speak(cleanAnswer);
+    if (shouldSpeakReply) {
+      if (typeof window.SarathiVoice?.speak === "function") window.SarathiVoice.speak(cleanAnswer);
+      else window.SarathiNative?.resumeWakeWord?.();
+    }
 
     if (useWebSearch && data.searchWarning) {
       setStatus("इंटरनेट खोज: " + data.searchWarning);
@@ -1191,10 +1194,13 @@ async function sendMessage(text) {
   } catch (error) {
     const rawMessage = String(error?.message || "");
     const isNetworkError = /networkerror|failed to fetch|load failed|network request failed/i.test(rawMessage);
+    const isTimeout = /समय अधिक लगा|timed out|timeout/i.test(rawMessage);
     const isRateLimit = /429|बहुत अधिक अनुरोध|अनुरोध सीमा/i.test(rawMessage);
-    const message = isNetworkError
-      ? "इंटरनेट या सर्वर से संपर्क नहीं हो पा रहा। अपना कनेक्शन जाँचें और थोड़ी देर बाद फिर कोशिश करें।"
-      : isRateLimit
+    const message = isTimeout
+      ? "सर्वर से जवाब आने में 45 सेकंड से अधिक लगे। थोड़ी देर बाद फिर कोशिश करें।"
+      : isNetworkError
+        ? "इंटरनेट या सर्वर से संपर्क नहीं हो पा रहा। अपना कनेक्शन जाँचें और थोड़ी देर बाद फिर कोशिश करें।"
+        : isRateLimit
         ? "AI सेवा पर अभी बहुत अधिक अनुरोध हैं। 30–60 सेकंड बाद दोबारा पूछें।"
         : (rawMessage || "अस्थायी तकनीकी समस्या हुई।");
 
@@ -1203,8 +1209,8 @@ async function sendMessage(text) {
       "माफ़ कीजिए, अभी जवाब नहीं मिल पाया।\n\nकारण: " + message
     );
 
-    setStatus(isNetworkError ? "इंटरनेट कनेक्शन जाँचें" : isRateLimit ? "AI सेवा व्यस्त है" : "अस्थायी समस्या");
-    if (shouldSpeakReply && window.SarathiVoice && typeof window.SarathiVoice.speak === "function") window.SarathiVoice.speak("माफ़ कीजिए, अभी जवाब नहीं मिल पाया। " + message);
+    setStatus(isTimeout ? "सर्वर से जवाब आने में देर हुई" : isNetworkError ? "इंटरनेट कनेक्शन जाँचें" : isRateLimit ? "AI सेवा व्यस्त है" : "अस्थायी समस्या");
+    finishVoiceEarly("माफ़ कीजिए, अभी जवाब नहीं मिल पाया। " + message);
   } finally {
     setBusy(false);
     if (input) {
