@@ -49,4 +49,18 @@ assert.ok(
   "Voice commands received while busy must get feedback and release the listener"
 );
 
+
+assert.ok(
+  activity.includes("private boolean activityDestroyed = false;") &&
+  activity.includes("if (activityDestroyed) return;"),
+  "Late TTS callbacks must not start a Service after Activity teardown"
+);
+const destroyStart = activity.indexOf("protected void onDestroy()");
+const destroyEnd = activity.indexOf("\n    }", destroyStart);
+assert.ok(destroyStart >= 0 && destroyEnd > destroyStart, "Activity teardown handler must exist");
+assert.ok(
+  !activity.slice(destroyStart, destroyEnd).includes("resumeWakeWordAfterCommand();"),
+  "Activity teardown must not restart the wake-word service"
+);
+
 console.log("Sarathi Android wake-word self-test: stop phrases, resume and early-exit checks passed.");
