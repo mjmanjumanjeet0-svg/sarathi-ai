@@ -144,6 +144,16 @@ await test("long numbered prompts reach Groq without losing their beginning or e
   assert.ok(sentPrompt.includes("50. सवाल 50:"), "last question must be preserved");
   assert.equal(groqBody.max_tokens, 6000, "output budget should support longer answer lists");
 });
+await test("missing Exa key never fabricates current web results", async () => {
+  const previousKey = env.EXA_API_KEY;
+  env.EXA_API_KEY = "";
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज की ताजा खबरें बताओ" }] }, token);
+  assert.equal(r.status, 200);
+  assert.match(r.data.reply, /भरोसेमंद परिणाम नहीं मिले/);
+  assert.equal(calls.length, before, "missing search credentials must not call external providers");
+  env.EXA_API_KEY = previousKey;
+});
 await test("Exa rate-limit is handled without crashing the Worker", async () => {
   exaMode = "429";
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज सोने का भाव बताओ" }] }, token);
