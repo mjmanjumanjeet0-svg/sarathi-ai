@@ -233,8 +233,7 @@ public class MainActivity extends Activity {
                 // The JavaScript bridge is privileged. Never allow a redirect or
                 // unexpected top-level navigation to load an untrusted origin.
                 Uri uri = Uri.parse(url == null ? "" : url);
-                if (!"https".equalsIgnoreCase(uri.getScheme())
-                        || !APP_HOST.equalsIgnoreCase(uri.getHost())) {
+                if (!isTrustedAppUrl(uri)) {
                     view.stopLoading();
                     Toast.makeText(MainActivity.this, "सुरक्षा के कारण बाहरी पेज ऐप के अंदर नहीं खोला गया।", Toast.LENGTH_SHORT).show();
                     return;
@@ -253,8 +252,7 @@ public class MainActivity extends Activity {
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
                 String scheme = uri.getScheme();
-                String host = uri.getHost();
-                if ("https".equalsIgnoreCase(scheme) && APP_HOST.equalsIgnoreCase(host)) {
+                if (isTrustedAppUrl(uri)) {
                     return false;
                 }
                 // केवल उपयोगकर्ता के टैप किए हुए सामान्य वेब लिंक बाहरी ब्राउज़र में खोलें।
@@ -278,6 +276,20 @@ public class MainActivity extends Activity {
 
         webView.loadUrl("https://" + APP_HOST + "/sarathi-ai/");
         handleWakeCommandIntent(getIntent());
+    }
+
+    private boolean isTrustedAppUrl(Uri uri) {
+        if (uri == null
+                || !"https".equalsIgnoreCase(uri.getScheme())
+                || !APP_HOST.equalsIgnoreCase(uri.getHost())
+                || (uri.getPort() != -1 && uri.getPort() != 443)
+                || uri.getUserInfo() != null) {
+            return false;
+        }
+        String path = uri.getPath();
+        return "/sarathi-ai".equals(path)
+                || "/sarathi-ai/".equals(path)
+                || "/sarathi-ai/index.html".equals(path);
     }
 
     private void handleWakeCommandIntent(Intent intent) {
