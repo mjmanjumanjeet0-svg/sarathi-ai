@@ -911,6 +911,11 @@ async function sendMessage(text) {
     ];
     const match = aliases.find(item => item.names.some(name => requested === name));
     if (match) {
+      // A wake-word request has already paused listening. Clear its pending
+      // spoken-reply flag so it cannot leak into the next unrelated message.
+      const cameFromVoice = state.voiceReplyPending || Boolean(window.SarathiVoice?.isActive?.());
+      state.voiceReplyPending = false;
+      if (cameFromVoice) window.SarathiVoice?.pause?.();
       const accepted = window.SarathiNative.openApp(match.id);
       addMessage("user", prompt);
       addMessage("assistant", accepted
