@@ -288,6 +288,17 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void requestNotificationPermissionOrStartWakeWord() {
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            pendingNotificationWakeStart = true;
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_POST_NOTIFICATIONS);
+            notifyVoice("onStatus", "वेक-वर्ड के लिए नोटिफिकेशन अनुमति पूछी जा रही है।");
+            return;
+        }
+        startWakeWordService();
+    }
+
     private void startWakeWordService() {
         try {
             Intent service = new Intent(this, WakeWordService.class);
@@ -553,7 +564,7 @@ public class MainActivity extends Activity {
                 beginListeningWithSelectedLanguage();
             } else if (granted && pendingWakeStart) {
                 pendingWakeStart = false;
-                startWakeWordService();
+                requestNotificationPermissionOrStartWakeWord();
             } else {
                 pendingListen = false;
                 pendingWakeStart = false;
@@ -653,14 +664,7 @@ public class MainActivity extends Activity {
                     notifyVoice("onStatus", "वेक-वर्ड चालू करने के लिए माइक्रोफ़ोन अनुमति दें।");
                     return;
                 }
-                if (Build.VERSION.SDK_INT >= 33
-                        && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                    pendingNotificationWakeStart = true;
-                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_POST_NOTIFICATIONS);
-                    notifyVoice("onStatus", "वेक-वर्ड के लिए नोटिफिकेशन अनुमति पूछी जा रही है।");
-                    return;
-                }
-                startWakeWordService();
+                requestNotificationPermissionOrStartWakeWord();
             });
         }
 
