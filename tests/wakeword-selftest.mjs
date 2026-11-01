@@ -37,5 +37,16 @@ assert.ok(
   app.includes("window.SarathiNative?.resumeWakeWord?.()"),
   "Voice-triggered app launching must request wake-word resume"
 );
+assert.ok(
+  app.includes("const finishVoiceEarly = (message) =>") &&
+  app.includes("finishVoiceEarly(reply)") &&
+  app.includes("finishVoiceEarly(message)"),
+  "Early media, image, settings, and file exits must complete the voice reply"
+);
+assert.ok(
+  app.includes("const incomingVoice = state.voiceReplyPending") &&
+  app.includes("सारथी अभी पिछले काम में व्यस्त है"),
+  "Voice commands received while busy must get feedback and release the listener"
+);
 
-console.log("Sarathi Android wake-word self-test: stop phrases and app-launch resume checks passed.");
+console.log("Sarathi Android wake-word self-test: stop phrases, resume and early-exit checks passed.");
