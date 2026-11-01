@@ -517,6 +517,21 @@ export default {
       }, 503);
     }
 
+    // Protect chat requests with the signed 12-hour login token.
+    // The media endpoints above intentionally return their disabled status before auth.
+    if (!env.SARATHI_LOGIN_PASSWORD) {
+      return jsonResponse({ success: false, error: "लॉगिन Secret सेट नहीं है।" }, 500);
+    }
+
+    const authorization = request.headers.get("Authorization") || "";
+    const bearer = authorization.match(/^Bearer\\s+(.+)$/i);
+    if (!bearer || !(await verifyToken(bearer[1], env.SARATHI_LOGIN_PASSWORD))) {
+      return jsonResponse({
+        success: false,
+        error: "लॉगिन सत्र समाप्त या अमान्य है। कृपया दोबारा लॉगिन करें।"
+      }, 401);
+    }
+
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const userMessage = [...messages].reverse().find(m => m?.role === "user");
     const userText = typeof userMessage?.content === "string"
