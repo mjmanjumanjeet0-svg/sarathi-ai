@@ -916,7 +916,12 @@ async function sendMessage(text) {
       // spoken-reply flag so it cannot leak into the next unrelated message.
       const cameFromVoice = state.voiceReplyPending || Boolean(window.SarathiVoice?.isActive?.());
       state.voiceReplyPending = false;
-      if (cameFromVoice) window.SarathiVoice?.pause?.();
+      if (cameFromVoice) {
+        window.SarathiVoice?.pause?.();
+        // The wake-word service was paused while processing this spoken command.
+        // Resume it before leaving the WebView for another Android app.
+        window.SarathiNative?.resumeWakeWord?.();
+      }
       const accepted = window.SarathiNative.openApp(match.id);
       addMessage("user", prompt);
       addMessage("assistant", accepted
