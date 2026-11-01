@@ -266,29 +266,27 @@ async function enrichGoldRateResults(results) {
       if (!response.ok) return item;
       const html = (await response.text()).slice(0, 1200000);
       const visible = cleanText(html
-        .replace(/<script[\\s\\S]*?<\\/script>/gi, " ")
-        .replace(/<style[\\s\\S]*?<\\/style>/gi, " ")
+        .replace(/<script[\s\S]*?<\/script>/gi, " ")
+        .replace(/<style[\s\S]*?<\/style>/gi, " ")
         .replace(/<[^>]+>/g, " ")
         .replace(/&nbsp;|&#160;/gi, " ")
-        .replace(/&#8377;|&\#x20b9;/gi, "₹"));
+        .replace(/&#8377;|&#x20b9;/gi, "₹"));
       const contexts = [];
-      const labelPattern = /(?:22\\s*(?:k|karat|carat)|24\\s*(?:k|karat|carat)|22 कैरेट|24 कैरेट|999(?:\\s*(?:fine\\s*)?silver)?|silver\\s*999|चाँदी|चांदी)/gi;
+      const labelPattern = /(?:22\s*(?:k|karat|carat)|24\s*(?:k|karat|carat)|22 कैरेट|24 कैरेट|999(?:\s*(?:fine\s*)?silver)?|silver\s*999|चाँदी|चांदी)/gi;
       let match;
       while ((match = labelPattern.exec(visible)) && contexts.length < 14) {
-        const context = visible.slice(Math.max(0, match.index - 120), Math.min(visible.length, match.index + 260)).replace(/\\s+/g, " ").trim();
-        if (/(₹|rs\\.?|inr|रुपये|रु\\.?)/i.test(context) && /[0-9][0-9,]*(?:\\.[0-9]+)?/.test(context)) contexts.push(context);
+        const context = visible.slice(Math.max(0, match.index - 120), Math.min(visible.length, match.index + 260)).replace(/\s+/g, " ").trim();
+        if (/(₹|rs\.?|inr|रुपये|रु\.?)/i.test(context) && /[0-9][0-9,]*(?:\.[0-9]+)?/.test(context)) contexts.push(context);
       }
       if (!contexts.length) return item;
       const combined = [item.title || "", item.snippet || "", ...contexts].join(" | ");
       const rateFor = (karat) => {
-        const escaped = String(karat);
-        // Preserve whitespace tokens in the RegExp constructor string.
-        const re = new RegExp("(?:\\b" + escaped + "\\s*K\\b|" + escaped + "\\s*कैरेट|" + escaped + "\\s*karat)[^₹]{0,120}(?:₹|Rs\\.?|INR)\\s*([0-9,]+(?:\\.[0-9]+)?)", "i");
+        const re = new RegExp("(?:\\b" + karat + "\\s*(?:K|karat|carat)|" + karat + "\\s*कैरेट)[^₹]{0,120}(?:₹|Rs\\.?|INR)\\s*([0-9,]+(?:\\.[0-9]+)?)", "i");
         const m = combined.match(re);
         return m ? Number(m[1].replace(/,/g, "")) : null;
       };
       const goldRates = { per10g22K: rateFor(22), per10g24K: rateFor(24) };
-      const silverMatch = combined.match(/(?:999(?:\\s*(?:fine\\s*)?silver)?|silver\\s*999|चाँदी|चांदी)[^₹]{0,120}(?:₹|Rs\\.?|INR)\\s*([0-9,]+(?:\\.[0-9]+)?)/i);
+      const silverMatch = combined.match(/(?:999(?:\s*(?:fine\s*)?silver)?|silver\s*999|चाँदी|चांदी)[^₹]{0,120}(?:₹|Rs\.?|INR)\s*([0-9,]+(?:\.[0-9]+)?)/i);
       const silverRate = silverMatch ? Number(silverMatch[1].replace(/,/g, "")) : null;
       return {
         ...item,
