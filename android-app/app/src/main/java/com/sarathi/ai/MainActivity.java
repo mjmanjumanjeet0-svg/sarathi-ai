@@ -51,6 +51,7 @@ public class MainActivity extends Activity {
     private Voice localEnglishVoice;
     private boolean pendingListen = false;
     private boolean pendingWakeStart = false;
+    private boolean nativeStopRequested = false;
     private boolean pageLoaded = false;
     private boolean appInForeground = false;
     private boolean wakeReceiverRegistered = false;
@@ -372,12 +373,25 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void stopNativeListening() {
+        nativeStopRequested = true;
+        SpeechRecognizer current = speechRecognizer;
+        speechRecognizer = null;
+        if (current != null) {
+            try { current.cancel(); } catch (Exception ignored) {}
+            try { current.destroy(); } catch (Exception ignored) {}
+        }
+        wakeCommandSession = false;
+        resumeWakeWordAfterCommand();
+    }
+
     private boolean hasMicrophonePermission() {
         return Build.VERSION.SDK_INT < 23
                 || checkSelfPermission(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED;
     }
 
     private void startRecognition(boolean useOnlineService) {
+        nativeStopRequested = false;
         try {
             // Re-check permission immediately before starting the speech service.
             if (!hasMicrophonePermission()) {
@@ -422,6 +436,10 @@ public class MainActivity extends Activity {
                     notifyVoice("onStatus", "आवाज़ समझी जा रही है…");
                 }
                 @Override public void onError(int error) {
+                    if (nativeStopRequested) {
+                        nativeStopRequested = false;
+                        return;
+                    }
                     if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS
                             && !hasMicrophonePermission()) {
                         pendingListen = false;
@@ -451,6 +469,10 @@ public class MainActivity extends Activity {
                     }
                 }
                 @Override public void onResults(Bundle results) {
+                    if (nativeStopRequested) {
+                        nativeStopRequested = false;
+                        return;
+                    }
                     ArrayList<String> matches = results == null ? null
                         : results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                     if (matches != null && !matches.isEmpty()) {
@@ -522,6 +544,11 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void pauseWakeWord() {
             runOnUiThread(MainActivity.this::pauseWakeWordForCommand);
+        }
+
+        @JavascriptInterface
+        public void stopListening() {
+            runOnUiThread(MainActivity.this::stopNativeListening);
         }
 
         @JavascriptInterface
