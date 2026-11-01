@@ -519,7 +519,8 @@ function renderMessages() {
       for (const source of message.sources) {
         try {
           const url = new URL(source.url);
-          if (!["http:", "https:"].includes(url.protocol)) continue;
+          // Search citations must be HTTPS; block insecure legacy links in saved chats too.
+          if (url.protocol !== "https:" || url.username || url.password) continue;
           const item = document.createElement("li");
           const link = document.createElement("a");
           link.href = url.href;
@@ -606,7 +607,7 @@ function addMessage(role, content, imageUrl, sources) {
     role,
     content: String(content || ""),
     ...(imageUrl ? { imageUrl: String(imageUrl) } : {}),
-    ...(Array.isArray(sources) && sources.length ? { sources: sources.filter(source => source && typeof source.title === "string" && (String(source.url || "").startsWith("https://") || String(source.url || "").startsWith("http://"))).slice(0, 8).map(source => ({ title: source.title.slice(0, 240), url: source.url, publisher: String(source.publisher || "").slice(0, 100), publishedAt: String(source.publishedAt || "").slice(0, 80) })) } : {}),
+    ...(Array.isArray(sources) && sources.length ? { sources: sources.filter(source => source && typeof source.title === "string" && (String(source.url || "").startsWith("https://"))).slice(0, 8).map(source => ({ title: source.title.slice(0, 240), url: source.url, publisher: String(source.publisher || "").slice(0, 100), publishedAt: String(source.publishedAt || "").slice(0, 80) })) } : {}),
     createdAt: Date.now()
   });
 
