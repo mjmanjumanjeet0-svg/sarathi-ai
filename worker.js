@@ -4,11 +4,14 @@ const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "openai/gpt-oss-20b";
 const SESSION_SECONDS = 12 * 60 * 60;
 
+// The web app and Android WebView both load from this GitHub Pages origin.
+const APP_ORIGIN = "https://mjmanjumanjeet0-svg.github.io";
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Origin": APP_ORIGIN,
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
   "Cache-Control": "no-store",
+  "Vary": "Origin",
 };
 
 function jsonResponse(data, status = 200) {
