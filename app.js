@@ -791,30 +791,41 @@ async function downloadSarathiImage(imageUrl, edited) {
   setTimeout(() => URL.revokeObjectURL(objectUrl), 60000);
 }
 
-function buildBoundedChatMessages(messages, maxTotalChars = 9000) {
+function buildBoundedChatMessages(messages, maxTotalChars = 16000) {
   const valid = (Array.isArray(messages) ? messages : [])
     .filter(item => item && ["user", "assistant"].includes(item.role) && typeof item.content === "string")
     .slice(-8);
-  const kept = [];
-  let remaining = maxTotalChars;
+  const latestUserIndex = valid.map(item => item.role).lastIndexOf("user");
+  if (latestUserIndex < 0) return [];
 
-  // Keep the newest turn intact first, then add recent context while budget remains.
-  for (let i = valid.length - 1; i >= 0 && remaining > 0; i--) {
-    const item = valid[i];
-    const perMessageLimit = item.role === "user" ? 2200 : 1400;
-    const content = item.content.trim();
-    if (!content) continue;
-    const clipped = content.slice(-Math.min(perMessageLimit, remaining));
-    if (!clipped) continue;
-    kept.unshift({ role: item.role, content: clipped });
-    remaining -= clipped.length;
+  // Never truncate the newest user message: numbered multi-question prompts must
+  // arrive at the Worker from their first character through their last character.
+  const latest = valid[latestUserIndex].content.trim();
+  if (latest.length > 12000) {
+    throw new Error("एक संदेश अधिकतम 12,000 अक्षरों का हो सकता है। कृपया इसे दो भागों में भेजें।");
   }
+
+  const history = valid.slice(0, latestUserIndex);
+  const kept = [];
+  let remaining = Math.max(0, maxTotalChars - latest.length);
+  for (let i = history.length - 1; i >= 0 && remaining > 0; i--) {
+    const item = history[i];
+    const content = item.content.trim().slice(-Math.min(650, remaining));
+    if (!content) continue;
+    kept.unshift({ role: item.role, content });
+    remaining -= content.length;
+  }
+  kept.push({ role: "user", content: latest });
   return kept;
 }
 
 function buildChatRequestPayload(prompt, webSearch) {
+  const fullPrompt = String(prompt || "");
+  if (fullPrompt.length > 12000) {
+    throw new Error("एक संदेश अधिकतम 12,000 अक्षरों का हो सकता है। कृपया इसे दो भागों में भेजें।");
+  }
   return {
-    message: String(prompt || "").slice(0, 4000),
+    message: fullPrompt,
     messages: buildBoundedChatMessages(activeChat()?.messages || []),
     webSearch: Boolean(webSearch)
   };
