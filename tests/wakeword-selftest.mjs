@@ -33,6 +33,14 @@ assert.ok(
   "Active conversation must check stop phrases before forwarding speech"
 );
 
+assert.ok(
+  activity.includes("public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon)") &&
+  activity.includes('!"https".equalsIgnoreCase(uri.getScheme())') &&
+  activity.includes("!APP_HOST.equalsIgnoreCase(uri.getHost())") &&
+  activity.includes("view.stopLoading();"),
+  "Android WebView must block unexpected top-level origins before loading privileged bridge pages"
+);
+
 assert.ok(activity.includes("public void resumeWakeWord()"), "Android bridge must expose wake-word resume");
 assert.ok(activity.includes("setAction(WakeWordService.ACTION_RESUME)"), "Bridge must send the resume action");
 assert.ok(
