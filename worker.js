@@ -524,7 +524,7 @@ export default {
     }
 
     const authorization = request.headers.get("Authorization") || "";
-    const bearer = authorization.match(/^Bearer\\s+(.+)$/i);
+    const bearer = authorization.match(/^Bearer\s+(.+)$/i);
     if (!bearer || !(await verifyToken(bearer[1], env.SARATHI_LOGIN_PASSWORD))) {
       return jsonResponse({
         success: false,
