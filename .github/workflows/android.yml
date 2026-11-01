@@ -8,6 +8,7 @@ name: Build Sarathi AI Android APK
       - 'index.html'
       - 'style.css'
       - 'app.js'
+      - 'voice.js'
       - 'media-studio.js'
       - 'project-studio.js'
       - 'worker.js'
