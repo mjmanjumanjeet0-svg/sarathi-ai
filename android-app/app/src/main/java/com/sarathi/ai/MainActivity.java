@@ -405,10 +405,12 @@ public class MainActivity extends Activity {
                 .setNegativeButton("रद्द करें", (dialog, which) -> {
                     wakeCommandSession = false;
                     notifyVoice("onError", "ऑनलाइन आवाज़ पहचान रद्द कर दी गई। आपकी आवाज़ नहीं सुनी गई।");
+                    notifyVoice("onNativeRecognitionDone", "");
                     resumeWakeWordAfterCommand();
                 })
                 .setOnCancelListener(dialog -> {
                     wakeCommandSession = false;
+                    notifyVoice("onNativeRecognitionDone", "");
                     resumeWakeWordAfterCommand();
                 })
                 .setCancelable(true)
@@ -456,6 +458,7 @@ public class MainActivity extends Activity {
             if (!SpeechRecognizer.isRecognitionAvailable(this)) {
                 wakeCommandSession = false;
                 notifyVoice("onError", "इस फ़ोन में कोई आवाज़ पहचान सेवा उपलब्ध नहीं मिली। Google ऐप या Speech Services इंस्टॉल/अपडेट करें और फिर कोशिश करें।");
+                notifyVoice("onNativeRecognitionDone", "");
                 resumeWakeWordAfterCommand();
                 return;
             }
@@ -472,6 +475,8 @@ public class MainActivity extends Activity {
                 speechRecognizer = SpeechRecognizer.createOnDeviceSpeechRecognizer(this);
             } else {
                 notifyVoice("onError", "ऑफ़लाइन आवाज़ पहचान उपलब्ध नहीं है।");
+                notifyVoice("onNativeRecognitionDone", "");
+                resumeWakeWordAfterCommand();
                 return;
             }
 
@@ -497,6 +502,7 @@ public class MainActivity extends Activity {
                         pendingListen = false;
                         wakeCommandSession = false;
                         notifyVoice("onError", "Android ने माइक्रोफ़ोन अनुमति नहीं दी। सेटिंग में Sarathi AI → माइक्रोफ़ोन → केवल ऐप इस्तेमाल करते समय अनुमति चुनें।");
+                        notifyVoice("onNativeRecognitionDone", "");
                         resumeWakeWordAfterCommand();
                     } else if (!useOnlineService) {
                         // If the offline provider fails (including provider-side error 9),
@@ -509,10 +515,12 @@ public class MainActivity extends Activity {
                     } else if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
                         wakeCommandSession = false;
                         notifyVoice("onError", "Sarathi AI की माइक्रोफ़ोन अनुमति चालू है, लेकिन फ़ोन की ऑनलाइन स्पीच सेवा ने अनुमति त्रुटि (कोड 9) दी। यह स्पीच सेवा/फ़ोन की समस्या है; आवाज़ इंटरनेट पर भेजने की अनुमति देने से भी यह सेवा ठीक होना निश्चित नहीं है।");
+                        notifyVoice("onNativeRecognitionDone", "");
                         resumeWakeWordAfterCommand();
                     } else {
                         wakeCommandSession = false;
                         notifyVoice("onError", getSpeechErrorMessage(error, true));
+                        notifyVoice("onNativeRecognitionDone", "");
                         resumeWakeWordAfterCommand();
                     }
                     if (speechRecognizer != null) {
@@ -535,6 +543,7 @@ public class MainActivity extends Activity {
                         wakeCommandSession = false;
                         notifyVoice("onError", "आवाज़ से शब्द समझ नहीं आए। फिर बोलकर देखें।");
                     }
+                    notifyVoice("onNativeRecognitionDone", "");
                     resumeWakeWordAfterCommand();
                 }
                 @Override public void onPartialResults(Bundle partialResults) {}
@@ -559,6 +568,7 @@ public class MainActivity extends Activity {
         } catch (Exception error) {
             wakeCommandSession = false;
             notifyVoice("onError", "माइक्रोफ़ोन शुरू नहीं हो सका।");
+            notifyVoice("onNativeRecognitionDone", "");
             resumeWakeWordAfterCommand();
         }
     }
@@ -588,6 +598,7 @@ public class MainActivity extends Activity {
                 pendingWakeStart = false;
                 wakeCommandSession = false;
                 notifyVoice("onError", "माइक्रोफ़ोन अनुमति नहीं मिली। अनुमति के बिना आवाज़ नहीं सुनी जाएगी।");
+                notifyVoice("onNativeRecognitionDone", "");
                 resumeWakeWordAfterCommand();
             }
         }
