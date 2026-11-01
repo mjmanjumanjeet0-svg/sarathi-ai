@@ -288,12 +288,61 @@ public class WakeWordService extends Service {
         });
     }
 
+    private boolean isConversationEndPhrase(String recognized) {
+        if (recognized == null) return false;
+        String normalized = recognized.toLowerCase(Locale.ROOT)
+                .replaceAll("[^\\p{L}\\p{N}]+", " ").trim().replaceAll("\\s+", " ");
+        normalized = normalized.replace("सारथि", "सारथी").replace("सरथी", "सारथी");
+        String compact = normalized.replaceAll("[^\\p{L}\\p{N}]", "");
+        return normalized.equals("ठीक है सारथी")
+                || normalized.equals("अच्छा है सारथी")
+                || normalized.equals("ओके सारथी")
+                || normalized.equals("बाय सारथी")
+                || normalized.equals("ok sarathi")
+                || normalized.equals("okay sarathi")
+                || normalized.equals("bye sarathi")
+                || compact.equals("ठीकहैसारथी")
+                || compact.equals("ओकेसारथी")
+                || compact.equals("बायसारथी");
+    }
+
+    private void endConversationAndResumeWakeWord() {
+        commandDelivered = true;
+        commandMode = false;
+        conversationMode = false;
+        awaitingCommand = false;
+        if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
+        commandTimeout = null;
+        updateStatus("बातचीत बंद। दोबारा शुरू करने के लिए ‘हेलो सारथी’ कहें।");
+        if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
+        worker.execute(() -> {
+            try {
+                if (speechService != null) {
+                    speechService.cancel();
+                    speechService.shutdown();
+                    speechService = null;
+                }
+                if (recognizer != null) {
+                    recognizer.close();
+                    recognizer = null;
+                }
+                if (running) startWakeRecognition();
+            } catch (Exception error) {
+                scheduleListeningRetry("वेक-वर्ड सुनना फिर शुरू नहीं हो सका");
+            }
+        });
+    }
+
     private void handleConversationUtterance(String json) {
         if (!running || !conversationMode || awaitingCommand || commandDelivered || json == null) return;
         String text = "";
         try { text = new JSONObject(json).optString("text", "").trim(); }
         catch (Exception ignored) { }
         if (text.isEmpty()) return;
+        if (isConversationEndPhrase(text)) {
+            endConversationAndResumeWakeWord();
+            return;
+        }
         commandMode = true;
         finishCommand(json);
     }
