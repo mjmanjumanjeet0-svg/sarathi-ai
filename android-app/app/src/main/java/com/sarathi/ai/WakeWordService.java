@@ -303,6 +303,9 @@ public class WakeWordService extends Service {
                 || normalized.equals("अलविदा सारथी")
                 || normalized.equals("ठीक है बाय")
                 || normalized.equals("अच्छा है बाय")
+                || normalized.equals("बाय")
+                || normalized.equals("bye")
+                || normalized.equals("अलविदा")
                 || normalized.equals("ok sarathi")
                 || normalized.equals("okay sarathi")
                 || normalized.equals("bye sarathi")
@@ -313,7 +316,9 @@ public class WakeWordService extends Service {
                 || compact.equals("धन्यवादसारथी")
                 || compact.equals("अलविदासारथी")
                 || compact.equals("ठीकहैबाय")
-                || compact.equals("अच्छाहैबाय");
+                || compact.equals("अच्छाहैबाय")
+                || compact.equals("बाय")
+                || compact.equals("अलविदा");
     }
 
     private void endConversationAndResumeWakeWord() {
