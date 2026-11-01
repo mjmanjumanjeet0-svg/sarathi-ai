@@ -661,12 +661,62 @@ public class MainActivity extends Activity {
         }
     }
 
+    private String normalizeAppLabel(CharSequence label) {
+        return label == null ? "" : label.toString().toLowerCase(Locale.ROOT)
+                .replaceAll("[^\\p{L}\\p{N}]+", "");
+    }
+
+    private Intent getLaunchIntentForAppName(String appName) {
+        String target = normalizeAppLabel(appName);
+        if (target.isEmpty() || target.length() > 64) return null;
+
+        Intent query = new Intent(Intent.ACTION_MAIN);
+        query.addCategory(Intent.CATEGORY_LAUNCHER);
+        java.util.List<android.content.pm.ResolveInfo> candidates =
+                getPackageManager().queryIntentActivities(query, 0);
+        android.content.pm.ResolveInfo match = null;
+        for (android.content.pm.ResolveInfo candidate : candidates) {
+            if (candidate.activityInfo == null
+                    || !target.equals(normalizeAppLabel(candidate.loadLabel(getPackageManager())))) {
+                continue;
+            }
+            if (match != null
+                    && !match.activityInfo.packageName.equals(candidate.activityInfo.packageName)) {
+                // Do not guess when two installed apps have the same visible name.
+                return null;
+            }
+            match = candidate;
+        }
+        if (match == null) return null;
+
+        Intent launch = new Intent(Intent.ACTION_MAIN);
+        launch.addCategory(Intent.CATEGORY_LAUNCHER);
+        launch.setClassName(match.activityInfo.packageName, match.activityInfo.name);
+        return launch;
+    }
+
     private class SarathiBridge {
         @JavascriptInterface
         public boolean openApp(String appId) {
             if (appId == null || appId.length() > 32) return false;
             Intent launchIntent = getAllowedAppLaunchIntent(appId);
             if (launchIntent == null || launchIntent.resolveActivity(getPackageManager()) == null) return false;
+            launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            runOnUiThread(() -> {
+                try {
+                    startActivity(launchIntent);
+                } catch (Exception error) {
+                    notifyVoice("onError", "यह ऐप Android से नहीं खुल सका।");
+                }
+            });
+            return true;
+        }
+
+        @JavascriptInterface
+        public boolean openAppByName(String appName) {
+            if (appName == null || appName.length() > 64) return false;
+            Intent launchIntent = getLaunchIntentForAppName(appName);
+            if (launchIntent == null) return false;
             launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
             runOnUiThread(() -> {
                 try {
