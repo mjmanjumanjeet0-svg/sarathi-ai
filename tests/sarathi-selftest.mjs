@@ -81,6 +81,19 @@ await test("chat rejects an invalid login token", async () => {
   assert.equal(r.status, 401);
   assert.equal(calls.length, before, "invalid-token requests must not reach providers");
 });
+async function makeSignedToken(payload, password) {
+  const data = Buffer.from(JSON.stringify(payload)).toString("base64url");
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(password), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(data));
+  return data + "." + Buffer.from(signature).toString("base64url");
+}
+await test("chat rejects an expired but correctly signed token", async () => {
+  const before = calls.length;
+  const expired = await makeSignedToken({ iat: 1, exp: 2 }, env.SARATHI_LOGIN_PASSWORD);
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "इतिहास क्या है?" }] }, expired);
+  assert.equal(r.status, 401);
+  assert.equal(calls.length, before, "expired-token requests must not reach providers");
+});
 await test("Hindi greeting is answered locally without provider calls", async () => {
   const before = calls.length;
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "हेलो सारथी" }] }, token);
