@@ -34,12 +34,23 @@ assert.ok(
   "Active conversation must check stop phrases before forwarding speech"
 );
 
+const trustedUrlStart = activity.indexOf("private boolean isTrustedAppUrl(Uri uri)");
+const trustedUrlEnd = activity.indexOf("\\n    private void handleWakeCommandIntent", trustedUrlStart);
+assert.ok(trustedUrlStart >= 0 && trustedUrlEnd > trustedUrlStart, "WebView trusted URL policy must exist");
+const trustedUrlCode = activity.slice(trustedUrlStart, trustedUrlEnd);
 assert.ok(
-  activity.includes("public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon)") &&
-  activity.includes('!"https".equalsIgnoreCase(uri.getScheme())') &&
-  activity.includes("!APP_HOST.equalsIgnoreCase(uri.getHost())") &&
-  activity.includes("view.stopLoading();"),
-  "Android WebView must block unexpected top-level origins before loading privileged bridge pages"
+  trustedUrlCode.includes('"https".equalsIgnoreCase(uri.getScheme())') &&
+  trustedUrlCode.includes("APP_HOST.equalsIgnoreCase(uri.getHost())") &&
+  trustedUrlCode.includes("uri.getPort() != -1 && uri.getPort() != 443") &&
+  trustedUrlCode.includes("uri.getUserInfo() != null") &&
+  trustedUrlCode.includes('"/sarathi-ai/"'.replaceAll("/", "\\/")),
+  "WebView bridge must be limited to HTTPS, default port, no user-info and Sarathi app paths"
+);
+assert.ok(
+  activity.includes("if (!isTrustedAppUrl(uri))") &&
+  activity.includes("view.stopLoading();") &&
+  activity.includes("if (isTrustedAppUrl(uri))"),
+  "Top-level navigation and link handling must use the same strict trusted URL policy"
 );
 
 assert.ok(
