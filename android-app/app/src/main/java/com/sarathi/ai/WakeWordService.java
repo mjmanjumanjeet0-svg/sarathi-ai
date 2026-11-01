@@ -363,6 +363,7 @@ public class WakeWordService extends Service {
         awaitingCommand = false;
         if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
         commandTimeout = null;
+        getSystemService(NotificationManager.class).cancel(NOTIFICATION_ID + 1);
         updateStatus("बातचीत बंद। दोबारा शुरू करने के लिए ‘हेलो सारथी’ कहें।");
         if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
         worker.execute(() -> {
@@ -768,6 +769,11 @@ public class WakeWordService extends Service {
         if (textToSpeech != null) { textToSpeech.stop(); textToSpeech.shutdown(); textToSpeech = null; }
     }
 
-    @Override public void onDestroy() { stopListening(); super.onDestroy(); }
+    @Override public void onDestroy() {
+        stopListening();
+        // This notification is independent of the foreground-service notification.
+        getSystemService(NotificationManager.class).cancel(NOTIFICATION_ID + 1);
+        super.onDestroy();
+    }
     @Override public IBinder onBind(Intent intent) { return null; }
 }
