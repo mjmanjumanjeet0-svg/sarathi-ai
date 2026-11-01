@@ -86,14 +86,15 @@ public class WakeWordService extends Service {
             return START_STICKY;
         }
         if (intent != null && ACTION_END_CONVERSATION.equals(intent.getAction())) {
-            conversationMode = false;
-            awaitingCommand = false;
-            if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
-            commandTimeout = null;
             if (running) {
-                if (speechService != null) speechService.setPause(false);
-                resumeListening();
-                updateStatus("बातचीत समाप्त। सारथी फिर से वेक-वर्ड सुन रहा है।");
+                endActiveConversation();
+            } else {
+                conversationMode = false;
+                awaitingCommand = false;
+                commandMode = false;
+                commandDelivered = true;
+                if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
+                commandTimeout = null;
             }
             return START_STICKY;
         }
