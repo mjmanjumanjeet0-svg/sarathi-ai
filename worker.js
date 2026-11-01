@@ -332,6 +332,21 @@ function filterRelevantSearchResults(query, results) {
   const textOf = (item) => `${item.title || ""} ${item.url || ""} ${item.snippet || ""}`.toLocaleLowerCase("hi-IN");
   const list = Array.isArray(results) ? results : [];
 
+  // For exam dates, results, forms, fees and eligibility, accept only official
+  // Indian government or recognized academic domains. Search ranking alone
+  // must not make an unofficial coaching/blog page look authoritative.
+  if (/(सिलेबस|पाठ्यक्रम|परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|परिणाम|आवेदन|फॉर्म|फीस|पात्रता|नियम|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(q)) {
+    const officialHost = /(?:^|\\.)(?:gov\\.in|nic\\.in|ac\\.in|edu\\.in)$/i;
+    return list.filter(item => {
+      try {
+        const host = new URL(item.url).hostname.toLowerCase().replace(/^www\\./, "");
+        return officialHost.test(host);
+      } catch {
+        return false;
+      }
+    });
+  }
+
   if (/(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(q)) {
     const trustedNewsHost = /(^|\.)(indianexpress\.com|thehindu\.com|ndtv\.com|hindustantimes\.com|bbc\.com|reuters\.com|apnews\.com|news18\.com|aajtak\.in|abplive\.com|amarujala\.com|jagran\.com|zeenews\.india\.com|indiatoday\.in|theprint\.in|livemint\.com|timesofindia\.indiatimes\.com|pti\.in|aninews\.in)$/;
     return list.filter(item => {
