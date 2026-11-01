@@ -294,8 +294,55 @@ public class WakeWordService extends Service {
         try { text = new JSONObject(json).optString("text", "").trim(); }
         catch (Exception ignored) { }
         if (text.isEmpty()) return;
+        if (isConversationEndPhrase(text)) {
+            endActiveConversation();
+            return;
+        }
         commandMode = true;
         finishCommand(json);
+    }
+
+    private boolean isConversationEndPhrase(String recognized) {
+        String normalized = recognized.toLowerCase(Locale.ROOT)
+                .replaceAll("[^\\p{L}\\p{N}]+", " ").trim().replaceAll("\\s+", " ");
+        normalized = normalized.replace("सारथि", "सारथी").replace("सरथी", "सारथी");
+        String compact = normalized.replaceAll("[^\\p{L}\\p{N}]", "");
+        return normalized.equals("ठीक है सारथी")
+                || normalized.equals("अच्छा है सारथी")
+                || normalized.equals("ओके सारथी")
+                || normalized.equals("बाय सारथी")
+                || normalized.equals("ok sarathi")
+                || normalized.equals("okay sarathi")
+                || compact.equals("ठीकहैसारथी")
+                || compact.equals("ओकेसारथी")
+                || compact.equals("बायसारथी");
+    }
+
+    private void endActiveConversation() {
+        conversationMode = false;
+        awaitingCommand = false;
+        commandMode = false;
+        commandDelivered = true;
+        if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
+        commandTimeout = null;
+        updateStatus("बातचीत बंद। दोबारा शुरू करने के लिए ‘हेलो सारथी’ कहें।");
+        if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
+        worker.execute(() -> {
+            try {
+                if (speechService != null) {
+                    speechService.cancel();
+                    speechService.shutdown();
+                    speechService = null;
+                }
+                if (recognizer != null) {
+                    recognizer.close();
+                    recognizer = null;
+                }
+                if (running) startWakeRecognition();
+            } catch (Exception error) {
+                scheduleListeningRetry("वेक-वर्ड सुनना फिर शुरू नहीं हो सका");
+            }
+        });
     }
 
     private void startConversationRecognition() throws Exception {
