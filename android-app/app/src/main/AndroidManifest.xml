@@ -18,6 +18,9 @@
             <action android:name="android.intent.action.DIAL" />
         </intent>
         <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+        <intent>
             <action android:name="android.settings.SETTINGS" />
         </intent>
     </queries>
