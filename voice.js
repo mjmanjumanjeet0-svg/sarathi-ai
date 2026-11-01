@@ -7,6 +7,7 @@
   let speaking = false;
   let restarting = false;
   let paused = false;
+  let nativeMode = false;
 
   function show(activeNow, hint) {
     ["voicePanel", "voiceWave", "voiceActiveNote"].forEach(id => $(id)?.classList.toggle("hidden", !activeNow));
@@ -33,6 +34,8 @@
     }
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (window.SarathiNative?.stopSpeaking) window.SarathiNative.stopSpeaking();
+    if (nativeMode && window.SarathiNative?.stopListening) window.SarathiNative.stopListening();
+    nativeMode = false;
     if (window.SarathiNative?.stopWakeWord) window.SarathiNative.stopWakeWord();
     show(false);
     const status = $("status");
@@ -70,6 +73,13 @@
 
   function start() {
     if (!Recognition) {
+      if (window.SarathiNative?.startListening) {
+        active = true;
+        nativeMode = true;
+        show(true, "बोलिए। Android की आवाज़ पहचान सुविधा आपकी बात लिखेगी।");
+        window.SarathiNative.startListening();
+        return;
+      }
       const status = $("status");
       if (status) status.textContent = "माइक इस ब्राउज़र में उपलब्ध नहीं है। Chrome में खोलकर माइक्रोफोन अनुमति दें।";
       return;
@@ -133,6 +143,14 @@
   window.SarathiVoice.speak = speak;
   window.SarathiVoice.isActive = () => active;
   window.SarathiVoice.pause = () => { paused = true; try { recognition?.stop(); } catch (_) {} };
+  window.SarathiVoice.nativeComplete = () => {
+    if (!nativeMode) return;
+    nativeMode = false;
+    active = false;
+    speaking = false;
+    paused = false;
+    show(false);
+  };
   window.SarathiVoice.stop = stop;
   window.SarathiVoice.start = start;
 
