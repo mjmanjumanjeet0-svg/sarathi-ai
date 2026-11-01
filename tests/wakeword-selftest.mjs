@@ -3,11 +3,12 @@ import { readFile } from "node:fs/promises";
 
 const wakePath = new URL("../android-app/app/src/main/java/com/sarathi/ai/WakeWordService.java", import.meta.url);
 const activityPath = new URL("../android-app/app/src/main/java/com/sarathi/ai/MainActivity.java", import.meta.url);
-const [wake, activity, app, worker] = await Promise.all([
+const [wake, activity, app, worker, wakeService] = await Promise.all([
   readFile(wakePath, "utf8"),
   readFile(activityPath, "utf8"),
   readFile(new URL("../app.js", import.meta.url), "utf8"),
   readFile(new URL("../worker.js", import.meta.url), "utf8"),
+  readFile(new URL("../android-app/app/src/main/java/com/sarathi/ai/WakeWordService.java", import.meta.url), "utf8"),
 ]);
 
 const helperStart = wake.indexOf("private boolean isConversationEndPhrase");
@@ -115,6 +116,18 @@ assert.ok(
 assert.ok(
   sendCode.includes('else window.SarathiNative?.resumeWakeWord?.();'),
   "Successful voice replies must resume wake-word listening when speech playback is unavailable"
+);
+
+
+const serviceStart = wakeService.indexOf("public int onStartCommand(Intent intent, int flags, int startId)");
+const serviceEnd = wakeService.indexOf("\\n    private void createChannel()", serviceStart);
+assert.ok(serviceStart >= 0 && serviceEnd > serviceStart, "Wake-word service command handler must exist");
+const serviceCommandCode = wakeService.slice(serviceStart, serviceEnd);
+assert.ok(
+  serviceCommandCode.includes("if (intent == null)") &&
+  serviceCommandCode.includes('prefs.edit().putBoolean("enabled", false).apply();') &&
+  serviceCommandCode.includes("return START_NOT_STICKY;"),
+  "Microphone foreground service must not attempt a sticky background restart after process death"
 );
 
 console.log("Sarathi Android wake-word self-test: stop phrases, resume and early-exit checks passed.");
