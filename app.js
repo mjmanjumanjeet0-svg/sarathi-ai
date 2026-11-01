@@ -915,7 +915,7 @@ async function sendMessage(text) {
     addMessage("user", prompt);
     if (window.SarathiNative?.openApp) {
       window.SarathiNative.openApp(appKey);
-      addMessage("assistant", "ठीक है, ऐप खोलने का अनुरोध भेज दिया है।");
+      addMessage("assistant", "मैंने ऐप खोलने की कोशिश की है। अगर ऐप इंस्टॉल है और Android अनुमति देता है, तो वह खुल जाएगा।");
     } else {
       addMessage("assistant", "ऐप खोलने की सुविधा अभी Android सारथी ऐप में उपलब्ध है।");
     }
