@@ -229,6 +229,20 @@ public class MainActivity extends Activity {
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
+            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                // The JavaScript bridge is privileged. Never allow a redirect or
+                // unexpected top-level navigation to load an untrusted origin.
+                Uri uri = Uri.parse(url == null ? "" : url);
+                if (!"https".equalsIgnoreCase(uri.getScheme())
+                        || !APP_HOST.equalsIgnoreCase(uri.getHost())) {
+                    view.stopLoading();
+                    Toast.makeText(MainActivity.this, "सुरक्षा के कारण बाहरी पेज ऐप के अंदर नहीं खोला गया।", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                super.onPageStarted(view, url, favicon);
+            }
+
+            @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
                 pageLoaded = true;
