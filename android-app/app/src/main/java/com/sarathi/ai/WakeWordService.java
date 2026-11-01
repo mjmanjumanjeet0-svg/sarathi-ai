@@ -88,15 +88,16 @@ public class WakeWordService extends Service {
         if (intent != null && ACTION_END_CONVERSATION.equals(intent.getAction())) {
             if (running) {
                 endActiveConversation();
-            } else {
-                conversationMode = false;
-                awaitingCommand = false;
-                commandMode = false;
-                commandDelivered = true;
-                if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
-                commandTimeout = null;
+                return START_STICKY;
             }
-            return START_STICKY;
+            conversationMode = false;
+            awaitingCommand = false;
+            commandMode = false;
+            commandDelivered = true;
+            if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
+            commandTimeout = null;
+            stopSelf();
+            return START_NOT_STICKY;
         }
         if (intent != null && ACTION_CAPTURE_COMMAND.equals(intent.getAction())) {
             if (running) beginCommandCapture();
