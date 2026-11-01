@@ -1044,10 +1044,12 @@ async function sendMessage(text) {
       throw new Error("AI से खाली जवाब मिला। Worker को जाँचना होगा।");
     }
 
-    // Never display stray or unrelated links in ordinary conversation.
-    // Sources are shown only when the user explicitly asks for an internet search.
+    // Keep answers and citations aligned with the actual search result.
+    // The Worker may search automatically for trains, prices, schedules, etc.
+    const hasSearchSources = Array.isArray(data.sources) && data.sources.length > 0;
+    const searchedForAnswer = useWebSearch || hasSearchSources;
     let cleanAnswer = answer.trim();
-    if (!explicitlyRequestsWebSearch(prompt)) {
+    if (!searchedForAnswer) {
       cleanAnswer = cleanAnswer
         // Remove common source/reference sections, including English headings.
         .replace(/\n{0,2}\s*(?:🌐\s*)?(?:इंटरनेट से मिले स्रोत|स्रोत(?: सूची)?|references?|sources?|वेबसाइट(?:ें)?|लिंक(?:\s*सूची)?)\s*[:：]?\s*[\s\S]*$/i, "")
@@ -1077,7 +1079,7 @@ async function sendMessage(text) {
         addMessage("assistant", "टेस्ट का प्रारूप सही नहीं मिला। कृपया MCQ टेस्ट फिर से शुरू करें।\n\n" + answer.trim());
       }
     } else {
-      addMessage("assistant", cleanAnswer, null, useWebSearch ? filterSourcesForPrompt(prompt, data.sources || []) : []);
+      addMessage("assistant", cleanAnswer, null, searchedForAnswer ? filterSourcesForPrompt(prompt, data.sources || []) : []);
     }
 
     // Only speak automatically for a reply triggered by the wake-word voice command.
