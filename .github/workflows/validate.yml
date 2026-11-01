@@ -44,6 +44,7 @@ jobs:
           node --check voice.js
           node --input-type=module --check < worker.js
           node tests/voice-selftest.mjs
+          node tests/wakeword-selftest.mjs
 
       - name: Check required web files
         run: |
