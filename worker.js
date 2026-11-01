@@ -225,7 +225,7 @@ async function searchInternet(query, env) {
       .slice(0, isNewsQuery ? 8 : 5)
       .map(item => {
         let publisher = "वेबसाइट";
-        try { publisher = new URL(item.url).hostname.replace(/^www\\./i, ""); } catch {}
+        try { publisher = new URL(item.url).hostname.replace(/^www\./i, ""); } catch {}
         const highlights = Array.isArray(item.highlights) ? item.highlights.join(" ") : "";
         return {
           title: cleanText(item.title).slice(0, 300),
@@ -634,7 +634,7 @@ export default {
         const seenPublishers = new Set();
         searchResults = searchResults.filter(item => {
           let publisher = String(item.publisher || "").toLowerCase();
-          try { publisher = new URL(item.url).hostname.toLowerCase().replace(/^www\\./, ""); } catch {}
+          try { publisher = new URL(item.url).hostname.toLowerCase().replace(/^www\./, ""); } catch {}
           if (!publisher || seenPublishers.has(publisher)) return false;
           seenPublishers.add(publisher);
           return true;
