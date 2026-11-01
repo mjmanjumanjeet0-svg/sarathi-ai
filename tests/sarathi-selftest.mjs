@@ -102,6 +102,9 @@ await test("current price query invokes web search and AI", async () => {
   assert.match(enrichedUserPrompt, /सोना-चाँदी भाव उत्तर का अनिवार्य प्रारूप/);
   assert.match(enrichedUserPrompt, /24 कैरेट और 22 कैरेट/);
   assert.match(enrichedUserPrompt, /999 शुद्धता/);
+  assert.match(enrichedUserPrompt, /13,888 × 10 = 1,38,880/);
+  assert.match(enrichedUserPrompt, /179 × 1000 = 1,79,000/);
+  assert.match(enrichedUserPrompt, /विसंगति बताओ/);
 });
 await test("long numbered prompts reach Groq without losing their beginning or ending", async () => {
   const longPrompt = Array.from({ length: 50 }, (_, i) => `${i + 1}. सवाल ${i + 1}: सामान्य ज्ञान का छोटा परीक्षण`).join("\n");
