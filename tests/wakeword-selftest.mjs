@@ -33,6 +33,14 @@ assert.ok(
   wake.slice(handlerStart, handlerEnd).includes("isConversationEndPhrase(text)"),
   "Active conversation must check stop phrases before forwarding speech"
 );
+const endActionStart = wake.indexOf("if (intent != null && ACTION_END_CONVERSATION.equals(intent.getAction()))");
+const endActionEnd = wake.indexOf("\n        if (intent != null && ACTION_CAPTURE_COMMAND", endActionStart);
+assert.ok(endActionStart >= 0 && endActionEnd > endActionStart, "Explicit end-conversation action must exist");
+assert.ok(
+  wake.slice(endActionStart, endActionEnd).includes("endConversationAndResumeWakeWord();"),
+  "Ending conversation from the app must tear down the continuous recognizer and restart wake-word listening"
+);
+
 
 const trustedUrlStart = activity.indexOf("private boolean isTrustedAppUrl(Uri uri)");
 const trustedUrlEnd = activity.indexOf("\n    private void handleWakeCommandIntent", trustedUrlStart);
