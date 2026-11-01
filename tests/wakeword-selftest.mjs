@@ -192,6 +192,17 @@ assert.ok(
   "Foreground promotion must fail closed if microphone permission is revoked during service startup"
 );
 
+const inactiveEndStart = serviceCommandCode.indexOf("if (intent != null && ACTION_END_CONVERSATION.equals(intent.getAction()))");
+const inactiveEndEnd = serviceCommandCode.indexOf("\n        if (intent != null && ACTION_CAPTURE_COMMAND", inactiveEndStart);
+assert.ok(inactiveEndStart >= 0 && inactiveEndEnd > inactiveEndStart, "End-conversation service branch must exist");
+const inactiveEndCode = serviceCommandCode.slice(inactiveEndStart, inactiveEndEnd);
+assert.ok(
+  inactiveEndCode.includes("stopSelf();") &&
+  inactiveEndCode.includes("return START_NOT_STICKY;") &&
+  inactiveEndCode.includes("cancel(NOTIFICATION_ID + 1);"),
+  "An end-conversation command received while the service is inactive must clear stale notification and stop the temporary service"
+);
+
 
 
 assert.ok(
