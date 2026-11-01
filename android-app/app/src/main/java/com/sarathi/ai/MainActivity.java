@@ -162,6 +162,11 @@ public class MainActivity extends Activity {
             @Override
             public boolean onJsPrompt(WebView view, String url, String message,
                     String defaultValue, JsPromptResult result) {
+                // Only the trusted Sarathi Pages origin may open the native password dialog.
+                if (!isTrustedAppUrl(Uri.parse(url == null ? "" : url))) {
+                    result.cancel();
+                    return true;
+                }
                 // app.js uses window.prompt() to collect the Worker login password.
                 // Handle it explicitly because WebView does not guarantee a prompt
                 // dialog unless the host WebChromeClient implements this callback.
