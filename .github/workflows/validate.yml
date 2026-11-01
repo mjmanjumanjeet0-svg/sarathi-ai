@@ -2,14 +2,15 @@ name: Validate Sarathi AI
 
 on:
   push:
-    branches: [main, sarathi-audit-fixes-2026-10]
+    branches: [main, sarathi-audit-fixes-2026-10, fix/android-webview-login-prompt]
     paths:
       - "app.js"
       - "voice.js"
       - "worker.js"
       - "index.html"
       - "style.css"
-      - "android-app/app/src/main/AndroidManifest.xml"
+      - "android-app/**"
+      - "tests/**"
       - ".github/workflows/validate.yml"
   pull_request:
     branches: [main]
