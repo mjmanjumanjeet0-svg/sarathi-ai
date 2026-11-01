@@ -895,11 +895,11 @@ async function sendMessage(text) {
 
   // Open only a small, explicit set of installed Android apps. Arbitrary
   // package names or shell commands are never accepted from the webpage.
-  const appOpenMatch = prompt.match(/^(?:(?:सारथी)\\s+)?(.+?)\\s+(?:ऐप\\s+)?(?:खोलो|खोल\\s+दो|ओपन\\s+करो|open|launch)(?:\\s+ऐप)?[.!?।]*$/i)
-    || prompt.match(/^(?:खोलो|open)\\s+(.+?)[.!?।]*$/i);
+  const appOpenMatch = prompt.match(/^(?:(?:सारथी)\s+)?(.+?)\s+(?:ऐप\s+)?(?:खोलो|खोल\s+दो|ओपन\s+करो|open|launch)(?:\s+ऐप)?[.!?।]*$/i)
+    || prompt.match(/^(?:खोलो|open)\s+(.+?)[.!?।]*$/i);
   if (appOpenMatch && !state.attachments.length && window.SarathiNative?.openApp) {
     const requested = String(appOpenMatch[1] || "").toLocaleLowerCase("hi-IN")
-      .replace(/\\b(app|ऐप)\\b/g, " ").replace(/[^\\p{L}\\p{N}]+/gu, " ").trim();
+      .replace(/\b(app|ऐप)\b/g, " ").replace(/[^\p{L}\p{N}]+/gu, " ").trim();
     const aliases = [
       { id: "youtube", names: ["यूट्यूब", "youtube"] },
       { id: "chrome", names: ["क्रोम", "chrome"] },
@@ -914,8 +914,8 @@ async function sendMessage(text) {
       const accepted = window.SarathiNative.openApp(match.id);
       addMessage("user", prompt);
       addMessage("assistant", accepted
-        ? "ऐप खोलने का अनुरोध भेज दिया है। अगर ऐप फ़ोन में इंस्टॉल नहीं है या Android ने अनुमति नहीं दी, तो वह नहीं खुलेगा।"
-        : "यह ऐप अभी फ़ोन में उपलब्ध नहीं है या खोला नहीं जा सका।");
+        ? "ऐप खोलने का अनुरोध भेज दिया है।"
+        : "यह ऐप फ़ोन में इंस्टॉल नहीं है या खोला नहीं जा सका।");
       setStatus(accepted ? "ऐप खोलने का अनुरोध भेजा गया।" : "ऐप नहीं खुल सका।");
       const input = $("messageInput");
       if (input) { input.value = ""; input.style.height = ""; }
