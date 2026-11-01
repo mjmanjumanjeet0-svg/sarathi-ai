@@ -41,18 +41,26 @@
 
   function speak(text) {
     const answer = String(text || "").replaceAll("*", " ").replaceAll("#", " ").slice(0, 4500);
-    if (!active || !answer) return;
-    if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
-      if (window.SarathiNative?.speak) {
-        speaking = true;
-        window.SarathiNative.speak(answer);
-        setTimeout(() => { speaking = false; startRecognition(); }, Math.min(30000, Math.max(2500, answer.length * 65)));
-      } else {
-        const status = $("status");
-        if (status) status.textContent = "इस ब्राउज़र में आवाज़ में जवाब उपलब्ध नहीं है।";
-      }
+    if (!answer) return;
+
+    // Android's native TTS is also used for wake-word replies when the
+    // browser microphone session is not active. The native bridge resumes
+    // the wake-word service from its real TTS completion callback.
+    if (window.SarathiNative?.speak) {
+      speaking = true;
+      paused = true;
+      try { recognition?.stop(); } catch (_) {}
+      window.SarathiNative.speak(answer);
       return;
     }
+
+    if (!active) return;
+    if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
+      const status = $("status");
+      if (status) status.textContent = "इस ब्राउज़र में आवाज़ में जवाब उपलब्ध नहीं है।";
+      return;
+    }
+
     speaking = true;
     paused = true;
     try { recognition?.stop(); } catch (_) {}
