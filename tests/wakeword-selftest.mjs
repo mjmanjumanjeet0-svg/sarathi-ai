@@ -261,7 +261,7 @@ const appLaunchEnd = app.indexOf('\n    ];', appLaunchStart);
 assert.ok(appLaunchStart >= 0 && appLaunchEnd > appLaunchStart, "Android app-launch aliases must exist");
 const appAliases = app.slice(appLaunchStart, appLaunchEnd);
 assert.ok(appAliases.includes('{ id: "camera", names: ["कैमरा", "camera", "फोटो कैमरा"] }'), "Hindi and English camera voice aliases must be supported");
-assert.ok(activity.includes('case "camera":\\n                return new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);'), "Android must launch the system camera capture intent");
+assert.ok(activity.includes(`case "camera":\n                return new Intent(android.provider.MediaStore.ACTION_IMAGE_CAPTURE);`), "Android must launch the system camera capture intent");
 assert.ok((await readFile(new URL("../android-app/app/src/main/AndroidManifest.xml", import.meta.url), "utf8")).includes('android:name="android.media.action.IMAGE_CAPTURE"'), "Manifest must declare camera intent visibility");
 
 console.log("Sarathi Android wake-word self-test: stop phrases, resume and early-exit checks passed.");
