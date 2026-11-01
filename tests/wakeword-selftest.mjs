@@ -159,4 +159,32 @@ assert.ok(
   "Microphone foreground service must not attempt a sticky background restart after process death"
 );
 
+
+assert.ok(
+  wakeService.includes("MAX_MODEL_ARCHIVE_BYTES") &&
+  wakeService.includes("MAX_MODEL_EXPANDED_BYTES") &&
+  wakeService.includes("MAX_MODEL_ARCHIVE_ENTRIES"),
+  "Wake-word model download and extraction must have explicit size and entry-count limits"
+);
+const downloadStart = wakeService.indexOf("private void downloadModel(File destination)");
+const downloadEnd = wakeService.indexOf("\\n    private void unzipModel", downloadStart);
+assert.ok(downloadStart >= 0 && downloadEnd > downloadStart, "Bounded model download method must exist");
+const downloadCode = wakeService.slice(downloadStart, downloadEnd);
+assert.ok(
+  downloadCode.includes("getContentLengthLong()") &&
+  downloadCode.includes("downloadedBytes > MAX_MODEL_ARCHIVE_BYTES") &&
+  downloadCode.includes("if (!completed && temp.exists()) temp.delete();"),
+  "Model download must reject oversized/incomplete files and remove partial downloads"
+);
+const unzipStart = wakeService.indexOf("private void unzipModel(File zipFile, File destination)");
+const unzipEnd = wakeService.indexOf("\\n    private Recognizer createWakeRecognizer", unzipStart);
+assert.ok(unzipStart >= 0 && unzipEnd > unzipStart, "Model extraction method must exist");
+const unzipCode = wakeService.slice(unzipStart, unzipEnd);
+assert.ok(
+  unzipCode.includes("expandedBytes > MAX_MODEL_EXPANDED_BYTES") &&
+  unzipCode.includes("entryCount > MAX_MODEL_ARCHIVE_ENTRIES") &&
+  unzipCode.includes("getCanonicalPath().startsWith(root)"),
+  "Model extraction must limit expanded size and entry count and prevent ZIP path traversal"
+);
+
 console.log("Sarathi Android wake-word self-test: stop phrases, resume and early-exit checks passed.");
