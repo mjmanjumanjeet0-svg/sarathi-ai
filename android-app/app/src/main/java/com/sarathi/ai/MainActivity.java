@@ -611,6 +611,39 @@ public class MainActivity extends Activity {
             });
         }
         @JavascriptInterface
+        public void openApp(String appKey) {
+            final String key = appKey == null ? "" : appKey.trim().toLowerCase(Locale.ROOT);
+            runOnUiThread(() -> {
+                String packageName;
+                switch (key) {
+                    case "youtube": packageName = "com.google.android.youtube"; break;
+                    case "chatgpt": packageName = "com.openai.chatgpt"; break;
+                    case "whatsapp": packageName = "com.whatsapp"; break;
+                    case "chrome": packageName = "com.android.chrome"; break;
+                    case "maps": packageName = "com.google.android.apps.maps"; break;
+                    case "gmail": packageName = "com.google.android.gm"; break;
+                    case "instagram": packageName = "com.instagram.android"; break;
+                    case "telegram": packageName = "org.telegram.messenger"; break;
+                    default:
+                        notifyVoice("onError", "यह ऐप खोलने की अनुमति सूची में नहीं है।");
+                        return;
+                }
+                try {
+                    Intent launch = getPackageManager().getLaunchIntentForPackage(packageName);
+                    if (launch == null) {
+                        notifyVoice("onError", "यह ऐप फ़ोन में इंस्टॉल नहीं है या खुल नहीं सका।");
+                        return;
+                    }
+                    launch.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(launch);
+                    notifyVoice("onStatus", "ऐप खोला जा रहा है।");
+                } catch (Exception error) {
+                    notifyVoice("onError", "ऐप नहीं खुल सका। फ़ोन में ऐप की उपलब्धता जाँचें।");
+                }
+            });
+        }
+
+        @JavascriptInterface
         public void startWakeWord() {
             runOnUiThread(() -> {
                 if (!hasMicrophonePermission()) {
