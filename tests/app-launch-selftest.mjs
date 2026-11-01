@@ -29,6 +29,12 @@ for (const [input, expected] of cases) {
 
 const java = await readFile(new URL("../android-app/app/src/main/java/com/sarathi/ai/MainActivity.java", import.meta.url), "utf8");
 const manifest = await readFile(new URL("../android-app/app/src/main/AndroidManifest.xml", import.meta.url), "utf8");
+const wakeService = await readFile(new URL("../android-app/app/src/main/java/com/sarathi/ai/WakeWordService.java", import.meta.url), "utf8");
+assert.ok(wakeService.includes("awaitingCommand = false;\\n                conversationMode = false;\\n                commandMode = false;"), "wake notification timeout must reset conversation state");
+assert.ok(wakeService.includes("|| conversationMode || recognized == null"), "wake recognizer must ignore late callbacks after activation");
+assert.ok(wakeService.includes("notifications.cancel(NOTIFICATION_ID + 1)"), "wake notifications must be cleared after timeout/stop");
+console.log("WAKE SERVICE SELF-TEST: timeout reset, duplicate callback guard and notification cleanup passed");
+
 const packages = [
   "com.google.android.youtube",
   "com.openai.chatgpt",
