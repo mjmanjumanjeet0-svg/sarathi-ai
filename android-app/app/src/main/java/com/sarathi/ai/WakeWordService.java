@@ -74,6 +74,7 @@ public class WakeWordService extends Service {
         if (intent != null && ACTION_STOP.equals(intent.getAction())) {
             prefs.edit().putBoolean("enabled", false).apply();
             stopListening();
+            getSystemService(NotificationManager.class).cancel(NOTIFICATION_ID + 1);
             stopForeground(true);
             stopSelf();
             return START_NOT_STICKY;
@@ -192,10 +193,22 @@ public class WakeWordService extends Service {
             if (!marker.isFile()) {
                 updateStatus("हिंदी मॉडल डाउनलोड हो रहा है (लगभग 42 MB)…");
                 File zipFile = new File(modelsDir, MODEL_NAME + ".zip");
-                downloadModel(zipFile);
-                updateStatus("हिंदी मॉडल तैयार किया जा रहा है…");
-                unzipModel(zipFile, modelsDir);
-                zipFile.delete();
+                File stagingDir = new File(modelsDir, MODEL_NAME + ".staging");
+                try {
+                    downloadModel(zipFile);
+                    if (!running) return;
+                    updateStatus("हिंदी मॉडल तैयार किया जा रहा है…");
+                    deleteModelFiles(stagingDir);
+                    unzipModel(zipFile, stagingDir);
+                    if (!running) return;
+                    File stagedMarker = new File(stagingDir, MODEL_NAME + "/am/final.mdl");
+                    if (!stagedMarker.isFile()) throw new Exception("हिंदी मॉडल ZIP अधूरा है");
+                    deleteModelFiles(modelDir);
+                    if (!stagingDir.renameTo(modelDir)) throw new Exception("तैयार मॉडल सुरक्षित रूप से सेव नहीं हुआ");
+                } finally {
+                    zipFile.delete();
+                    if (stagingDir.exists()) deleteModelFiles(stagingDir);
+                }
             }
             if (!running) return;
             if (!marker.isFile()) throw new Exception("हिंदी मॉडल अधूरा है");
@@ -490,6 +503,7 @@ public class WakeWordService extends Service {
     }
 
     private void unzipModel(File zipFile, File destination) throws Exception {
+        if (!destination.exists() && !destination.mkdirs()) throw new Exception("अस्थायी मॉडल फ़ोल्डर नहीं बन पाया");
         String root = destination.getCanonicalPath() + File.separator;
         long expandedBytes = 0L;
         int entryCount = 0;
@@ -509,7 +523,7 @@ public class WakeWordService extends Service {
                     if (!parent.exists() && !parent.mkdirs()) throw new Exception("मॉडल फ़ोल्डर नहीं बन पाया");
                     try (FileOutputStream stream = new FileOutputStream(output)) {
                         int count;
-                        while ((count = zip.read(buffer)) != -1) {
+                        while (running && (count = zip.read(buffer)) != -1) {
                             expandedBytes += count;
                             if (expandedBytes > MAX_MODEL_EXPANDED_BYTES) {
                                 throw new SecurityException("खुला हुआ मॉडल तय स्टोरेज सीमा से बड़ा है");
@@ -519,9 +533,21 @@ public class WakeWordService extends Service {
                     }
                 }
                 zip.closeEntry();
+                if (!running) throw new InterruptedException("मॉडल extraction रोक दिया गया");
             }
-            if (running && entryCount == 0) throw new Exception("मॉडल ZIP खाली है");
+            if (!running) throw new InterruptedException("मॉडल extraction रोक दिया गया");
+            if (entryCount == 0) throw new Exception("मॉडल ZIP खाली है");
         }
+    }
+
+    private void deleteModelFiles(File file) throws Exception {
+        if (file == null || !file.exists()) return;
+        if (file.isDirectory()) {
+            File[] children = file.listFiles();
+            if (children == null) throw new Exception("पुराना मॉडल फ़ोल्डर साफ़ नहीं हो पाया");
+            for (File child : children) deleteModelFiles(child);
+        }
+        if (!file.delete()) throw new Exception("पुराना मॉडल डेटा साफ़ नहीं हो पाया");
     }
 
     private Recognizer createWakeRecognizer() throws Exception {
