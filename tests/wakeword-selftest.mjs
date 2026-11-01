@@ -229,5 +229,12 @@ assert.ok(
   wakeService.includes("cancel(NOTIFICATION_ID + 1);"),
   "Stopping wake-word service must also clear its secondary wake/command notification"
 );
+assert.ok(
+  wakeService.includes("private void endConversationAndResumeWakeWord()") &&
+  wakeService.includes("getSystemService(NotificationManager.class).cancel(NOTIFICATION_ID + 1);") &&
+  wakeService.includes("public void onDestroy()") &&
+  wakeService.includes("// This notification is independent of the foreground-service notification."),
+  "Ending a conversation and unexpected service teardown must clear the separate wake/command notification"
+);
 
 console.log("Sarathi Android wake-word self-test: stop phrases, resume and early-exit checks passed.");
