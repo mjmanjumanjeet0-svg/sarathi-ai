@@ -12,6 +12,13 @@ const [wake, activity, app, worker, wakeService, indexHtml] = await Promise.all(
   readFile(new URL("../index.html", import.meta.url), "utf8"),
 ]);
 
+const cspMeta = indexHtml.match(/<meta http-equiv="Content-Security-Policy" content="([^"]+)"/i);
+assert.ok(cspMeta, "Sarathi page must declare a Content Security Policy");
+assert.ok(cspMeta[1].includes("default-src 'self'") && cspMeta[1].includes("script-src 'self'"),
+  "Sarathi page must restrict resource and script loading to its own origin");
+assert.ok(cspMeta[1].includes("frame-src 'none'") && cspMeta[1].includes("object-src 'none'"),
+  "Sarathi page must block frames and embedded objects while exposing the Android bridge");
+
 const loginPromptStart = activity.indexOf("public boolean onJsPrompt");
 const loginPromptEnd = activity.indexOf("public boolean onJsConfirm", loginPromptStart);
 assert.ok(loginPromptStart >= 0 && loginPromptEnd > loginPromptStart, "Android WebView login prompt handler must exist");
