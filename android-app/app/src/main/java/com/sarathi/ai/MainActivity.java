@@ -24,8 +24,11 @@ import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebChromeClient;
 import android.webkit.JsResult;
+import android.webkit.JsPromptResult;
 import android.webkit.ValueCallback;
 import android.webkit.WebResourceRequest;
+import android.text.InputType;
+import android.widget.EditText;
 
 import org.json.JSONObject;
 
@@ -149,6 +152,39 @@ public class MainActivity extends Activity {
 
         webView.addJavascriptInterface(new SarathiBridge(), "SarathiNative");
         webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onJsPrompt(WebView view, String url, String message,
+                    String defaultValue, JsPromptResult result) {
+                // app.js uses window.prompt() to collect the Worker login password.
+                // Handle it explicitly because WebView does not guarantee a prompt
+                // dialog unless the host WebChromeClient implements this callback.
+                EditText input = new EditText(MainActivity.this);
+                input.setSingleLine(true);
+                input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+                input.setText(defaultValue == null ? "" : defaultValue);
+                input.setSelection(input.length());
+
+                android.app.AlertDialog dialog = new android.app.AlertDialog.Builder(MainActivity.this)
+                        .setTitle("सारथी AI लॉगिन")
+                        .setMessage(message == null ? "अपना लॉगिन पासवर्ड लिखें:" : message)
+                        .setView(input)
+                        .setPositiveButton("लॉगिन", (d, which) -> result.confirm(input.getText().toString()))
+                        .setNegativeButton("रद्द करें", (d, which) -> result.cancel())
+                        .create();
+                dialog.setOnCancelListener(d -> result.cancel());
+                dialog.setOnShowListener(d -> {
+                    input.requestFocus();
+                    input.post(() -> {
+                        android.view.Window window = dialog.getWindow();
+                        if (window != null) {
+                            window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+                        }
+                    });
+                });
+                dialog.show();
+                return true;
+            }
+
             @Override
             public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
                 new android.app.AlertDialog.Builder(MainActivity.this)
