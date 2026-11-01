@@ -3,12 +3,13 @@ import { readFile } from "node:fs/promises";
 
 const wakePath = new URL("../android-app/app/src/main/java/com/sarathi/ai/WakeWordService.java", import.meta.url);
 const activityPath = new URL("../android-app/app/src/main/java/com/sarathi/ai/MainActivity.java", import.meta.url);
-const [wake, activity, app, worker, wakeService] = await Promise.all([
+const [wake, activity, app, worker, wakeService, indexHtml] = await Promise.all([
   readFile(wakePath, "utf8"),
   readFile(activityPath, "utf8"),
   readFile(new URL("../app.js", import.meta.url), "utf8"),
   readFile(new URL("../worker.js", import.meta.url), "utf8"),
   readFile(new URL("../android-app/app/src/main/java/com/sarathi/ai/WakeWordService.java", import.meta.url), "utf8"),
+  readFile(new URL("../index.html", import.meta.url), "utf8"),
 ]);
 
 const helperStart = wake.indexOf("private boolean isConversationEndPhrase");
@@ -39,6 +40,14 @@ assert.ok(
   activity.includes("!APP_HOST.equalsIgnoreCase(uri.getHost())") &&
   activity.includes("view.stopLoading();"),
   "Android WebView must block unexpected top-level origins before loading privileged bridge pages"
+);
+
+assert.ok(
+  indexHtml.includes("frame-src 'none'") &&
+  indexHtml.includes("child-src 'none'") &&
+  indexHtml.includes("object-src 'none'") &&
+  indexHtml.includes("base-uri 'self'"),
+  "Sarathi web shell must block iframe/child-frame content and embedded objects so third-party frames cannot access the Android JavaScript bridge"
 );
 
 assert.ok(activity.includes("public void resumeWakeWord()"), "Android bridge must expose wake-word resume");
