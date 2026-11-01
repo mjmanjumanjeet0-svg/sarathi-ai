@@ -183,6 +183,7 @@ assert.ok(downloadStart >= 0 && downloadEnd > downloadStart, "Bounded model down
 const downloadCode = wakeService.slice(downloadStart, downloadEnd);
 assert.ok(
   downloadCode.includes("getContentLengthLong()") &&
+  downloadCode.includes("setInstanceFollowRedirects(false)") &&
   downloadCode.includes("downloadedBytes > MAX_MODEL_ARCHIVE_BYTES") &&
   downloadCode.includes("if (!completed && temp.exists()) temp.delete();"),
   "Model download must reject oversized/incomplete files and remove partial downloads"
