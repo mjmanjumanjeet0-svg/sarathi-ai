@@ -672,6 +672,11 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void resumeWakeWord() {
+            runOnUiThread(MainActivity.this::resumeWakeWordAfterCommand);
+        }
+
+        @JavascriptInterface
         public void speak(String text) {
             String safeText = text == null ? "" : text.trim();
             if (safeText.isEmpty()) return;
