@@ -475,7 +475,8 @@ public class MainActivity extends Activity {
                 return;
             }
 
-            speechRecognizer.setRecognitionListener(new RecognitionListener() {
+            final SpeechRecognizer activeRecognizer = speechRecognizer;
+            activeRecognizer.setRecognitionListener(new RecognitionListener() {
                 @Override public void onReadyForSpeech(Bundle params) {
                     String languageLabel = "en-IN".equals(selectedSpeechLanguage)
                             ? "English" : ("auto".equals(selectedSpeechLanguage) ? "हिन्दी + English" : "हिन्दी");
@@ -490,6 +491,7 @@ public class MainActivity extends Activity {
                     notifyVoice("onStatus", "आवाज़ समझी जा रही है…");
                 }
                 @Override public void onError(int error) {
+                    if (speechRecognizer != activeRecognizer) return;
                     if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS
                             && !hasMicrophonePermission()) {
                         pendingListen = false;
@@ -519,6 +521,7 @@ public class MainActivity extends Activity {
                     }
                 }
                 @Override public void onResults(Bundle results) {
+                    if (speechRecognizer != activeRecognizer) return;
                     ArrayList<String> matches = results == null ? null
                         : results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                     if (matches != null && !matches.isEmpty()) {
@@ -552,7 +555,7 @@ public class MainActivity extends Activity {
             }
             intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, !useOnlineService);
             intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);
-            speechRecognizer.startListening(intent);
+            activeRecognizer.startListening(intent);
         } catch (Exception error) {
             wakeCommandSession = false;
             notifyVoice("onError", "माइक्रोफ़ोन शुरू नहीं हो सका।");
@@ -631,6 +634,22 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void startListening() {
             runOnUiThread(() -> MainActivity.this.startListening());
+        }
+
+        @JavascriptInterface
+        public void stopListening() {
+            runOnUiThread(() -> {
+                pendingListen = false;
+                wakeCommandSession = false;
+                SpeechRecognizer current = speechRecognizer;
+                speechRecognizer = null;
+                if (current != null) {
+                    try { current.cancel(); } catch (Exception ignored) {}
+                    try { current.destroy(); } catch (Exception ignored) {}
+                }
+                resumeWakeWordAfterCommand();
+                notifyVoice("onStatus", "आवाज़ पहचान रोक दी गई।");
+            });
         }
 
         @JavascriptInterface
