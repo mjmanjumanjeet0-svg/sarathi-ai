@@ -103,6 +103,19 @@ await test("current price query invokes web search and AI", async () => {
   assert.match(enrichedUserPrompt, /24 कैरेट और 22 कैरेट/);
   assert.match(enrichedUserPrompt, /999 शुद्धता/);
 });
+await test("long numbered prompts reach Groq without losing their beginning or ending", async () => {
+  const longPrompt = Array.from({ length: 50 }, (_, i) => `${i + 1}. सवाल ${i + 1}: सामान्य ज्ञान का छोटा परीक्षण`).join("\\n");
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: longPrompt }] }, token);
+  assert.equal(r.status, 200);
+  const groqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
+  assert.ok(groqCall, "Groq request should be made");
+  const groqBody = JSON.parse(groqCall.init.body || "{}");
+  const sentPrompt = groqBody.messages?.at(-1)?.content || "";
+  assert.ok(sentPrompt.startsWith("1. सवाल 1:"), "first question must be preserved");
+  assert.ok(sentPrompt.includes("50. सवाल 50:"), "last question must be preserved");
+  assert.equal(groqBody.max_tokens, 6000, "output budget should support longer answer lists");
+});
 await test("Exa rate-limit is handled without crashing the Worker", async () => {
   exaMode = "429";
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज सोने का भाव बताओ" }] }, token);
