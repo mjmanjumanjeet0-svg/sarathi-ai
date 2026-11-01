@@ -517,6 +517,13 @@ export default {
       }, 503);
     }
 
+    // Require a valid signed session before any chat response or paid provider use.
+    const authHeader = request.headers.get("Authorization") || "";
+    const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
+    if (!env.SARATHI_LOGIN_PASSWORD || !await verifyToken(bearerToken, env.SARATHI_LOGIN_PASSWORD)) {
+      return jsonResponse({ success: false, error: "लॉगिन सत्र मान्य नहीं है। कृपया दोबारा लॉगिन करें।" }, 401);
+    }
+
     const messages = Array.isArray(body.messages) ? body.messages : [];
     const userMessage = [...messages].reverse().find(m => m?.role === "user");
     const userText = typeof userMessage?.content === "string"
