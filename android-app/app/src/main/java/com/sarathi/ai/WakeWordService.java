@@ -43,6 +43,9 @@ public class WakeWordService extends Service {
     private static final String CHANNEL = "sarathi_wake_channel";
     private static final int NOTIFICATION_ID = 771;
     private static final String MODEL_NAME = "vosk-model-small-hi-0.22";
+    private static final long MAX_MODEL_ARCHIVE_BYTES = 100L * 1024L * 1024L;
+    private static final long MAX_MODEL_EXPANDED_BYTES = 300L * 1024L * 1024L;
+    private static final int MAX_MODEL_ARCHIVE_ENTRIES = 20000;
     private static final String MODEL_URL = "https://alphacephei.com/vosk/models/vosk-model-small-hi-0.22.zip";
     private static final String WAKE_GRAMMAR = "[\"सारथी\",\"सारथी जी\",\"हेलो सारथी\",\"हैलो सारथी\",\"नमस्ते सारथी\",\"हे सारथी\",\"ठीक है सारथी\",\"अच्छा है सारथी\",\"ओके सारथी\",\"बाय सारथी\",\"बस सारथी\",\"धन्यवाद सारथी\",\"अलविदा सारथी\",\"ठीक है बाय\",\"अच्छा है बाय\",\"सरथी\",\"सारथि\",\"hello sarathi\",\"helo sarathi\",\"hey sarathi\",\"hi sarathi\",\"namaste sarathi\",\"sarathi\",\"sarthi\",\"bye sarathi\",\"ok sarathi\",\"okay sarathi\",\"[unk]\"]";
     private final Handler handler = new Handler(Looper.getMainLooper());
@@ -440,30 +443,50 @@ public class WakeWordService extends Service {
         connection.setConnectTimeout(20000);
         connection.setReadTimeout(60000);
         connection.setInstanceFollowRedirects(true);
+        File temp = new File(destination.getParentFile(), destination.getName() + ".part");
+        boolean completed = false;
         connection.connect();
         try {
             if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) throw new Exception("मॉडल डाउनलोड नहीं हुआ");
-            File temp = new File(destination.getParentFile(), destination.getName() + ".part");
+            long expectedBytes = connection.getContentLengthLong();
+            if (expectedBytes > MAX_MODEL_ARCHIVE_BYTES) throw new SecurityException("मॉडल फ़ाइल तय सीमा से बड़ी है");
+            long downloadedBytes = 0L;
             try (InputStream input = new BufferedInputStream(connection.getInputStream());
                  FileOutputStream output = new FileOutputStream(temp)) {
                 byte[] buffer = new byte[16384];
                 int count;
-                while (running && (count = input.read(buffer)) != -1) output.write(buffer, 0, count);
+                while (running && (count = input.read(buffer)) != -1) {
+                    downloadedBytes += count;
+                    if (downloadedBytes > MAX_MODEL_ARCHIVE_BYTES) {
+                        throw new SecurityException("मॉडल डाउनलोड तय सीमा से बड़ा हो गया");
+                    }
+                    output.write(buffer, 0, count);
+                }
                 output.getFD().sync();
             }
-            if (!running) { temp.delete(); return; }
+            if (!running) return;
+            if (downloadedBytes == 0L || (expectedBytes >= 0L && downloadedBytes != expectedBytes)) {
+                throw new Exception("मॉडल डाउनलोड अधूरा है");
+            }
             if (!temp.renameTo(destination)) throw new Exception("डाउनलोड फ़ाइल सेव नहीं हुई");
+            completed = true;
         } finally {
             connection.disconnect();
+            if (!completed && temp.exists()) temp.delete();
         }
     }
 
     private void unzipModel(File zipFile, File destination) throws Exception {
         String root = destination.getCanonicalPath() + File.separator;
+        long expandedBytes = 0L;
+        int entryCount = 0;
         try (ZipInputStream zip = new ZipInputStream(new BufferedInputStream(new java.io.FileInputStream(zipFile)))) {
             ZipEntry entry;
             byte[] buffer = new byte[16384];
             while (running && (entry = zip.getNextEntry()) != null) {
+                if (++entryCount > MAX_MODEL_ARCHIVE_ENTRIES) {
+                    throw new SecurityException("मॉडल ZIP में बहुत अधिक फ़ाइलें हैं");
+                }
                 File output = new File(destination, entry.getName());
                 if (!output.getCanonicalPath().startsWith(root)) throw new SecurityException("Invalid model archive path");
                 if (entry.isDirectory()) {
@@ -473,11 +496,18 @@ public class WakeWordService extends Service {
                     if (!parent.exists() && !parent.mkdirs()) throw new Exception("मॉडल फ़ोल्डर नहीं बन पाया");
                     try (FileOutputStream stream = new FileOutputStream(output)) {
                         int count;
-                        while ((count = zip.read(buffer)) != -1) stream.write(buffer, 0, count);
+                        while ((count = zip.read(buffer)) != -1) {
+                            expandedBytes += count;
+                            if (expandedBytes > MAX_MODEL_EXPANDED_BYTES) {
+                                throw new SecurityException("खुला हुआ मॉडल तय स्टोरेज सीमा से बड़ा है");
+                            }
+                            stream.write(buffer, 0, count);
+                        }
                     }
                 }
                 zip.closeEntry();
             }
+            if (running && entryCount == 0) throw new Exception("मॉडल ZIP खाली है");
         }
     }
 
