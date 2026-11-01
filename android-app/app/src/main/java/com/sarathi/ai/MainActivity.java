@@ -775,10 +775,16 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void stopWakeWord() {
-            Intent service = new Intent(MainActivity.this, WakeWordService.class);
-            service.setAction(WakeWordService.ACTION_STOP);
-            startService(service);
-            notifyVoice("onStatus", "वेक-वर्ड सेवा बंद करने का अनुरोध भेजा गया।");
+            runOnUiThread(() -> {
+                Intent service = new Intent(MainActivity.this, WakeWordService.class);
+                service.setAction(WakeWordService.ACTION_STOP);
+                try {
+                    startService(service);
+                    notifyVoice("onStatus", "वेक-वर्ड सेवा बंद करने का अनुरोध भेजा गया।");
+                } catch (Exception error) {
+                    notifyVoice("onError", "वेक-वर्ड सेवा बंद नहीं हो सकी। सारथी ऐप खोलकर दोबारा कोशिश करें।");
+                }
+            });
         }
 
         @JavascriptInterface
