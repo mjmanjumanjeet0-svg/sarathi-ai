@@ -938,7 +938,7 @@ async function sendMessage(text) {
       { id: "camera", names: ["कैमरा", "camera", "फोटो कैमरा"] }
     ];
     const match = aliases.find(item => item.names.some(name => requested === name));
-    if (match) {
+    if (match || typeof window.SarathiNative.openAppByName === "function") {
       // A wake-word request has already paused listening. Clear its pending
       // spoken-reply flag so it cannot leak into the next unrelated message.
       const cameFromVoice = state.voiceReplyPending || Boolean(window.SarathiVoice?.isActive?.());
@@ -949,7 +949,9 @@ async function sendMessage(text) {
         // Resume it before leaving the WebView for another Android app.
         window.SarathiNative?.resumeWakeWord?.();
       }
-      const accepted = window.SarathiNative.openApp(match.id);
+      const accepted = match
+        ? window.SarathiNative.openApp(match.id)
+        : window.SarathiNative.openAppByName(requested);
       addMessage("user", prompt);
       addMessage("assistant", accepted
         ? "ऐप खोलने का अनुरोध भेज दिया है।"
