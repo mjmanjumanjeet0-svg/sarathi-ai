@@ -42,6 +42,8 @@ public class MainActivity extends Activity {
     public static final String ACTION_WAKE_RESULT = "com.sarathi.ai.WAKE_RESULT";
     public static final String EXTRA_WAKE_TEXT = "wake_text";
     private static final int REQUEST_RECORD_AUDIO = 1201;
+    private static final int REQUEST_POST_NOTIFICATIONS = 1203;
+    private boolean pendingNotificationWakeStart = false;
     private static final String APP_HOST = "mjmanjumanjeet0-svg.github.io";
     private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
@@ -292,7 +294,11 @@ public class MainActivity extends Activity {
             service.setAction(WakeWordService.ACTION_START);
             if (Build.VERSION.SDK_INT >= 26) startForegroundService(service);
             else startService(service);
-            notifyVoice("onStatus", "हिंदी ऑफ़लाइन मॉडल तैयार किया जा रहा है। पहली बार इंटरनेट से लगभग 42 MB डाउनलोड होगा; इसके बाद आवाज़ पहचान फ़ोन पर ही होगी।");
+            boolean notificationsAllowed = Build.VERSION.SDK_INT < 33
+                    || checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED;
+            notifyVoice("onStatus", notificationsAllowed
+                    ? "हिंदी ऑफ़लाइन मॉडल तैयार किया जा रहा है। पहली बार इंटरनेट से लगभग 42 MB डाउनलोड होगा; इसके बाद आवाज़ पहचान फ़ोन पर ही होगी।"
+                    : "वेक-वर्ड सेवा शुरू हो रही है। नोटिफिकेशन अनुमति बंद है, इसलिए सूचना से ऐप खोलने की सुविधा सीमित हो सकती है।");
         } catch (Exception error) {
             notifyVoice("onError", "वेक-वर्ड सेवा शुरू नहीं हो सकी।");
         }
@@ -531,6 +537,15 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_POST_NOTIFICATIONS) {
+            boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
+            if (pendingNotificationWakeStart) {
+                pendingNotificationWakeStart = false;
+                startWakeWordService();
+                if (!granted) notifyVoice("onStatus", "नोटिफिकेशन अनुमति नहीं मिली। वेक-वर्ड सेवा चल सकती है, लेकिन लॉक स्क्रीन/सूचना से सारथी खोलना सीमित हो सकता है। ऐप खोलकर आदेश देख सकते हैं।");
+            }
+            return;
+        }
         if (requestCode == REQUEST_RECORD_AUDIO) {
             boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
             if (granted && pendingListen) {
@@ -636,6 +651,13 @@ public class MainActivity extends Activity {
                     pendingWakeStart = true;
                     requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_RECORD_AUDIO);
                     notifyVoice("onStatus", "वेक-वर्ड चालू करने के लिए माइक्रोफ़ोन अनुमति दें।");
+                    return;
+                }
+                if (Build.VERSION.SDK_INT >= 33
+                        && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                    pendingNotificationWakeStart = true;
+                    requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_POST_NOTIFICATIONS);
+                    notifyVoice("onStatus", "वेक-वर्ड के लिए नोटिफिकेशन अनुमति पूछी जा रही है।");
                     return;
                 }
                 startWakeWordService();
