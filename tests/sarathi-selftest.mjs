@@ -95,7 +95,13 @@ await test("current price query invokes web search and AI", async () => {
   assert.equal(r.status, 200);
   assert.ok(r.data.reply);
   assert.ok(calls.slice(before).some(x => x.url.includes("api.exa.ai/search")));
-  assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")));
+  const groqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
+  assert.ok(groqCall, "Groq should receive the searched price question");
+  const groqBody = JSON.parse(groqCall.init.body || "{}");
+  const enrichedUserPrompt = groqBody.messages?.at(-1)?.content || "";
+  assert.match(enrichedUserPrompt, /सोना-चाँदी भाव उत्तर का अनिवार्य प्रारूप/);
+  assert.match(enrichedUserPrompt, /24 कैरेट और 22 कैरेट/);
+  assert.match(enrichedUserPrompt, /999 शुद्धता/);
 });
 await test("Exa rate-limit is handled without crashing the Worker", async () => {
   exaMode = "429";
