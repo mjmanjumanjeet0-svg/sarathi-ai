@@ -15,6 +15,12 @@ globalThis.fetch = async (input, init = {}) => {
   const url = String(input);
   calls.push({ url, init });
   if (url.includes("api.exa.ai/search")) {
+    if (exaResultsMode === "insecure-search-links") {
+      return Response.json({ results: [
+        { title: "Insecure HTTP news result", url: "http://insecure.example/news", highlights: ["This result must be excluded."] },
+        { title: "Secure HTTPS news result", url: "https://reuters.com/world/india/secure-news", highlights: ["This secure result may be included."] }
+      ] });
+    }
     if (exaMode === "429") return Response.json({ error: "rate limited" }, { status: 429 });
     const searchBody = JSON.parse(init.body || "{}");
     if (/(ट्रेन|रेल|train|railway)/i.test(searchBody.query || "")) {
@@ -172,6 +178,19 @@ await test("Hindi train timing question automatically searches railway informati
   const prompt = JSON.parse(groqCall.init.body || "{}").messages?.at(-1)?.content || "";
   assert.match(prompt, /Indian Railways|indianrail\.gov\.in/);
 });
+await test("web search excludes insecure HTTP result links", async () => {
+  exaResultsMode = "insecure-search-links";
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज की ताजा खबरें बताओ" }] }, token);
+  assert.equal(r.status, 200);
+  const groqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
+  assert.ok(groqCall, "valid HTTPS search results should still reach the AI");
+  const prompt = JSON.parse(groqCall.init.body || "{}").messages?.at(-1)?.content || "";
+  assert.doesNotMatch(prompt, /insecure\.example/);
+  assert.match(prompt, /reuters\.com/);
+  exaResultsMode = "normal";
+});
+
 await test("Hindi current-news request automatically searches trusted news sources", async () => {
   const before = calls.length;
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज की ताजा खबरें बताओ" }] }, token);
