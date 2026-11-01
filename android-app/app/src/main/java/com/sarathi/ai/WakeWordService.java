@@ -487,7 +487,9 @@ public class WakeWordService extends Service {
     }
 
     private void checkWakePhrase(String recognized) {
-        if (!running || speaking || awaitingCommand || recognized == null) return;
+        // Ignore any late callbacks from the wake recognizer after a wake phrase
+        // has already switched the service into the conversation flow.
+        if (!running || speaking || awaitingCommand || conversationMode || recognized == null) return;
         String normalized = recognized.toLowerCase(Locale.ROOT)
                 .replaceAll("[^\\p{L}\\p{N}]+", " ").trim().replaceAll("\\s+", " ");
         // Hindi Vosk small models sometimes split a familiar wake word into
@@ -603,7 +605,14 @@ public class WakeWordService extends Service {
             commandTimeout = null;
             if (running && commandMode) finishCommand("{}");
             else if (running && awaitingCommand) {
+                // A wake-word notification that was not opened must not leave
+                // the service in conversation mode indefinitely.
                 awaitingCommand = false;
+                conversationMode = false;
+                commandMode = false;
+                commandDelivered = true;
+                NotificationManager notifications = getSystemService(NotificationManager.class);
+                if (notifications != null) notifications.cancel(NOTIFICATION_ID + 1);
                 resumeListening();
             }
         };
@@ -653,6 +662,11 @@ public class WakeWordService extends Service {
         if (recognizer != null) { recognizer.close(); recognizer = null; }
         if (model != null) { model.close(); model = null; }
         if (textToSpeech != null) { textToSpeech.stop(); textToSpeech.shutdown(); textToSpeech = null; }
+        conversationMode = false;
+        speaking = false;
+        retryAttempt = 0;
+        NotificationManager notifications = getSystemService(NotificationManager.class);
+        if (notifications != null) notifications.cancel(NOTIFICATION_ID + 1);
     }
 
     @Override public void onDestroy() { stopListening(); super.onDestroy(); }
