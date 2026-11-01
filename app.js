@@ -1331,6 +1331,7 @@ function findInCurrentChat() {
 
 window.SarathiVoice = {
   onResult(transcript) {
+    window.SarathiVoice?.nativeComplete?.();
     const input = $("messageInput");
     if (input && transcript) {
       input.value = (input.value ? input.value + " " : "") + transcript;
@@ -1358,6 +1359,7 @@ window.SarathiVoice = {
     }
   },
   onError(message) {
+    window.SarathiVoice?.nativeComplete?.();
     setStatus(message || "ऑफ़लाइन आवाज़ सुविधा अभी उपलब्ध नहीं है।");
   },
   onStatus(message) {
