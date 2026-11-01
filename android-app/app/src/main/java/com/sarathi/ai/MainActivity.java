@@ -596,16 +596,23 @@ public class MainActivity extends Activity {
                     textToSpeech.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                         @Override public void onStart(String utteranceId) {}
                         @Override public void onDone(String utteranceId) {
-                            mainHandler.post(MainActivity.this::resumeWakeWordAfterCommand);
+                            mainHandler.post(() -> {
+                                notifyVoice("onNativeSpeechDone", "");
+                                resumeWakeWordAfterCommand();
+                            });
                         }
                         @Override public void onError(String utteranceId) {
                             mainHandler.post(() -> {
+                                notifyVoice("onNativeSpeechDone", "");
                                 notifyVoice("onError", "जवाब बोलने में समस्या हुई। फ़ोन की Text-to-Speech आवाज़ और मीडिया वॉल्यूम जाँचें।");
                                 resumeWakeWordAfterCommand();
                             });
                         }
                         @Override public void onStop(String utteranceId, boolean interrupted) {
-                            mainHandler.post(MainActivity.this::resumeWakeWordAfterCommand);
+                            mainHandler.post(() -> {
+                                notifyVoice("onNativeSpeechDone", "");
+                                resumeWakeWordAfterCommand();
+                            });
                         }
                     });
                     int result = textToSpeech.speak(toSpeak, TextToSpeech.QUEUE_FLUSH, null, "sarathi-local-voice");
