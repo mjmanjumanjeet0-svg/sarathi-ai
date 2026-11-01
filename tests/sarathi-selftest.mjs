@@ -69,6 +69,18 @@ await test("login issues a session token", async () => {
   assert.ok(r.data.token);
   token = r.data.token;
 });
+await test("chat rejects requests without a login token", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "इतिहास क्या है?" }] });
+  assert.equal(r.status, 401);
+  assert.equal(calls.length, before, "unauthenticated requests must not reach providers");
+});
+await test("chat rejects an invalid login token", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "इतिहास क्या है?" }] }, "not-a-valid-token");
+  assert.equal(r.status, 401);
+  assert.equal(calls.length, before, "invalid-token requests must not reach providers");
+});
 await test("Hindi greeting is answered locally without provider calls", async () => {
   const before = calls.length;
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "हेलो सारथी" }] }, token);
