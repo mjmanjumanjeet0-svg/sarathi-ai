@@ -1,0 +1,27 @@
+name: Sarathi Worker Self-Test
+
+on:
+  push:
+    paths:
+      - 'worker.js'
+      - 'tests/**'
+      - '.github/workflows/worker-selftest.yml'
+  pull_request:
+    paths:
+      - 'worker.js'
+      - 'tests/**'
+      - '.github/workflows/worker-selftest.yml'
+  workflow_dispatch:
+
+jobs:
+  worker-selftest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Run Worker self-tests
+        run: node tests/sarathi-selftest.mjs
