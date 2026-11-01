@@ -149,7 +149,10 @@ public class MainActivity extends Activity {
                 }
             } else {
                 ttsReady = false;
+                pendingSpeechText = null;
+                notifyVoice("onNativeSpeechDone", "");
                 notifyVoice("onError", "फ़ोन की Text-to-Speech सेवा शुरू नहीं हो सकी। Android में टेक्स्ट-टू-स्पीच इंजन जाँचें।");
+                resumeWakeWordAfterCommand();
             }
         });
 
@@ -693,6 +696,7 @@ public class MainActivity extends Activity {
                         notifyVoice("onError", hindiText
                                 ? "फ़ोन में हिंदी बोलने की आवाज़ उपलब्ध नहीं है। Android की Text-to-Speech सेटिंग में हिंदी आवाज़ इंस्टॉल करें।"
                                 : "फ़ोन में English बोलने की आवाज़ उपलब्ध नहीं है। Android की Text-to-Speech सेटिंग में English आवाज़ इंस्टॉल करें।");
+                        resumeWakeWordAfterCommand();
                         return;
                     }
 
