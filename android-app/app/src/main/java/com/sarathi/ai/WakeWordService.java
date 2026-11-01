@@ -101,6 +101,9 @@ public class WakeWordService extends Service {
                 commandDelivered = true;
                 if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
                 commandTimeout = null;
+                getSystemService(NotificationManager.class).cancel(NOTIFICATION_ID + 1);
+                stopSelf();
+                return START_NOT_STICKY;
             }
             return START_STICKY;
         }
