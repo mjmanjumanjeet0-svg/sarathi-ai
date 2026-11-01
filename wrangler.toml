@@ -7,3 +7,5 @@ name = "SARATHI_RATE_LIMITER"
 namespace_id = "726104"
 simple = { limit = 10, period = 60 }
 
+[previews.ai]
+binding = "AI"
