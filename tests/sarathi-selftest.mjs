@@ -15,6 +15,13 @@ globalThis.fetch = async (input, init = {}) => {
   calls.push({ url, init });
   if (url.includes("api.exa.ai/search")) {
     if (exaMode === "429") return Response.json({ error: "rate limited" }, { status: 429 });
+    const searchBody = JSON.parse(init.body || "{}");
+    if (/India latest news/i.test(searchBody.query || "")) {
+      return Response.json({ results: [
+        { title: "India announces new national education initiative", url: "https://www.reuters.com/world/india/test-education-update/", highlights: ["Government officials announced a new national education initiative for schools."], publishedDate: new Date().toISOString() },
+        { title: "Heavy rainfall alert issued for eastern India", url: "https://indianexpress.com/article/india/test-rainfall-alert/", highlights: ["Weather authorities issued a rainfall alert for parts of eastern India."], publishedDate: new Date().toISOString() }
+      ] });
+    }
     return Response.json({
       results: [
         { title: "भारत में सोने का भाव", url: "https://example.com/gold-rate", highlights: ["24K gold rate ₹7800 per gram and 22K gold rate ₹7150 per gram in India."] },
@@ -130,6 +137,22 @@ await test("current price query invokes web search and AI", async () => {
   assert.match(enrichedUserPrompt, /13,888 × 10 = 1,38,880/);
   assert.match(enrichedUserPrompt, /179 × 1000 = 1,79,000/);
   assert.match(enrichedUserPrompt, /विसंगति बताओ/);
+});
+await test("Hindi current-news request automatically searches trusted news sources", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज की ताजा खबरें बताओ" }] }, token);
+  assert.equal(r.status, 200);
+  const exaCall = calls.slice(before).find(x => x.url.includes("api.exa.ai/search"));
+  assert.ok(exaCall, "current-news request should automatically call Exa");
+  const exaBody = JSON.parse(exaCall.init.body || "{}");
+  assert.equal(exaBody.category, "news");
+  const groqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
+  assert.ok(groqCall, "trusted news results should be sent to Groq");
+  const groqBody = JSON.parse(groqCall.init.body || "{}");
+  const enrichedPrompt = groqBody.messages?.at(-1)?.content || "";
+  assert.match(enrichedPrompt, /समाचार के सख्त निर्देश/);
+  assert.match(enrichedPrompt, /Reuters|reuters\.com/);
+  assert.match(enrichedPrompt, /Indian Express|indianexpress\.com/);
 });
 await test("long numbered prompts reach Groq without losing their beginning or ending", async () => {
   const longPrompt = Array.from({ length: 50 }, (_, i) => `${i + 1}. सवाल ${i + 1}: सामान्य ज्ञान का छोटा परीक्षण`).join("\n");
