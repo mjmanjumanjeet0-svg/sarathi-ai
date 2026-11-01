@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const app = await readFile(new URL("../app.js", import.meta.url), "utf8");
-const start = app.indexOf("function detectAppLaunchCommand(prompt) {");
+const start = app.indexOf("function detectAppLaunchCommand(prompt, installedApps = []) {");
 const end = app.indexOf("\n}\n\n/* ========================================\n   SEND MESSAGE", start);
 assert.ok(start >= 0 && end > start, "app launch parser must exist");
 const parserSource = app.slice(start, end + 2);
