@@ -5,9 +5,13 @@ const GROQ_MODEL = "openai/gpt-oss-20b";
 const SESSION_SECONDS = 12 * 60 * 60;
 
 const CORS_HEADERS = {
-  "Access-Control-Allow-Origin": "*",
+  // The production web app and Android WebView both load this exact GitHub Pages origin.
+  // Restrict browser access to that origin; API authentication remains separately required.
+  "Access-Control-Allow-Origin": "https://mjmanjumanjeet0-svg.github.io",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Vary": "Origin",
+  "X-Content-Type-Options": "nosniff",
   "Cache-Control": "no-store",
 };
 
