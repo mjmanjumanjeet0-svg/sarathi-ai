@@ -442,11 +442,11 @@ public class WakeWordService extends Service {
         HttpURLConnection connection = (HttpURLConnection) new URL(MODEL_URL).openConnection();
         connection.setConnectTimeout(20000);
         connection.setReadTimeout(60000);
-        connection.setInstanceFollowRedirects(true);
+        connection.setInstanceFollowRedirects(false);
         File temp = new File(destination.getParentFile(), destination.getName() + ".part");
         boolean completed = false;
-        connection.connect();
         try {
+            connection.connect();
             if (connection.getResponseCode() != HttpURLConnection.HTTP_OK) throw new Exception("मॉडल डाउनलोड नहीं हुआ");
             long expectedBytes = connection.getContentLengthLong();
             if (expectedBytes > MAX_MODEL_ARCHIVE_BYTES) throw new SecurityException("मॉडल फ़ाइल तय सीमा से बड़ी है");
