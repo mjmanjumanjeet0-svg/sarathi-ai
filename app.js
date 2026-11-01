@@ -880,10 +880,10 @@ function detectAppLaunchCommand(prompt, installedApps = []) {
   const known = commands.find(([, pattern]) => pattern.test(value));
   if (known) return { type: "known", key: known[0] };
 
-  const match = value.match(/^(?:कृपया\\s*)?(.+?)(?:\\s+ऐप)?\\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i);
+  const match = value.match(/^(?:कृपया\s*)?(.+?)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i);
   if (!match) return null;
-  const requested = match[1].trim().replace(/\\s+/g, " ");
-  const normalize = text => String(text || "").toLowerCase().normalize("NFKC").replace(/[^\\p{L}\\p{N}]+/gu, "");
+  const requested = match[1].trim().replace(/\s+/g, " ");
+  const normalize = text => String(text || "").toLowerCase().normalize("NFKC").replace(/[^\p{L}\p{N}]+/gu, "");
   const wanted = normalize(requested);
   const found = installedApps.find(item => normalize(item.label) === wanted);
   return found && found.packageName ? { type: "package", packageName: found.packageName, label: found.label } : null;
