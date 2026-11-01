@@ -29,6 +29,14 @@ assert.ok(
   "Android native login prompt must reject untrusted page origins"
 );
 
+const confirmStart = activity.indexOf("public boolean onJsConfirm");
+const confirmEnd = activity.indexOf("public boolean onShowFileChooser", confirmStart);
+assert.ok(confirmStart >= 0 && confirmEnd > confirmStart, "Android WebView confirmation handler must exist");
+const confirmCode = activity.slice(confirmStart, confirmEnd);
+assert.ok(confirmCode.includes("isTrustedAppUrl(Uri.parse(url == null ? \\"\\" : url))") &&
+  confirmCode.includes("result.cancel()"),
+  "Android native confirmation dialog must reject untrusted page origins");
+
 const helperStart = wake.indexOf("private boolean isConversationEndPhrase");
 const helperEnd = wake.indexOf("\n    private void endConversationAndResumeWakeWord", helperStart);
 assert.ok(helperStart >= 0 && helperEnd > helperStart, "Android stop-phrase helper must exist");
