@@ -3,10 +3,11 @@ import { readFile } from "node:fs/promises";
 
 const wakePath = new URL("../android-app/app/src/main/java/com/sarathi/ai/WakeWordService.java", import.meta.url);
 const activityPath = new URL("../android-app/app/src/main/java/com/sarathi/ai/MainActivity.java", import.meta.url);
-const [wake, activity, app] = await Promise.all([
+const [wake, activity, app, worker] = await Promise.all([
   readFile(wakePath, "utf8"),
   readFile(activityPath, "utf8"),
   readFile(new URL("../app.js", import.meta.url), "utf8"),
+  readFile(new URL("../worker.js", import.meta.url), "utf8"),
 ]);
 
 const helperStart = wake.indexOf("private boolean isConversationEndPhrase");
@@ -78,6 +79,23 @@ assert.ok(
   loginCode.includes("लॉगिन सर्वर से जवाब आने में 20 सेकंड से अधिक लगे") &&
   loginCode.includes("लॉगिन सर्वर से संपर्क नहीं हो पाया"),
   "Login timeout and network failures must show clear Hindi errors"
+);
+
+
+const searchFilterStart = worker.indexOf("function filterRelevantSearchResults");
+const searchFilterEnd = worker.indexOf("\\nfunction dedupeNewsResults", searchFilterStart);
+assert.ok(searchFilterStart >= 0 && searchFilterEnd > searchFilterStart, "Search result relevance filter must exist");
+const searchFilter = worker.slice(searchFilterStart, searchFilterEnd);
+assert.ok(
+  searchFilter.includes("gov\\\\.in") &&
+  searchFilter.includes("nic\\\\.in") &&
+  searchFilter.includes("ac\\\\.in") &&
+  searchFilter.includes("edu\\\\.in"),
+  "Official education questions must be restricted to government and academic domains"
+);
+assert.ok(
+  searchFilter.includes("परीक्षा तिथि") && searchFilter.includes("return officialHost.test(host)"),
+  "Exam and result searches must reject non-official domains"
 );
 
 console.log("Sarathi Android wake-word self-test: stop phrases, resume and early-exit checks passed.");
