@@ -162,6 +162,22 @@ await test("regulated career pathways trigger current education search and stric
   assert.match(system, /सभी कोर्स में 60% या Maths अनिवार्य मत कहो/);
 });
 
+await test("scholarship deadlines and eligibility trigger official education-source search", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    webSearch: false,
+    messages: [{ role: "user", content: "बिहार छात्रवृत्ति 2026 की आवेदन अंतिम तिथि और पात्रता क्या है?" }]
+  }, token);
+  assert.equal(r.status, 200);
+  const exaCall = calls.slice(before).find(x => x.url.includes("api.exa.ai/search"));
+  assert.ok(exaCall, "current scholarship rules must trigger official-source search");
+  const body = JSON.parse(exaCall.init.body || "{}");
+  assert.equal(body.numResults, 8);
+  assert.ok(body.includeDomains.includes("*.gov.in"), "scholarship search must be scoped to official government sources");
+  assert.ok(body.query.includes("official website"), "scholarship search query should request official sources");
+  assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")));
+});
+
 await test("Indian course catalog questions trigger official-source search even with web toggle off", async () => {
   const before = calls.length;
   const r = await request("/api/chat", "POST", {
