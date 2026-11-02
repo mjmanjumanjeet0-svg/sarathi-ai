@@ -100,6 +100,36 @@ await test("general knowledge reaches the AI provider", async () => {
   assert.match(r.data.reply, /परीक्षण उत्तर|1857/);
   assert.ok(calls.some(x => x.url.includes("api.groq.com")));
 });
+await test("explicit Hindi command इंटरनेट खोजो triggers Exa even when webSearch toggle is off", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    webSearch: false,
+    messages: [{ role: "user", content: "इंटरनेट खोजो भारत की नई शिक्षा नीति के बारे में" }]
+  }, token);
+  assert.equal(r.status, 200);
+  assert.ok(calls.slice(before).some(x => x.url.includes("api.exa.ai/search")),
+    "explicit Hindi search command must invoke Exa");
+  const exaCall = calls.slice(before).find(x => x.url.includes("api.exa.ai/search"));
+  const exaBody = JSON.parse(exaCall.init.body || "{}");
+  assert.equal(exaBody.type, "auto");
+  assert.deepEqual(exaBody.contents, { highlights: true });
+});
+
+await test("latest news query uses Exa news category and publication freshness filter", async () => {
+  const before = calls.length;
+  await request("/api/chat", "POST", {
+    messages: [{ role: "user", content: "आज की ताजा खबरें बताओ" }]
+  }, token);
+  const exaCall = calls.slice(before).find(x => x.url.includes("api.exa.ai/search"));
+  assert.ok(exaCall, "latest news must invoke Exa");
+  const exaBody = JSON.parse(exaCall.init.body || "{}");
+  assert.equal(exaBody.type, "auto");
+  assert.equal(exaBody.category, "news");
+  assert.equal(exaBody.numResults, 8);
+  assert.ok(exaBody.startPublishedDate, "news search must constrain publication date");
+  assert.deepEqual(exaBody.contents, { highlights: true });
+});
+
 await test("current price query invokes web search and AI", async () => {
   const before = calls.length;
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज सोने और चांदी का भाव बताओ" }] }, token);
