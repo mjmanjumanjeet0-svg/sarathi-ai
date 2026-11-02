@@ -1438,6 +1438,7 @@ window.SarathiVoice = {
       }
       setStatus("आपकी बात समझ रहा हूँ…");
       state.voiceReplyPending = true;
+      window.SarathiNative?.setVoiceRequestInProgress?.(true);
       sendMessage(spokenText);
       return;
     }
@@ -1454,6 +1455,7 @@ window.SarathiVoice = {
       setStatus("सारथी आपका आदेश समझ रहा है…");
       state.voiceStopRequested = false;
       state.voiceReplyPending = true;
+      window.SarathiNative?.setVoiceRequestInProgress?.(true);
       // Pause recognition while the request is being processed so one utterance
       // cannot accidentally trigger overlapping requests.
       if (window.SarathiNative && typeof window.SarathiNative.pauseWakeWord === "function") {
