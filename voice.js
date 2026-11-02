@@ -37,7 +37,11 @@
     }
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (window.SarathiNative?.stopSpeaking) window.SarathiNative.stopSpeaking();
-    if (nativeMode && window.SarathiNative?.stopListening) window.SarathiNative.stopListening();
+    if (nativeMode && window.SarathiNative?.endVoiceConversation) {
+      window.SarathiNative.endVoiceConversation();
+    } else if (nativeMode && window.SarathiNative?.stopListening) {
+      window.SarathiNative.stopListening();
+    }
     nativeMode = false;
     if (window.SarathiNative?.stopWakeWord) window.SarathiNative.stopWakeWord();
     show(false);
