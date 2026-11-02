@@ -485,8 +485,7 @@ public class MainActivity extends Activity {
                         notifyVoice("onError", "आवाज़ से शब्द समझ नहीं आए। फिर बोलकर देखें।");
                     }
                     if (voiceConversationActive && useOnlineService) {
-                        // Do not restart the wake-word service here: it would compete
-                        // with the continuous conversation recognizer for the microphone.
+                        // Keep the active foreground voice session ready for its next turn.
                         if (matches != null && !matches.isEmpty()) voiceRecognitionRetryAttempt = 0;
                     } else {
                         voiceRecognitionRetryAttempt = 0;
