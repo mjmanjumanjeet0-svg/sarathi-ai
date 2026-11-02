@@ -3,7 +3,6 @@ package com.sarathi.ai;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
-import android.content.Context;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -43,7 +42,7 @@ public class MainActivity extends Activity {
     private boolean voiceSessionOnlineConsent = false;
     private boolean voiceConversationActive = false;
     private boolean voiceRequestInProgress = false;
-    // Preserve an active hands-free session when another app (for example YouTube) temporarily covers Sarathi.
+    // Pause foreground recognition when Sarathi is covered; resume only after Sarathi returns.
     private boolean nativeListeningPausedForAppPause = false;
     private int voiceRecognitionRetryAttempt = 0;
     private Runnable voiceRecognitionRetry;
@@ -555,7 +554,6 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        @JavascriptInterface
         public void stopListening() {
             runOnUiThread(MainActivity.this::pauseNativeListeningForReply);
         }
@@ -729,7 +727,6 @@ public class MainActivity extends Activity {
             });
         }
 
-        @JavascriptInterface
         @JavascriptInterface
         public void stopSpeaking() {
             runOnUiThread(() -> {
