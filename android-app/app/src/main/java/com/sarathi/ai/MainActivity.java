@@ -43,6 +43,7 @@ public class MainActivity extends Activity {
     public static final String ACTION_WAKE_RESULT = "com.sarathi.ai.WAKE_RESULT";
     public static final String EXTRA_WAKE_TEXT = "wake_text";
     private static final int REQUEST_RECORD_AUDIO = 1201;
+    private static final int REQUEST_POST_NOTIFICATIONS = 1203;
     private static final String APP_HOST = "mjmanjumanjeet0-svg.github.io";
     private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
@@ -278,6 +279,18 @@ public class MainActivity extends Activity {
             pendingWakeCommand = false;
             startWakeCommandCapture();
         }
+    }
+
+    private void startWakeWordAfterPermissions() {
+        if (Build.VERSION.SDK_INT >= 33
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+            pendingWakeStart = true;
+            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_POST_NOTIFICATIONS);
+            notifyVoice("onStatus", "वेक-वर्ड की सूचना दिखाने के लिए नोटिफिकेशन अनुमति दें।");
+            return;
+        }
+        pendingWakeStart = false;
+        startWakeWordService();
     }
 
     private void startWakeWordService() {
@@ -546,14 +559,23 @@ public class MainActivity extends Activity {
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_POST_NOTIFICATIONS) {
+            if (pendingWakeStart) {
+                pendingWakeStart = false;
+                if (grantResults.length == 0 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
+                    notifyVoice("onStatus", "नोटिफिकेशन अनुमति नहीं मिली। वेक-वर्ड चालू रहेगा, लेकिन सूचना Android के सूचना पैनल में नहीं दिख सकती।");
+                }
+                startWakeWordService();
+            }
+            return;
+        }
         if (requestCode == REQUEST_RECORD_AUDIO) {
             boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
             if (granted && pendingListen) {
                 pendingListen = false;
                 beginListeningWithSelectedLanguage();
             } else if (granted && pendingWakeStart) {
-                pendingWakeStart = false;
-                startWakeWordService();
+                startWakeWordAfterPermissions();
             } else {
                 pendingListen = false;
                 pendingWakeStart = false;
@@ -723,7 +745,7 @@ public class MainActivity extends Activity {
                     notifyVoice("onStatus", "वेक-वर्ड चालू करने के लिए माइक्रोफ़ोन अनुमति दें।");
                     return;
                 }
-                startWakeWordService();
+                startWakeWordAfterPermissions();
             });
         }
 
