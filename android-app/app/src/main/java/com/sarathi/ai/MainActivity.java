@@ -48,6 +48,9 @@ public class MainActivity extends Activity {
     private boolean speechActivityFallbackLaunched = false;
     // Online speech permission is remembered only for the current user-started voice session.
     private boolean voiceSessionOnlineConsent = false;
+    private boolean voiceConversationActive = false;
+    private int voiceRecognitionRetryAttempt = 0;
+    private Runnable voiceRecognitionRetry;
     private static final String APP_HOST = "mjmanjumanjeet0-svg.github.io";
     private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
@@ -335,6 +338,10 @@ public class MainActivity extends Activity {
     }
 
     private void startListening() {
+        voiceConversationActive = true;
+        voiceRecognitionRetryAttempt = 0;
+        if (voiceRecognitionRetry != null) mainHandler.removeCallbacks(voiceRecognitionRetry);
+        voiceRecognitionRetry = null;
         pauseWakeWordForCommand();
         // After the user has explicitly approved online recognition once in this
         // voice conversation, reuse that choice for subsequent turns without
@@ -455,6 +462,11 @@ public class MainActivity extends Activity {
     }
 
     private void stopNativeListening() {
+        voiceConversationActive = false;
+        voiceSessionOnlineConsent = false;
+        voiceRecognitionRetryAttempt = 0;
+        if (voiceRecognitionRetry != null) mainHandler.removeCallbacks(voiceRecognitionRetry);
+        voiceRecognitionRetry = null;
         nativeStopRequested = true;
         SpeechRecognizer current = speechRecognizer;
         speechRecognizer = null;
@@ -464,6 +476,20 @@ public class MainActivity extends Activity {
         }
         wakeCommandSession = false;
         resumeWakeWordAfterCommand();
+    }
+
+    private void scheduleVoiceRecognitionRetry(boolean online) {
+        if (!voiceConversationActive || isFinishing()) return;
+        if (voiceRecognitionRetry != null) mainHandler.removeCallbacks(voiceRecognitionRetry);
+        voiceRecognitionRetryAttempt = Math.min(voiceRecognitionRetryAttempt + 1, 6);
+        long delayMs = Math.min(900L * voiceRecognitionRetryAttempt, 5000L);
+        notifyVoice("onStatus", "सारथी सुन रहा है। आवाज़ साफ़ नहीं मिली तो अपने-आप फिर कोशिश करेगा…");
+        voiceRecognitionRetry = () -> {
+            voiceRecognitionRetry = null;
+            if (!voiceConversationActive || isFinishing()) return;
+            startRecognition(online);
+        };
+        mainHandler.postDelayed(voiceRecognitionRetry, delayMs);
     }
 
     private boolean hasMicrophonePermission() {
@@ -535,6 +561,15 @@ public class MainActivity extends Activity {
                                         ? "Sarathi AI को माइक्रोफ़ोन अनुमति मिली है, लेकिन फ़ोन की ऑफ़लाइन स्पीच सेवा ने अनुमति त्रुटि (कोड 9) दी। क्या आप इस बार इंटरनेट के माध्यम से आवाज़ पहचान इस्तेमाल करना चाहते हैं?"
                                         : "इस फ़ोन की ऑफ़लाइन हिंदी आवाज़ पहचान अभी काम नहीं कर पाई। क्या आप इस बार इंटरनेट के माध्यम से आवाज़ पहचान इस्तेमाल करना चाहते हैं?"
                         ));
+                    } else if (voiceConversationActive && useOnlineService
+                            && error != SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
+                        // No-match, silence, network hiccups and provider restarts must
+                        // never terminate an active hands-free conversation.
+                        notifyVoice("onStatus", error == SpeechRecognizer.ERROR_NO_MATCH
+                                || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT
+                                ? "आवाज़ साफ़ नहीं मिली। सारथी फिर सुन रहा है…"
+                                : "आवाज़ सेवा में थोड़ी रुकावट आई। सारथी फिर सुन रहा है…");
+                        scheduleVoiceRecognitionRetry(true);
                     } else if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS
                             && useOnlineService && !speechActivityFallbackLaunched) {
                         // Some Android speech providers reject direct app-bound recognition
@@ -570,11 +605,18 @@ public class MainActivity extends Activity {
                         } else {
                             notifyVoice("onResult", matches.get(0));
                         }
+                    } else if (voiceConversationActive && useOnlineService) {
+                        notifyVoice("onStatus", "आवाज़ साफ़ नहीं मिली। सारथी फिर सुन रहा है…");
+                        scheduleVoiceRecognitionRetry(true);
                     } else {
                         wakeCommandSession = false;
                         notifyVoice("onError", "आवाज़ से शब्द समझ नहीं आए। फिर बोलकर देखें।");
                     }
-                    resumeWakeWordAfterCommand();
+                    if (!(voiceConversationActive && useOnlineService
+                            && (matches == null || matches.isEmpty()))) {
+                        voiceRecognitionRetryAttempt = 0;
+                        resumeWakeWordAfterCommand();
+                    }
                 }
                 @Override public void onPartialResults(Bundle partialResults) {}
                 @Override public void onEvent(int eventType, Bundle params) {}
@@ -650,10 +692,7 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void endVoiceConversation() {
-            runOnUiThread(() -> {
-                voiceSessionOnlineConsent = false;
-                MainActivity.this.stopNativeListening();
-            });
+            runOnUiThread(MainActivity.this::stopNativeListening);
         }
 
         @JavascriptInterface
