@@ -251,6 +251,11 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.equal(exaBody.numResults, 8);
   assert.ok(exaBody.startPublishedDate, "news search must constrain publication date");
   assert.deepEqual(exaBody.contents, { highlights: true });
+  const groqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
+  const groqBody = JSON.parse(groqCall.init.body || "{}");
+  const userContext = groqBody.messages?.at(-1)?.content || "";
+  assert.match(userContext, /पूर्वानुमानित है तो उसे हो चुकी घटना की तरह मत लिखो/);
+  assert.match(userContext, /कोई अतिरिक्त घटना, स्थान, संख्या, नुकसान, उड़ान रद्द होने या असर का दावा मत जोड़ो/);
 });
 
 await test("a casual sentence containing आज does not automatically trigger Exa", async () => {
@@ -337,7 +342,10 @@ await test("Groq HTTP 413 retries once with compact context and preserves the co
   assert.match(retryPrompt, /अभी का पूरा सवाल/);
   assert.match(retryPrompt, /सबका उत्तर दो/);
   assert.equal(retryBody.messages.length, 2, "compact retry should combine context into one user message");
-  assert.equal(retryBody.max_tokens, 3000);
+  assert.equal(retryBody.max_tokens, 1800);
+  const retrySystem = retryBody.messages?.[0]?.content || "";
+  assert.match(retrySystem, /समाचार में केवल शीर्षक और स्रोत-अंश से पुष्ट तथ्य लिखो/);
+  assert.ok(retrySystem.length < 1000, "413 retry must also compact the oversized system prompt");
   groqMode = "success";
 });
 await test("Groq 429 preserves available web results with an honest fallback", async () => {
