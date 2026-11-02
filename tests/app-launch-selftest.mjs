@@ -52,6 +52,9 @@ const java = await readFile(new URL("../android-app/app/src/main/java/com/sarath
 const mainActivity = await readFile(new URL("../android-app/app/src/main/java/com/sarathi/ai/MainActivity.java", import.meta.url), "utf8");
 assert.ok(mainActivity.includes("public boolean onJsPrompt("), "Android WebView must handle login prompts");
 assert.ok(mainActivity.includes("nativeListeningPausedForBackground && voiceConversationActive"), "active voice session must resume when Sarathi returns from another app");
+assert.ok(mainActivity.includes("startBackgroundConversationListening()") && mainActivity.includes("ACTION_START_CONVERSATION"), "active voice session must hand off to the foreground microphone service while another app is open");
+assert.ok(mainActivity.includes("voiceRequestInProgress") && mainActivity.includes("setVoiceRequestInProgress"), "background listening must wait while an AI request or spoken reply is in progress");
+assert.ok(mainActivity.includes("if (!appInForeground || !pageLoaded) return;"), "background wake commands must remain queued until Sarathi returns");
 assert.ok(mainActivity.includes("if (voiceConversationActive && !speechActivityFallbackLaunched)"), "background pause must release the microphone without interrupting the system speech fallback");
 assert.ok(mainActivity.includes("pauseNativeListeningForReply();"), "background transition must release the current native microphone recognizer");
 assert.ok(mainActivity.includes("recognizerForSession") && mainActivity.includes("isCurrentRecognizer()"), "stale speech callbacks must not restart or destroy the current microphone session");
@@ -64,6 +67,8 @@ console.log("ANDROID LOGIN PROMPT SELF-TEST: password masking, same-origin promp
 const wakeService = await readFile(new URL("../android-app/app/src/main/java/com/sarathi/ai/WakeWordService.java", import.meta.url), "utf8");
 assert.ok(/awaitingCommand = false;\s+conversationMode = false;\s+commandMode = false;/.test(wakeService), "wake notification timeout must reset conversation state");
 assert.ok(wakeService.includes("|| conversationMode || recognized == null"), "wake recognizer must ignore late callbacks after activation");
+assert.ok(wakeService.includes("ACTION_START_CONVERSATION") && wakeService.includes("if (conversationMode) startConversationRecognition();"), "foreground service must support continuous background conversation listening");
+assert.ok(wakeService.includes("A captured conversation request must release the microphone"), "captured requests must stop the service recognizer before the Activity processes them");
 assert.ok(wakeService.includes("notifications.cancel(NOTIFICATION_ID + 1)"), "wake notifications must be cleared after timeout/stop");
 console.log("WAKE SERVICE SELF-TEST: timeout reset, duplicate callback guard and notification cleanup passed");
 
