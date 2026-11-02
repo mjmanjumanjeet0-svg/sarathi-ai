@@ -785,37 +785,50 @@ export default {
       safeMessages.push(...safeHistory, { role: "user", content: latestUserText });
     }
 
-    if (searchResults.length) {
-      for (let i = safeMessages.length - 1; i >= 0; i--) {
-        if (safeMessages[i].role === "user") {
-          safeMessages[i].content += buildSearchContext(searchResults, userText).slice(0, 6500);
-          break;
-        }
-      }
+    const latestPrompt = safeMessages.at(-1)?.content || userText;
+    const searchContext = searchResults.length
+      ? buildSearchContext(searchResults, userText)
+      : "";
+    if (searchContext && safeMessages.length) {
+      safeMessages[safeMessages.length - 1].content += searchContext.slice(0, 6500);
     }
 
-    let groqResponse;
-    const groqController = new AbortController();
-    const groqTimeout = setTimeout(() => groqController.abort(), 30000);
+    const sendGroqRequest = async (requestMessages, maxTokens) => {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 30000);
+      try {
+        return await fetch(GROQ_API_URL, {
+          method: "POST",
+          headers: {
+            "Authorization": `Bearer ${env.GROQ_API_KEY}`,
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            model: GROQ_MODEL,
+            messages: [{ role: "system", content: systemPrompt }, ...requestMessages],
+            temperature: 0.3,
+            max_tokens: maxTokens,
+          }),
+          signal: controller.signal,
+        });
+      } finally {
+        clearTimeout(timeout);
+      }
+    };
 
+    let groqResponse;
     try {
-      groqResponse = await fetch(GROQ_API_URL, {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${env.GROQ_API_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: GROQ_MODEL,
-          messages: [
-            { role: "system", content: systemPrompt },
-            ...safeMessages,
-          ],
-          temperature: 0.3,
-          max_tokens: 6000,
-        }),
-        signal: groqController.signal,
-      });
+      groqResponse = await sendGroqRequest(safeMessages, 6000);
+      // On provider HTTP 413, retry once with compact context. Keep the preceding
+      // user turn as well as the latest follow-up (e.g. "सबका उत्तर दो").
+      if (groqResponse.status === 413) {
+        const priorUser = [...safeMessages.slice(0, -1)].reverse().find(item => item.role === "user");
+        const compactMessages = [];
+        if (priorUser) compactMessages.push({ role: "user", content: priorUser.content.slice(-9000) });
+        compactMessages.push({ role: "user", content: latestPrompt });
+        if (searchContext) compactMessages[compactMessages.length - 1].content += searchContext.slice(0, 1200);
+        groqResponse = await sendGroqRequest(compactMessages, 3000);
+      }
     } catch (error) {
       if (error?.name === "AbortError") {
         return jsonResponse({
@@ -826,8 +839,6 @@ export default {
         }, 504);
       }
       return jsonResponse({ success: false, error: "AI सेवा से संपर्क नहीं हो सका।" }, 502);
-    } finally {
-      clearTimeout(groqTimeout);
     }
 
     if (!groqResponse.ok) {
