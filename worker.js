@@ -653,6 +653,19 @@ export default {
       });
     }
 
+    // Identity questions about Sarathi are stable and should never trigger
+    // Exa/Groq, even when the browser's web-search switch is enabled.
+    const isSarathiIdentityQuestion = /(?:तुम|आप|तू)\s*(?:कौन\s*हो|कौन\s*हैं|कौन\s*है)|(?:तुम्हारा|आपका)\s*नाम\s*(?:क्या\s*है|बताओ|बताइए)|अपने\s*बारे\s*में\s*बताओ|सारथी\s*AI\s*क्या\s*है/i.test(userText);
+    if (isSarathiIdentityQuestion) {
+      return jsonResponse({
+        success: true,
+        reply: "मैं सारथी AI हूँ—आपका हिंदी और अंग्रेज़ी में मदद करने वाला डिजिटल सहायक। मैं पढ़ाई, सामान्य ज्ञान, लेखन, तकनीकी सवाल और इंटरनेट पर उपलब्ध ताज़ा जानकारी खोजने में मदद कर सकता हूँ। ताज़ा जानकारी के लिए इंटरनेट चालू होना और खोज सेवा उपलब्ध होना जरूरी है।",
+        ...dateTime,
+        webSearch: false,
+        sources: [],
+      });
+    }
+
     if (!env.GROQ_API_KEY) {
       return jsonResponse({ success: false, error: "AI सेवा का Secret उपलब्ध नहीं है।" }, 500);
     }
