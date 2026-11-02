@@ -7,7 +7,7 @@ const newChatStart = app.indexOf("function detectNewChatCommand(prompt) {");
 const newChatEnd = app.indexOf("\n}\n\nfunction detectAppLaunchCommand", newChatStart);
 assert.ok(newChatStart >= 0 && newChatEnd > newChatStart, "new chat command parser must exist");
 const detectNewChat = new Function(app.slice(newChatStart, newChatEnd + 2) + "\nreturn detectNewChatCommand;")();
-for (const phrase of ["नई चैट खोलो", "नई चैट ओपन करो", "नई चैट वन करो", "नई बातचीत शुरू करो", "new chat", "start new chat", "open new conversation"]) {
+for (const phrase of ["नई चैट खोलो", "नई चैट ओपन करो", "नई चैट वन करो", "नई बातचीत शुरू करो", "सारथी न्यू चैट ओपन करो", "हेलो सारथी नई चैट खोलो", "new chat", "start new chat", "open new conversation"]) {
   assert.equal(detectNewChat(phrase), true, "new chat command not detected: " + phrase);
 }
 for (const phrase of ["नई चैट क्या है", "मुझे नई चैट के बारे में बताओ", "आज नई बातचीत की खबर"]) {
@@ -15,6 +15,8 @@ for (const phrase of ["नई चैट क्या है", "मुझे न�
 }
 assert.ok(app.includes('setStatus("नई चैट खोल दी गई है।")'), "new chat action must show a success status");
 assert.ok(app.includes("createChat();") && app.includes("closeSidebar();") && app.includes("closeMoreMenu();"), "new chat voice command must create a fresh local chat");
+assert.ok(app.includes("stripSarathiWakePrefix(prompt)"), "voice command parser must ignore Sarathi wake-word prefixes");
+assert.ok(app.includes("window.SarathiNative.openPhone()"), "phone command must use the safe Android dialer action");
 const start = app.indexOf("function detectAppLaunchCommand(prompt, installedApps = []) {");
 const end = app.indexOf("\n}\n\n/* ========================================\n   SEND MESSAGE", start);
 assert.ok(start >= 0 && end > start, "app launch parser must exist");
@@ -23,6 +25,11 @@ const detect = new Function(parserSource + "\nreturn detectAppLaunchCommand;")()
 
 const cases = [
   ["यूट्यूब खोलो", "youtube"],
+  ["सारथी यूट्यूब ओपन करो", "youtube"],
+  ["हेलो सर जी यूट्यूब ओपन करो", "youtube"],
+  ["युटुब खोलो", "youtube"],
+  ["फोन ओपन करो", "phone"],
+  ["सारथी फोन खोलो", "phone"],
   ["youtube open", "youtube"],
   ["चैट जीपीटी खोलो", "chatgpt"],
   ["व्हाट्सऐप खोलो", "whatsapp"],
@@ -80,5 +87,6 @@ assert.deepEqual(detect("calculator खोलो", dynamicApps), {type:"package"
 assert.deepEqual(detect("Files खोलो", dynamicApps), {type:"package", packageName:"com.google.android.documentsui", label:"Files"});
 assert.equal(detect("unknown app खोलो", dynamicApps), null);
 assert.ok(java.includes("getInstalledApps()") && java.includes("openAppPackage(String requestedPackage)"));
+assert.ok(java.includes("public void openPhone()") && java.includes("Intent.ACTION_DIAL"), "phone command must open the dialer without placing a call");
 assert.ok(manifest.includes('android.intent.category.LAUNCHER'));
 console.log("APP LAUNCH SELF-TEST: " + cases.length + " fixed parser cases, 3 dynamic app cases and " + packages.length + " fixed Android mappings passed");
