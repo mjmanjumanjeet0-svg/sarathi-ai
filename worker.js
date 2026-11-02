@@ -168,9 +168,11 @@ function shouldSearchAutomatically(text) {
   const verification = /(किसने कहा|क्या सही है|सच है या नहीं|जांच करो|जाँच करो|सत्यापित करो|verify|fact.?check)/i.test(q);
   // Education and career pathways can change by academic session and regulator.
   const educationUpdate = /(प्रवेश|एडमिशन|admission|पात्रता|योग्यता|eligibility|फीस|शुल्क|आवेदन|फॉर्म|सिलेबस|पाठ्यक्रम|कट.?ऑफ|काउंसलिंग|मान्यता|recognition|recognized|नया कोर्स|नए कोर्स|आगामी|आने वाला|अगले सत्र|शैक्षणिक सत्र|academic session|course list|courses in india)/i.test(q);
-  const regulatedCareerPath = /(डॉक्टर|चिकित्सक|इंजीनियर|वकील|अधिवक्ता|नर्स|शिक्षक|फार्मासिस्ट|आर्किटेक्ट|पायलट|वेटरिनरी|पशु.?चिकित्सक|doctor|engineer|lawyer|nurse|teacher|pharmacist|architect|pilot)/i.test(q)
-    && /(बनने|बनना|कैसे बने|कैसे बनें|क्या पढ़ें|कौन.?सा विषय|कोर्स|परीक्षा|योग्यता|पात्रता|career|become|pathway|study)/i.test(q);
-  const education = educationUpdate || regulatedCareerPath;
+  const courseCatalogQuestion = /(भारत|इंडिया|india|बिहार|राज्य|राज्यों|देश|देशभर|कौन.?कौन|कितने|सूची|list|all|available)/i.test(q)
+    && /(कोर्स|courses?|डिग्री|degrees?|डिप्लोमा|diplomas?|आईटीआई|iti|पॉलिटेक्निक|polytechnic|vocational|व्यावसायिक|कौशल पाठ्यक्रम|skill courses?)/i.test(q);
+  const regulatedCareerPath = /(डॉक्टर|चिकित्सक|इंजीनियर|वकील|अधिवक्ता|नर्स|शिक्षक|फार्मासिस्ट|आर्किटेक्ट|पायलट|वेटरिनरी|पशु.?चिकित्सक|दंत.?चिकित्सक|फिजियोथेरेपिस्ट|सीए|चार्टर्ड अकाउंटेंट|doctor|physician|engineer|lawyer|advocate|nurse|teacher|pharmacist|architect|pilot|veterinarian|dentist|physiotherapist|chartered accountant)/i.test(q)
+    && /(बनने|बनना|कैसे बने|कैसे बनें|क्या पढ़ें|कौन.?सा विषय|कोर्स|परीक्षा|योग्यता|पात्रता|career|become|pathway|study|admission)/i.test(q);
+  const education = educationUpdate || courseCatalogQuestion || regulatedCareerPath;
 
   return (recent && (news || weather || travel || prices))
     || weather
