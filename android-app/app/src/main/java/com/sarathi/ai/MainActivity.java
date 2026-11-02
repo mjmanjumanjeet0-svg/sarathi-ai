@@ -844,6 +844,20 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
+        public void openPhone() {
+            runOnUiThread(() -> {
+                try {
+                    Intent dial = new Intent(Intent.ACTION_DIAL);
+                    dial.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    startActivity(dial);
+                    notifyVoice("onStatus", "फ़ोन डायलर खोला जा रहा है।");
+                } catch (Exception error) {
+                    notifyVoice("onError", "फ़ोन डायलर नहीं खुल सका।");
+                }
+            });
+        }
+
+        @JavascriptInterface
         public void openApp(String appKey) {
             final String key = appKey == null ? "" : appKey.trim().toLowerCase(Locale.ROOT);
             runOnUiThread(() -> {
