@@ -163,3 +163,27 @@ body,.app,.main{background:radial-gradient(ellipse at 50% 45%,#09265a,#041633 52
 .bottom-nav button{border:0;background:transparent;color:#c1cde2;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;font-size:23px}
 .bottom-nav button small{font-size:11px}.bottom-nav button.active{color:#16a6ff;font-weight:700}
 }
+
+/* Round voice-conversation control inspired by the requested voice button */
+.mic-btn{
+  width:48px;
+  height:48px;
+  flex:0 0 48px;
+  border-radius:50%;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  font-size:21px;
+  letter-spacing:-3px;
+  padding-right:3px;
+  background:linear-gradient(145deg,#1769f5,#315bea);
+  box-shadow:0 3px 14px #1769f566;
+}
+.mic-btn.active{
+  background:linear-gradient(145deg,#078a61,#10b981);
+  border-color:#48f0b2;
+  box-shadow:0 0 0 6px #10b98122,0 0 20px #10b98188;
+}
+@media(max-width:700px){
+  .mic-btn{width:46px;height:46px;flex-basis:46px;border-radius:50%}
+}
