@@ -189,7 +189,7 @@ async function searchInternet(query, env) {
     const isPreciousMetalQuery = /(gold|सोना|सोने|silver|चांदी|चाँदी|bullion|22K|24K)/i.test(searchQuery);
     const requestBody = {
       query: searchQuery,
-      type: "instant",
+      type: "auto",
       // Fetch a wider candidate pool so the answer can compare independent publishers.
       numResults: isNewsQuery || isPreciousMetalQuery ? 8 : 5,
       contents: { highlights: true }
