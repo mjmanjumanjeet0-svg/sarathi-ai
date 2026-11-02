@@ -224,7 +224,7 @@ async function searchInternet(query, env) {
       query: searchQuery,
       type: "auto",
       // Education queries need a broader candidate pool to compare official notices.
-      numResults: isNewsQuery || isPreciousMetalQuery || isEducationQuery ? 8 : 5,
+      numResults: isNewsQuery || isPreciousMetalQuery || isEducationQuery || isHistoricalResearchQuery(searchQuery) ? 8 : 5,
       contents: { highlights: true }
     };
     if (isEducationQuery) {
@@ -355,6 +355,41 @@ async function enrichGoldRateResults(results) {
   }));
 }
 
+function isHistoricalResearchQuery(query) {
+  return /(खूनी रविवार|bloody sunday|रूसी क्रांति|रूस की क्रांति|1905 की क्रांति|रूसी इतिहास|ऐतिहासिक घटना|ऐतिहासिक महत्व|russian revolution|1905 revolution)/i.test(String(query || ""));
+}
+
+function historicalSourceRank(item) {
+  try {
+    const host = new URL(item.url).hostname.toLowerCase().replace(/^www\\./, "");
+    if (/\\.(gov|gov\\.in|nic\\.in|edu|ac\\.in)$/.test(host) ||
+        /(^|\\.)(loc\\.gov|archives\\.gov|nationalarchives\\.gov\\.uk|encspb\\.ru)$/.test(host)) return 4;
+    if (/(^|\\.)(ebsco\\.com|worldhistory\\.org|britannica\\.com|encyclopedia\\.com|oxfordreference\\.com|cambridge\\.org|jstor\\.org|iupress\\.indiana\\.edu|press\\.princeton\\.edu|history\\.com)$/.test(host)) return 3;
+    if (/(^|\\.)(reuters\\.com|apnews\\.com|bbc\\.com|theguardian\\.com|nytimes\\.com|indianexpress\\.com|thehindu\\.com|smithsonianmag\\.com|nationalgeographic\\.com)$/.test(host)) return 2;
+    return 0;
+  } catch {
+    return 0;
+  }
+}
+
+function filterHistoricalSources(query, results) {
+  const list = Array.isArray(results) ? results : [];
+  const isBloodySunday = /(खूनी रविवार|bloody sunday)/i.test(String(query || ""));
+  const topicPattern = isBloodySunday
+    ? /(bloody sunday|खूनी रविवार|1905|st\\.? ?petersburg|saint petersburg|russia|रूस|петербург)/i
+    : null;
+  return list
+    .map(item => ({ item, rank: historicalSourceRank(item) }))
+    .filter(({ item, rank }) => {
+      if (rank < 2) return false;
+      const content = `${item.title || ""} ${item.snippet || ""}`;
+      return !topicPattern || topicPattern.test(content);
+    })
+    .sort((a, b) => b.rank - a.rank)
+    .slice(0, 6)
+    .map(({ item }) => item);
+}
+
 function filterRelevantSearchResults(query, results) {
   const q = String(query || "").toLocaleLowerCase("hi-IN");
   const textOf = (item) => `${item.title || ""} ${item.url || ""} ${item.snippet || ""}`.toLocaleLowerCase("hi-IN");
@@ -481,6 +516,10 @@ function buildSearchContext(results, query = "") {
 
   const isNewsQuery = /(खबर|समाचार|news|breaking|latest|ताज़ा|ताजा)/i.test(query);
   const isPreciousMetalQuery = /(सोने|सोना|gold|चांदी|चाँदी|silver|bullion|22\\s*k|24\\s*k)/i.test(query);
+  const isHistoricalQuery = isHistoricalResearchQuery(query);
+  const historyInstruction = isHistoricalQuery
+    ? "\\n\\nइतिहास और स्रोत-जाँच के सख्त निर्देश: केवल दिए गए खोज परिणामों के शीर्षक और उपलब्ध अंश से पुष्ट तथ्य लिखो। किसी एक स्रोत के अनुमान को सर्वमान्य तथ्य मत बताओ। तारीख, स्थान, व्यक्तियों और घटनाक्रम में स्रोतों का मेल जाँचो। यदि स्रोतों में मृतकों/घायलों की संख्या अलग हो तो स्पष्ट बताओ कि आँकड़े विवादित हैं; एक संख्या चुनकर निश्चित मत बताओ। आधिकारिक/समकालीन आँकड़े और बाद के इतिहासकारों के अनुमान अलग-अलग बताओ। कम स्रोत हों तो सीमा साफ लिखो। Wikipedia, सामान्य ब्लॉग, SEO/परीक्षा-क्विज़ एग्रीगेटर या असंबंधित पेज को प्रामाणिक ऐतिहासिक प्रमाण मत मानो। स्रोत में जानकारी न हो तो सामान्य ज्ञान से खाली जगह मत भरो।"
+    : "";
   const newsInstruction = isNewsQuery
     ? "\\n\\nसमाचार के सख्त निर्देश: एक ही घटना को केवल एक बार बताओ; समान रिपोर्ट को जोड़ो, लेकिन अलग घटनाओं को मत मिलाओ। प्रकाशित तारीख केवल प्रकाशित फ़ील्ड से लो; घटना की तारीख केवल खबर के पाठ से लो। तारीख उपलब्ध न हो तो अनुमान मत लगाओ। आज की खबरों में आज या पिछले 48 घंटों में प्रकाशित खबरों को प्राथमिकता दो। एक ही एजेंसी की कॉपी को स्वतंत्र पुष्टि मत मानो। राजनीतिक आरोपों को आरोप के रूप में ही लिखो। हर खबर के तथ्य केवल उसी परिणाम के शीर्षक और उपलब्ध जानकारी वाले अंश से लो; अपनी सामान्य जानकारी, अनुमान या दूसरी खबर के आधार पर कोई अतिरिक्त घटना, स्थान, संख्या, नुकसान, उड़ान रद्द होने या असर का दावा मत जोड़ो। यदि अंश में घटना केवल संभावित/पूर्वानुमानित है तो उसे हो चुकी घटना की तरह मत लिखो; साफ बताओ कि यह चेतावनी या पूर्वानुमान है। शीर्षक अकेला हो और अंश में विवरण न हो तो केवल शीर्षक का संक्षिप्त परिचय दो या खबर छोड़ दो। एक तथ्य का स्रोत स्पष्ट न हो तो उसे शामिल मत करो। उपलब्ध परिणामों में से अधिकतम 8 अलग और महत्वपूर्ण खबरें चुनो। हर खबर में 2–4 छोटे वाक्यों का स्वाभाविक हिंदी विवरण, प्रकाशक और प्रकाशित तारीख दो। हिंदी सवाल पर पूरा उत्तर सहज देवनागरी हिंदी में दो; अंग्रेज़ी शीर्षक, अंग्रेज़ी लेख का अंश या मेटाडेटा ज्यों-का-त्यों बिल्कुल मत छोड़ो। अंग्रेज़ी स्रोत को समझकर अपने शब्दों में हिंदी में सार लिखो। कम से कम 2 उपयोगी परिणाम न हों तो खबरों की संख्या बढ़ाकर मत दिखाओ। URL मत लिखो और कोई तथ्य मत गढ़ो।"
     : "";
@@ -492,7 +531,7 @@ function buildSearchContext(results, query = "") {
     (item, i) =>
       `${i + 1}. ${item.title}\nप्रकाशक: ${item.publisher || "उपलब्ध नहीं"}\nप्रकाशित: ${item.publishedAt || "तारीख उपलब्ध नहीं"}\nजानकारी: ${item.snippet || "जानकारी उपलब्ध नहीं है।"}`
   ).join("\n\n") +
-  "\n\nपरिणाम पर्याप्त न हों तो स्पष्ट बताओ। तथ्य या लिंक मत गढ़ो।" + newsInstruction + preciousMetalInstruction;
+  "\n\nपरिणाम पर्याप्त न हों तो स्पष्ट बताओ। तथ्य या लिंक मत गढ़ो।" + newsInstruction + preciousMetalInstruction + historyInstruction;
 }
 
 export default {
@@ -720,6 +759,7 @@ export default {
       const isGoldRateQuestion = /(सोने|सोना|gold|22\s*k|24\s*k|bullion)/i.test(userText);
       const isSilverRateQuestion = /(चांदी|चाँदी|silver)/i.test(userText);
       const isDiamondPriceQuestion = /(हीरा|हीरे|हीरों|diamond)/i.test(userText);
+      const isHistoricalQuestion = isHistoricalResearchQuery(userText);
       const indiaToday = new Intl.DateTimeFormat("en-CA", { timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
       const isOfficialEducationQuestion = /(सिलेबस|पाठ्यक्रम|परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|परिणाम|आवेदन|फॉर्म|फीस|पात्रता|नियम|छात्रवृत्ति|स्कॉलरशिप|scholarship|fellowship|stipend|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(userText);
       const searchQuery = isCurrentNewsQuestion
@@ -730,9 +770,14 @@ export default {
             ? "India diamond price today per carat natural diamond 4Cs price range " + indiaToday
             : isOfficialEducationQuestion
             ? userText + " official website government university board site:gov.in OR site:ac.in"
-            : userText;
+            : isHistoricalQuestion
+              ? (/(खूनी रविवार|bloody sunday)/i.test(userText)
+                  ? "Bloody Sunday 1905 St Petersburg Russia historical encyclopedia university press scholarly sources"
+                  : userText + " historical encyclopedia academic university press sources")
+              : userText;
       const search = await searchInternet(searchQuery, env);
       searchResults = filterRelevantSearchResults(userText, search.results);
+      if (isHistoricalQuestion) searchResults = filterHistoricalSources(userText, searchResults);
       if (isCurrentNewsQuestion) searchResults = dedupeNewsResults(searchResults);
       if ((isGoldRateQuestion || isSilverRateQuestion) && searchResults.length) {
         // Keep the strongest result from each publisher; repeated pages from one
