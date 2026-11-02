@@ -225,6 +225,19 @@ async function searchInternet(query, env) {
       numResults: isNewsQuery || isPreciousMetalQuery || isEducationQuery ? 8 : 5,
       contents: { highlights: true }
     };
+    if (isEducationQuery) {
+      // Hard-scope current education facts to official government, regulator,
+      // board, university, and recognized professional-body domains.
+      requestBody.includeDomains = [
+        "*.gov.in", "*.nic.in", "*.ac.in", "*.edu.in",
+        "ugc.gov.in", "aicte-india.org", "nmc.org.in", "nta.ac.in",
+        "ncvet.gov.in", "nqr.gov.in", "ncte.gov.in", "icar.gov.in",
+        "pci.nic.in", "indiannursingcouncil.org", "barcouncilofindia.org",
+        "coa.gov.in", "rehabcouncil.nic.in", "dciindia.gov.in",
+        "ncismindia.org", "nch.org.in", "vci.dadf.gov.in",
+        "cisce.org", "upsc.gov.in", "ssc.gov.in", "ibps.in"
+      ];
+    }
     if (isNewsQuery) {
       requestBody.category = "news";
       const since = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000);
