@@ -597,6 +597,11 @@ function renderMessages() {
   container.scrollTop = container.scrollHeight;
 }
 
+function shouldShowSearchSources(data) {
+  return Boolean(data && data.searchAttempted === true &&
+    Array.isArray(data.sources) && data.sources.length > 0);
+}
+
 function addMessage(role, content, imageUrl, sources) {
   let chat = activeChat();
   if (!chat) chat = createChat();
@@ -1185,14 +1190,14 @@ async function sendMessage(text) {
         addMessage("assistant", "टेस्ट का प्रारूप सही नहीं मिला। कृपया MCQ टेस्ट फिर से शुरू करें।\n\n" + answer.trim());
       }
     } else {
-      addMessage("assistant", cleanAnswer, null, useWebSearch ? filterSourcesForPrompt(prompt, data.sources || []) : []);
+      addMessage("assistant", cleanAnswer, null, shouldShowSearchSources(data) ? filterSourcesForPrompt(prompt, data.sources || []) : []);
     }
 
     // Only speak automatically for a reply triggered by an explicit voice command.
     // Typed messages stay silent; the user can still tap the per-message speaker button.
     if (shouldSpeakReply && window.SarathiVoice && typeof window.SarathiVoice.speak === "function") window.SarathiVoice.speak(cleanAnswer);
 
-    if (useWebSearch && data.searchWarning) {
+    if (data.searchAttempted && data.searchWarning) {
       setStatus("इंटरनेट खोज: " + data.searchWarning);
     } else {
       setStatus("");
