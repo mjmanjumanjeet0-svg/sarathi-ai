@@ -90,12 +90,14 @@ await test("Hindi greeting is answered locally without provider calls", async ()
   assert.equal(calls.length, before);
 });
 
-await test("speech-recognition greeting variant हेलो सर्दी is handled locally without Exa or Groq", async () => {
+await test("हेलो सर्दी is not treated as a Sarathi greeting alias", async () => {
   const before = calls.length;
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "हेलो सर्दी" }] }, token);
   assert.equal(r.status, 200);
-  assert.match(r.data.reply, /नमस्ते/);
-  assert.equal(calls.length, before, "misheard wake greeting must not trigger external providers");
+  assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")),
+    "the removed wake-word alias must not receive the local greeting response");
+  assert.equal(calls.slice(before).some(x => x.url.includes("api.exa.ai/search")), false,
+    "removing the wake-word alias must not itself trigger a web search");
 });
 await test("India capital is answered locally without Groq quota", async () => {
   const before = calls.length;
