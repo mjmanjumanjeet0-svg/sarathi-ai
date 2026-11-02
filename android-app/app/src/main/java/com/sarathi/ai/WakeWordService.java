@@ -83,7 +83,14 @@ public class WakeWordService extends Service {
             }
             awaitingCommand = true;
             if (speechService != null) speechService.setPause(true);
-            scheduleCommandTimeout(60000L);
+            if (conversationMode) {
+                // An AI reply may take longer than one minute. Keep the
+                // conversation paused until its explicit resume callback.
+                if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
+                commandTimeout = null;
+            } else {
+                scheduleCommandTimeout(60000L);
+            }
             return START_STICKY;
         }
         if (intent != null && ACTION_END_CONVERSATION.equals(intent.getAction())) {
