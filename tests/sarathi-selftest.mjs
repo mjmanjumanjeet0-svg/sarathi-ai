@@ -17,6 +17,18 @@ globalThis.fetch = async (input, init = {}) => {
   if (url.includes("api.exa.ai/search")) {
     if (exaMode === "429") return Response.json({ error: "rate limited" }, { status: 429 });
     const exaRequest = JSON.parse(init.body || "{}");
+    if (exaRequest.query.includes("Bloody Sunday 1905")) {
+      return Response.json({
+        results: [
+          { title: "Bloody Sunday: January 1905", url: "https://publish.iupress.indiana.edu/read/mutiny-amid-repression/section/7fb8bcb8-533a-4903-9bc8-aede21369fd7", highlights: ["Bloody Sunday on January 9, 1905, when soldiers shot workers marching to present a petition to the Tsar."] },
+          { title: "Bloody Sunday", url: "https://www.ebsco.com/research-starters/history/bloody-sunday", highlights: ["At least 130 demonstrators were killed and hundreds injured in St. Petersburg on January 22, 1905."] },
+          { title: "Bloody Sunday in 1905", url: "https://www.worldhistory.org/Bloody_Sunday_in_1905/", highlights: ["The massacre took place in St. Petersburg on 22 January 1905 and helped trigger the 1905 Revolution."] },
+          { title: "Bloody Sunday", url: "https://www.encyclopedia.com/history/modern-europe/british-and-irish-history/bloody-sunday", highlights: ["The official count eventually listed 130 killed."] },
+          { title: "खूनी रविवार क्या है", url: "https://hindikul.com/khuni-ravivar", highlights: ["A short exam summary with no citations."] },
+          { title: "Bloody Sunday", url: "https://en.wikipedia.org/wiki/Bloody_Sunday_(1905)", highlights: ["Historical overview."] }
+        ]
+      });
+    }
     if (exaRequest.category === "news") {
       return Response.json({
         results: [
@@ -258,6 +270,31 @@ await test("explicit Hindi command इंटरनेट खोजो triggers E
   const exaBody = JSON.parse(exaCall.init.body || "{}");
   assert.equal(exaBody.type, "auto");
   assert.deepEqual(exaBody.contents, { highlights: true });
+});
+
+await test("historical research prioritizes credible sources and marks casualty figures as disputed", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    webSearch: true,
+    messages: [{ role: "user", content: "खूनी रविवार" }]
+  }, token);
+  assert.equal(r.status, 200);
+  assert.equal(r.data.searchAttempted, true);
+  assert.equal(r.data.webSearch, true);
+  const exaCall = calls.slice(before).find(x => x.url.includes("api.exa.ai/search"));
+  assert.ok(exaCall, "historical question should invoke Exa");
+  const exaBody = JSON.parse(exaCall.init.body || "{}");
+  assert.equal(exaBody.numResults, 8);
+  assert.match(exaBody.query, /Bloody Sunday 1905 St Petersburg/);
+  assert.ok(r.data.sources.length >= 3);
+  assert.equal(r.data.sources.some(x => x.url.includes("hindikul.com")), false);
+  assert.equal(r.data.sources.some(x => x.url.includes("wikipedia.org")), false);
+  const groqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
+  assert.ok(groqCall);
+  const groqBody = JSON.parse(groqCall.init.body || "{}");
+  const enrichedPrompt = groqBody.messages?.at(-1)?.content || "";
+  assert.match(enrichedPrompt, /इतिहास और स्रोत-जाँच के सख्त निर्देश/);
+  assert.match(enrichedPrompt, /मृतकों\/घायलों की संख्या अलग हो तो स्पष्ट बताओ कि आँकड़े विवादित हैं/);
 });
 
 await test("latest news query uses Exa news category and publication freshness filter", async () => {
