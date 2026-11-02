@@ -104,7 +104,7 @@ await test("general knowledge reaches the AI provider", async () => {
 });
 await test("Android app-launch capability is distinguished from website limitations", async () => {
   const before = calls.length;
-  const r = await request("/api/chat", { method: "POST" }, {
+  const r = await request("/api/chat", "POST", {
     messages: [{ role: "user", content: "क्या तुम Android में इंस्टॉल ऐप खोल सकते हो?" }]
   }, token);
   assert.equal(r.status, 200);
