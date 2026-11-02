@@ -147,6 +147,9 @@ await test("regulated career pathways trigger current education search and stric
   assert.ok(exaCall, "regulated career pathways must trigger current web verification");
   const exaBody = JSON.parse(exaCall.init.body || "{}");
   assert.equal(exaBody.numResults, 8, "education searches should compare a wider source pool");
+  assert.ok(exaBody.includeDomains.includes("*.gov.in"));
+  assert.ok(exaBody.includeDomains.includes("*.ac.in"));
+  assert.ok(exaBody.includeDomains.includes("nmc.org.in"));
   const groqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
   assert.ok(groqCall, "the searched education question should reach the assistant");
   const groqBody = JSON.parse(groqCall.init.body || "{}");
