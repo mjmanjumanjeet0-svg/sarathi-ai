@@ -1660,6 +1660,19 @@ function resizeMessageInput() {
 }
 
 function handlePromptClick(event) {
+  const voiceButton = event.target.closest("[data-voice-action]");
+  if (voiceButton?.getAttribute("data-voice-action") === "start") {
+    if (window.SarathiVoice?.isActive?.()) {
+      setStatus("सारथी से बातचीत पहले से चालू है। बोलिए।");
+      return;
+    }
+    if (typeof window.SarathiVoice?.start === "function") {
+      window.SarathiVoice.start();
+      return;
+    }
+    setStatus("आवाज़ की सुविधा अभी उपलब्ध नहीं है। माइक बटन दबाकर कोशिश करें।");
+    return;
+  }
   const button = event.target.closest("[data-prompt]");
   const prompt = button?.getAttribute("data-prompt");
   if (prompt) sendMessage(prompt);
