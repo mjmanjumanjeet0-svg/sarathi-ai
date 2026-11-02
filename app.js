@@ -873,7 +873,7 @@ function explicitlyRequestsWebSearch(prompt) {
 function stripSarathiWakePrefix(prompt) {
   return String(prompt || "")
     .toLocaleLowerCase("hi-IN")
-    .replace(/^(?:(?:हेलो|हैलो|hello|hi|नमस्ते|हे)\s+)?(?:(?:सारथी|सरथी|सर\s*जी|सरजी|सर्दी|सारथी\s+जी)\s+)+/i, "")
+    .replace(/^(?:(?:हेलो|हैलो|hello|hi|नमस्ते|हे)\s+)?(?:(?:सारथी|सरथी|सर\s*जी|सरजी|सारथी\s+जी)\s+)+/i, "")
     .trim();
 }
 
