@@ -672,7 +672,10 @@ public class MainActivity extends Activity {
                     textToSpeech.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                         @Override public void onStart(String utteranceId) {}
                         @Override public void onDone(String utteranceId) {
-                            mainHandler.post(MainActivity.this::resumeWakeWordAfterCommand);
+                            mainHandler.post(() -> {
+                                MainActivity.this.resumeWakeWordAfterCommand();
+                                notifyVoice("onSpeechComplete", "");
+                            });
                         }
                         @Override public void onError(String utteranceId) {
                             mainHandler.post(() -> {
