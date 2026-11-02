@@ -461,6 +461,21 @@ function buildNewsFallback(results, dateTime) {
   return "आज की खबरों की खोज में " + items.length + " स्रोत मिले, लेकिन उनका भरोसेमंद हिंदी सार तैयार नहीं हो पाया। इसलिए अंग्रेज़ी लेखों को ज्यों-का-त्यों दिखाने या अधूरी जानकारी को खबर बताने के बजाय मैं इस बार अपुष्ट सार नहीं दे रहा हूँ। कृपया थोड़ी देर बाद फिर पूछें।";
 }
 
+function buildProviderBusySearchFallback(results, query) {
+  const items = (Array.isArray(results) ? results : []).slice(0, 5);
+  if (!items.length) return "";
+  const lines = items.map((item, index) => {
+    const snippet = cleanText(item.snippet || "").slice(0, 500);
+    const publisher = item.publisher || "प्रकाशक उपलब्ध नहीं";
+    const published = item.publishedAt || "प्रकाशित तारीख उपलब्ध नहीं";
+    return (index + 1) + ". " + item.title + "\nप्रकाशक: " + publisher +
+      "\nप्रकाशित: " + published +
+      (snippet ? "\nउपलब्ध जानकारी: " + snippet : "\nविस्तृत जानकारी स्रोत पर देखें।");
+  });
+  return "AI सेवा इस समय व्यस्त है, इसलिए खोज परिणामों का विस्तृत सार तैयार नहीं हो सका। नीचे इंटरनेट खोज में मिले परिणाम दिए जा रहे हैं। इन्हें पढ़ते समय स्रोत और तारीख जाँचें; अधूरी जानकारी को अंतिम पुष्टि न मानें।\n\n" +
+    lines.join("\n\n");
+}
+
 function buildSearchContext(results, query = "") {
   if (!results.length) return "";
 
@@ -934,6 +949,28 @@ export default {
 
     if (!groqResponse.ok) {
       const status = groqResponse.status;
+      // If search succeeded but Groq is rate-limited, preserve useful source
+      // results instead of discarding them. Never invent a generated summary.
+      if (status === 429 && searchResults.length) {
+        const fallbackReply = buildProviderBusySearchFallback(searchResults, userText);
+        if (fallbackReply) {
+          return jsonResponse({
+            success: true,
+            reply: fallbackReply,
+            ...dateTime,
+            webSearch: true,
+            searchAttempted: true,
+            searchWarning: "AI सेवा व्यस्त थी; इसलिए खोज परिणामों का स्रोत-आधारित संक्षिप्त प्रदर्शन दिया गया है, AI सार नहीं।",
+            providerBusy: true,
+            sources: searchResults.map(item => ({
+              title: item.title,
+              url: item.url,
+              publisher: item.publisher || "",
+              publishedAt: item.publishedAt || "",
+            })),
+          });
+        }
+      }
       const message = status === 429
         ? "AI सेवा पर इस समय बहुत अधिक अनुरोध हैं। 30–60 सेकंड बाद फिर कोशिश करें।"
         : status >= 500
