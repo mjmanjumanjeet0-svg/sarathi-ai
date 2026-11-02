@@ -361,11 +361,11 @@ function isHistoricalResearchQuery(query) {
 
 function historicalSourceRank(item) {
   try {
-    const host = new URL(item.url).hostname.toLowerCase().replace(/^www\\./, "");
-    if (/\\.(gov|gov\\.in|nic\\.in|edu|ac\\.in)$/.test(host) ||
-        /(^|\\.)(loc\\.gov|archives\\.gov|nationalarchives\\.gov\\.uk|encspb\\.ru)$/.test(host)) return 4;
-    if (/(^|\\.)(ebsco\\.com|worldhistory\\.org|britannica\\.com|encyclopedia\\.com|oxfordreference\\.com|cambridge\\.org|jstor\\.org|iupress\\.indiana\\.edu|press\\.princeton\\.edu|history\\.com)$/.test(host)) return 3;
-    if (/(^|\\.)(reuters\\.com|apnews\\.com|bbc\\.com|theguardian\\.com|nytimes\\.com|indianexpress\\.com|thehindu\\.com|smithsonianmag\\.com|nationalgeographic\\.com)$/.test(host)) return 2;
+    const host = new URL(item.url).hostname.toLowerCase().replace(/^www\./, "");
+    if (/\.(gov|gov\.in|nic\.in|edu|ac\.in)$/.test(host) ||
+        /(^|\.)(loc\.gov|archives\.gov|nationalarchives\.gov\.uk|encspb\.ru)$/.test(host)) return 4;
+    if (/(^|\.)(ebsco\.com|worldhistory\.org|britannica\.com|encyclopedia\.com|oxfordreference\.com|cambridge\.org|jstor\.org|iupress\.indiana\.edu|press\.princeton\.edu|history\.com)$/.test(host)) return 3;
+    if (/(^|\.)(reuters\.com|apnews\.com|bbc\.com|theguardian\.com|nytimes\.com|indianexpress\.com|thehindu\.com|smithsonianmag\.com|nationalgeographic\.com)$/.test(host)) return 2;
     return 0;
   } catch {
     return 0;
@@ -376,7 +376,7 @@ function filterHistoricalSources(query, results) {
   const list = Array.isArray(results) ? results : [];
   const isBloodySunday = /(खूनी रविवार|bloody sunday)/i.test(String(query || ""));
   const topicPattern = isBloodySunday
-    ? /(bloody sunday|खूनी रविवार|1905|st\\.? ?petersburg|saint petersburg|russia|रूस|петербург)/i
+    ? /(bloody sunday|खूनी रविवार|1905|st\.? ?petersburg|saint petersburg|russia|रूस|петербург)/i
     : null;
   return list
     .map(item => ({ item, rank: historicalSourceRank(item) }))
