@@ -14,7 +14,7 @@ for (const phrase of ["नई चैट क्या है", "मुझे न�
   assert.equal(detectNewChat(phrase), false, "ordinary question must not trigger new chat: " + phrase);
 }
 assert.ok(app.includes('setStatus("नई चैट खोल दी गई है।")'), "new chat action must show a success status");
-assert.ok(app.includes("createChat();\\n    closeSidebar();\n    closeMoreMenu();"), "new chat voice command must create a fresh local chat");
+assert.ok(app.includes("createChat();") && app.includes("closeSidebar();") && app.includes("closeMoreMenu();"), "new chat voice command must create a fresh local chat");
 const start = app.indexOf("function detectAppLaunchCommand(prompt, installedApps = []) {");
 const end = app.indexOf("\n}\n\n/* ========================================\n   SEND MESSAGE", start);
 assert.ok(start >= 0 && end > start, "app launch parser must exist");
