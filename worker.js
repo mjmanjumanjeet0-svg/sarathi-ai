@@ -681,6 +681,18 @@ export default {
       });
     }
 
+    // Explain the actual voice workflow locally; avoid false denials and web search.
+    const isVoiceCapabilityQuestion = /(?:आवाज|आवाज़|वॉइस|voice|माइक्रोफोन|माइक्रोफ़ोन|mic).{0,55}(?:सुन|बोल|जवाब|बात|बातचीत|पहचान|काम|कर|सकते|सकती|सकता)|(?:सुन|बोल).{0,35}(?:आवाज|आवाज़|वॉइस|voice|माइक्रोफोन|माइक्रोफ़ोन|mic)/i.test(userText);
+    if (isVoiceCapabilityQuestion) {
+      return jsonResponse({
+        success: true,
+        reply: "हाँ, सारथी ऐप में आवाज़ से बातचीत की सुविधा है। माइक्रोफ़ोन बटन दबाकर अनुमति दें और बोलें। फ़ोन आपकी आवाज़ को टेक्स्ट में बदलकर सवाल भेजता है, फिर सारथी जवाब देता है; आवाज़ में जवाब भी उपलब्ध है। यह सीधे कच्चे ऑडियो को AI तक भेजने वाली सुविधा नहीं है। अगर हिंदी आवाज़ पहचान उपलब्ध न हो, तो फ़ोन ऑनलाइन स्पीच सेवा की अनुमति माँग सकता है। सुविधा न चले तो बताइए कि माइक्रोफ़ोन दबाने पर क्या संदेश आता है।",
+        ...dateTime,
+        webSearch: false,
+        sources: [],
+      });
+    }
+
     if (!env.GROQ_API_KEY) {
       return jsonResponse({ success: false, error: "AI सेवा का Secret उपलब्ध नहीं है।" }, 500);
     }
