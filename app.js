@@ -1383,6 +1383,18 @@ function findInCurrentChat() {
 
 window.SarathiVoice = {
   onResult(transcript) {
+    if (window.SarathiVoice?.isConversationMode?.()) {
+      const spokenText = String(transcript || "").trim();
+      if (!spokenText) {
+        setStatus("आवाज़ समझ नहीं आई। फिर से बोलिए।");
+        window.SarathiVoice?.resumeAfterSpeech?.();
+        return;
+      }
+      setStatus("आपकी बात समझ रहा हूँ…");
+      state.voiceReplyPending = true;
+      sendMessage(spokenText);
+      return;
+    }
     window.SarathiVoice?.nativeComplete?.();
     const input = $("messageInput");
     if (input && transcript) {
