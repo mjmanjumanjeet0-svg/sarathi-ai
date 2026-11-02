@@ -1188,7 +1188,7 @@ async function sendMessage(text) {
       addMessage("assistant", cleanAnswer, null, useWebSearch ? filterSourcesForPrompt(prompt, data.sources || []) : []);
     }
 
-    // Only speak automatically for a reply triggered by the wake-word voice command.
+    // Only speak automatically for a reply triggered by an explicit voice command.
     // Typed messages stay silent; the user can still tap the per-message speaker button.
     if (shouldSpeakReply && window.SarathiVoice && typeof window.SarathiVoice.speak === "function") window.SarathiVoice.speak(cleanAnswer);
 
@@ -1458,26 +1458,6 @@ window.SarathiVoice = {
       input.value = (input.value ? input.value + " " : "") + transcript;
       input.focus();
       setStatus("आवाज़ लिख दी गई है। भेजने से पहले संदेश जाँच लें।");
-    }
-  },
-  onWakeCommandResult(transcript) {
-    if (transcript && String(transcript).trim()) {
-      setStatus("सारथी आपका आदेश समझ रहा है…");
-      state.voiceStopRequested = false;
-      state.voiceReplyPending = true;
-      window.SarathiNative?.setVoiceRequestInProgress?.(true);
-      // Pause recognition while the request is being processed so one utterance
-      // cannot accidentally trigger overlapping requests.
-      if (window.SarathiNative && typeof window.SarathiNative.pauseWakeWord === "function") {
-        window.SarathiNative.pauseWakeWord();
-      }
-      sendMessage(String(transcript).trim());
-    } else {
-      const message = "आवाज़ समझ नहीं आई। कृपया फिर से साफ़ बोलें।";
-      setStatus(message);
-      if (window.SarathiNative && typeof window.SarathiNative.speak === "function") {
-        window.SarathiNative.speak(message);
-      }
     }
   },
   onError(message) {
@@ -1897,18 +1877,6 @@ function bindEvents() {
   $("photosOption")?.addEventListener("click", choosePhotos);
   $("filesOption")?.addEventListener("click", chooseFiles);
   $("webToggle")?.addEventListener("click", toggleWebSearch);
-  const startWakeWord = () => {
-    if (window.SarathiNative?.startWakeWord) window.SarathiNative.startWakeWord();
-    else setStatus("वेक-वर्ड सुविधा Android ऐप में ही उपलब्ध है।");
-  };
-  const stopWakeWord = () => {
-    if (window.SarathiNative?.stopWakeWord) window.SarathiNative.stopWakeWord();
-    else setStatus("वेक-वर्ड सुविधा Android ऐप में ही उपलब्ध है।");
-  };
-  $("wakeStart")?.addEventListener("click", startWakeWord);
-  $("wakeStop")?.addEventListener("click", stopWakeWord);
-  $("wakeStartMain")?.addEventListener("click", startWakeWord);
-  $("wakeStopMain")?.addEventListener("click", stopWakeWord);
 
   $("messageInput")?.addEventListener("input", resizeMessageInput);
   $("messageInput")?.addEventListener("keydown", event => {
