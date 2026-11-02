@@ -340,12 +340,30 @@ await test("Groq HTTP 413 retries once with compact context and preserves the co
   assert.equal(retryBody.max_tokens, 3000);
   groqMode = "success";
 });
-await test("Groq 429 is surfaced as a clear retryable error", async () => {
+await test("Groq 429 preserves available web results with an honest fallback", async () => {
   groqMode = "429";
+  exaMode = "success";
+  const r = await request("/api/chat", "POST", {
+    webSearch: true,
+    messages: [{ role: "user", content: "आज सोने का भाव इंटरनेट पर खोजो" }]
+  }, token);
+  assert.equal(r.status, 200);
+  assert.equal(r.data.success, true);
+  assert.equal(r.data.providerBusy, true);
+  assert.match(r.data.reply, /AI सेवा इस समय व्यस्त है/);
+  assert.match(r.data.reply, /भारत में सोने का भाव/);
+  assert.equal(r.data.sources.length, 2);
+  assert.match(r.data.searchWarning, /AI सेवा व्यस्त थी/);
+  groqMode = "success";
+});
+await test("Groq 429 without search results remains a clear retryable error", async () => {
+  groqMode = "429";
+  exaMode = "429";
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "भारत का इतिहास बताओ" }] }, token);
   assert.equal(r.status, 429);
   assert.equal(r.data.retryable, true);
   groqMode = "success";
+  exaMode = "success";
 });
 await test("Groq 5xx is handled as a provider outage", async () => {
   groqMode = "500";
