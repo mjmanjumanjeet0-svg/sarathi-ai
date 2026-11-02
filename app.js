@@ -862,7 +862,12 @@ async function postChatWithRetry(url, token, payload) {
 }
 
 function explicitlyRequestsWebSearch(prompt) {
-  return /(?:इंटरनेट|वेब|online)\s*(?:पर\s*)?(?:खोज|सर्च|search)|(?:ताज़ा|ताजा|आज की|लेटेस्ट|latest|current|breaking)\s*(?:खबर|समाचार|news|updates?)|(?:search|खोज|सर्च)\s+(?:the\s+)?(?:internet|web|online)/i.test(String(prompt || ""));
+  const q = String(prompt || "").toLocaleLowerCase("hi-IN").trim();
+  return /(?:इंटरनेट|वेब|online)\s*(?:पर\s*)?(?:खोज(?:ो|ें|ना)?|सर्च(?:ो| करें| करना)?|search(?:\s+for)?|ढूँढ(?:ो|ें)?|देख(?:ो|ें)?)/i.test(q)
+    || /(?:google|गूगल)\s*(?:पर\s*)?(?:खोज(?:ो|ें)?|सर्च(?:ो| करें)?|करो|करें)/i.test(q)
+    || /(?:search|खोज|सर्च|ढूँढो|ढूंढो)\s+(?:the\s+)?(?:internet|web|online|इंटरनेट|वेब)/i.test(q)
+    || /(?:ताज़ा|ताजा|आज की|लेटेस्ट|latest|current|breaking)\s*(?:खबरें?|समाचार|news|updates?)/i.test(q)
+    || /^(?:इंटरनेट|वेब|गूगल|google)\s*(?:खोजो|सर्च करो|पर खोजो|पर सर्च करो)$/i.test(q);
 }
 
 function detectAppLaunchCommand(prompt, installedApps = []) {
