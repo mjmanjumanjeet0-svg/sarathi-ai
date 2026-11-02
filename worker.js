@@ -153,10 +153,26 @@ function explicitlyRequestsWebSearch(text) {
 function shouldSearchAutomatically(text) {
   const q = String(text || "").trim();
   if (!q || q.length < 8) return false;
-  // Search automatically for facts that commonly change or require authoritative verification.
-  return explicitlyRequestsWebSearch(q)
-    || /(आज|अभी|वर्तमान|लेटेस्ट|ताज़ा|ताजा|नवीनतम|इस साल|इस महीने|कल|कब चलेगी|कितने बजे|ट्रेन|रेलवे|प्लेटफॉर्म|मौसम|तापमान|भाव|कीमत|दाम|रेट|की दर|उपलब्धता|खुला है|बंद है|समय सारणी|परीक्षा तिथि|एडमिट कार्ड|रिजल्ट|परिणाम|फॉर्म|आवेदन|फीस|पात्रता|नियम|सरकारी योजना|आधिकारिक|नया अपडेट|समाचार|खबर|न्यूज़|सिलेबस|पाठ्यक्रम|प्रवेश|मान्यता|विश्वविद्यालय|बोर्ड|news|latest|today|current|price|rate|schedule|status|result|admit card|official|syllabus|curriculum|admission|accreditation|202[6-9])/i.test(q)
-    || /(किसने कहा|क्या सही है|सच है या नहीं|जांच करो|जाँच करो|सत्यापित करो|verify|fact.?check)/i.test(q);
+  if (explicitlyRequestsWebSearch(q)) return true;
+
+  // A time word alone (for example, "आज मैं क्या करूँ?") is not a search request.
+  // Require a matching changing-information topic as well.
+  const recent = /(आज|अभी|वर्तमान|लेटेस्ट|ताज़ा|ताजा|नवीनतम|इस साल|इस महीने|कल|today|latest|current|202[6-9])/i.test(q);
+  const news = /(खबर|समाचार|न्यूज़|न्यूज|news|breaking)/i.test(q);
+  const weather = /(मौसम|तापमान|बारिश|वर्षा|weather|temperature|rain|forecast)/i.test(q);
+  const travel = /(ट्रेन|रेलवे|गाड़ी|बस|फ्लाइट|प्लेटफॉर्म|train|railway|flight)/i.test(q)
+    && /(कब|कितने बजे|समय|स्थिति|स्टेटस|प्लेटफॉर्म|चलेगी|आएगी|पहुंचेगी|रद्द|देरी|delay|status|schedule|when|time)/i.test(q);
+  const prices = /(सोना|सोने|चांदी|चाँदी|हीरा|हीरे|भाव|कीमत|दाम|रेट|price|rate)/i.test(q)
+    && (recent || /(भाव|कीमत|दाम|रेट|price|rate)/i.test(q));
+  const official = /(परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|परिणाम|आवेदन|फॉर्म|फीस|पात्रता|सरकारी योजना|आधिकारिक|सिलेबस|पाठ्यक्रम|मान्यता|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(q);
+  const verification = /(किसने कहा|क्या सही है|सच है या नहीं|जांच करो|जाँच करो|सत्यापित करो|verify|fact.?check)/i.test(q);
+
+  return (recent && (news || weather || travel || prices))
+    || weather
+    || travel
+    || prices
+    || official
+    || verification;
 }
 
 function cleanText(value) {
@@ -595,6 +611,7 @@ export default {
     const greetingVocabulary = new Set([
       "नमस्ते", "नमस्कार", "हेलो", "हैलो", "हाय", "सारथी",
       "राम", "प्रणाम", "सुप्रभात", "शुभ", "सुबह", "शाम",
+      "सर्दी", "सरथी", "सरजी", "सर", "जी", "सारथीजी",
       "hi", "hello", "hey", "good", "morning", "evening"
     ]);
     const isGreetingOnly = normalizedGreeting.length <= 70 &&
