@@ -549,8 +549,13 @@ public class MainActivity extends Activity {
                 return;
             }
 
-            speechRecognizer.setRecognitionListener(new RecognitionListener() {
+            final SpeechRecognizer recognizerForSession = speechRecognizer;
+            recognizerForSession.setRecognitionListener(new RecognitionListener() {
+                private boolean isCurrentRecognizer() {
+                    return speechRecognizer == recognizerForSession && !nativeStopRequested;
+                }
                 @Override public void onReadyForSpeech(Bundle params) {
+                    if (!isCurrentRecognizer()) return;
                     String languageLabel = "en-IN".equals(selectedSpeechLanguage)
                             ? "English" : ("auto".equals(selectedSpeechLanguage) ? "हिन्दी + English" : "हिन्दी");
                     notifyVoice("onStatus", useOnlineService
@@ -561,9 +566,11 @@ public class MainActivity extends Activity {
                 @Override public void onRmsChanged(float rmsdB) {}
                 @Override public void onBufferReceived(byte[] buffer) {}
                 @Override public void onEndOfSpeech() {
+                    if (!isCurrentRecognizer()) return;
                     notifyVoice("onStatus", "आवाज़ समझी जा रही है…");
                 }
                 @Override public void onError(int error) {
+                    if (!isCurrentRecognizer()) return;
                     if (nativeStopRequested) {
                         nativeStopRequested = false;
                         return;
@@ -607,12 +614,13 @@ public class MainActivity extends Activity {
                         notifyVoice("onError", getSpeechErrorMessage(error, true));
                         resumeWakeWordAfterCommand();
                     }
-                    if (speechRecognizer != null) {
-                        speechRecognizer.destroy();
+                    if (speechRecognizer == recognizerForSession) {
+                        recognizerForSession.destroy();
                         speechRecognizer = null;
                     }
                 }
                 @Override public void onResults(Bundle results) {
+                    if (!isCurrentRecognizer()) return;
                     if (nativeStopRequested) {
                         nativeStopRequested = false;
                         return;
@@ -641,8 +649,14 @@ public class MainActivity extends Activity {
                         voiceRecognitionRetryAttempt = 0;
                         resumeWakeWordAfterCommand();
                     }
+                    if (speechRecognizer == recognizerForSession) {
+                        recognizerForSession.destroy();
+                        speechRecognizer = null;
+                    }
                 }
-                @Override public void onPartialResults(Bundle partialResults) {}
+                @Override public void onPartialResults(Bundle partialResults) {
+                    if (!isCurrentRecognizer()) return;
+                }
                 @Override public void onEvent(int eventType, Bundle params) {}
             });
 
