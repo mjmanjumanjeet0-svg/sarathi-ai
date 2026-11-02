@@ -102,6 +102,20 @@ await test("general knowledge reaches the AI provider", async () => {
   assert.match(r.data.reply, /परीक्षण उत्तर|1857/);
   assert.ok(calls.some(x => x.url.includes("api.groq.com")));
 });
+await test("Android app-launch capability is distinguished from website limitations", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", { method: "POST" }, {
+    messages: [{ role: "user", content: "क्या तुम Android में इंस्टॉल ऐप खोल सकते हो?" }]
+  }, token);
+  assert.equal(r.status, 200);
+  const groqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
+  assert.ok(groqCall, "request should reach the assistant provider");
+  const body = JSON.parse(groqCall.init.body || "{}");
+  const system = body.messages?.find(message => message.role === "system")?.content || "";
+  assert.match(system, /Android सारथी ऐप/);
+  assert.match(system, /केवल वेबसाइट\/ब्राउज़र/);
+  assert.match(system, /खुलना सत्यापित नहीं हुआ/);
+});
 await test("stable general-knowledge questions do not trigger unnecessary web search", async () => {
   const before = calls.length;
   const r = await request("/api/chat", "POST", {
