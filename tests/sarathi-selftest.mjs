@@ -110,6 +110,21 @@ await test("Sarathi identity question is answered locally without web search eve
   assert.equal(r.data.webSearch, false);
   assert.equal(calls.length, before, "identity questions must not consume Exa or Groq requests");
 });
+await test("voice capability question explains the actual microphone workflow locally", async () => {
+  const before = calls.length;
+  const result = await worker.fetch(new Request("https://sarathi.test/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ message: "क्या तुम मेरी आवाज सुनकर जवाब दे सकते हो?", webSearch: true })
+  }), env);
+  const data = await result.json();
+  assert.equal(result.status, 200);
+  assert.match(data.reply, /माइक्रोफ़ोन बटन दबाकर अनुमति दें/);
+  assert.match(data.reply, /आवाज़ को टेक्स्ट में बदलकर सवाल भेजता है/);
+  assert.equal(data.webSearch, false);
+  assert.deepEqual(data.sources, []);
+  assert.equal(calls.length, before, "voice capability question must not call Exa or Groq");
+});
 
 await test("हेलो सर्दी is not treated as a Sarathi greeting alias", async () => {
   const before = calls.length;
