@@ -611,7 +611,7 @@ export default {
     const greetingVocabulary = new Set([
       "नमस्ते", "नमस्कार", "हेलो", "हैलो", "हाय", "सारथी",
       "राम", "प्रणाम", "सुप्रभात", "शुभ", "सुबह", "शाम",
-      "सर्दी", "सरथी", "सरजी", "सर", "जी", "सारथीजी",
+      "सरथी", "सरजी", "सर", "जी", "सारथीजी",
       "hi", "hello", "hey", "good", "morning", "evening"
     ]);
     const isGreetingOnly = normalizedGreeting.length <= 70 &&
