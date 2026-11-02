@@ -870,6 +870,16 @@ function explicitlyRequestsWebSearch(prompt) {
     || /^(?:इंटरनेट|वेब|गूगल|google)\s*(?:खोजो|सर्च करो|पर खोजो|पर सर्च करो)$/i.test(q);
 }
 
+function detectNewChatCommand(prompt) {
+  const value = String(prompt || "")
+    .toLocaleLowerCase("hi-IN")
+    .replace(/[।.!?]+$/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  return /^(?:(?:कृपया|प्लीज)\s*)?(?:(?:एक\s+)?नई\s+(?:चैट|चैटिंग|बातचीत)(?:\s+(?:को|खोलने के लिए))?\s*(?:खोलो|खोल दो|ओपन करो|ओपन|वन करो|बना दो|बनाओ|शुरू करो|स्टार्ट करो|start|open|new chat)|(?:नई\s+बातचीत|नई\s+चैट)\s*(?:शुरू|आरंभ)\s*(?:करो|करें)|(?:start|open)\s+(?:a\s+)?new\s+(?:chat|conversation))$/i.test(value);
+}
+
 function detectAppLaunchCommand(prompt, installedApps = []) {
   const value = String(prompt || "").trim().toLowerCase().replace(/[।.!?]+$/g, "").trim();
   const commands = [
@@ -921,6 +931,23 @@ async function sendMessage(text) {
   }
 
   if ((!prompt && !state.attachments.length) || state.busy) return;
+
+  if (prompt && !state.attachments.length && detectNewChatCommand(prompt)) {
+    const input = $("messageInput");
+    if (input) { input.value = ""; input.style.height = ""; }
+    createChat();
+    closeSidebar();
+    closeMoreMenu();
+    setStatus("नई चैट खोल दी गई है।");
+    const shouldSpeakConfirmation = state.voiceReplyPending || Boolean(window.SarathiVoice?.isActive?.());
+    state.voiceReplyPending = false;
+    if (shouldSpeakConfirmation) {
+      const confirmation = "नई चैट खोल दी गई है। अब आप नया सवाल पूछ सकते हैं।";
+      if (window.SarathiNative?.speak) window.SarathiNative.speak(confirmation);
+      else window.SarathiVoice?.speak?.(confirmation);
+    }
+    return;
+  }
 
   let installedApps = [];
   if (window.SarathiNative?.getInstalledApps) {
