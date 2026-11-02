@@ -16,6 +16,15 @@ globalThis.fetch = async (input, init = {}) => {
   calls.push({ url, init });
   if (url.includes("api.exa.ai/search")) {
     if (exaMode === "429") return Response.json({ error: "rate limited" }, { status: 429 });
+    const exaRequest = JSON.parse(init.body || "{}");
+    if (exaRequest.category === "news") {
+      return Response.json({
+        results: [
+          { title: "IMD issues warning for Cyclone Murasu", url: "https://example.com/murasu", highlights: ["IMD says Severe Cyclonic Storm Murasu is over the westcentral Bay of Bengal and is forecast to cross the south Andhra Pradesh coast late on 2 November."] },
+          { title: "Supreme Court permits certified green crackers in Delhi-NCR", url: "https://example.com/green-crackers", highlights: ["The Supreme Court allowed certified green crackers in Delhi-NCR during specified hours on 7 and 8 November."] }
+        ]
+      });
+    }
     return Response.json({
       results: [
         { title: "भारत में सोने का भाव", url: "https://example.com/gold-rate", highlights: ["24K gold rate ₹7800 per gram and 22K gold rate ₹7150 per gram in India."] },
