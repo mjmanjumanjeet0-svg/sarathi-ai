@@ -46,6 +46,7 @@ jobs:
           node --check voice.js
           node --input-type=module --check < worker.js
           node tests/app-launch-selftest.mjs
+          node tests/web-smoke-selftest.mjs
           node tests/sarathi-selftest.mjs
 
       - name: Check required web files
