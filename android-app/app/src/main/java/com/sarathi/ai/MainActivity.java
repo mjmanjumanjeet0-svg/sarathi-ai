@@ -217,9 +217,6 @@ public class MainActivity extends Activity {
         nativeListeningPausedForAppPause = false;
         voiceRequestInProgress = false;
         voiceConversationActive = true;
-        // Prepare (but pause) the foreground microphone service while this
-        // Activity is visible. It can take over only when another app opens.
-        prepareBackgroundConversationService();
         voiceRecognitionRetryAttempt = 0;
         if (voiceRecognitionRetry != null) mainHandler.removeCallbacks(voiceRecognitionRetry);
         voiceRecognitionRetry = null;
