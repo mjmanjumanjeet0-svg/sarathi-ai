@@ -30,6 +30,9 @@ for (const [input, expected] of cases) {
 const java = await readFile(new URL("../android-app/app/src/main/java/com/sarathi/ai/MainActivity.java", import.meta.url), "utf8");
 const mainActivity = await readFile(new URL("../android-app/app/src/main/java/com/sarathi/ai/MainActivity.java", import.meta.url), "utf8");
 assert.ok(mainActivity.includes("public boolean onJsPrompt("), "Android WebView must handle login prompts");
+assert.ok(mainActivity.includes("nativeListeningPausedForBackground && voiceConversationActive"), "active voice session must resume when Sarathi returns from another app");
+assert.ok(mainActivity.includes("if (voiceConversationActive && !speechActivityFallbackLaunched)"), "background pause must release the microphone without interrupting the system speech fallback");
+assert.ok(mainActivity.includes("pauseNativeListeningForReply();"), "background transition must release the current native microphone recognizer");
 assert.ok(mainActivity.includes("TYPE_TEXT_VARIATION_PASSWORD"), "Android login prompt must mask password input");
 assert.ok(mainActivity.includes("APP_HOST.equalsIgnoreCase(pageUri.getHost())"), "Android login prompt must be restricted to the Sarathi host");
 const manifest = await readFile(new URL("../android-app/app/src/main/AndroidManifest.xml", import.meta.url), "utf8");
