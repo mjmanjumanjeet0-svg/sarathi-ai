@@ -870,27 +870,34 @@ function explicitlyRequestsWebSearch(prompt) {
     || /^(?:इंटरनेट|वेब|गूगल|google)\s*(?:खोजो|सर्च करो|पर खोजो|पर सर्च करो)$/i.test(q);
 }
 
-function detectNewChatCommand(prompt) {
-  const value = String(prompt || "")
+function stripSarathiWakePrefix(prompt) {
+  return String(prompt || "")
     .toLocaleLowerCase("hi-IN")
+    .replace(/^(?:(?:हेलो|हैलो|hello|hi|नमस्ते|हे)\s+)?(?:(?:सारथी|सरथी|सर\s*जी|सरजी|सर्दी|सारथी\s+जी)\s+)+/i, "")
+    .trim();
+}
+
+function detectNewChatCommand(prompt) {
+  const value = stripSarathiWakePrefix(prompt)
     .replace(/[।.!?]+$/g, "")
     .replace(/\s+/g, " ")
     .trim();
 
-  return /^(?:(?:कृपया|प्लीज)\s*)?(?:(?:एक\s+)?नई\s+(?:चैट|चैटिंग|बातचीत)(?:\s+(?:को|खोलने के लिए))?\s*(?:खोलो|खोल दो|ओपन करो|ओपन|वन करो|बना दो|बनाओ|शुरू करो|स्टार्ट करो|start|open|new chat)|(?:नई\s+बातचीत|नई\s+चैट)\s*(?:शुरू|आरंभ)\s*(?:करो|करें)|new\s+chat|(?:start|open)\s+(?:a\s+)?new\s+(?:chat|conversation))$/i.test(value);
+  return /^(?:(?:कृपया|प्लीज)\s*)?(?:(?:एक\s+)?(?:नई|न्यू)\s+(?:चैट|चैटिंग|बातचीत)(?:\s+(?:को|खोलने के लिए))?\s*(?:खोलो|खोल दो|ओपन करो|ओपन|वन करो|बना दो|बनाओ|शुरू करो|स्टार्ट करो|start|open|new chat)|(?:नई|न्यू)\s+(?:बातचीत|चैट)\s*(?:शुरू|आरंभ)\s*(?:करो|करें)|new\s+chat|(?:start|open)\s+(?:a\s+)?new\s+(?:chat|conversation))$/i.test(value);
 }
 
 function detectAppLaunchCommand(prompt, installedApps = []) {
-  const value = String(prompt || "").trim().toLowerCase().replace(/[।.!?]+$/g, "").trim();
+  const value = stripSarathiWakePrefix(prompt).replace(/[।.!?]+$/g, "").trim();
   const commands = [
-    ["youtube", /^(?:कृपया\s*)?(?:यूट्यूब|youtube)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
+    ["youtube", /^(?:कृपया\s*)?(?:यूट्यूब|यूटुब|युटुब|youtube)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
     ["chatgpt", /^(?:कृपया\s*)?(?:चैट\s*जीपीटी|chatgpt)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
     ["whatsapp", /^(?:कृपया\s*)?(?:व्हाट्सऐप|व्हाट्सएप|whatsapp)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
     ["chrome", /^(?:कृपया\s*)?(?:क्रोम|chrome)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
     ["maps", /^(?:कृपया\s*)?(?:गूगल\s*मैप्स|google\s*maps|maps)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
     ["gmail", /^(?:कृपया\s*)?(?:जीमेल|gmail)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
     ["instagram", /^(?:कृपया\s*)?(?:इंस्टाग्राम|instagram)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
-    ["telegram", /^(?:कृपया\s*)?(?:टेलीग्राम|telegram)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i]
+    ["telegram", /^(?:कृपया\s*)?(?:टेलीग्राम|telegram)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
+    ["phone", /^(?:कृपया\s*)?(?:फोन|फ़ोन|डायलर|phone|dialer)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i]
   ];
   const known = commands.find(([, pattern]) => pattern.test(value));
   if (known) return { type: "known", key: known[0] };
@@ -963,7 +970,9 @@ async function sendMessage(text) {
     if (input) { input.value = ""; input.style.height = ""; }
     addMessage("user", prompt);
     if (window.SarathiNative) {
-      if (appCommand.type === "known" && window.SarathiNative.openApp) {
+      if (appCommand.type === "known" && appCommand.key === "phone" && window.SarathiNative.openPhone) {
+        window.SarathiNative.openPhone();
+      } else if (appCommand.type === "known" && window.SarathiNative.openApp) {
         window.SarathiNative.openApp(appCommand.key);
       } else if (appCommand.type === "package" && window.SarathiNative.openAppPackage) {
         window.SarathiNative.openAppPackage(appCommand.packageName);
