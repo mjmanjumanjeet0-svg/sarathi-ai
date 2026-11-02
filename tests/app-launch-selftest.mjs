@@ -17,6 +17,7 @@ assert.ok(app.includes('setStatus("नई चैट खोल दी गई ह�
 assert.ok(app.includes("createChat();") && app.includes("closeSidebar();") && app.includes("closeMoreMenu();"), "new chat voice command must create a fresh local chat");
 assert.ok(app.includes("stripSarathiWakePrefix(prompt)"), "voice command parser must ignore Sarathi wake-word prefixes");
 assert.ok(app.includes("window.SarathiNative.openPhone()"), "phone command must use the safe Android dialer action");
+assert.ok(app.includes("shouldSpeakAppConfirmation = state.voiceReplyPending") && app.includes("window.SarathiNative.speak(confirmation)"), "voice app launch must confirm completion through TTS and release the pending request");
 const start = app.indexOf("function stripSarathiWakePrefix(prompt) {");
 const end = app.indexOf("\n}\n\n/* ========================================\n   SEND MESSAGE", start);
 assert.ok(start >= 0 && end > start, "app launch parser must exist");
