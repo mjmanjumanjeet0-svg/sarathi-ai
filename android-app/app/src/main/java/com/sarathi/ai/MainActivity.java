@@ -46,6 +46,8 @@ public class MainActivity extends Activity {
     private static final int REQUEST_POST_NOTIFICATIONS = 1203;
     private static final int REQUEST_SPEECH_ACTIVITY = 1204;
     private boolean speechActivityFallbackLaunched = false;
+    // Online speech permission is remembered only for the current user-started voice session.
+    private boolean voiceSessionOnlineConsent = false;
     private static final String APP_HOST = "mjmanjumanjeet0-svg.github.io";
     private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
@@ -334,6 +336,13 @@ public class MainActivity extends Activity {
 
     private void startListening() {
         pauseWakeWordForCommand();
+        // After the user has explicitly approved online recognition once in this
+        // voice conversation, reuse that choice for subsequent turns without
+        // showing the consent dialog after every spoken question.
+        if (voiceSessionOnlineConsent) {
+            startRecognition(true);
+            return;
+        }
         if (Build.VERSION.SDK_INT >= 34) {
             selectedSpeechLanguage = "auto";
             beginListeningWithSelectedLanguage();
@@ -378,7 +387,10 @@ public class MainActivity extends Activity {
         new android.app.AlertDialog.Builder(this)
                 .setTitle("आवाज़ पहचान")
                 .setMessage(message)
-                .setPositiveButton("हाँ, इस बार इस्तेमाल करें", (dialog, which) -> startRecognition(true))
+                .setPositiveButton("हाँ, इस बातचीत में इस्तेमाल करें", (dialog, which) -> {
+                    voiceSessionOnlineConsent = true;
+                    startRecognition(true);
+                })
                 .setNegativeButton("रद्द करें", (dialog, which) -> {
                     wakeCommandSession = false;
                     notifyVoice("onError", "ऑनलाइन आवाज़ पहचान रद्द कर दी गई। आपकी आवाज़ नहीं सुनी गई।");
@@ -634,6 +646,14 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void stopListening() {
             runOnUiThread(MainActivity.this::stopNativeListening);
+        }
+
+        @JavascriptInterface
+        public void endVoiceConversation() {
+            runOnUiThread(() -> {
+                voiceSessionOnlineConsent = false;
+                MainActivity.this.stopNativeListening();
+            });
         }
 
         @JavascriptInterface
