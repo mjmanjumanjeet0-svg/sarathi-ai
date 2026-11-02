@@ -579,9 +579,6 @@ public class MainActivity extends Activity {
                 try {
                     boolean hindiText = toSpeak.matches("(?s).*[ऀ-ॿ].*");
                     Locale language = hindiText ? new Locale("hi", "IN") : new Locale("en", "IN");
-
-                    // Do not require a pre-discovered offline Voice object. Many Android
-                    // devices expose a working default TTS voice through setLanguage().
                     int languageResult = textToSpeech.setLanguage(language);
                     if (languageResult == TextToSpeech.LANG_MISSING_DATA
                             || languageResult == TextToSpeech.LANG_NOT_SUPPORTED) {
@@ -589,26 +586,18 @@ public class MainActivity extends Activity {
                                 ? "फ़ोन में हिंदी बोलने की आवाज़ उपलब्ध नहीं है। Android की Text-to-Speech सेटिंग में हिंदी आवाज़ इंस्टॉल करें।"
                                 : "फ़ोन में English बोलने की आवाज़ उपलब्ध नहीं है। Android की Text-to-Speech सेटिंग में English आवाज़ इंस्टॉल करें।");
                         if (voiceConversationActive) notifyVoice("onSpeechComplete", "");
-                        else MainActivity.this.return;
+                        return;
                     }
 
                     Voice selectedVoice = hindiText ? localHindiVoice : localEnglishVoice;
-                    if (selectedVoice != null) {
-                        textToSpeech.setVoice(selectedVoice);
-                    }
-                    // Slightly slower pacing and a gentle pitch lift can make the
-                    // built-in Android voice less rushed and more conversational.
+                    if (selectedVoice != null) textToSpeech.setVoice(selectedVoice);
                     textToSpeech.setSpeechRate(0.94f);
                     textToSpeech.setPitch(1.04f);
-
                     textToSpeech.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                         @Override public void onStart(String utteranceId) {}
                         @Override public void onDone(String utteranceId) {
                             mainHandler.post(() -> {
-                                if (voiceConversationActive) {
-                                    notifyVoice("onSpeechComplete", "");
-                                } else {
-                                    MainActivity.this.}
+                                if (voiceConversationActive) notifyVoice("onSpeechComplete", "");
                             });
                         }
                         @Override public void onError(String utteranceId) {
@@ -618,26 +607,27 @@ public class MainActivity extends Activity {
                                     notifyVoice("onSpeechComplete", "");
                                 } else {
                                     notifyVoice("onError", "जवाब बोलने में समस्या हुई। फ़ोन की Text-to-Speech आवाज़ और मीडिया वॉल्यूम जाँचें।");
-                                    }
+                                }
                             });
                         }
                         @Override public void onStop(String utteranceId, boolean interrupted) {
                             mainHandler.post(() -> {
                                 if (voiceConversationActive) notifyVoice("onSpeechComplete", "");
-                                else MainActivity.this.});
+                            });
                         }
                     });
                     int result = textToSpeech.speak(toSpeak, TextToSpeech.QUEUE_FLUSH, null, "sarathi-local-voice");
                     if (result == TextToSpeech.ERROR) {
                         notifyVoice("onError", "जवाब बोलना शुरू नहीं हुआ। फ़ोन की Text-to-Speech सेटिंग जाँचें।");
                         if (voiceConversationActive) notifyVoice("onSpeechComplete", "");
-                        else }
+                    }
                 } catch (Exception error) {
                     if (voiceConversationActive) notifyVoice("onSpeechComplete", "");
                     else notifyVoice("onError", "जवाब बोलना शुरू नहीं हो सका। फ़ोन की Text-to-Speech सेटिंग जाँचें।");
                 }
             });
         }
+
         @JavascriptInterface
         public String getInstalledApps() {
             JSONArray apps = new JSONArray();
