@@ -20,8 +20,8 @@ globalThis.fetch = async (input, init = {}) => {
     if (exaRequest.category === "news") {
       return Response.json({
         results: [
-          { title: "IMD issues warning for Cyclone Murasu", url: "https://example.com/murasu", highlights: ["IMD says Severe Cyclonic Storm Murasu is over the westcentral Bay of Bengal and is forecast to cross the south Andhra Pradesh coast late on 2 November."] },
-          { title: "Supreme Court permits certified green crackers in Delhi-NCR", url: "https://example.com/green-crackers", highlights: ["The Supreme Court allowed certified green crackers in Delhi-NCR during specified hours on 7 and 8 November."] }
+          { title: "IMD issues warning for Cyclone Murasu", url: "https://indianexpress.com/murasu", highlights: ["IMD says Severe Cyclonic Storm Murasu is over the westcentral Bay of Bengal and is forecast to cross the south Andhra Pradesh coast late on 2 November."] },
+          { title: "Supreme Court permits certified green crackers in Delhi-NCR", url: "https://thehindu.com/green-crackers", highlights: ["The Supreme Court allowed certified green crackers in Delhi-NCR during specified hours on 7 and 8 November."] }
         ]
       });
     }
