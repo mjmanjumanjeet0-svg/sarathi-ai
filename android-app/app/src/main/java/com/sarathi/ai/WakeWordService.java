@@ -40,6 +40,7 @@ public class WakeWordService extends Service {
     public static final String ACTION_RESUME = "com.sarathi.ai.WAKE_RESUME";
     public static final String ACTION_CAPTURE_COMMAND = "com.sarathi.ai.WAKE_CAPTURE_COMMAND";
     public static final String ACTION_START_CONVERSATION = "com.sarathi.ai.WAKE_START_CONVERSATION";
+    public static final String ACTION_PREPARE_CONVERSATION = "com.sarathi.ai.WAKE_PREPARE_CONVERSATION";
     public static final String ACTION_END_CONVERSATION = "com.sarathi.ai.WAKE_END_CONVERSATION";
     private static final String CHANNEL = "sarathi_wake_channel";
     private static final int NOTIFICATION_ID = 771;
@@ -106,6 +107,38 @@ public class WakeWordService extends Service {
             commandTimeout = null;
             stopSelf();
             return START_NOT_STICKY;
+        }
+        if (intent != null && ACTION_PREPARE_CONVERSATION.equals(intent.getAction())) {
+            prefs.edit().putBoolean("enabled", true).apply();
+            conversationMode = true;
+            awaitingCommand = true;
+            commandMode = false;
+            commandDelivered = false;
+            if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
+            commandTimeout = null;
+            if (!running) {
+                if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                    prefs.edit().putBoolean("enabled", false).apply();
+                    stopSelf();
+                    return START_NOT_STICKY;
+                }
+                startForeground(NOTIFICATION_ID, buildNotification("बैकग्राउंड बातचीत के लिए माइक्रोफ़ोन सेवा तैयार हो रही है…"));
+                running = true;
+                if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
+                worker.execute(this::prepareModelAndListen);
+            } else if (model != null) {
+                if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
+                worker.execute(() -> {
+                    try {
+                        if (speechService != null) { speechService.cancel(); speechService.shutdown(); speechService = null; }
+                        if (recognizer != null) { recognizer.close(); recognizer = null; }
+                        if (running && conversationMode) startConversationRecognition();
+                    } catch (Exception error) {
+                        scheduleListeningRetry("बैकग्राउंड बातचीत की सेवा तैयार नहीं हो सकी");
+                    }
+                });
+            }
+            return START_STICKY;
         }
         if (intent != null && ACTION_START_CONVERSATION.equals(intent.getAction())) {
             prefs.edit().putBoolean("enabled", true).apply();
