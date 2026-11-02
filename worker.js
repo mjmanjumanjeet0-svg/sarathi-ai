@@ -679,7 +679,7 @@ export default {
           success: true,
           reply: "मैंने वेब पर खोजने की कोशिश की, लेकिन अभी भरोसेमंद परिणाम नहीं मिले। इसलिए कोई तथ्य या लिंक गढ़कर नहीं बताऊँगा। थोड़ी देर बाद फिर कोशिश करें या सवाल को दूसरे शब्दों में पूछें।",
           ...dateTime,
-          webSearch: false,
+          webSearch: true,
           searchAttempted: true,
           searchWarning: searchWarning || "इंटरनेट खोज से कोई परिणाम नहीं मिला।",
           sources: [],
