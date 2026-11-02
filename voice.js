@@ -43,7 +43,6 @@
       window.SarathiNative.stopListening();
     }
     nativeMode = false;
-    if (window.SarathiNative?.stopWakeWord) window.SarathiNative.stopWakeWord();
     show(false);
     const status = $("status");
     if (status) status.textContent = "सारथी की बातचीत बंद कर दी गई है।";
