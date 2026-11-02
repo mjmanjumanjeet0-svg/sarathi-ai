@@ -90,6 +90,18 @@ await test("Hindi greeting is answered locally without provider calls", async ()
   assert.equal(calls.length, before);
 });
 
+await test("Sarathi identity question is answered locally without web search even when toggle is on", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    webSearch: true,
+    messages: [{ role: "user", content: "नमस्ते सारथी, तुम कौन हो?" }]
+  }, token);
+  assert.equal(r.status, 200);
+  assert.match(r.data.reply, /मैं सारथी AI हूँ/);
+  assert.equal(r.data.webSearch, false);
+  assert.equal(calls.length, before, "identity questions must not consume Exa or Groq requests");
+});
+
 await test("हेलो सर्दी is not treated as a Sarathi greeting alias", async () => {
   const before = calls.length;
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "हेलो सर्दी" }] }, token);
