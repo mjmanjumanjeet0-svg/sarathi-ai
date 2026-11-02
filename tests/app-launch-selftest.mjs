@@ -27,6 +27,7 @@ const cases = [
   ["यूट्यूब खोलो", "youtube"],
   ["सारथी यूट्यूब ओपन करो", "youtube"],
   ["हेलो सर जी यूट्यूब ओपन करो", "youtube"],
+  ["हेलो सर्दी यूट्यूब ओपन करो", null],
   ["युटुब खोलो", "youtube"],
   ["फोन ओपन करो", "phone"],
   ["सारथी फोन खोलो", "phone"],
@@ -53,6 +54,7 @@ assert.ok(mainActivity.includes("public boolean onJsPrompt("), "Android WebView 
 assert.ok(mainActivity.includes("nativeListeningPausedForBackground && voiceConversationActive"), "active voice session must resume when Sarathi returns from another app");
 assert.ok(mainActivity.includes("if (voiceConversationActive && !speechActivityFallbackLaunched)"), "background pause must release the microphone without interrupting the system speech fallback");
 assert.ok(mainActivity.includes("pauseNativeListeningForReply();"), "background transition must release the current native microphone recognizer");
+assert.ok(mainActivity.includes("recognizerForSession") && mainActivity.includes("isCurrentRecognizer()"), "stale speech callbacks must not restart or destroy the current microphone session");
 assert.ok(mainActivity.includes("TYPE_TEXT_VARIATION_PASSWORD"), "Android login prompt must mask password input");
 assert.ok(mainActivity.includes("APP_HOST.equalsIgnoreCase(pageUri.getHost())"), "Android login prompt must be restricted to the Sarathi host");
 const manifest = await readFile(new URL("../android-app/app/src/main/AndroidManifest.xml", import.meta.url), "utf8");
