@@ -49,6 +49,8 @@ public class MainActivity extends Activity {
     // Online speech permission is remembered only for the current user-started voice session.
     private boolean voiceSessionOnlineConsent = false;
     private boolean voiceConversationActive = false;
+    // Preserve an active hands-free session when another app (for example YouTube) temporarily covers Sarathi.
+    private boolean nativeListeningPausedForBackground = false;
     private int voiceRecognitionRetryAttempt = 0;
     private Runnable voiceRecognitionRetry;
     private static final String APP_HOST = "mjmanjumanjeet0-svg.github.io";
@@ -338,6 +340,7 @@ public class MainActivity extends Activity {
     }
 
     private void startListening() {
+        nativeListeningPausedForBackground = false;
         voiceConversationActive = true;
         voiceRecognitionRetryAttempt = 0;
         if (voiceRecognitionRetry != null) mainHandler.removeCallbacks(voiceRecognitionRetry);
@@ -474,6 +477,7 @@ public class MainActivity extends Activity {
     }
 
     private void stopNativeListening() {
+        nativeListeningPausedForBackground = false;
         voiceConversationActive = false;
         voiceSessionOnlineConsent = false;
         voiceRecognitionRetryAttempt = 0;
@@ -915,11 +919,24 @@ public class MainActivity extends Activity {
         super.onResume();
         appInForeground = true;
         deliverPendingWakeEvents();
+        // Android may stop microphone capture while YouTube or another external app is in front.
+        // Restart only a session that was active before Sarathi went to the background.
+        if (nativeListeningPausedForBackground && voiceConversationActive) {
+            nativeListeningPausedForBackground = false;
+            startListening();
+        }
     }
 
     @Override
     protected void onPause() {
         appInForeground = false;
+        // Keep the conversation state/UI active, but release the microphone while another app owns the screen.
+        if (voiceConversationActive && !speechActivityFallbackLaunched) {
+            nativeListeningPausedForBackground = true;
+            if (voiceRecognitionRetry != null) mainHandler.removeCallbacks(voiceRecognitionRetry);
+            voiceRecognitionRetry = null;
+            pauseNativeListeningForReply();
+        }
         super.onPause();
     }
 
