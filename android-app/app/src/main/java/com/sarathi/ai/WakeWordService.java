@@ -127,12 +127,14 @@ public class WakeWordService extends Service {
                 if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
                 worker.execute(this::prepareModelAndListen);
             } else if (model != null) {
+                // Preparation must release any existing recognizer but must not
+                // start a second microphone session while MainActivity is active.
                 if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
                 worker.execute(() -> {
                     try {
                         if (speechService != null) { speechService.cancel(); speechService.shutdown(); speechService = null; }
                         if (recognizer != null) { recognizer.close(); recognizer = null; }
-                        if (running && conversationMode) startConversationRecognition();
+                        updateStatus("बैकग्राउंड बातचीत तैयार है। दूसरी ऐप खोलने पर सुनना शुरू होगा।");
                     } catch (Exception error) {
                         scheduleListeningRetry("बैकग्राउंड बातचीत की सेवा तैयार नहीं हो सकी");
                     }
@@ -253,8 +255,12 @@ public class WakeWordService extends Service {
             if (!running) return;
             if (!marker.isFile()) throw new Exception("हिंदी मॉडल अधूरा है");
             model = new Model(modelDir.getAbsolutePath());
-            if (conversationMode) startConversationRecognition();
-            else startWakeRecognition();
+            // PREPARE_CONVERSATION deliberately loads the model with the mic
+            // idle. ACTION_START_CONVERSATION is the only background handoff
+            // that may open the microphone.
+            if (conversationMode && !awaitingCommand) startConversationRecognition();
+            else if (!conversationMode) startWakeRecognition();
+            else updateStatus("बैकग्राउंड बातचीत तैयार है। दूसरी ऐप खोलने पर सुनना शुरू होगा।");
         } catch (Exception error) {
             scheduleListeningRetry("मॉडल या माइक्रोफ़ोन तैयार नहीं हुआ; सारथी फिर कोशिश करेगा");
         }
