@@ -712,7 +712,7 @@ export default {
     }
 
     const medicalDegreeQuestion = userText.trim();
-    if (/^(?:DM|डीएम)(?:\\s*(?:(?:का\\s*)?(?:मतलब|full form|पूरा नाम)(?:\\s*(?:क्या है|बताओ|बताइए))?|क्या है))?[?।.!\\s]*$/i.test(medicalDegreeQuestion)) {
+    if (/^(?:DM|डीएम)(?:\s*(?:(?:का\s*)?(?:मतलब|full form|पूरा नाम)(?:\s*(?:क्या है|बताओ|बताइए))?|क्या है))?[?।.!\s]*$/i.test(medicalDegreeQuestion)) {
       return jsonResponse({
         success: true,
         reply: "चिकित्सा शिक्षा के संदर्भ में DM का पूरा नाम Doctorate of Medicine है। यह MD/MS के बाद की सुपर-स्पेशलिटी डिग्री है। भारत में इसकी अवधि और प्रवेश-नियम संबंधित विषय तथा वर्तमान NMC/प्रवेश नियमों के अनुसार जाँचने चाहिए।",
@@ -721,7 +721,7 @@ export default {
         sources: []
       });
     }
-    if (/^(?:M\\s*Ch|MCh|एम\\s*सीएच)(?:\\s*(?:(?:का\\s*)?(?:मतलब|full form|पूरा नाम)(?:\\s*(?:क्या है|बताओ|बताइए))?|क्या है))?[?।.!\\s]*$/i.test(medicalDegreeQuestion)) {
+    if (/^(?:M\s*Ch|MCh|एम\s*सीएच)(?:\s*(?:(?:का\s*)?(?:मतलब|full form|पूरा नाम)(?:\s*(?:क्या है|बताओ|बताइए))?|क्या है))?[?।.!\s]*$/i.test(medicalDegreeQuestion)) {
       return jsonResponse({
         success: true,
         reply: "चिकित्सा शिक्षा के संदर्भ में MCh का पूरा नाम Magister Chirurgiae है। यह सर्जरी की सुपर-स्पेशलिटी डिग्री है। भारत में इसकी अवधि और प्रवेश-नियम संबंधित विषय तथा वर्तमान NMC/प्रवेश नियमों के अनुसार जाँचने चाहिए।",
