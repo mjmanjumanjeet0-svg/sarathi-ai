@@ -130,6 +130,19 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.deepEqual(exaBody.contents, { highlights: true });
 });
 
+await test("failed web search is explicitly marked as attempted and unavailable", async () => {
+  exaMode = "429";
+  const r = await request("/api/chat", "POST", {
+    messages: [{ role: "user", content: "इंटरनेट पर आज की ताजा खबरें खोजो" }]
+  }, token);
+  assert.equal(r.status, 200);
+  assert.equal(r.data.searchAttempted, true);
+  assert.equal(r.data.webSearch, true);
+  assert.ok(r.data.searchWarning);
+  assert.equal(r.data.sources.length, 0);
+  exaMode = "success";
+});
+
 await test("current price query invokes web search and AI", async () => {
   const before = calls.length;
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज सोने और चांदी का भाव बताओ" }] }, token);
