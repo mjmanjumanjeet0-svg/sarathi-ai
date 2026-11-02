@@ -711,6 +711,26 @@ export default {
       }
     }
 
+    const medicalDegreeQuestion = userText.trim();
+    if (/^(?:DM|डीएम)(?:\\s*(?:का मतलब|मतलब|का full form|full form|का पूरा नाम|क्या है))?[?।.!\\s]*$/i.test(medicalDegreeQuestion)) {
+      return jsonResponse({
+        success: true,
+        reply: "चिकित्सा शिक्षा के संदर्भ में DM का पूरा नाम Doctorate of Medicine है। यह MD/MS के बाद की सुपर-स्पेशलिटी डिग्री है। भारत में इसकी अवधि और प्रवेश-नियम संबंधित विषय तथा वर्तमान NMC/प्रवेश नियमों के अनुसार जाँचने चाहिए।",
+        ...dateTime,
+        webSearch: false,
+        sources: []
+      });
+    }
+    if (/^(?:M\\s*Ch|MCh|एम\\s*सीएच)(?:\\s*(?:का मतलब|मतलब|का full form|full form|का पूरा नाम|क्या है))?[?।.!\\s]*$/i.test(medicalDegreeQuestion)) {
+      return jsonResponse({
+        success: true,
+        reply: "चिकित्सा शिक्षा के संदर्भ में MCh का पूरा नाम Magister Chirurgiae है। यह सर्जरी की सुपर-स्पेशलिटी डिग्री है। भारत में इसकी अवधि और प्रवेश-नियम संबंधित विषय तथा वर्तमान NMC/प्रवेश नियमों के अनुसार जाँचने चाहिए।",
+        ...dateTime,
+        webSearch: false,
+        sources: []
+      });
+    }
+
     const broadExamQuestion = /(कौन.?कौन.?सी? परीक्षा|कौन.?कौन.?सा परीक्षा|कवन.?कवन.?सा परीक्षा|किन.?किन.?परीक्षा|किस.?किस.?परीक्षा|कौन.?सी.?परीक्षा.*तैयारी|परीक्षा.*तैयारी.*करा सकते)/i.test(userText);
     if (broadExamQuestion) {
       return jsonResponse({
