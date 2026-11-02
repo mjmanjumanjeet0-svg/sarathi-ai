@@ -44,6 +44,8 @@ public class MainActivity extends Activity {
     public static final String EXTRA_WAKE_TEXT = "wake_text";
     private static final int REQUEST_RECORD_AUDIO = 1201;
     private static final int REQUEST_POST_NOTIFICATIONS = 1203;
+    private static final int REQUEST_SPEECH_ACTIVITY = 1204;
+    private boolean speechActivityFallbackLaunched = false;
     private static final String APP_HOST = "mjmanjumanjeet0-svg.github.io";
     private WebView webView;
     private ValueCallback<Uri[]> filePathCallback;
@@ -415,6 +417,31 @@ public class MainActivity extends Activity {
         }
     }
 
+    private void launchSystemSpeechActivity() {
+        speechActivityFallbackLaunched = true;
+        SpeechRecognizer current = speechRecognizer;
+        speechRecognizer = null;
+        if (current != null) {
+            try { current.cancel(); } catch (Exception ignored) {}
+            try { current.destroy(); } catch (Exception ignored) {}
+        }
+        try {
+            Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
+            intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE,
+                    "auto".equals(selectedSpeechLanguage) ? "hi-IN" : selectedSpeechLanguage);
+            intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "सारथी के लिए बोलिए");
+            intent.putExtra(RecognizerIntent.EXTRA_PREFER_OFFLINE, false);
+            intent.putExtra(RecognizerIntent.EXTRA_MAX_RESULTS, 3);
+            startActivityForResult(intent, REQUEST_SPEECH_ACTIVITY);
+        } catch (Exception error) {
+            speechActivityFallbackLaunched = false;
+            wakeCommandSession = false;
+            notifyVoice("onError", "फ़ोन की आवाज़ पहचान विंडो नहीं खुल सकी। Google ऐप या Speech Services की अनुमति जाँचें।");
+            resumeWakeWordAfterCommand();
+        }
+    }
+
     private void stopNativeListening() {
         nativeStopRequested = true;
         SpeechRecognizer current = speechRecognizer;
@@ -496,9 +523,16 @@ public class MainActivity extends Activity {
                                         ? "Sarathi AI को माइक्रोफ़ोन अनुमति मिली है, लेकिन फ़ोन की ऑफ़लाइन स्पीच सेवा ने अनुमति त्रुटि (कोड 9) दी। क्या आप इस बार इंटरनेट के माध्यम से आवाज़ पहचान इस्तेमाल करना चाहते हैं?"
                                         : "इस फ़ोन की ऑफ़लाइन हिंदी आवाज़ पहचान अभी काम नहीं कर पाई। क्या आप इस बार इंटरनेट के माध्यम से आवाज़ पहचान इस्तेमाल करना चाहते हैं?"
                         ));
+                    } else if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS
+                            && useOnlineService && !speechActivityFallbackLaunched) {
+                        // Some Android speech providers reject direct app-bound recognition
+                        // with error 9 even when RECORD_AUDIO is granted. Fall back to the
+                        // system recognition UI, which delegates capture to the provider's
+                        // own activity. This path is reached only after per-use online consent.
+                        launchSystemSpeechActivity();
                     } else if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
                         wakeCommandSession = false;
-                        notifyVoice("onError", "Sarathi AI की माइक्रोफ़ोन अनुमति चालू है, लेकिन फ़ोन की ऑनलाइन स्पीच सेवा ने अनुमति त्रुटि (कोड 9) दी। यह स्पीच सेवा/फ़ोन की समस्या है; आवाज़ इंटरनेट पर भेजने की अनुमति देने से भी यह सेवा ठीक होना निश्चित नहीं है।");
+                        notifyVoice("onError", "Android की स्पीच सेवा ने अनुमति त्रुटि (कोड 9) दी। सारथी की ऐप अनुमति चालू है, फिर भी फ़ोन की पहचान सेवा ने सीधे सुनने की अनुमति नहीं दी।");
                         resumeWakeWordAfterCommand();
                     } else {
                         wakeCommandSession = false;
@@ -796,6 +830,27 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_SPEECH_ACTIVITY) {
+            speechActivityFallbackLaunched = false;
+            ArrayList<String> matches = resultCode == RESULT_OK && data != null
+                    ? data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS) : null;
+            if (matches != null && !matches.isEmpty() && matches.get(0) != null
+                    && !matches.get(0).trim().isEmpty()) {
+                String recognizedText = matches.get(0).trim();
+                if (wakeCommandSession) {
+                    wakeCommandSession = false;
+                    notifyVoice("onWakeCommandResult", recognizedText);
+                } else {
+                    notifyVoice("onResult", recognizedText);
+                }
+            } else {
+                wakeCommandSession = false;
+                notifyVoice("onError", resultCode == RESULT_CANCELED
+                        ? "आवाज़ पहचान रद्द कर दी गई।" : "आवाज़ से शब्द नहीं मिले। फिर कोशिश करें।");
+            }
+            resumeWakeWordAfterCommand();
+            return;
+        }
         if (requestCode == REQUEST_FILE_CHOOSER && filePathCallback != null) {
             Uri[] results = resultCode == RESULT_OK && data != null
                 ? WebChromeClient.FileChooserParams.parseResult(resultCode, data)
