@@ -981,6 +981,16 @@ async function sendMessage(text) {
     } else {
       addMessage("assistant", "ऐप खोलने की सुविधा अभी Android सारथी ऐप में उपलब्ध है।");
     }
+    // Voice app commands return before the normal chat request path. Confirm
+    // completion through TTS so the native bridge releases the pending request
+    // and resumes listening only after the confirmation has finished.
+    const shouldSpeakAppConfirmation = state.voiceReplyPending || Boolean(window.SarathiVoice?.isActive?.());
+    state.voiceReplyPending = false;
+    if (shouldSpeakAppConfirmation) {
+      const confirmation = "मैंने " + (appCommand.label || appCommand.key || "ऐप") + " खोलने की कोशिश की है।";
+      if (window.SarathiNative?.speak) window.SarathiNative.speak(confirmation);
+      else window.SarathiVoice?.speak?.(confirmation);
+    }
     setStatus("");
     return;
   }
