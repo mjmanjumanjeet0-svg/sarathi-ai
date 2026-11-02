@@ -162,6 +162,22 @@ await test("regulated career pathways trigger current education search and stric
   assert.match(system, /सभी कोर्स में 60% या Maths अनिवार्य मत कहो/);
 });
 
+await test("Indian course catalog questions trigger official-source search even with web toggle off", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    webSearch: false,
+    messages: [{ role: "user", content: "भारत में ITI के कौन-कौन से कोर्स उपलब्ध हैं?" }]
+  }, token);
+  assert.equal(r.status, 200);
+  const exaCall = calls.slice(before).find(x => x.url.includes("api.exa.ai/search"));
+  assert.ok(exaCall, "Indian course catalog questions must trigger current verification");
+  const body = JSON.parse(exaCall.init.body || "{}");
+  assert.equal(body.numResults, 8);
+  assert.ok(body.includeDomains.includes("*.gov.in"));
+  assert.ok(body.includeDomains.includes("ncvet.gov.in"));
+  assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")));
+});
+
 await test("medical super-specialty degree abbreviations use verified local definitions", async () => {
   for (const [question, expected] of [
     ["MCh का मतलब क्या है?", "Magister Chirurgiae"],
