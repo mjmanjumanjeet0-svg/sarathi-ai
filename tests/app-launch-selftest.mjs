@@ -32,10 +32,10 @@ const mainActivity = await readFile(new URL("../android-app/app/src/main/java/co
 assert.ok(mainActivity.includes("public boolean onJsPrompt("), "Android WebView must handle login prompts");
 assert.ok(mainActivity.includes("TYPE_TEXT_VARIATION_PASSWORD"), "Android login prompt must mask password input");
 assert.ok(mainActivity.includes("APP_HOST.equalsIgnoreCase(pageUri.getHost())"), "Android login prompt must be restricted to the Sarathi host");
+const manifest = await readFile(new URL("../android-app/app/src/main/AndroidManifest.xml", import.meta.url), "utf8");
 assert.ok(mainActivity.includes("REQUEST_POST_NOTIFICATIONS") && mainActivity.includes("startWakeWordAfterPermissions()"), "Android 13+ wake-word flow must request notification permission");
 assert.ok(manifest.includes('android:name="android.permission.POST_NOTIFICATIONS"'), "Manifest must declare notification permission");
-console.log("ANDROID LOGIN PROMPT SELF-TEST: password masking and same-origin prompt guard passed");
-const manifest = await readFile(new URL("../android-app/app/src/main/AndroidManifest.xml", import.meta.url), "utf8");
+console.log("ANDROID LOGIN PROMPT SELF-TEST: password masking, same-origin prompt guard and Android 13+ notification permission passed");
 const wakeService = await readFile(new URL("../android-app/app/src/main/java/com/sarathi/ai/WakeWordService.java", import.meta.url), "utf8");
 assert.ok(/awaitingCommand = false;\s+conversationMode = false;\s+commandMode = false;/.test(wakeService), "wake notification timeout must reset conversation state");
 assert.ok(wakeService.includes("|| conversationMode || recognized == null"), "wake recognizer must ignore late callbacks after activation");
