@@ -89,6 +89,14 @@ await test("Hindi greeting is answered locally without provider calls", async ()
   assert.match(r.data.reply, /नमस्ते/);
   assert.equal(calls.length, before);
 });
+
+await test("speech-recognition greeting variant हेलो सर्दी is handled locally without Exa or Groq", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "हेलो सर्दी" }] }, token);
+  assert.equal(r.status, 200);
+  assert.match(r.data.reply, /नमस्ते/);
+  assert.equal(calls.length, before, "misheard wake greeting must not trigger external providers");
+});
 await test("India capital is answered locally without Groq quota", async () => {
   const before = calls.length;
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "भारत की राजधानी कहाँ है?" }] }, token);
@@ -154,6 +162,18 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.equal(exaBody.numResults, 8);
   assert.ok(exaBody.startPublishedDate, "news search must constrain publication date");
   assert.deepEqual(exaBody.contents, { highlights: true });
+});
+
+await test("a casual sentence containing आज does not automatically trigger Exa", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    messages: [{ role: "user", content: "आज मैं क्या करूँ?" }]
+  }, token);
+  assert.equal(r.status, 200);
+  assert.equal(calls.slice(before).some(x => x.url.includes("api.exa.ai/search")), false,
+    "a generic use of आज must not start a web search");
+  assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")),
+    "normal conversation should still reach the AI provider");
 });
 
 await test("failed web search is explicitly marked as attempted and unavailable", async () => {
