@@ -507,9 +507,14 @@ public class MainActivity extends Activity {
                 return;
             }
             if (!SpeechRecognizer.isRecognitionAvailable(this)) {
-                wakeCommandSession = false;
-                notifyVoice("onError", "इस फ़ोन में कोई आवाज़ पहचान सेवा उपलब्ध नहीं मिली। Google ऐप या Speech Services इंस्टॉल/अपडेट करें और फिर कोशिश करें।");
-                resumeWakeWordAfterCommand();
+                if (voiceConversationActive && useOnlineService) {
+                    notifyVoice("onStatus", "फ़ोन की आवाज़ सेवा अभी उपलब्ध नहीं है। सारथी फिर कोशिश करेगा…");
+                    scheduleVoiceRecognitionRetry(true);
+                } else {
+                    wakeCommandSession = false;
+                    notifyVoice("onError", "इस फ़ोन में कोई आवाज़ पहचान सेवा उपलब्ध नहीं मिली। Google ऐप या Speech Services इंस्टॉल/अपडेट करें और फिर कोशिश करें।");
+                    resumeWakeWordAfterCommand();
+                }
                 return;
             }
             if (speechRecognizer != null) {
@@ -638,9 +643,14 @@ public class MainActivity extends Activity {
             intent.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, false);
             speechRecognizer.startListening(intent);
         } catch (Exception error) {
-            wakeCommandSession = false;
-            notifyVoice("onError", "माइक्रोफ़ोन शुरू नहीं हो सका।");
-            resumeWakeWordAfterCommand();
+            if (voiceConversationActive && useOnlineService) {
+                notifyVoice("onStatus", "माइक्रोफ़ोन फिर से शुरू किया जा रहा है…");
+                scheduleVoiceRecognitionRetry(true);
+            } else {
+                wakeCommandSession = false;
+                notifyVoice("onError", "माइक्रोफ़ोन शुरू नहीं हो सका।");
+                resumeWakeWordAfterCommand();
+            }
         }
     }
 
