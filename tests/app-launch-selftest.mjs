@@ -4,9 +4,9 @@ import { readFile } from "node:fs/promises";
 const app = await readFile(new URL("../app.js", import.meta.url), "utf8");
 
 const newChatStart = app.indexOf("function detectNewChatCommand(prompt) {");
-const newChatEnd = app.indexOf("\\n}\\n\\nfunction detectAppLaunchCommand", newChatStart);
+const newChatEnd = app.indexOf("\n}\n\nfunction detectAppLaunchCommand", newChatStart);
 assert.ok(newChatStart >= 0 && newChatEnd > newChatStart, "new chat command parser must exist");
-const detectNewChat = new Function(app.slice(newChatStart, newChatEnd + 2) + "\\nreturn detectNewChatCommand;")();
+const detectNewChat = new Function(app.slice(newChatStart, newChatEnd + 2) + "\nreturn detectNewChatCommand;")();
 for (const phrase of ["नई चैट खोलो", "नई चैट ओपन करो", "नई चैट वन करो", "नई बातचीत शुरू करो", "new chat", "start new chat", "open new conversation"]) {
   assert.equal(detectNewChat(phrase), true, "new chat command not detected: " + phrase);
 }
@@ -14,7 +14,7 @@ for (const phrase of ["नई चैट क्या है", "मुझे न�
   assert.equal(detectNewChat(phrase), false, "ordinary question must not trigger new chat: " + phrase);
 }
 assert.ok(app.includes('setStatus("नई चैट खोल दी गई है।")'), "new chat action must show a success status");
-assert.ok(app.includes("createChat();\\n    closeSidebar();\\n    closeMoreMenu();"), "new chat voice command must create a fresh local chat");
+assert.ok(app.includes("createChat();\\n    closeSidebar();\n    closeMoreMenu();"), "new chat voice command must create a fresh local chat");
 const start = app.indexOf("function detectAppLaunchCommand(prompt, installedApps = []) {");
 const end = app.indexOf("\n}\n\n/* ========================================\n   SEND MESSAGE", start);
 assert.ok(start >= 0 && end > start, "app launch parser must exist");
