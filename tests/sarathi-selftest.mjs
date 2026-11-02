@@ -23,6 +23,7 @@ globalThis.fetch = async (input, init = {}) => {
     });
   }
   if (url.includes("api.groq.com")) {
+    if (groqMode === "timeout") throw new DOMException("The operation was aborted.", "AbortError");
     if (groqMode === "429") return Response.json({ error: { message: "rate limited" } }, { status: 429 });
     if (groqMode === "500") return Response.json({ error: { message: "provider down" } }, { status: 500 });
     const body = JSON.parse(init.body || "{}");
@@ -147,6 +148,15 @@ await test("Groq 5xx is handled as a provider outage", async () => {
   groqMode = "500";
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "भारत का इतिहास बताओ" }] }, token);
   assert.equal(r.status, 502);
+  groqMode = "success";
+});
+await test("Groq timeout returns a clear retryable gateway timeout", async () => {
+  groqMode = "timeout";
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "भारत का इतिहास बताओ" }] }, token);
+  assert.equal(r.status, 504);
+  assert.equal(r.data.retryable, true);
+  assert.equal(r.data.providerStatus, 504);
+  assert.match(r.data.error, /समय अधिक लगा/);
   groqMode = "success";
 });
 await test("empty question is rejected", async () => {
