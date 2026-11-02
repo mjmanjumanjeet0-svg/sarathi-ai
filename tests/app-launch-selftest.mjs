@@ -70,6 +70,10 @@ assert.ok(wakeService.includes("|| conversationMode || recognized == null"), "wa
 assert.ok(wakeService.includes("ACTION_START_CONVERSATION") && wakeService.includes("ACTION_PREPARE_CONVERSATION") && wakeService.includes("if (conversationMode && !awaitingCommand) startConversationRecognition();"), "model preparation must keep the microphone paused until the explicit background start action");
 assert.ok(wakeService.includes("Preparation must release any existing recognizer") && wakeService.includes("दूसरी ऐप खोलने पर सुनना शुरू होगा"), "preparing the background service must not open a second microphone session while Sarathi is foreground");
 assert.ok(wakeService.includes("A captured conversation request must release the microphone"), "captured requests must stop the service recognizer before the Activity processes them");
+assert.ok(wakeService.includes('.putString("pending_command", command).apply()'), "background voice command must be saved until the app can process it");
+assert.ok(wakeService.includes('setContentTitle("सारथी ने आदेश सुन लिया")') && wakeService.includes('setContentText("जवाब पाने के लिए सूचना दबाकर सारथी खोलें।")'), "background command must clearly tell the user to tap the notification to return to Sarathi");
+assert.ok(wakeService.includes('new Intent(this, MainActivity.class)') && wakeService.includes('open.setAction(MainActivity.ACTION_WAKE_COMMAND)'), "notification must open Sarathi through an explicit user tap rather than forcing a background activity launch");
+assert.ok(mainActivity.includes('getString("pending_command", "")') && mainActivity.includes('notifyVoice("onWakeCommandResult", command)'), "Sarathi must deliver the queued spoken command to the chat after returning to foreground");
 assert.ok(wakeService.includes("notifications.cancel(NOTIFICATION_ID + 1)"), "wake notifications must be cleared after timeout/stop");
 console.log("WAKE SERVICE SELF-TEST: timeout reset, duplicate callback guard and notification cleanup passed");
 
