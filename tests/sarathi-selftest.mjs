@@ -187,15 +187,15 @@ await test("Groq HTTP 413 retries once with compact context and preserves the co
   groq413Count = 0;
   const before = calls.length;
   const r = await request("/api/chat", "POST", {
-    messages: [{ role: "user", content: "1. लोक प्रशासन में उत्तरदायित्व की अवधारणा समझाओ।\\n2. समाजशास्त्र में सामाजिक परिवर्तन के कारण बताओ।\\n3. भारतीय राजनीतिक व्यवस्था का विश्लेषण करो।" }]
+    messages: [{ role: "user", content: "कृपया इन तीन अलग विषयों पर क्रमवार विस्तार से उत्तर दो: पहला विषय ग्रामीण विकास की चुनौतियाँ; दूसरा विषय औद्योगीकरण के सामाजिक प्रभाव; तीसरा विषय आधुनिक शिक्षा की भूमिका।" }]
   }, token);
   assert.equal(r.status, 200);
   const groqCalls = calls.slice(before).filter(x => x.url.includes("api.groq.com"));
   assert.equal(groqCalls.length, 2, "provider should be retried exactly once");
   const retryBody = JSON.parse(groqCalls[1].init.body || "{}");
   const retryPrompt = retryBody.messages?.at(-1)?.content || "";
-  assert.match(retryPrompt, /1. लोक प्रशासन में उत्तरदायित्व/);
-  assert.match(retryPrompt, /3. भारतीय राजनीतिक व्यवस्था/);
+  assert.match(retryPrompt, /ग्रामीण विकास की चुनौतियाँ/);
+  assert.match(retryPrompt, /आधुनिक शिक्षा की भूमिका/);
   assert.equal(retryBody.max_tokens, 3000);
   groqMode = "success";
 });
