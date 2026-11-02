@@ -3,9 +3,7 @@ package com.sarathi.ai;
 import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
@@ -38,12 +36,7 @@ import java.util.Locale;
 import java.util.Set;
 
 public class MainActivity extends Activity {
-    public static final String ACTION_WAKE_COMMAND = "com.sarathi.ai.WAKE_COMMAND";
-    public static final String ACTION_WAKE_DETECTED = "com.sarathi.ai.WAKE_DETECTED";
-    public static final String ACTION_WAKE_RESULT = "com.sarathi.ai.WAKE_RESULT";
-    public static final String EXTRA_WAKE_TEXT = "wake_text";
     private static final int REQUEST_RECORD_AUDIO = 1201;
-    private static final int REQUEST_POST_NOTIFICATIONS = 1203;
     private static final int REQUEST_SPEECH_ACTIVITY = 1204;
     private boolean speechActivityFallbackLaunched = false;
     // Online speech permission is remembered only for the current user-started voice session.
@@ -51,7 +44,7 @@ public class MainActivity extends Activity {
     private boolean voiceConversationActive = false;
     private boolean voiceRequestInProgress = false;
     // Preserve an active hands-free session when another app (for example YouTube) temporarily covers Sarathi.
-    private boolean nativeListeningPausedForBackground = false;
+    private boolean nativeListeningPausedForAppPause = false;
     private int voiceRecognitionRetryAttempt = 0;
     private Runnable voiceRecognitionRetry;
     private static final String APP_HOST = "mjmanjumanjeet0-svg.github.io";
@@ -65,37 +58,7 @@ public class MainActivity extends Activity {
     private Voice localHindiVoice;
     private Voice localEnglishVoice;
     private boolean pendingListen = false;
-    private boolean pendingWakeStart = false;
     private boolean nativeStopRequested = false;
-    private boolean pageLoaded = false;
-    private boolean appInForeground = false;
-    private boolean wakeReceiverRegistered = false;
-    private final BroadcastReceiver wakeDetectedReceiver = new BroadcastReceiver() {
-        @Override public void onReceive(Context context, Intent intent) {
-            if (intent == null) return;
-            if (ACTION_WAKE_RESULT.equals(intent.getAction())) {
-                // The Activity may receive this broadcast while another app is
-                // foregrounded. Keep the persisted command until the user returns.
-                if (!appInForeground || !pageLoaded) return;
-                String command = intent.getStringExtra(EXTRA_WAKE_TEXT);
-                getSharedPreferences("sarathi_wake_settings", MODE_PRIVATE).edit()
-                        .remove("pending_command").apply();
-                wakeCommandSession = false;
-                pendingWakeResultText = command == null ? "" : command;
-                pendingWakeResult = true;
-                deliverPendingWakeEvents();
-                return;
-            }
-            if (!ACTION_WAKE_DETECTED.equals(intent.getAction())) return;
-            pendingWakeCommand = true;
-            wakeCommandSession = true;
-            deliverPendingWakeEvents();
-        }
-    };
-    private boolean pendingWakeCommand = false;
-    private boolean pendingWakeResult = false;
-    private String pendingWakeResultText = "";
-    private boolean wakeCommandSession = false;
     private String selectedSpeechLanguage = "hi-IN";
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
@@ -105,13 +68,6 @@ public class MainActivity extends Activity {
 
         webView = new WebView(this);
         setContentView(webView);
-        IntentFilter wakeFilter = new IntentFilter();
-        wakeFilter.addAction(ACTION_WAKE_DETECTED);
-        wakeFilter.addAction(ACTION_WAKE_RESULT);
-        if (Build.VERSION.SDK_INT >= 33) registerReceiver(wakeDetectedReceiver, wakeFilter, Context.RECEIVER_NOT_EXPORTED);
-        else registerReceiver(wakeDetectedReceiver, wakeFilter);
-        wakeReceiverRegistered = true;
-
         WebSettings settings = webView.getSettings();
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
@@ -230,13 +186,6 @@ public class MainActivity extends Activity {
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
-            public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
-                pageLoaded = true;
-                deliverPendingWakeEvents();
-            }
-
-            @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri uri = request.getUrl();
                 String scheme = uri.getScheme();
@@ -250,108 +199,6 @@ public class MainActivity extends Activity {
         });
 
         webView.loadUrl("https://" + APP_HOST + "/sarathi-ai/");
-        handleWakeCommandIntent(getIntent());
-    }
-
-    private void handleWakeCommandIntent(Intent intent) {
-        if (intent != null && ACTION_WAKE_COMMAND.equals(intent.getAction())) {
-            intent.setAction(null);
-            String captured = intent.getStringExtra(EXTRA_WAKE_TEXT);
-            if (captured != null && !captured.trim().isEmpty()) {
-                pendingWakeResultText = captured.trim();
-                pendingWakeResult = true;
-                getSharedPreferences("sarathi_wake_settings", MODE_PRIVATE).edit()
-                        .remove("pending_command").apply();
-            } else {
-                pendingWakeCommand = true;
-                wakeCommandSession = true;
-            }
-            deliverPendingWakeEvents();
-        }
-    }
-
-    private void deliverPendingWakeEvents() {
-        if (!appInForeground || !pageLoaded) return;
-        if (!pendingWakeResult) {
-            String savedCommand = getSharedPreferences("sarathi_wake_settings", MODE_PRIVATE)
-                    .getString("pending_command", "");
-            if (savedCommand != null && !savedCommand.trim().isEmpty()) {
-                pendingWakeResultText = savedCommand.trim();
-                pendingWakeResult = true;
-                getSharedPreferences("sarathi_wake_settings", MODE_PRIVATE).edit()
-                        .remove("pending_command").apply();
-            }
-        }
-        if (pendingWakeResult) {
-            voiceRequestInProgress = true;
-            String command = pendingWakeResultText;
-            pendingWakeResult = false;
-            pendingWakeResultText = "";
-            notifyVoice("onWakeCommandResult", command);
-        }
-        if (pendingWakeCommand) {
-            pendingWakeCommand = false;
-            startWakeCommandCapture();
-        }
-    }
-
-    private void startWakeWordAfterPermissions() {
-        if (Build.VERSION.SDK_INT >= 33
-                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-            pendingWakeStart = true;
-            requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS}, REQUEST_POST_NOTIFICATIONS);
-            notifyVoice("onStatus", "वेक-वर्ड की सूचना दिखाने के लिए नोटिफिकेशन अनुमति दें।");
-            return;
-        }
-        pendingWakeStart = false;
-        startWakeWordService();
-    }
-
-    private void startWakeWordService() {
-        try {
-            Intent service = new Intent(this, WakeWordService.class);
-            service.setAction(WakeWordService.ACTION_START);
-            if (Build.VERSION.SDK_INT >= 26) startForegroundService(service);
-            else startService(service);
-            notifyVoice("onStatus", "हिंदी ऑफ़लाइन मॉडल तैयार किया जा रहा है। पहली बार इंटरनेट से लगभग 42 MB डाउनलोड होगा; इसके बाद आवाज़ पहचान फ़ोन पर ही होगी।");
-        } catch (Exception error) {
-            notifyVoice("onError", "वेक-वर्ड सेवा शुरू नहीं हो सकी।");
-        }
-    }
-
-    private void pauseWakeWordForCommand() {
-        Intent service = new Intent(this, WakeWordService.class);
-        service.setAction(WakeWordService.ACTION_PAUSE);
-        try { startService(service); } catch (Exception ignored) {}
-    }
-
-    private void prepareBackgroundConversationService() {
-        Intent service = new Intent(this, WakeWordService.class);
-        service.setAction(WakeWordService.ACTION_PREPARE_CONVERSATION);
-        try {
-            if (Build.VERSION.SDK_INT >= 26) startForegroundService(service);
-            else startService(service);
-        } catch (Exception error) {
-            notifyVoice("onStatus", "बैकग्राउंड आवाज़ सेवा तैयार नहीं हो सकी।");
-        }
-    }
-
-    private void startBackgroundConversationListening() {
-        if (!voiceConversationActive || voiceRequestInProgress || isFinishing()) return;
-        Intent service = new Intent(this, WakeWordService.class);
-        service.setAction(WakeWordService.ACTION_START_CONVERSATION);
-        try {
-            if (Build.VERSION.SDK_INT >= 26) startForegroundService(service);
-            else startService(service);
-        } catch (Exception error) {
-            notifyVoice("onStatus", "दूसरी ऐप में सुनना शुरू नहीं हो सका। सारथी ऐप खोलकर फिर कोशिश करें।");
-        }
-    }
-
-    private void resumeWakeWordAfterCommand() {
-        Intent service = new Intent(this, WakeWordService.class);
-        service.setAction(WakeWordService.ACTION_RESUME);
-        try { startService(service); } catch (Exception ignored) {}
     }
 
     private void notifyVoice(String callback, String message) {
@@ -368,7 +215,7 @@ public class MainActivity extends Activity {
     }
 
     private void startListening() {
-        nativeListeningPausedForBackground = false;
+        nativeListeningPausedForAppPause = false;
         voiceRequestInProgress = false;
         voiceConversationActive = true;
         // Prepare (but pause) the foreground microphone service while this
@@ -377,7 +224,6 @@ public class MainActivity extends Activity {
         voiceRecognitionRetryAttempt = 0;
         if (voiceRecognitionRetry != null) mainHandler.removeCallbacks(voiceRecognitionRetry);
         voiceRecognitionRetry = null;
-        pauseWakeWordForCommand();
         // After the user has explicitly approved online recognition once in this
         // voice conversation, reuse that choice for subsequent turns without
         // showing the consent dialog after every spoken question.
@@ -392,19 +238,6 @@ public class MainActivity extends Activity {
         }
         selectedSpeechLanguage = "hi-IN";
         beginListeningWithSelectedLanguage();
-    }
-
-    private void startWakeCommandCapture() {
-        // Reuse the Vosk service that detected the wake word. This avoids
-        // opening a second recognizer and avoids the provider error 9 path.
-        Intent service = new Intent(this, WakeWordService.class);
-        service.setAction(WakeWordService.ACTION_CAPTURE_COMMAND);
-        try {
-            startService(service);
-            notifyVoice("onStatus", "बोलिए, सारथी ऑफ़लाइन हिंदी में सुन रहा है…");
-        } catch (Exception error) {
-            notifyVoice("onError", "ऑफ़लाइन आदेश पहचान शुरू नहीं हो सकी।");
-        }
     }
 
     private void beginListeningWithSelectedLanguage() {
@@ -434,14 +267,10 @@ public class MainActivity extends Activity {
                     startRecognition(true);
                 })
                 .setNegativeButton("रद्द करें", (dialog, which) -> {
-                    wakeCommandSession = false;
                     notifyVoice("onError", "ऑनलाइन आवाज़ पहचान रद्द कर दी गई। आपकी आवाज़ नहीं सुनी गई।");
-                    resumeWakeWordAfterCommand();
-                })
+                    })
                 .setOnCancelListener(dialog -> {
-                    wakeCommandSession = false;
-                    resumeWakeWordAfterCommand();
-                })
+                    })
                 .setCancelable(true)
                 .show();
     }
@@ -490,10 +319,8 @@ public class MainActivity extends Activity {
             startActivityForResult(intent, REQUEST_SPEECH_ACTIVITY);
         } catch (Exception error) {
             speechActivityFallbackLaunched = false;
-            wakeCommandSession = false;
             notifyVoice("onError", "फ़ोन की आवाज़ पहचान विंडो नहीं खुल सकी। Google ऐप या Speech Services की अनुमति जाँचें।");
-            resumeWakeWordAfterCommand();
-        }
+            }
     }
 
     // Pause only the current recognition request while Sarathi prepares a reply.
@@ -509,7 +336,7 @@ public class MainActivity extends Activity {
     }
 
     private void stopNativeListening() {
-        nativeListeningPausedForBackground = false;
+        nativeListeningPausedForAppPause = false;
         voiceConversationActive = false;
         voiceSessionOnlineConsent = false;
         voiceRecognitionRetryAttempt = 0;
@@ -522,11 +349,7 @@ public class MainActivity extends Activity {
             try { current.cancel(); } catch (Exception ignored) {}
             try { current.destroy(); } catch (Exception ignored) {}
         }
-        wakeCommandSession = false;
-        Intent service = new Intent(this, WakeWordService.class);
-        service.setAction(WakeWordService.ACTION_END_CONVERSATION);
-        try { startService(service); } catch (Exception ignored) {}
-    }
+}
 
     private void scheduleVoiceRecognitionRetry(boolean online) {
         if (!voiceConversationActive || isFinishing()) return;
@@ -561,10 +384,8 @@ public class MainActivity extends Activity {
                     notifyVoice("onStatus", "फ़ोन की आवाज़ सेवा अभी उपलब्ध नहीं है। सारथी फिर कोशिश करेगा…");
                     scheduleVoiceRecognitionRetry(true);
                 } else {
-                    wakeCommandSession = false;
                     notifyVoice("onError", "इस फ़ोन में कोई आवाज़ पहचान सेवा उपलब्ध नहीं मिली। Google ऐप या Speech Services इंस्टॉल/अपडेट करें और फिर कोशिश करें।");
-                    resumeWakeWordAfterCommand();
-                }
+                    }
                 return;
             }
             if (speechRecognizer != null) {
@@ -612,10 +433,8 @@ public class MainActivity extends Activity {
                     if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS
                             && !hasMicrophonePermission()) {
                         pendingListen = false;
-                        wakeCommandSession = false;
                         notifyVoice("onError", "Android ने माइक्रोफ़ोन अनुमति नहीं दी। सेटिंग में Sarathi AI → माइक्रोफ़ोन → केवल ऐप इस्तेमाल करते समय अनुमति चुनें।");
-                        resumeWakeWordAfterCommand();
-                    } else if (!useOnlineService) {
+                        } else if (!useOnlineService) {
                         // If the offline provider fails (including provider-side error 9),
                         // offer the normal recognizer only after explicit per-use consent.
                         mainHandler.post(() -> showOnlineVoiceConsent(
@@ -640,14 +459,10 @@ public class MainActivity extends Activity {
                         // own activity. This path is reached only after per-use online consent.
                         launchSystemSpeechActivity();
                     } else if (error == SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS) {
-                        wakeCommandSession = false;
                         notifyVoice("onError", "Android की स्पीच सेवा ने अनुमति त्रुटि (कोड 9) दी। सारथी की ऐप अनुमति चालू है, फिर भी फ़ोन की पहचान सेवा ने सीधे सुनने की अनुमति नहीं दी।");
-                        resumeWakeWordAfterCommand();
-                    } else {
-                        wakeCommandSession = false;
+                        } else {
                         notifyVoice("onError", getSpeechErrorMessage(error, true));
-                        resumeWakeWordAfterCommand();
-                    }
+                        }
                     if (speechRecognizer == recognizerForSession) {
                         recognizerForSession.destroy();
                         speechRecognizer = null;
@@ -662,17 +477,11 @@ public class MainActivity extends Activity {
                     ArrayList<String> matches = results == null ? null
                         : results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
                     if (matches != null && !matches.isEmpty()) {
-                        if (wakeCommandSession) {
-                            wakeCommandSession = false;
-                            notifyVoice("onWakeCommandResult", matches.get(0));
-                        } else {
-                            notifyVoice("onResult", matches.get(0));
-                        }
+                        notifyVoice("onResult", matches.get(0));
                     } else if (voiceConversationActive && useOnlineService) {
                         notifyVoice("onStatus", "आवाज़ साफ़ नहीं मिली। सारथी फिर सुन रहा है…");
                         scheduleVoiceRecognitionRetry(true);
                     } else {
-                        wakeCommandSession = false;
                         notifyVoice("onError", "आवाज़ से शब्द समझ नहीं आए। फिर बोलकर देखें।");
                     }
                     if (voiceConversationActive && useOnlineService) {
@@ -681,8 +490,7 @@ public class MainActivity extends Activity {
                         if (matches != null && !matches.isEmpty()) voiceRecognitionRetryAttempt = 0;
                     } else {
                         voiceRecognitionRetryAttempt = 0;
-                        resumeWakeWordAfterCommand();
-                    }
+                        }
                     if (speechRecognizer == recognizerForSession) {
                         recognizerForSession.destroy();
                         speechRecognizer = null;
@@ -714,39 +522,22 @@ public class MainActivity extends Activity {
                 notifyVoice("onStatus", "माइक्रोफ़ोन फिर से शुरू किया जा रहा है…");
                 scheduleVoiceRecognitionRetry(true);
             } else {
-                wakeCommandSession = false;
                 notifyVoice("onError", "माइक्रोफ़ोन शुरू नहीं हो सका।");
-                resumeWakeWordAfterCommand();
-            }
+                }
         }
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_POST_NOTIFICATIONS) {
-            if (pendingWakeStart) {
-                pendingWakeStart = false;
-                if (grantResults.length == 0 || grantResults[0] != PackageManager.PERMISSION_GRANTED) {
-                    notifyVoice("onStatus", "नोटिफिकेशन अनुमति नहीं मिली। वेक-वर्ड चालू रहेगा, लेकिन सूचना Android के सूचना पैनल में नहीं दिख सकती।");
-                }
-                startWakeWordService();
-            }
-            return;
-        }
         if (requestCode == REQUEST_RECORD_AUDIO) {
             boolean granted = grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED;
             if (granted && pendingListen) {
                 pendingListen = false;
                 beginListeningWithSelectedLanguage();
-            } else if (granted && pendingWakeStart) {
-                startWakeWordAfterPermissions();
             } else {
                 pendingListen = false;
-                pendingWakeStart = false;
-                wakeCommandSession = false;
                 notifyVoice("onError", "माइक्रोफ़ोन अनुमति नहीं मिली। अनुमति के बिना आवाज़ नहीं सुनी जाएगी।");
-                resumeWakeWordAfterCommand();
             }
         }
     }
@@ -755,8 +546,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void startListening() {
             runOnUiThread(() -> {
-                if (!appInForeground) startBackgroundConversationListening();
-                else MainActivity.this.startListening();
+                MainActivity.this.startListening();
             });
         }
 
@@ -766,10 +556,6 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public void pauseWakeWord() {
-            runOnUiThread(MainActivity.this::pauseWakeWordForCommand);
-        }
-
         @JavascriptInterface
         public void stopListening() {
             runOnUiThread(MainActivity.this::pauseNativeListeningForReply);
@@ -806,8 +592,7 @@ public class MainActivity extends Activity {
                                 ? "फ़ोन में हिंदी बोलने की आवाज़ उपलब्ध नहीं है। Android की Text-to-Speech सेटिंग में हिंदी आवाज़ इंस्टॉल करें।"
                                 : "फ़ोन में English बोलने की आवाज़ उपलब्ध नहीं है। Android की Text-to-Speech सेटिंग में English आवाज़ इंस्टॉल करें।");
                         if (voiceConversationActive) notifyVoice("onSpeechComplete", "");
-                        else MainActivity.this.resumeWakeWordAfterCommand();
-                        return;
+                        else MainActivity.this.return;
                     }
 
                     Voice selectedVoice = hindiText ? localHindiVoice : localEnglishVoice;
@@ -819,7 +604,6 @@ public class MainActivity extends Activity {
                     textToSpeech.setSpeechRate(0.94f);
                     textToSpeech.setPitch(1.04f);
 
-                    pauseWakeWordForCommand();
                     textToSpeech.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                         @Override public void onStart(String utteranceId) {}
                         @Override public void onDone(String utteranceId) {
@@ -827,8 +611,7 @@ public class MainActivity extends Activity {
                                 if (voiceConversationActive) {
                                     notifyVoice("onSpeechComplete", "");
                                 } else {
-                                    MainActivity.this.resumeWakeWordAfterCommand();
-                                }
+                                    MainActivity.this.}
                             });
                         }
                         @Override public void onError(String utteranceId) {
@@ -838,27 +621,23 @@ public class MainActivity extends Activity {
                                     notifyVoice("onSpeechComplete", "");
                                 } else {
                                     notifyVoice("onError", "जवाब बोलने में समस्या हुई। फ़ोन की Text-to-Speech आवाज़ और मीडिया वॉल्यूम जाँचें।");
-                                    resumeWakeWordAfterCommand();
-                                }
+                                    }
                             });
                         }
                         @Override public void onStop(String utteranceId, boolean interrupted) {
                             mainHandler.post(() -> {
                                 if (voiceConversationActive) notifyVoice("onSpeechComplete", "");
-                                else MainActivity.this.resumeWakeWordAfterCommand();
-                            });
+                                else MainActivity.this.});
                         }
                     });
                     int result = textToSpeech.speak(toSpeak, TextToSpeech.QUEUE_FLUSH, null, "sarathi-local-voice");
                     if (result == TextToSpeech.ERROR) {
                         notifyVoice("onError", "जवाब बोलना शुरू नहीं हुआ। फ़ोन की Text-to-Speech सेटिंग जाँचें।");
                         if (voiceConversationActive) notifyVoice("onSpeechComplete", "");
-                        else resumeWakeWordAfterCommand();
-                    }
+                        else }
                 } catch (Exception error) {
                     if (voiceConversationActive) notifyVoice("onSpeechComplete", "");
-                    else resumeWakeWordAfterCommand();
-                    notifyVoice("onError", "जवाब बोलना शुरू नहीं हो सका। फ़ोन की Text-to-Speech सेटिंग जाँचें।");
+                    else notifyVoice("onError", "जवाब बोलना शुरू नहीं हो सका। फ़ोन की Text-to-Speech सेटिंग जाँचें।");
                 }
             });
         }
@@ -952,35 +731,6 @@ public class MainActivity extends Activity {
         }
 
         @JavascriptInterface
-        public void startWakeWord() {
-            runOnUiThread(() -> {
-                if (!hasMicrophonePermission()) {
-                    pendingWakeStart = true;
-                    requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_RECORD_AUDIO);
-                    notifyVoice("onStatus", "वेक-वर्ड चालू करने के लिए माइक्रोफ़ोन अनुमति दें।");
-                    return;
-                }
-                startWakeWordAfterPermissions();
-            });
-        }
-
-        @JavascriptInterface
-        public void endConversation() {
-            runOnUiThread(() -> {
-                Intent service = new Intent(MainActivity.this, WakeWordService.class);
-                service.setAction(WakeWordService.ACTION_END_CONVERSATION);
-                try { startService(service); } catch (Exception ignored) {}
-            });
-        }
-
-        @JavascriptInterface
-        public void stopWakeWord() {
-            Intent service = new Intent(MainActivity.this, WakeWordService.class);
-            service.setAction(WakeWordService.ACTION_STOP);
-            startService(service);
-            notifyVoice("onStatus", "वेक-वर्ड सेवा बंद करने का अनुरोध भेजा गया।");
-        }
-
         @JavascriptInterface
         public void stopSpeaking() {
             runOnUiThread(() -> {
@@ -992,42 +742,21 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
-        appInForeground = true;
-        deliverPendingWakeEvents();
-        // Android may stop microphone capture while YouTube or another external app is in front.
-        // Restart only a session that was active before Sarathi went to the background.
-        if (nativeListeningPausedForBackground && voiceConversationActive) {
-            nativeListeningPausedForBackground = false;
-            pauseWakeWordForCommand();
-            // A command received in the background is delivered above. Do not
-            // start another microphone request while its AI reply is pending.
+        if (nativeListeningPausedForAppPause && voiceConversationActive) {
+            nativeListeningPausedForAppPause = false;
             if (!voiceRequestInProgress) startListening();
         }
     }
 
     @Override
     protected void onPause() {
-        appInForeground = false;
-        // Keep the conversation state/UI active, but release the microphone while another app owns the screen.
         if (voiceConversationActive && !speechActivityFallbackLaunched) {
-            nativeListeningPausedForBackground = true;
+            nativeListeningPausedForAppPause = true;
             if (voiceRecognitionRetry != null) mainHandler.removeCallbacks(voiceRecognitionRetry);
             voiceRecognitionRetry = null;
             pauseNativeListeningForReply();
-            // Do not listen over an AI request or spoken reply. Once the reply
-            // finishes, the bridge starts this foreground service in background.
-            if (!voiceRequestInProgress && (textToSpeech == null || !textToSpeech.isSpeaking())) {
-                startBackgroundConversationListening();
-            }
         }
         super.onPause();
-    }
-
-    @Override
-    protected void onNewIntent(Intent intent) {
-        super.onNewIntent(intent);
-        setIntent(intent);
-        handleWakeCommandIntent(intent);
     }
 
     @Override
@@ -1038,19 +767,11 @@ public class MainActivity extends Activity {
                     ? data.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS) : null;
             if (matches != null && !matches.isEmpty() && matches.get(0) != null
                     && !matches.get(0).trim().isEmpty()) {
-                String recognizedText = matches.get(0).trim();
-                if (wakeCommandSession) {
-                    wakeCommandSession = false;
-                    notifyVoice("onWakeCommandResult", recognizedText);
-                } else {
-                    notifyVoice("onResult", recognizedText);
-                }
+                notifyVoice("onResult", matches.get(0).trim());
             } else {
-                wakeCommandSession = false;
                 notifyVoice("onError", resultCode == RESULT_CANCELED
                         ? "आवाज़ पहचान रद्द कर दी गई।" : "आवाज़ से शब्द नहीं मिले। फिर कोशिश करें।");
             }
-            resumeWakeWordAfterCommand();
             return;
         }
         if (requestCode == REQUEST_FILE_CHOOSER && filePathCallback != null) {
@@ -1075,11 +796,6 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-        appInForeground = false;
-        if (wakeReceiverRegistered) {
-            try { unregisterReceiver(wakeDetectedReceiver); } catch (Exception ignored) {}
-            wakeReceiverRegistered = false;
-        }
         if (speechRecognizer != null) {
             speechRecognizer.cancel();
             speechRecognizer.destroy();
@@ -1090,7 +806,6 @@ public class MainActivity extends Activity {
             textToSpeech.shutdown();
             textToSpeech = null;
         }
-        resumeWakeWordAfterCommand();
         if (filePathCallback != null) {
             filePathCallback.onReceiveValue(null);
             filePathCallback = null;
