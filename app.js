@@ -1122,6 +1122,11 @@ async function sendMessage(text) {
         .trim();
     }
 
+    // Keep search failures visible in the chat, not only in the temporary status line.
+    if (data.searchAttempted && data.searchWarning && !cleanAnswer.includes(data.searchWarning)) {
+      cleanAnswer += "\n\n⚠️ इंटरनेट खोज: " + data.searchWarning;
+    }
+
     if (prompt.includes("SARATHI_QUIZ_JSON:")) {
       const quiz = parseSarathiQuiz(cleanAnswer);
       if (quiz) {
