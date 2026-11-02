@@ -134,12 +134,12 @@ public class MainActivity extends Activity {
                             if (locale == null || voice.isNetworkConnectionRequired()) continue;
                             if ("hi".equalsIgnoreCase(locale.getLanguage())
                                     && ("IN".equalsIgnoreCase(locale.getCountry()) || locale.getCountry().isEmpty())
-                                    && localHindiVoice == null) {
+                                    && (localHindiVoice == null || voice.getQuality() > localHindiVoice.getQuality())) {
                                 localHindiVoice = voice;
                             } else if ("en".equalsIgnoreCase(locale.getLanguage())
                                     && ("IN".equalsIgnoreCase(locale.getCountry()) || "US".equalsIgnoreCase(locale.getCountry())
                                     || locale.getCountry().isEmpty())
-                                    && localEnglishVoice == null) {
+                                    && (localEnglishVoice == null || voice.getQuality() > localEnglishVoice.getQuality())) {
                                 localEnglishVoice = voice;
                             }
                         }
@@ -751,6 +751,10 @@ public class MainActivity extends Activity {
                     if (selectedVoice != null) {
                         textToSpeech.setVoice(selectedVoice);
                     }
+                    // Slightly slower pacing and a gentle pitch lift can make the
+                    // built-in Android voice less rushed and more conversational.
+                    textToSpeech.setSpeechRate(0.94f);
+                    textToSpeech.setPitch(1.04f);
 
                     pauseWakeWordForCommand();
                     textToSpeech.setOnUtteranceProgressListener(new UtteranceProgressListener() {
