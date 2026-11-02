@@ -877,7 +877,7 @@ function detectNewChatCommand(prompt) {
     .replace(/\s+/g, " ")
     .trim();
 
-  return /^(?:(?:कृपया|प्लीज)\s*)?(?:(?:एक\s+)?नई\s+(?:चैट|चैटिंग|बातचीत)(?:\s+(?:को|खोलने के लिए))?\s*(?:खोलो|खोल दो|ओपन करो|ओपन|वन करो|बना दो|बनाओ|शुरू करो|स्टार्ट करो|start|open|new chat)|(?:नई\s+बातचीत|नई\s+चैट)\s*(?:शुरू|आरंभ)\s*(?:करो|करें)|new\\s+chat|(?:start|open)\s+(?:a\s+)?new\s+(?:chat|conversation))$/i.test(value);
+  return /^(?:(?:कृपया|प्लीज)\s*)?(?:(?:एक\s+)?नई\s+(?:चैट|चैटिंग|बातचीत)(?:\s+(?:को|खोलने के लिए))?\s*(?:खोलो|खोल दो|ओपन करो|ओपन|वन करो|बना दो|बनाओ|शुरू करो|स्टार्ट करो|start|open|new chat)|(?:नई\s+बातचीत|नई\s+चैट)\s*(?:शुरू|आरंभ)\s*(?:करो|करें)|new\s+chat|(?:start|open)\s+(?:a\s+)?new\s+(?:chat|conversation))$/i.test(value);
 }
 
 function detectAppLaunchCommand(prompt, installedApps = []) {
