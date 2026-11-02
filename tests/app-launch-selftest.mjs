@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 
 const app = await readFile(new URL("../app.js", import.meta.url), "utf8");
 
-const newChatStart = app.indexOf("function detectNewChatCommand(prompt) {");
+const newChatStart = app.indexOf("function stripSarathiWakePrefix(prompt) {");
 const newChatEnd = app.indexOf("\n}\n\nfunction detectAppLaunchCommand", newChatStart);
 assert.ok(newChatStart >= 0 && newChatEnd > newChatStart, "new chat command parser must exist");
 const detectNewChat = new Function(app.slice(newChatStart, newChatEnd + 2) + "\nreturn detectNewChatCommand;")();
@@ -17,7 +17,7 @@ assert.ok(app.includes('setStatus("नई चैट खोल दी गई ह�
 assert.ok(app.includes("createChat();") && app.includes("closeSidebar();") && app.includes("closeMoreMenu();"), "new chat voice command must create a fresh local chat");
 assert.ok(app.includes("stripSarathiWakePrefix(prompt)"), "voice command parser must ignore Sarathi wake-word prefixes");
 assert.ok(app.includes("window.SarathiNative.openPhone()"), "phone command must use the safe Android dialer action");
-const start = app.indexOf("function detectAppLaunchCommand(prompt, installedApps = []) {");
+const start = app.indexOf("function stripSarathiWakePrefix(prompt) {");
 const end = app.indexOf("\n}\n\n/* ========================================\n   SEND MESSAGE", start);
 assert.ok(start >= 0 && end > start, "app launch parser must exist");
 const parserSource = app.slice(start, end + 2);
