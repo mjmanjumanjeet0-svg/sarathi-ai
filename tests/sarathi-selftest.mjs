@@ -136,6 +136,38 @@ await test("stable general-knowledge questions do not trigger unnecessary web se
   assert.equal(calls.slice(before).some(x => x.url.includes("api.exa.ai/search")), false,
     "stable biography/general knowledge should not spend search requests");
 });
+await test("regulated career pathways trigger current education search and strict official-source rules", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    webSearch: false,
+    messages: [{ role: "user", content: "भारत में डॉक्टर बनने के लिए वर्तमान योग्यता और सही प्रवेश परीक्षा क्या है?" }]
+  }, token);
+  assert.equal(r.status, 200);
+  const exaCall = calls.slice(before).find(x => x.url.includes("api.exa.ai/search"));
+  assert.ok(exaCall, "regulated career pathways must trigger current web verification");
+  const exaBody = JSON.parse(exaCall.init.body || "{}");
+  assert.equal(exaBody.numResults, 8, "education searches should compare a wider source pool");
+  const groqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
+  assert.ok(groqCall, "the searched education question should reach the assistant");
+  const groqBody = JSON.parse(groqCall.init.body || "{}");
+  const system = groqBody.messages?.find(message => message.role === "system")?.content || "";
+  assert.match(system, /शिक्षा और करियर में उच्च-सटीकता नियम/);
+  assert.match(system, /आधिकारिक पुष्टि नहीं मिली/);
+  assert.match(system, /NEET-UG/);
+  assert.match(system, /Doctorate of Medicine \(DM\)/);
+  assert.match(system, /Magister Chirurgiae \(MCh\)/);
+  assert.match(system, /सभी कोर्स में 60% या Maths अनिवार्य मत कहो/);
+});
+
+await test("stable acronym definition does not automatically trigger an unnecessary web search", async () => {
+  const before = calls.length;
+  await request("/api/chat", "POST", {
+    messages: [{ role: "user", content: "MCh का मतलब क्या है?" }]
+  }, token);
+  assert.equal(calls.slice(before).some(x => x.url.includes("api.exa.ai/search")), false,
+    "stable terminology should not spend a web search request");
+});
+
 await test("explicit Hindi command इंटरनेट खोजो triggers Exa even when webSearch toggle is off", async () => {
   const before = calls.length;
   const r = await request("/api/chat", "POST", {
