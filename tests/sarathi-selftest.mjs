@@ -8,6 +8,7 @@ const { default: worker } = await import(moduleUrl);
 
 const calls = [];
 let groqMode = "success";
+let groq413Count = 0;
 let exaMode = "success";
 let groqReply = "यह सारथी का परीक्षण उत्तर है।";
 globalThis.fetch = async (input, init = {}) => {
@@ -26,6 +27,7 @@ globalThis.fetch = async (input, init = {}) => {
     if (groqMode === "timeout") throw new DOMException("The operation was aborted.", "AbortError");
     if (groqMode === "429") return Response.json({ error: { message: "rate limited" } }, { status: 429 });
     if (groqMode === "500") return Response.json({ error: { message: "provider down" } }, { status: 500 });
+    if (groqMode === "413-once" && groq413Count++ === 0) return Response.json({ error: { message: "payload too large" } }, { status: 413 });
     const body = JSON.parse(init.body || "{}");
     const last = body.messages?.at(-1)?.content || "";
     groqReply = last.includes("इतिहास") ? "1857 का विद्रोह ब्रिटिश शासन के विरुद्ध एक बड़ा विद्रोह था।" :
@@ -179,6 +181,23 @@ await test("Exa rate-limit is handled without crashing the Worker", async () => 
   assert.ok([200, 502, 429].includes(r.status));
   assert.ok(r.data.reply || r.data.error);
   exaMode = "success";
+});
+await test("Groq HTTP 413 retries once with compact context and preserves the complete latest question", async () => {
+  groqMode = "413-once";
+  groq413Count = 0;
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    messages: [{ role: "user", content: "1. भारत की राजधानी क्या है?\\n2. बिहार का इतिहास बताओ?\\n3. लोकतंत्र और गणतंत्र में अंतर बताओ?" }]
+  }, token);
+  assert.equal(r.status, 200);
+  const groqCalls = calls.slice(before).filter(x => x.url.includes("api.groq.com"));
+  assert.equal(groqCalls.length, 2, "provider should be retried exactly once");
+  const retryBody = JSON.parse(groqCalls[1].init.body || "{}");
+  const retryPrompt = retryBody.messages?.at(-1)?.content || "";
+  assert.match(retryPrompt, /1. भारत की राजधानी/);
+  assert.match(retryPrompt, /3. लोकतंत्र और गणतंत्र/);
+  assert.equal(retryBody.max_tokens, 3000);
+  groqMode = "success";
 });
 await test("Groq 429 is surfaced as a clear retryable error", async () => {
   groqMode = "429";
