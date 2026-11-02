@@ -67,7 +67,8 @@ console.log("ANDROID LOGIN PROMPT SELF-TEST: password masking, same-origin promp
 const wakeService = await readFile(new URL("../android-app/app/src/main/java/com/sarathi/ai/WakeWordService.java", import.meta.url), "utf8");
 assert.ok(/awaitingCommand = false;\s+conversationMode = false;\s+commandMode = false;/.test(wakeService), "wake notification timeout must reset conversation state");
 assert.ok(wakeService.includes("|| conversationMode || recognized == null"), "wake recognizer must ignore late callbacks after activation");
-assert.ok(wakeService.includes("ACTION_START_CONVERSATION") && wakeService.includes("ACTION_PREPARE_CONVERSATION") && wakeService.includes("if (conversationMode) startConversationRecognition();"), "foreground service must prepare paused and resume continuous background conversation listening");
+assert.ok(wakeService.includes("ACTION_START_CONVERSATION") && wakeService.includes("ACTION_PREPARE_CONVERSATION") && wakeService.includes("if (conversationMode && !awaitingCommand) startConversationRecognition();"), "model preparation must keep the microphone paused until the explicit background start action");
+assert.ok(wakeService.includes("Preparation must release any existing recognizer") && wakeService.includes("दूसरी ऐप खोलने पर सुनना शुरू होगा"), "preparing the background service must not open a second microphone session while Sarathi is foreground");
 assert.ok(wakeService.includes("A captured conversation request must release the microphone"), "captured requests must stop the service recognizer before the Activity processes them");
 assert.ok(wakeService.includes("notifications.cancel(NOTIFICATION_ID + 1)"), "wake notifications must be cleared after timeout/stop");
 console.log("WAKE SERVICE SELF-TEST: timeout reset, duplicate callback guard and notification cleanup passed");
