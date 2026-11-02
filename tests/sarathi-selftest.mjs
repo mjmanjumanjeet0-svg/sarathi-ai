@@ -102,6 +102,16 @@ await test("general knowledge reaches the AI provider", async () => {
   assert.match(r.data.reply, /परीक्षण उत्तर|1857/);
   assert.ok(calls.some(x => x.url.includes("api.groq.com")));
 });
+await test("stable general-knowledge questions do not trigger unnecessary web search", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    messages: [{ role: "user", content: "गौतम बुद्ध कौन थे?" }]
+  }, token);
+  assert.equal(r.status, 200);
+  assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")));
+  assert.equal(calls.slice(before).some(x => x.url.includes("api.exa.ai/search")), false,
+    "stable biography/general knowledge should not spend search requests");
+});
 await test("explicit Hindi command इंटरनेट खोजो triggers Exa even when webSearch toggle is off", async () => {
   const before = calls.length;
   const r = await request("/api/chat", "POST", {
@@ -187,15 +197,23 @@ await test("Groq HTTP 413 retries once with compact context and preserves the co
   groq413Count = 0;
   const before = calls.length;
   const r = await request("/api/chat", "POST", {
-    messages: [{ role: "user", content: "कृपया इन तीन अलग विषयों पर क्रमवार विस्तार से उत्तर दो: पहला विषय ग्रामीण विकास की चुनौतियाँ; दूसरा विषय औद्योगीकरण के सामाजिक प्रभाव; तीसरा विषय आधुनिक शिक्षा की भूमिका।" }]
+    messages: [
+      { role: "user", content: "तीन सवालों के उत्तर दो: ग्रामीण विकास की चुनौतियाँ क्या हैं, औद्योगीकरण का सामाजिक प्रभाव क्या है, और आधुनिक शिक्षा की भूमिका क्या है?" },
+      { role: "assistant", content: "मैं तीनों सवालों का उत्तर दूँगा।" },
+      { role: "user", content: "सबका उत्तर दो।" }
+    ]
   }, token);
   assert.equal(r.status, 200);
   const groqCalls = calls.slice(before).filter(x => x.url.includes("api.groq.com"));
   assert.equal(groqCalls.length, 2, "provider should be retried exactly once");
   const retryBody = JSON.parse(groqCalls[1].init.body || "{}");
   const retryPrompt = retryBody.messages?.at(-1)?.content || "";
+  assert.match(retryPrompt, /पिछला सवाल\/संदर्भ/);
   assert.match(retryPrompt, /ग्रामीण विकास की चुनौतियाँ/);
   assert.match(retryPrompt, /आधुनिक शिक्षा की भूमिका/);
+  assert.match(retryPrompt, /अभी का पूरा सवाल/);
+  assert.match(retryPrompt, /सबका उत्तर दो/);
+  assert.equal(retryBody.messages.length, 2, "compact retry should combine context into one user message");
   assert.equal(retryBody.max_tokens, 3000);
   groqMode = "success";
 });
