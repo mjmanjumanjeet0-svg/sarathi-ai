@@ -116,6 +116,9 @@ public class WakeWordService extends Service {
             commandDelivered = false;
             if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
             commandTimeout = null;
+            // Preparation is intentionally microphone-silent: MainActivity still owns
+            // foreground recognition. Start background recognition only after onPause
+            // hands off the session, avoiding two simultaneous recognizers.
             if (!running) {
                 if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
                     prefs.edit().putBoolean("enabled", false).apply();
