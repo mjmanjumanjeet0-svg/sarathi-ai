@@ -52,32 +52,25 @@ for (const [input, expected] of cases) {
 const java = await readFile(new URL("../android-app/app/src/main/java/com/sarathi/ai/MainActivity.java", import.meta.url), "utf8");
 const mainActivity = await readFile(new URL("../android-app/app/src/main/java/com/sarathi/ai/MainActivity.java", import.meta.url), "utf8");
 assert.ok(mainActivity.includes("public boolean onJsPrompt("), "Android WebView must handle login prompts");
-assert.ok(mainActivity.includes("nativeListeningPausedForBackground && voiceConversationActive"), "active voice session must resume when Sarathi returns from another app");
-assert.ok(mainActivity.includes("startBackgroundConversationListening()") && mainActivity.includes("ACTION_START_CONVERSATION"), "active voice session must hand off to the foreground microphone service while another app is open");
-assert.ok(mainActivity.includes("voiceRequestInProgress") && mainActivity.includes("setVoiceRequestInProgress"), "background listening must wait while an AI request or spoken reply is in progress");
-assert.ok(mainActivity.includes('if (voiceConversationActive) notifyVoice("onSpeechComplete", "")'), "TTS language/setup/start failures must resume an active voice conversation instead of leaving its microphone paused");
-assert.ok(mainActivity.includes("if (!appInForeground || !pageLoaded) return;"), "background wake commands must remain queued until Sarathi returns");
-assert.ok(mainActivity.includes("if (voiceConversationActive && !speechActivityFallbackLaunched)"), "background pause must release the microphone without interrupting the system speech fallback");
-assert.ok(mainActivity.includes("pauseNativeListeningForReply();"), "background transition must release the current native microphone recognizer");
+assert.ok(mainActivity.includes("nativeListeningPausedForAppPause && voiceConversationActive"), "voice recognition must pause when Sarathi leaves foreground and resume only when Sarathi returns");
+assert.ok(mainActivity.includes("pauseNativeListeningForReply();"), "leaving Sarathi must release the microphone");
+assert.ok(!mainActivity.includes("WakeWordService") && !mainActivity.includes("startBackgroundConversationListening"), "Android app must contain no background microphone service or handoff");
+assert.ok(!mainActivity.includes("ACTION_WAKE_COMMAND") && !mainActivity.includes("pending_command"), "background wake commands must not be queued or delivered");
+assert.ok(mainActivity.includes("voiceRequestInProgress") && mainActivity.includes("setVoiceRequestInProgress"), "voice requests must track reply state while Sarathi is foreground");
+assert.ok(mainActivity.includes('if (voiceConversationActive) notifyVoice("onSpeechComplete", "")'), "TTS language/setup/start failures must resume an active foreground voice conversation");
 assert.ok(mainActivity.includes("recognizerForSession") && mainActivity.includes("isCurrentRecognizer()"), "stale speech callbacks must not restart or destroy the current microphone session");
 assert.ok(mainActivity.includes("TYPE_TEXT_VARIATION_PASSWORD"), "Android login prompt must mask password input");
 assert.ok(mainActivity.includes("APP_HOST.equalsIgnoreCase(pageUri.getHost())"), "Android login prompt must be restricted to the Sarathi host");
 const manifest = await readFile(new URL("../android-app/app/src/main/AndroidManifest.xml", import.meta.url), "utf8");
-assert.ok(mainActivity.includes("REQUEST_POST_NOTIFICATIONS") && mainActivity.includes("startWakeWordAfterPermissions()"), "Android 13+ wake-word flow must request notification permission");
-assert.ok(manifest.includes('android:name="android.permission.POST_NOTIFICATIONS"'), "Manifest must declare notification permission");
-console.log("ANDROID LOGIN PROMPT SELF-TEST: password masking, same-origin prompt guard and Android 13+ notification permission passed");
-const wakeService = await readFile(new URL("../android-app/app/src/main/java/com/sarathi/ai/WakeWordService.java", import.meta.url), "utf8");
-assert.ok(/awaitingCommand = false;\s+conversationMode = false;\s+commandMode = false;/.test(wakeService), "wake notification timeout must reset conversation state");
-assert.ok(wakeService.includes("|| conversationMode || recognized == null"), "wake recognizer must ignore late callbacks after activation");
-assert.ok(wakeService.includes("ACTION_START_CONVERSATION") && wakeService.includes("ACTION_PREPARE_CONVERSATION") && wakeService.includes("if (conversationMode && !awaitingCommand) startConversationRecognition();"), "model preparation must keep the microphone paused until the explicit background start action");
-assert.ok(wakeService.includes("Preparation must release any existing recognizer") && wakeService.includes("दूसरी ऐप खोलने पर सुनना शुरू होगा"), "preparing the background service must not open a second microphone session while Sarathi is foreground");
-assert.ok(wakeService.includes("A captured conversation request must release the microphone"), "captured requests must stop the service recognizer before the Activity processes them");
-assert.ok(wakeService.includes('.putString("pending_command", command).apply()'), "background voice command must be saved until the app can process it");
-assert.ok(wakeService.includes('setContentTitle("सारथी ने आदेश सुन लिया")') && wakeService.includes('setContentText("जवाब पाने के लिए सूचना दबाकर सारथी खोलें।")'), "background command must clearly tell the user to tap the notification to return to Sarathi");
-assert.ok(wakeService.includes('new Intent(this, MainActivity.class)') && wakeService.includes('open.setAction(MainActivity.ACTION_WAKE_COMMAND)'), "notification must open Sarathi through an explicit user tap rather than forcing a background activity launch");
-assert.ok(mainActivity.includes('getString("pending_command", "")') && mainActivity.includes('notifyVoice("onWakeCommandResult", command)'), "Sarathi must deliver the queued spoken command to the chat after returning to foreground");
-assert.ok(wakeService.includes("notifications.cancel(NOTIFICATION_ID + 1)"), "wake notifications must be cleared after timeout/stop");
-console.log("WAKE SERVICE SELF-TEST: timeout reset, duplicate callback guard and notification cleanup passed");
+assert.ok(!manifest.includes("WakeWordService") && !manifest.includes("FOREGROUND_SERVICE") && !manifest.includes("POST_NOTIFICATIONS"), "manifest must not declare a background microphone service or its notification permissions");
+assert.ok(!manifest.includes("SYSTEM_ALERT_WINDOW") && !manifest.includes("READ_EXTERNAL_STORAGE") && !manifest.includes("WRITE_EXTERNAL_STORAGE") && !manifest.includes("MANAGE_EXTERNAL_STORAGE"), "manifest must not request overlays or broad storage access");
+assert.ok(!mainActivity.includes("TYPE_APPLICATION_OVERLAY") && !mainActivity.includes("ACTION_MANAGE_OVERLAY_PERMISSION"), "Android app must not create or request overlay windows");
+assert.ok(mainActivity.includes("settings.setAllowFileAccess(false)") && mainActivity.includes("settings.setAllowContentAccess(false)"), "WebView must not expose unrestricted local file or content access");
+assert.ok(mainActivity.includes("new Intent(Intent.ACTION_OPEN_DOCUMENT)") && mainActivity.includes("onShowFileChooser"), "files may only be selected through the system picker after the user chooses an attachment");
+assert.ok(app.includes('$("attachBtn")?.addEventListener("click", openAttachmentDialog)'), "attachment picker must require an explicit user click");
+await assert.rejects(readFile(new URL("../android-app/app/src/main/java/com/sarathi/ai/WakeWordService.java", import.meta.url), "utf8"), "background wake-word service source must be deleted");
+console.log("SAFETY SELF-TEST: no background microphone, wake-word service, overlays or broad storage permissions; files require explicit picker selection");
+console.log("ANDROID LOGIN PROMPT SELF-TEST: password masking and same-origin prompt guard passed");
 
 const packages = [
   "com.google.android.youtube",
