@@ -461,6 +461,18 @@ public class MainActivity extends Activity {
         }
     }
 
+    // Pause only the current recognition request while Sarathi prepares a reply.
+    // Keep the voice session and its consent alive for the next conversational turn.
+    private void pauseNativeListeningForReply() {
+        nativeStopRequested = true;
+        SpeechRecognizer current = speechRecognizer;
+        speechRecognizer = null;
+        if (current != null) {
+            try { current.cancel(); } catch (Exception ignored) {}
+            try { current.destroy(); } catch (Exception ignored) {}
+        }
+    }
+
     private void stopNativeListening() {
         voiceConversationActive = false;
         voiceSessionOnlineConsent = false;
@@ -617,8 +629,11 @@ public class MainActivity extends Activity {
                         wakeCommandSession = false;
                         notifyVoice("onError", "आवाज़ से शब्द समझ नहीं आए। फिर बोलकर देखें।");
                     }
-                    if (!(voiceConversationActive && useOnlineService
-                            && (matches == null || matches.isEmpty()))) {
+                    if (voiceConversationActive && useOnlineService) {
+                        // Do not restart the wake-word service here: it would compete
+                        // with the continuous conversation recognizer for the microphone.
+                        if (matches != null && !matches.isEmpty()) voiceRecognitionRetryAttempt = 0;
+                    } else {
                         voiceRecognitionRetryAttempt = 0;
                         resumeWakeWordAfterCommand();
                     }
@@ -697,7 +712,7 @@ public class MainActivity extends Activity {
 
         @JavascriptInterface
         public void stopListening() {
-            runOnUiThread(MainActivity.this::stopNativeListening);
+            runOnUiThread(MainActivity.this::pauseNativeListeningForReply);
         }
 
         @JavascriptInterface
@@ -742,18 +757,29 @@ public class MainActivity extends Activity {
                         @Override public void onStart(String utteranceId) {}
                         @Override public void onDone(String utteranceId) {
                             mainHandler.post(() -> {
-                                MainActivity.this.resumeWakeWordAfterCommand();
-                                notifyVoice("onSpeechComplete", "");
+                                if (voiceConversationActive) {
+                                    notifyVoice("onSpeechComplete", "");
+                                } else {
+                                    MainActivity.this.resumeWakeWordAfterCommand();
+                                }
                             });
                         }
                         @Override public void onError(String utteranceId) {
                             mainHandler.post(() -> {
-                                notifyVoice("onError", "जवाब बोलने में समस्या हुई। फ़ोन की Text-to-Speech आवाज़ और मीडिया वॉल्यूम जाँचें।");
-                                resumeWakeWordAfterCommand();
+                                if (voiceConversationActive) {
+                                    notifyVoice("onStatus", "जवाब की आवाज़ में रुकावट आई। अब आप बोल सकते हैं।");
+                                    notifyVoice("onSpeechComplete", "");
+                                } else {
+                                    notifyVoice("onError", "जवाब बोलने में समस्या हुई। फ़ोन की Text-to-Speech आवाज़ और मीडिया वॉल्यूम जाँचें।");
+                                    resumeWakeWordAfterCommand();
+                                }
                             });
                         }
                         @Override public void onStop(String utteranceId, boolean interrupted) {
-                            mainHandler.post(MainActivity.this::resumeWakeWordAfterCommand);
+                            mainHandler.post(() -> {
+                                if (voiceConversationActive) notifyVoice("onSpeechComplete", "");
+                                else MainActivity.this.resumeWakeWordAfterCommand();
+                            });
                         }
                     });
                     int result = textToSpeech.speak(toSpeak, TextToSpeech.QUEUE_FLUSH, null, "sarathi-local-voice");
