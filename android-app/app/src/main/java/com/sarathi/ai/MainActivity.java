@@ -325,6 +325,17 @@ public class MainActivity extends Activity {
         try { startService(service); } catch (Exception ignored) {}
     }
 
+    private void prepareBackgroundConversationService() {
+        Intent service = new Intent(this, WakeWordService.class);
+        service.setAction(WakeWordService.ACTION_PREPARE_CONVERSATION);
+        try {
+            if (Build.VERSION.SDK_INT >= 26) startForegroundService(service);
+            else startService(service);
+        } catch (Exception error) {
+            notifyVoice("onStatus", "बैकग्राउंड आवाज़ सेवा तैयार नहीं हो सकी।");
+        }
+    }
+
     private void startBackgroundConversationListening() {
         if (!voiceConversationActive || voiceRequestInProgress || isFinishing()) return;
         Intent service = new Intent(this, WakeWordService.class);
@@ -360,9 +371,9 @@ public class MainActivity extends Activity {
         nativeListeningPausedForBackground = false;
         voiceRequestInProgress = false;
         voiceConversationActive = true;
-        // Start the foreground microphone service while the Activity is visible.
-        // It can then continue the explicitly requested session when another app opens.
-        startWakeWordService();
+        // Prepare (but pause) the foreground microphone service while this
+        // Activity is visible. It can take over only when another app opens.
+        prepareBackgroundConversationService();
         voiceRecognitionRetryAttempt = 0;
         if (voiceRecognitionRetry != null) mainHandler.removeCallbacks(voiceRecognitionRetry);
         voiceRecognitionRetry = null;
@@ -512,7 +523,9 @@ public class MainActivity extends Activity {
             try { current.destroy(); } catch (Exception ignored) {}
         }
         wakeCommandSession = false;
-        resumeWakeWordAfterCommand();
+        Intent service = new Intent(this, WakeWordService.class);
+        service.setAction(WakeWordService.ACTION_END_CONVERSATION);
+        try { startService(service); } catch (Exception ignored) {}
     }
 
     private void scheduleVoiceRecognitionRetry(boolean online) {
