@@ -49,6 +49,7 @@ public class MainActivity extends Activity {
     // Online speech permission is remembered only for the current user-started voice session.
     private boolean voiceSessionOnlineConsent = false;
     private boolean voiceConversationActive = false;
+    private boolean voiceRequestInProgress = false;
     // Preserve an active hands-free session when another app (for example YouTube) temporarily covers Sarathi.
     private boolean nativeListeningPausedForBackground = false;
     private int voiceRecognitionRetryAttempt = 0;
@@ -73,6 +74,9 @@ public class MainActivity extends Activity {
         @Override public void onReceive(Context context, Intent intent) {
             if (intent == null) return;
             if (ACTION_WAKE_RESULT.equals(intent.getAction())) {
+                // The Activity may receive this broadcast while another app is
+                // foregrounded. Keep the persisted command until the user returns.
+                if (!appInForeground || !pageLoaded) return;
                 String command = intent.getStringExtra(EXTRA_WAKE_TEXT);
                 getSharedPreferences("sarathi_wake_settings", MODE_PRIVATE).edit()
                         .remove("pending_command").apply();
@@ -279,6 +283,7 @@ public class MainActivity extends Activity {
             }
         }
         if (pendingWakeResult) {
+            voiceRequestInProgress = true;
             String command = pendingWakeResultText;
             pendingWakeResult = false;
             pendingWakeResultText = "";
@@ -320,6 +325,18 @@ public class MainActivity extends Activity {
         try { startService(service); } catch (Exception ignored) {}
     }
 
+    private void startBackgroundConversationListening() {
+        if (!voiceConversationActive || voiceRequestInProgress || isFinishing()) return;
+        Intent service = new Intent(this, WakeWordService.class);
+        service.setAction(WakeWordService.ACTION_START_CONVERSATION);
+        try {
+            if (Build.VERSION.SDK_INT >= 26) startForegroundService(service);
+            else startService(service);
+        } catch (Exception error) {
+            notifyVoice("onStatus", "दूसरी ऐप में सुनना शुरू नहीं हो सका। सारथी ऐप खोलकर फिर कोशिश करें।");
+        }
+    }
+
     private void resumeWakeWordAfterCommand() {
         Intent service = new Intent(this, WakeWordService.class);
         service.setAction(WakeWordService.ACTION_RESUME);
@@ -341,7 +358,11 @@ public class MainActivity extends Activity {
 
     private void startListening() {
         nativeListeningPausedForBackground = false;
+        voiceRequestInProgress = false;
         voiceConversationActive = true;
+        // Start the foreground microphone service while the Activity is visible.
+        // It can then continue the explicitly requested session when another app opens.
+        startWakeWordService();
         voiceRecognitionRetryAttempt = 0;
         if (voiceRecognitionRetry != null) mainHandler.removeCallbacks(voiceRecognitionRetry);
         voiceRecognitionRetry = null;
@@ -720,7 +741,15 @@ public class MainActivity extends Activity {
     private class SarathiBridge {
         @JavascriptInterface
         public void startListening() {
-            runOnUiThread(() -> MainActivity.this.startListening());
+            runOnUiThread(() -> {
+                if (!appInForeground) startBackgroundConversationListening();
+                else MainActivity.this.startListening();
+            });
+        }
+
+        @JavascriptInterface
+        public void setVoiceRequestInProgress(boolean inProgress) {
+            runOnUiThread(() -> voiceRequestInProgress = inProgress);
         }
 
         @JavascriptInterface
@@ -745,6 +774,7 @@ public class MainActivity extends Activity {
             if (safeText.length() > 2500) safeText = safeText.substring(0, 2500);
             final String toSpeak = safeText;
             runOnUiThread(() -> {
+                voiceRequestInProgress = false;
                 if (textToSpeech == null || !ttsReady) {
                     pendingSpeechText = toSpeak;
                     notifyVoice("onStatus", "सारथी की आवाज़ सेवा तैयार हो रही है; जवाब तैयार होते ही बोलूँगी।");
@@ -951,7 +981,10 @@ public class MainActivity extends Activity {
         // Restart only a session that was active before Sarathi went to the background.
         if (nativeListeningPausedForBackground && voiceConversationActive) {
             nativeListeningPausedForBackground = false;
-            startListening();
+            pauseWakeWordForCommand();
+            // A command received in the background is delivered above. Do not
+            // start another microphone request while its AI reply is pending.
+            if (!voiceRequestInProgress) startListening();
         }
     }
 
@@ -964,6 +997,11 @@ public class MainActivity extends Activity {
             if (voiceRecognitionRetry != null) mainHandler.removeCallbacks(voiceRecognitionRetry);
             voiceRecognitionRetry = null;
             pauseNativeListeningForReply();
+            // Do not listen over an AI request or spoken reply. Once the reply
+            // finishes, the bridge starts this foreground service in background.
+            if (!voiceRequestInProgress && (textToSpeech == null || !textToSpeech.isSpeaking())) {
+                startBackgroundConversationListening();
+            }
         }
         super.onPause();
     }
