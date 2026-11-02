@@ -167,7 +167,7 @@ function shouldSearchAutomatically(text) {
   const official = /(परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|परिणाम|आवेदन|फॉर्म|फीस|पात्रता|सरकारी योजना|आधिकारिक|सिलेबस|पाठ्यक्रम|मान्यता|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(q);
   const verification = /(किसने कहा|क्या सही है|सच है या नहीं|जांच करो|जाँच करो|सत्यापित करो|verify|fact.?check)/i.test(q);
   // Education and career pathways can change by academic session and regulator.
-  const educationUpdate = /(प्रवेश|एडमिशन|admission|पात्रता|योग्यता|eligibility|फीस|शुल्क|आवेदन|फॉर्म|सिलेबस|पाठ्यक्रम|कट.?ऑफ|काउंसलिंग|मान्यता|recognition|recognized|नया कोर्स|नए कोर्स|आगामी|आने वाला|अगले सत्र|शैक्षणिक सत्र|academic session|course list|courses in india)/i.test(q);
+  const educationUpdate = /(प्रवेश|एडमिशन|admission|पात्रता|योग्यता|eligibility|फीस|शुल्क|आवेदन|फॉर्म|सिलेबस|पाठ्यक्रम|कट.?ऑफ|काउंसलिंग|मान्यता|recognition|recognized|नया कोर्स|नए कोर्स|आगामी|आने वाला|अगले सत्र|शैक्षणिक सत्र|academic session|course list|courses in india|छात्रवृत्ति|स्कॉलरशिप|scholarship|fellowship|stipend|छात्रवृत्ति योजना)/i.test(q);
   const courseCatalogQuestion = /(भारत|इंडिया|india|बिहार|राज्य|राज्यों|देश|देशभर|कौन.?कौन|कितने|सूची|list|all|available)/i.test(q)
     && /(कोर्स|courses?|डिग्री|degrees?|डिप्लोमा|diplomas?|आईटीआई|iti|पॉलिटेक्निक|polytechnic|vocational|व्यावसायिक|कौशल पाठ्यक्रम|skill courses?)/i.test(q);
   const regulatedCareerPath = /(डॉक्टर|चिकित्सक|इंजीनियर|वकील|अधिवक्ता|नर्स|शिक्षक|फार्मासिस्ट|आर्किटेक्ट|पायलट|वेटरिनरी|पशु.?चिकित्सक|दंत.?चिकित्सक|फिजियोथेरेपिस्ट|सीए|चार्टर्ड अकाउंटेंट|doctor|physician|engineer|lawyer|advocate|nurse|teacher|pharmacist|architect|pilot|veterinarian|dentist|physiotherapist|chartered accountant)/i.test(q)
@@ -219,7 +219,7 @@ async function searchInternet(query, env) {
   try {
     const isNewsQuery = /(खबर|समाचार|news|breaking|latest|ताज़ा|ताजा)/i.test(searchQuery);
     const isPreciousMetalQuery = /(gold|सोना|सोने|silver|चांदी|चाँदी|bullion|22K|24K)/i.test(searchQuery);
-    const isEducationQuery = /(कोर्स|पाठ्यक्रम|डिग्री|डिप्लोमा|प्रवेश|admission|पात्रता|योग्यता|eligibility|सिलेबस|मान्यता|शैक्षणिक सत्र|academic session|डॉक्टर|इंजीनियर|नर्स|शिक्षक|फार्मासिस्ट|doctor|engineer|nurse|teacher|pharmacist|course|career pathway)/i.test(searchQuery);
+    const isEducationQuery = /(कोर्स|पाठ्यक्रम|डिग्री|डिप्लोमा|प्रवेश|admission|पात्रता|योग्यता|eligibility|सिलेबस|मान्यता|शैक्षणिक सत्र|academic session|डॉक्टर|इंजीनियर|नर्स|शिक्षक|फार्मासिस्ट|doctor|engineer|nurse|teacher|pharmacist|course|career pathway|छात्रवृत्ति|स्कॉलरशिप|scholarship|fellowship|stipend)/i.test(searchQuery);
     const requestBody = {
       query: searchQuery,
       type: "auto",
@@ -681,7 +681,7 @@ export default {
       const isSilverRateQuestion = /(चांदी|चाँदी|silver)/i.test(userText);
       const isDiamondPriceQuestion = /(हीरा|हीरे|हीरों|diamond)/i.test(userText);
       const indiaToday = new Intl.DateTimeFormat("en-CA", { timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-      const isOfficialEducationQuestion = /(सिलेबस|पाठ्यक्रम|परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|परिणाम|आवेदन|फॉर्म|फीस|पात्रता|नियम|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(userText);
+      const isOfficialEducationQuestion = /(सिलेबस|पाठ्यक्रम|परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|परिणाम|आवेदन|फॉर्म|फीस|पात्रता|नियम|छात्रवृत्ति|स्कॉलरशिप|scholarship|fellowship|stipend|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(userText);
       const searchQuery = isCurrentNewsQuestion
         ? "India latest news when:2d " + indiaToday
         : isGoldRateQuestion || isSilverRateQuestion
