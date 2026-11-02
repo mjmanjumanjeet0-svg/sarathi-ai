@@ -271,7 +271,7 @@ async function searchInternet(query, env) {
     const items = Array.isArray(payload?.results) ? payload.results : [];
     const results = items
       .filter(item => item && typeof item.title === "string" && typeof item.url === "string" && validHttpUrl(item.url))
-      .slice(0, isNewsQuery ? 8 : 5)
+      .slice(0, (isNewsQuery || isHistoricalResearchQuery(searchQuery)) ? 8 : 5)
       .map(item => {
         let publisher = "वेबसाइट";
         try { publisher = new URL(item.url).hostname.replace(/^www\./i, ""); } catch {}
@@ -362,10 +362,13 @@ function isHistoricalResearchQuery(query) {
 function historicalSourceRank(item) {
   try {
     const host = new URL(item.url).hostname.toLowerCase().replace(/^www\./, "");
-    if (/\.(gov|gov\.in|nic\.in|edu|ac\.in)$/.test(host) ||
-        /(^|\.)(loc\.gov|archives\.gov|nationalarchives\.gov\.uk|encspb\.ru)$/.test(host)) return 4;
-    if (/(^|\.)(ebsco\.com|worldhistory\.org|britannica\.com|encyclopedia\.com|oxfordreference\.com|cambridge\.org|jstor\.org|iupress\.indiana\.edu|press\.princeton\.edu|history\.com)$/.test(host)) return 3;
-    if (/(^|\.)(reuters\.com|apnews\.com|bbc\.com|theguardian\.com|nytimes\.com|indianexpress\.com|thehindu\.com|smithsonianmag\.com|nationalgeographic\.com)$/.test(host)) return 2;
+    // Primary repositories, national archives, libraries, and university domains.
+    if (/\.(gov|gov\.in|nic\.in|edu|ac\.in|ac\.uk)$/.test(host) ||
+        /(^|\.)(loc\.gov|archives\.gov|nationalarchives\.gov\.uk|encspb\.ru|preslib\.ru|prlib\.ru)$/.test(host)) return 4;
+    // Established academic publishers, reference works, and scholarly databases.
+    if (/(^|\.)(oup\.com|oxfordreference\.com|cambridge\.org|jstor\.org|iupress\.indiana\.edu|press\.princeton\.edu|ebsco\.com|worldhistory\.org|britannica\.com|encyclopedia\.com|history\.com)$/.test(host)) return 3;
+    // Reputable reporting and museum/science institutions for contextual coverage.
+    if (/(^|\.)(reuters\.com|apnews\.com|bbc\.com|theguardian\.com|nytimes\.com|indianexpress\.com|thehindu\.com|smithsonianmag\.com|nationalgeographic\.com|historytoday\.com)$/.test(host)) return 2;
     return 0;
   } catch {
     return 0;
