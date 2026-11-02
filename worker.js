@@ -782,6 +782,8 @@ export default {
     }
 
     let groqResponse;
+    const groqController = new AbortController();
+    const groqTimeout = setTimeout(() => groqController.abort(), 30000);
 
     try {
       groqResponse = await fetch(GROQ_API_URL, {
@@ -799,9 +801,20 @@ export default {
           temperature: 0.3,
           max_tokens: 6000,
         }),
+        signal: groqController.signal,
       });
-    } catch {
+    } catch (error) {
+      if (error?.name === "AbortError") {
+        return jsonResponse({
+          success: false,
+          error: "AI सेवा से जवाब आने में समय अधिक लगा। थोड़ी देर बाद फिर कोशिश करें।",
+          retryable: true,
+          providerStatus: 504,
+        }, 504);
+      }
       return jsonResponse({ success: false, error: "AI सेवा से संपर्क नहीं हो सका।" }, 502);
+    } finally {
+      clearTimeout(groqTimeout);
     }
 
     if (!groqResponse.ok) {
