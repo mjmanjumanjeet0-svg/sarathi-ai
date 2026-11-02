@@ -159,13 +159,21 @@ await test("regulated career pathways trigger current education search and stric
   assert.match(system, /सभी कोर्स में 60% या Maths अनिवार्य मत कहो/);
 });
 
-await test("stable acronym definition does not automatically trigger an unnecessary web search", async () => {
-  const before = calls.length;
-  await request("/api/chat", "POST", {
-    messages: [{ role: "user", content: "MCh का मतलब क्या है?" }]
-  }, token);
-  assert.equal(calls.slice(before).some(x => x.url.includes("api.exa.ai/search")), false,
-    "stable terminology should not spend a web search request");
+await test("medical super-specialty degree abbreviations use verified local definitions", async () => {
+  for (const [question, expected] of [
+    ["MCh का मतलब क्या है?", "Magister Chirurgiae"],
+    ["DM का मतलब क्या है?", "Doctorate of Medicine"]
+  ]) {
+    const before = calls.length;
+    const r = await request("/api/chat", "POST", {
+      messages: [{ role: "user", content: question }]
+    }, token);
+    assert.equal(r.status, 200);
+    assert.match(r.data.reply, new RegExp(expected));
+    assert.equal(calls.slice(before).some(x => x.url.includes("api.exa.ai/search")), false);
+    assert.equal(calls.slice(before).some(x => x.url.includes("api.groq.com")), false,
+      "verified degree names should not depend on an uncertain generated answer");
+  }
 });
 
 await test("explicit Hindi command इंटरनेट खोजो triggers Exa even when webSearch toggle is off", async () => {
