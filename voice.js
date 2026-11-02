@@ -8,13 +8,14 @@
   let restarting = false;
   let paused = false;
   let nativeMode = false;
+  let conversationMode = false;
 
   function show(activeNow, hint) {
     ["voicePanel", "voiceWave", "voiceActiveNote"].forEach(id => $(id)?.classList.toggle("hidden", !activeNow));
     $("micBtn")?.classList.toggle("active", activeNow);
     $("micBtn")?.setAttribute("aria-pressed", String(activeNow));
-    if ($("voiceTitle")) $("voiceTitle").textContent = activeNow ? "सारथी सुन रहा है..." : "सारथी बंद है";
-    if ($("voiceHint")) $("voiceHint").textContent = hint || "अब आप मुझसे कुछ भी पूछ सकते हैं या बात कर सकते हैं।";
+    if ($("voiceTitle")) $("voiceTitle").textContent = activeNow ? "सारथी से बातचीत चालू है" : "सारथी बंद है";
+    if ($("voiceHint")) $("voiceHint").textContent = hint || "बोलना शुरू करें। जवाब आवाज़ में मिलेगा।";
   }
 
   function startRecognition() {
@@ -27,6 +28,8 @@
   function stop() {
     active = false;
     speaking = false;
+    paused = false;
+    conversationMode = false;
     if (recognition) {
       recognition.onend = null;
       try { recognition.stop(); } catch (_) {}
@@ -39,25 +42,26 @@
     if (window.SarathiNative?.stopWakeWord) window.SarathiNative.stopWakeWord();
     show(false);
     const status = $("status");
-    if (status) status.textContent = "सारथी की आवाज़ बंद कर दी गई है।";
+    if (status) status.textContent = "सारथी की बातचीत बंद कर दी गई है।";
   }
 
   function speak(text) {
     const answer = String(text || "").replaceAll("*", " ").replaceAll("#", " ").slice(0, 4500);
     if (!active || !answer) return;
-    if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
-      if (window.SarathiNative?.speak) {
-        speaking = true;
-        window.SarathiNative.speak(answer);
-        setTimeout(() => { speaking = false; startRecognition(); }, Math.min(30000, Math.max(2500, answer.length * 65)));
-      } else {
-        const status = $("status");
-        if (status) status.textContent = "इस ब्राउज़र में आवाज़ में जवाब उपलब्ध नहीं है।";
-      }
-      return;
-    }
     speaking = true;
     paused = true;
+    if (nativeMode && window.SarathiNative?.speak) {
+      try { window.SarathiNative.stopListening?.(); } catch (_) {}
+      window.SarathiNative.speak(answer);
+      return;
+    }
+    if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) {
+      speaking = false;
+      paused = false;
+      const status = $("status");
+      if (status) status.textContent = "इस ब्राउज़र में आवाज़ में जवाब उपलब्ध नहीं है।";
+      return;
+    }
     try { recognition?.stop(); } catch (_) {}
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(answer);
@@ -72,22 +76,24 @@
   }
 
   function start() {
-    // Prefer Android's native recognizer inside the app. WebView browser
-    // recognition support varies by device and can silently route to a provider.
+    if (active) return;
+    active = true;
+    conversationMode = true;
+    paused = false;
     if (window.SarathiNative?.startListening) {
-      active = true;
       nativeMode = true;
-      show(true, "बोलिए। Android की आवाज़ पहचान सुविधा आपकी बात लिखेगी।");
+      show(true, "बोलिए। सारथी सुनेगा, जवाब देगा और फिर आपकी अगली बात सुनेगा।");
       window.SarathiNative.startListening();
       return;
     }
     if (!Recognition) {
+      active = false;
+      conversationMode = false;
+      show(false);
       const status = $("status");
-      if (status) status.textContent = "माइक इस ब्राउज़र में उपलब्ध नहीं है। Chrome में खोलकर माइक्रोफोन अनुमति दें।";
+      if (status) status.textContent = "माइक इस ब्राउज़र में उपलब्ध नहीं है। Chrome में माइक्रोफोन अनुमति दें।";
       return;
     }
-    if (active) return;
-    active = true;
     const engine = new Recognition();
     recognition = engine;
     engine.lang = "hi-IN";
@@ -95,9 +101,9 @@
     engine.interimResults = true;
     engine.maxAlternatives = 1;
     engine.onstart = () => {
-      show(true, "अब बोलिए। सारथी आपकी बात सुनेगा और जवाब देगा।");
+      show(true, "बोलिए। जवाब मिलने के बाद सारथी फिर सुनेगा।");
       const status = $("status");
-      if (status) status.textContent = "माइक्रोफोन चालू है — सारथी सुन रहा है।";
+      if (status) status.textContent = "सारथी सुन रहा है…";
     };
     engine.onresult = event => {
       let finalText = "";
@@ -111,17 +117,13 @@
       if (finalText.trim()) {
         try { engine.stop(); } catch (_) {}
         if (typeof window.sendMessage === "function") window.sendMessage(finalText.trim());
-        else if ($("messageInput")) {
-          $("messageInput").value = finalText.trim();
-          $("chatForm")?.requestSubmit();
-        }
       }
     };
     engine.onerror = event => {
       if (!active) return;
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         const status = $("status");
-        if (status) status.textContent = "माइक्रोफोन अनुमति नहीं मिली। साइट सेटिंग्स में माइक्रोफोन Allow करें।";
+        if (status) status.textContent = "माइक्रोफोन अनुमति नहीं मिली। साइट सेटिंग्स में अनुमति दें।";
         stop();
       } else if (event.error !== "no-speech" && event.error !== "aborted") {
         const status = $("status");
@@ -134,25 +136,42 @@
     try { engine.start(); }
     catch (_) {
       active = false;
+      conversationMode = false;
       recognition = null;
       show(false);
       const status = $("status");
-      if (status) status.textContent = "माइक्रोफोन शुरू नहीं हुआ। अनुमति जाँचें और फिर प्रयास करें।";
+      if (status) status.textContent = "माइक्रोफोन शुरू नहीं हुआ। अनुमति जाँचें।";
     }
   }
 
   window.SarathiVoice = window.SarathiVoice || {};
   window.SarathiVoice.speak = speak;
   window.SarathiVoice.isActive = () => active;
-  window.SarathiVoice.pause = () => { paused = true; try { recognition?.stop(); } catch (_) {} };
+  window.SarathiVoice.isConversationMode = () => active && conversationMode;
+  window.SarathiVoice.pause = () => {
+    paused = true;
+    try { recognition?.stop(); } catch (_) {}
+    if (nativeMode) window.SarathiNative?.stopListening?.();
+  };
+  window.SarathiVoice.resumeAfterSpeech = () => {
+    if (!active || !conversationMode) return;
+    speaking = false;
+    paused = false;
+    if (nativeMode) {
+      window.SarathiNative?.startListening?.();
+    } else {
+      startRecognition();
+    }
+  };
   window.SarathiVoice.nativeComplete = () => {
-    if (!nativeMode) return;
+    if (conversationMode) return;
     nativeMode = false;
     active = false;
     speaking = false;
     paused = false;
     show(false);
   };
+  window.SarathiVoice.onSpeechComplete = () => window.SarathiVoice.resumeAfterSpeech();
   window.SarathiVoice.stop = stop;
   window.SarathiVoice.start = start;
 
@@ -164,9 +183,7 @@
       if (button.dataset.nav === "settings") $("settingsBtn")?.click();
       if (button.dataset.nav === "chat") $("messageInput")?.focus();
       if (button.dataset.nav === "search") $("webToggle")?.click();
-      if (button.dataset.nav === "home") {
-        $("chatArea")?.scrollTo({ top: 0, behavior: "smooth" });
-      }
+      if (button.dataset.nav === "home") $("chatArea")?.scrollTo({ top: 0, behavior: "smooth" });
     }));
   });
 })();
