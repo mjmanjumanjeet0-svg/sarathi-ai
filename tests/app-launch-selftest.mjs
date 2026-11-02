@@ -55,6 +55,7 @@ assert.ok(mainActivity.includes("public boolean onJsPrompt("), "Android WebView 
 assert.ok(mainActivity.includes("nativeListeningPausedForBackground && voiceConversationActive"), "active voice session must resume when Sarathi returns from another app");
 assert.ok(mainActivity.includes("startBackgroundConversationListening()") && mainActivity.includes("ACTION_START_CONVERSATION"), "active voice session must hand off to the foreground microphone service while another app is open");
 assert.ok(mainActivity.includes("voiceRequestInProgress") && mainActivity.includes("setVoiceRequestInProgress"), "background listening must wait while an AI request or spoken reply is in progress");
+assert.ok(mainActivity.includes('if (voiceConversationActive) notifyVoice("onSpeechComplete", "")'), "TTS language/setup/start failures must resume an active voice conversation instead of leaving its microphone paused");
 assert.ok(mainActivity.includes("if (!appInForeground || !pageLoaded) return;"), "background wake commands must remain queued until Sarathi returns");
 assert.ok(mainActivity.includes("if (voiceConversationActive && !speechActivityFallbackLaunched)"), "background pause must release the microphone without interrupting the system speech fallback");
 assert.ok(mainActivity.includes("pauseNativeListeningForReply();"), "background transition must release the current native microphone recognizer");
