@@ -39,6 +39,7 @@ public class WakeWordService extends Service {
     public static final String ACTION_PAUSE = "com.sarathi.ai.WAKE_PAUSE";
     public static final String ACTION_RESUME = "com.sarathi.ai.WAKE_RESUME";
     public static final String ACTION_CAPTURE_COMMAND = "com.sarathi.ai.WAKE_CAPTURE_COMMAND";
+    public static final String ACTION_START_CONVERSATION = "com.sarathi.ai.WAKE_START_CONVERSATION";
     public static final String ACTION_END_CONVERSATION = "com.sarathi.ai.WAKE_END_CONVERSATION";
     private static final String CHANNEL = "sarathi_wake_channel";
     private static final int NOTIFICATION_ID = 771;
@@ -98,6 +99,38 @@ public class WakeWordService extends Service {
             commandTimeout = null;
             stopSelf();
             return START_NOT_STICKY;
+        }
+        if (intent != null && ACTION_START_CONVERSATION.equals(intent.getAction())) {
+            prefs.edit().putBoolean("enabled", true).apply();
+            conversationMode = true;
+            awaitingCommand = false;
+            commandMode = false;
+            commandDelivered = false;
+            if (commandTimeout != null) handler.removeCallbacks(commandTimeout);
+            commandTimeout = null;
+            if (!running) {
+                if (checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+                    prefs.edit().putBoolean("enabled", false).apply();
+                    stopSelf();
+                    return START_NOT_STICKY;
+                }
+                startForeground(NOTIFICATION_ID, buildNotification("दूसरी ऐप में भी सारथी सुनने के लिए तैयार हो रहा है…"));
+                running = true;
+                if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
+                worker.execute(this::prepareModelAndListen);
+            } else if (model != null) {
+                if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
+                worker.execute(() -> {
+                    try {
+                        if (speechService != null) { speechService.cancel(); speechService.shutdown(); speechService = null; }
+                        if (recognizer != null) { recognizer.close(); recognizer = null; }
+                        if (running && conversationMode) startConversationRecognition();
+                    } catch (Exception error) {
+                        scheduleListeningRetry("बैकग्राउंड में सुनना शुरू नहीं हो सका");
+                    }
+                });
+            }
+            return START_STICKY;
         }
         if (intent != null && ACTION_CAPTURE_COMMAND.equals(intent.getAction())) {
             if (running) beginCommandCapture();
@@ -180,7 +213,8 @@ public class WakeWordService extends Service {
             if (!running) return;
             if (!marker.isFile()) throw new Exception("हिंदी मॉडल अधूरा है");
             model = new Model(modelDir.getAbsolutePath());
-            startWakeRecognition();
+            if (conversationMode) startConversationRecognition();
+            else startWakeRecognition();
         } catch (Exception error) {
             scheduleListeningRetry("मॉडल या माइक्रोफ़ोन तैयार नहीं हुआ; सारथी फिर कोशिश करेगा");
         }
@@ -266,24 +300,26 @@ public class WakeWordService extends Service {
         } else {
             updateStatus("आवाज़ समझ नहीं आई। कृपया फिर से ‘सारथी’ बोलें।");
         }
-        // Keep the active conversation alive after every utterance.
-        // It ends only when the user says a supported stop phrase.
+        // A captured conversation request must release the microphone and wait
+        // for the Activity to finish the AI reply. Restarting here races the
+        // Activity's pause request and causes the privacy indicator to flicker.
+        if (conversationMode) {
+            awaitingCommand = true;
+            commandMode = false;
+            updateStatus("आदेश सुन लिया गया। सारथी में जवाब तैयार होगा; सूचना दबाकर लौटें।");
+            if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
+            worker.execute(() -> {
+                if (speechService != null) { speechService.cancel(); speechService.shutdown(); speechService = null; }
+                if (recognizer != null) { recognizer.close(); recognizer = null; }
+            });
+            return;
+        }
         if (worker == null || worker.isShutdown()) worker = Executors.newSingleThreadExecutor();
         worker.execute(() -> {
             try {
-                if (speechService != null) {
-                    speechService.cancel();
-                    speechService.shutdown();
-                    speechService = null;
-                }
-                if (recognizer != null) {
-                    recognizer.close();
-                    recognizer = null;
-                }
-                if (running) {
-                    if (conversationMode) startConversationRecognition();
-                    else startWakeRecognition();
-                }
+                if (speechService != null) { speechService.cancel(); speechService.shutdown(); speechService = null; }
+                if (recognizer != null) { recognizer.close(); recognizer = null; }
+                if (running) startWakeRecognition();
             } catch (Exception error) {
                 scheduleListeningRetry("आवाज़ पहचान दोबारा शुरू नहीं हो सकी");
             }
