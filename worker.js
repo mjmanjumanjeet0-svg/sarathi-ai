@@ -249,6 +249,8 @@ function validHttpUrl(value) {
     const url = new URL(value);
     const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
     if (url.protocol !== "https:" || !hostname || url.username || url.password) return false;
+    // Reject obvious placeholder paths so fabricated article IDs never reach the UI.
+    if (/(?:^|[\\/?&#=_-])(?:x{3,}|placeholder|replace-me|todo)(?:[\\/?&#=_-]|$)/i.test(url.pathname + url.search + url.hash)) return false;
     // Reject local names and all IP literals. Search enrichment should fetch
     // public DNS hostnames only, never loopback, private, link-local or metadata IPs.
     if (hostname === "localhost" || hostname.endsWith(".localhost") ||
