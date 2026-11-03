@@ -444,7 +444,14 @@ await test("latest news query uses Exa news category and publication freshness f
   const exaBody = JSON.parse(exaCall.init.body || "{}");
   assert.equal(exaBody.type, "auto");
   assert.equal(exaBody.category, "news");
-  assert.equal(exaBody.numResults, 8);
+  assert.equal(exaBody.numResults, 20, "news search should request enough candidates for strict publisher/date filters");
+  assert.deepEqual(exaBody.includeDomains, [
+    "indianexpress.com", "thehindu.com", "ndtv.com", "hindustantimes.com",
+    "bbc.com", "reuters.com", "apnews.com", "news18.com", "aajtak.in",
+    "abplive.com", "amarujala.com", "jagran.com", "zeenews.india.com",
+    "indiatoday.in", "theprint.in", "livemint.com", "indiatimes.com",
+    "pti.in", "aninews.in"
+  ], "news search should be scoped to supported trusted publishers");
   assert.ok(exaBody.startPublishedDate, "news search must constrain the 48-hour publication window");
   assert.ok(exaBody.endPublishedDate, "news search must exclude future publication dates at the provider");
   assert.deepEqual(exaBody.contents, { highlights: true });
