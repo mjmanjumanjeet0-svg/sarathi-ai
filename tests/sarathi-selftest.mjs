@@ -294,7 +294,15 @@ await test("Bloody Sunday uses a deterministic date-safe answer and deduplicates
   assert.equal(r.data.sources.some(x => x.url.includes("wikipedia.org")), false);
   const publisherHosts = r.data.sources.map(x => new URL(x.url).hostname);
   assert.equal(new Set(publisherHosts).size, publisherHosts.length,
-    "only one result per publisher should be displayed");
+    "only one result per hostname should be displayed");
+  const publishers = r.data.sources.map(x => x.publisher);
+  assert.equal(new Set(publishers).size, publishers.length,
+    "one source per normalized publisher should be displayed");
+  assert.ok(r.data.sources.length >= 3, "at least three independent publishers are required");
+  assert.match(r.data.reply, /मृतकों की संख्या पर स्रोतों में बड़ा अंतर|मृतकों की सटीक संख्या/);
+  assert.match(r.data.reply, /अलग-अलग प्रकाशकों के स्रोत/);
+  assert.doesNotMatch(r.data.reply, /https?:\/\//,
+    "source links must be rendered once in the dedicated clickable source list");
   assert.match(r.data.reply, /22 जनवरी 1905 ग्रेगोरियन/);
   assert.match(r.data.reply, /9 जनवरी 1905/);
   assert.match(r.data.reply, /शांतिपूर्ण जुलूस/);
