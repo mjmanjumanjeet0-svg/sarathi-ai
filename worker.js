@@ -661,7 +661,7 @@ function buildSearchContext(results, query = "") {
 
   return "\n\nइंटरनेट खोज के परिणाम:\n" + results.map(
     (item, i) =>
-      `${i + 1}. ${item.title}\nप्रकाशक: ${item.publisher || "उपलब्ध नहीं"}\nप्रकाशित: ${item.publishedAt || "तारीख उपलब्ध नहीं"}${isHistoricalQuery ? `\nवास्तविक स्रोत URL: ${item.url}` : ""}\nजानकारी: ${item.snippet || "जानकारी उपलब्ध नहीं है।"}`
+      `${i + 1}. ${item.title}\nप्रकाशक: ${item.publisher || "उपलब्ध नहीं"}\nप्रकाशित: ${isNewsQuery ? formatNewsPublishedAt(item.publishedAt) : (item.publishedAt || "तारीख उपलब्ध नहीं")}${isHistoricalQuery ? `\nवास्तविक स्रोत URL: ${item.url}` : ""}\nजानकारी: ${item.snippet || "जानकारी उपलब्ध नहीं है।"}`
   ).join("\n\n") +
   "\n\nपरिणाम पर्याप्त न हों तो स्पष्ट बताओ। तथ्य या लिंक मत गढ़ो।" + newsInstruction + preciousMetalInstruction + historyInstruction;
 }
