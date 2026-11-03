@@ -142,7 +142,7 @@ function getIndiaDateTime() {
 
 function solveDiscountQuestion(text) {
   const input = String(text || "").replace(/,/g, "");
-  const match = input.match(/([0-9]+(?:\.[0-9]+)?)\s*(?:रुपये|रूपये|रु\.?|₹|rs\.?|rupees?)\s*पर\s*([0-9]+(?:\.[0-9]+)?)\s*%\s*(?:की\s*)?छूट/i);
+  const match = input.match(/(?:₹|रु\.?|rs\.?)?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:रुपये|रूपये|रु\.?|₹|rs\.?|rupees?)?\s*पर\s*([0-9]+(?:\.[0-9]+)?)\s*%\s*(?:की\s*)?छूट/i);
   if (!match) return null;
   const price = Number(match[1]);
   const percent = Number(match[2]);
