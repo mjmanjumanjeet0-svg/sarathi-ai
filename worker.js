@@ -629,7 +629,7 @@ function buildNewsFallback(results, dateTime) {
   return "आज की खबरों की खोज में " + items.length + " स्रोत मिले, लेकिन उनका भरोसेमंद हिंदी सार तैयार नहीं हो पाया। इसलिए अंग्रेज़ी लेखों को ज्यों-का-त्यों दिखाने या अधूरी जानकारी को खबर बताने के बजाय मैं इस बार अपुष्ट सार नहीं दे रहा हूँ। कृपया थोड़ी देर बाद फिर पूछें।";
 }
 
-function buildProviderBusySearchFallback(results, query) {
+function buildProviderBusySearchFallback(results, query, reason = "AI सेवा इस समय व्यस्त है, इसलिए खोज परिणामों का विस्तृत सार तैयार नहीं हो सका।") {
   const items = (Array.isArray(results) ? results : []).slice(0, 5);
   if (!items.length) return "";
   const lines = items.map((item, index) => {
@@ -640,7 +640,7 @@ function buildProviderBusySearchFallback(results, query) {
       "\nप्रकाशित: " + published +
       (snippet ? "\nउपलब्ध जानकारी: " + snippet : "\nविस्तृत जानकारी स्रोत पर देखें।");
   });
-  return "AI सेवा इस समय व्यस्त है, इसलिए खोज परिणामों का विस्तृत सार तैयार नहीं हो सका। नीचे इंटरनेट खोज में मिले परिणाम दिए जा रहे हैं। इन्हें पढ़ते समय स्रोत और तारीख जाँचें; अधूरी जानकारी को अंतिम पुष्टि न मानें।\n\n" +
+  return reason + " नीचे इंटरनेट खोज में मिले वास्तविक परिणाम दिए जा रहे हैं। इन्हें पढ़ते समय स्रोत और तारीख जाँचें; अधूरी जानकारी को अंतिम पुष्टि न मानें।\n\n" +
     lines.join("\n\n");
 }
 
@@ -925,23 +925,35 @@ export default {
         }).slice(0, 6);
         searchResults = await enrichGoldRateResults(searchResults);
       }
-      searchWarning = searchResults.length
-        ? search.warning
-        : (search.warning || "खोज में आपके सवाल से मेल खाते भरोसेमंद परिणाम नहीं मिले। गलत या असंबंधित स्रोत नहीं दिखाए गए।");
+      if (searchResults.length) {
+        searchWarning = search.warning || "इंटरनेट खोज से परिणाम मिले।";
+      } else if (search.httpStatus) {
+        searchWarning = search.warning || "इंटरनेट खोज सेवा ने परिणाम नहीं दिए।";
+      } else if (isCurrentNewsQuestion && Array.isArray(search.results) && search.results.length) {
+        searchWarning = "खोज में कुछ समाचार मिले, लेकिन उनकी प्रकाशित तारीख पिछले 48 घंटों के भीतर और वर्तमान समय से पहले होने की पुष्टि नहीं हुई। इसलिए उन्हें ताज़ा खबर के रूप में शामिल नहीं किया गया।";
+      } else if (Array.isArray(search.results) && search.results.length) {
+        searchWarning = "खोज में परिणाम मिले, लेकिन वे सवाल से मेल खाते भरोसेमंद स्रोतों की जाँच में पास नहीं हुए।";
+      } else {
+        searchWarning = search.warning || "खोज में आपके सवाल से मेल खाते भरोसेमंद परिणाम नहीं मिले।";
+      }
 
       // Never let the model pretend it has current web information when every
-      // search provider returned no usable results.
+      // search provider returned no usable results. Explain the actual failure.
       if (searchResults.length === 0) {
+        const retryableSearchFailure = search.httpStatus === 429 || search.httpStatus >= 500;
         return jsonResponse({
           success: true,
-          reply: "मैंने वेब पर खोजने की कोशिश की, लेकिन अभी भरोसेमंद परिणाम नहीं मिले। इसलिए कोई तथ्य या लिंक गढ़कर नहीं बताऊँगा। थोड़ी देर बाद फिर कोशिश करें या सवाल को दूसरे शब्दों में पूछें।",
+          reply: "मैंने वेब पर खोजने की कोशिश की, लेकिन अभी उपयोग करने योग्य परिणाम नहीं मिले। " + searchWarning + " इसलिए कोई तथ्य या लिंक गढ़कर नहीं बताऊँगा। " +
+            (retryableSearchFailure ? "थोड़ी देर बाद फिर कोशिश करें।" : "आप चाहें तो सवाल को दूसरे शब्दों में पूछ सकते हैं।"),
           ...dateTime,
           webSearch: true,
           searchAttempted: true,
-          searchWarning: searchWarning || "इंटरनेट खोज से कोई परिणाम नहीं मिला।",
+          searchUnavailable: true,
+          searchWarning,
+          retryable: retryableSearchFailure,
+          providerStatus: search.httpStatus || null,
           sources: [],
         });
-      }
     }
 
     // This well-documented event has recurring date and casualty-count errors.
@@ -1152,6 +1164,30 @@ export default {
             ? "तुम सारथी AI हो। समाचार के तथ्य केवल खोज परिणामों से लो। पूर्वानुमान को घटित घटना मत बताओ। बाजार के सुबह के आँकड़ों को बंद हुआ या दिन का अंतिम स्तर मत लिखो; समापन तभी बताओ जब स्रोत उसी दिन का closing स्तर स्पष्ट करे। हिंदी में सहज उत्तर दो और तथ्य मत गढ़ो।"
             : "तुम सारथी AI हो। उपयोगकर्ता की भाषा में स्पष्ट, सही और उपयोगी उत्तर दो। सवाल का पूरा उत्तर दो; तथ्य, तारीख, संख्या, स्रोत या लिंक मत गढ़ो। इंटरनेट खोज के परिणाम दिए हों तो हर बदलती/ताज़ा जानकारी केवल उन्हीं परिणामों से लो। समाचार में केवल शीर्षक और स्रोत-अंश से पुष्ट तथ्य लिखो; पूर्वानुमान को घटित घटना मत बताओ। बाजार के सुबह के आँकड़ों को बंद हुआ या दिन का अंतिम स्तर मत लिखो; समापन स्तर तभी बताओ जब स्रोत उसी दिन का closing स्तर स्पष्ट करे। जानकारी अपर्याप्त हो तो साफ कहो। हिंदी में सहज देवनागरी हिंदी लिखो।";
         groqResponse = await sendGroqRequest(compactMessages, 1800, compactSystemPrompt);
+      }
+      // If the compact retry is still rejected, preserve retrieved sources.
+      if (groqResponse.status === 413 && searchResults.length) {
+        const fallbackReply = buildProviderBusySearchFallback(
+          searchResults,
+          userText,
+          "AI सेवा ने संक्षिप्त अनुरोध भी स्वीकार नहीं किया (HTTP 413), इसलिए उसका सार नहीं बन सका।"
+        );
+        return jsonResponse({
+          success: true,
+          reply: fallbackReply,
+          ...dateTime,
+          webSearch: true,
+          searchAttempted: true,
+          searchWarning: "AI सेवा ने दो बार HTTP 413 लौटाया; केवल वास्तविक खोज परिणाम दिखाए गए हैं।",
+          providerBusy: true,
+          providerStatus: 413,
+          sources: searchResults.map(item => ({
+            title: item.title,
+            url: item.url,
+            publisher: item.publisher || "",
+            publishedAt: item.publishedAt || "",
+          })),
+        });
       }
     } catch (error) {
       if (error?.name === "AbortError") {
