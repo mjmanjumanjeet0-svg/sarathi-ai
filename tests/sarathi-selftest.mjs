@@ -324,7 +324,7 @@ await test("latest news query uses Exa news category and publication freshness f
     messages: [{ role: "user", content: "आज की ताजा खबरें बताओ" }]
   }, token);
   assert.equal(newsResponse.status, 200);
-  const newsHosts = newsResponse.data.sources.map(x => new URL(x.url).hostname.toLowerCase().replace(/^www\\./, ""));
+  const newsHosts = newsResponse.data.sources.map(x => new URL(x.url).hostname.toLowerCase().replace(/^www\./, ""));
   assert.equal(newsHosts.length, 3, "one news article per independent publisher should remain");
   assert.equal(new Set(newsHosts).size, newsHosts.length, "duplicate publisher hostnames must be removed");
   assert.ok(newsHosts.includes("indianexpress.com"));
