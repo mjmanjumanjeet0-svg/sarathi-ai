@@ -18,6 +18,29 @@ const metalResults = [
 ];
 assert.deepEqual(filterRelevantSearchResults("gold 22K and silver price", metalResults).map(item => item.title), ["24K gold rate today", "Silver price today"], "combined gold and silver searches must retain both metal result types and exclude unrelated results");
 
+const newsResults = [
+  { title: "Fresh report", url: "https://www.reuters.com/world/india/story", snippet: "Latest development" },
+  { title: "Horoscope today", url: "https://www.ndtv.com/astrology/today", snippet: " राशिफल " },
+  { title: "Fake Reuters mirror", url: "https://reuters.com.example.net/story", snippet: "Not Reuters" },
+  { title: "Untrusted blog", url: "https://random-blog.example/story", snippet: "News" }
+];
+assert.deepEqual(filterRelevantSearchResults("आज की ताज़ा खबरें", newsResults).map(item => item.title), ["Fresh report"], "current-news filter must keep trusted publisher domains and exclude horoscope, lookalike domains, and unrelated blogs");
+
+const freshStart = worker.indexOf("function filterFreshNewsResults(results, now = Date.now()) {");
+const freshEnd = worker.indexOf("\\n}\\n", freshStart);
+assert.ok(freshStart >= 0 && freshEnd > freshStart, "fresh-news date filter must exist");
+const filterFreshNewsResults = new Function(worker.slice(freshStart, freshEnd + 3) + "\\nreturn filterFreshNewsResults;")();
+const fixedNow = Date.parse("2026-11-03T12:00:00.000Z");
+const datedNews = [
+  { title: "Within 48 hours", publishedAt: "2026-11-02T12:00:00.000Z" },
+  { title: "Too old", publishedAt: "2026-10-31T11:59:59.000Z" },
+  { title: "Future", publishedAt: "2026-11-03T12:00:01.000Z" },
+  { title: "Missing date" },
+  { title: "Invalid date", publishedAt: "not-a-date" }
+];
+assert.deepEqual(filterFreshNewsResults(datedNews, fixedNow).map(item => item.title), ["Within 48 hours"], "current-news freshness filter must reject stale, future, missing, and invalid publication dates");
+
+
 
 const ids = [...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match => match[1]);
 const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
