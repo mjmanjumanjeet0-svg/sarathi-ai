@@ -428,6 +428,25 @@ await test("Groq HTTP 413 retries once with compact context and preserves the co
   assert.ok(retrySystem.length < 1000, "413 retry must also compact the oversized system prompt");
   groqMode = "success";
 });
+await test("Groq HTTP 413 news retry keeps market closing-price safeguards", async () => {
+  groqMode = "413-once";
+  groq413Count = 0;
+  exaMode = "success";
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    webSearch: true,
+    messages: [{ role: "user", content: "आज की ताज़ा खबरें और शेयर बाजार का हाल इंटरनेट पर खोजकर बताओ।" }]
+  }, token);
+  assert.equal(r.status, 200);
+  const groqCalls = calls.slice(before).filter(x => x.url.includes("api.groq.com"));
+  assert.equal(groqCalls.length, 2, "news query should retry exactly once after HTTP 413");
+  const retryBody = JSON.parse(groqCalls[1].init.body || "{}");
+  const retrySystem = retryBody.messages?.[0]?.content || "";
+  assert.match(retrySystem, /समाचार के तथ्य केवल खोज परिणामों से लो/);
+  assert.match(retrySystem, /बंद हुआ या दिन का अंतिम स्तर मत लिखो/);
+  assert.match(retrySystem, /समापन तभी बताओ/);
+  groqMode = "success";
+});
 await test("Groq 429 preserves available web results with an honest fallback", async () => {
   groqMode = "429";
   exaMode = "success";
