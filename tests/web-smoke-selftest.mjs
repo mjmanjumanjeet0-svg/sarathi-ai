@@ -81,4 +81,20 @@ assert.match(voice, /window\.SarathiVoice\.start = start/, "Voice start API must
 for (const selector of [".message-content", ".message-body", ".composer", ".send-btn", ".mic-btn", ".bottom-nav"]) {
   assert.ok(css.includes(selector), "Required layout styling missing: " + selector);
 }
+
+const studyActions = [...html.matchAll(/data-study="([^"]+)"/g)].map(match => match[1]);
+assert.equal(studyActions.length, 14, "SARATHI LEARNING must expose all 14 study actions");
+assert.equal(new Set(studyActions).size, 14, "SARATHI LEARNING action IDs must be unique");
+const studySectionStart = app.indexOf("function runStudyAction(action) {");
+const studySectionEnd = app.indexOf("const STUDY_PROGRESS_KEY", studySectionStart);
+assert.ok(studySectionStart >= 0 && studySectionEnd > studySectionStart, "study action handler and progress logic must exist");
+const studySection = app.slice(studySectionStart, studySectionEnd);
+for (const action of studyActions) {
+  assert.ok(studySection.includes(action + ":"), "study action must have a task prompt: " + action);
+}
+assert.ok(studySection.includes('addEventListener("input", saveProfile)'), "study topic must autosave while typing");
+assert.ok(studySection.includes('addEventListener("change", saveProfile)'), "study profile fields must save after editing");
+assert.ok(studySection.includes('progress.lastDate !== today'), "study progress must prevent duplicate daily session counts");
+assert.ok(studySection.includes('localStorage.removeItem(STUDY_PROGRESS_KEY)'), "study progress reset must clear the saved progress");
+
 console.log("WEB SMOKE SELF-TEST: " + requiredIds.length + " required IDs, duplicate-ID check, local scripts, voice wiring and core styles passed");
