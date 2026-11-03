@@ -612,6 +612,22 @@ await test("empty question is rejected", async () => {
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: " " }] }, token);
   assert.equal(r.status, 400);
 });
+await test("oversized user question is rejected before provider calls", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    messages: [{ role: "user", content: "क".repeat(12001) }]
+  }, token);
+  assert.equal(r.status, 400);
+  assert.equal(calls.length, before, "oversized input must not reach Exa or Groq");
+});
+await test("non-text user message is rejected as an empty question", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    messages: [{ role: "user", content: { text: "भारत का इतिहास" } }]
+  }, token);
+  assert.equal(r.status, 400);
+  assert.equal(calls.length, before, "non-text content must not reach providers");
+});
 await test("media-disabled status is honest and explicit", async () => {
   const r = await request("/api/media/image", "POST", { prompt: "test" }, token);
   assert.equal(r.status, 503);
