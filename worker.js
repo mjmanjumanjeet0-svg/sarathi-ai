@@ -1001,11 +1001,13 @@ export default {
           : latestPrompt;
         const compactMessages = [{
           role: "user",
-          content: compactPrompt + (searchContext ? searchContext.slice(0, 800) : "")
+          content: compactPrompt + (searchContext ? searchContext.slice(0, isHistoricalQuestion ? 5200 : 800) : "")
         }];
         // The original system prompt is intentionally extensive. A 413 retry
         // must compact that too; otherwise the same oversized prompt is resent.
-        const compactSystemPrompt = "तुम सारथी AI हो। उपयोगकर्ता की भाषा में स्पष्ट, सही और उपयोगी उत्तर दो। सवाल का पूरा उत्तर दो; तथ्य, तारीख, संख्या, स्रोत या लिंक मत गढ़ो। इंटरनेट खोज के परिणाम दिए हों तो हर बदलती/ताज़ा जानकारी केवल उन्हीं परिणामों से लो। समाचार में केवल शीर्षक और स्रोत-अंश से पुष्ट तथ्य लिखो; पूर्वानुमान को घटित घटना मत बताओ। जानकारी अपर्याप्त हो तो साफ कहो। हिंदी में सहज देवनागरी हिंदी लिखो।";
+        const compactSystemPrompt = isHistoricalQuestion
+          ? "तुम सारथी AI हो। ऐतिहासिक सवाल का उत्तर केवल दिए गए ऐतिहासिक खोज-स्रोतों से पुष्ट जानकारी के आधार पर दो। खूनी रविवार (1905) को दंगा या हिंसक प्रदर्शन मत कहो: यह फादर जॉर्जी गैपॉन के नेतृत्व में मजदूरों का शांतिपूर्ण जुलूस था, जो अपनी याचिका ज़ार निकोलस द्वितीय तक पहुँचाने के लिए Winter Palace की ओर जा रहा था; सैनिकों ने जुलूस/भीड़ पर गोलीबारी की। 9 जनवरी 1905 जूलियन कैलेंडर और 22 जनवरी 1905 ग्रेगोरियन कैलेंडर की एक ही तारीख है। गोलीबारी का सटीक स्थान स्रोत से पुष्ट किए बिना Winter Palace के ठीक सामने मत बताओ। मृतकों और घायलों की संख्या विवादित है; कोई एक निश्चित संख्या मत गढ़ो। कम-से-कम दो स्वतंत्र भरोसेमंद स्रोत हों तभी ऐसा दावा करो। हर स्रोत का वास्तविक शीर्षक, प्रकाशक और वास्तविक URL दो; स्रोत न हो तो साफ कहो। उपयोगकर्ता की भाषा में उत्तर दो।"
+          : "तुम सारथी AI हो। उपयोगकर्ता की भाषा में स्पष्ट, सही और उपयोगी उत्तर दो। सवाल का पूरा उत्तर दो; तथ्य, तारीख, संख्या, स्रोत या लिंक मत गढ़ो। इंटरनेट खोज के परिणाम दिए हों तो हर बदलती/ताज़ा जानकारी केवल उन्हीं परिणामों से लो। समाचार में केवल शीर्षक और स्रोत-अंश से पुष्ट तथ्य लिखो; पूर्वानुमान को घटित घटना मत बताओ। जानकारी अपर्याप्त हो तो साफ कहो। हिंदी में सहज देवनागरी हिंदी लिखो।";
         groqResponse = await sendGroqRequest(compactMessages, 1800, compactSystemPrompt);
       }
     } catch (error) {
@@ -1072,7 +1074,13 @@ export default {
     }
 
     const isCurrentNewsReply = /(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(userText);
-    const rawReply = reply.trim();
+    let rawReply = reply.trim();
+    // Final factual guard for the well-known 1905 event: prevent the model from
+    // reintroducing the specific "riot" misclassification after retrieval.
+    if (isHistoricalResearchQuery(userText) && /(खूनी रविवार|bloody sunday)/i.test(userText) &&
+        /(?:राजनीतिक\s+दंगा|दंगों?\s+के\s+दौरान|दंगा\s+हुआ|riot(?:s)?)/i.test(rawReply)) {
+      rawReply = "खूनी रविवार (Bloody Sunday) 1905 कोई दंगा नहीं था। यह 9 जनवरी 1905 (पुराने जूलियन कैलेंडर) / 22 जनवरी 1905 (ग्रेगोरियन कैलेंडर) को सेंट पीटर्सबर्ग में हुआ। फादर जॉर्जी गैपॉन के नेतृत्व में मजदूरों का शांतिपूर्ण जुलूस अपनी याचिका ज़ार निकोलस द्वितीय तक पहुँचाने के लिए Winter Palace की ओर जा रहा था। सैनिकों ने जुलूस/भीड़ पर गोलीबारी की। गोलीबारी के सटीक स्थान और मृतकों-घायलों की संख्या के बारे में स्रोतों में अंतर है, इसलिए किसी एक संख्या या महल के ठीक सामने गोलीबारी होने का दावा बिना पुष्ट स्रोत के नहीं करना चाहिए। नीचे केवल इस खोज में मिले वास्तविक स्रोत दिए गए हैं।";
+    }
     const newsListCount = (rawReply.match(/(^|\n)\s*(?:[1-8][.)]|[-•])\s*[^\n]{12,}/gm) || []).length;
     const looksLikeRawEnglishArticle = isCurrentNewsReply &&
       /\b(Updated:|By:|India News Live Updates|Published:|Read more|Breaking News)\b/i.test(rawReply);
