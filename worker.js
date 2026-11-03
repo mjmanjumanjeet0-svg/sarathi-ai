@@ -406,12 +406,21 @@ function filterHistoricalSources(query, results) {
     try {
       const url = new URL(item.url);
       const host = url.hostname.toLowerCase().replace(/^www\./, "");
+      const publisherKey = host.endsWith(".iupress.indiana.edu") || host === "iupress.indiana.edu"
+        ? "iupress.indiana.edu"
+        : host.endsWith(".ebsco.com") || host === "ebsco.com"
+          ? "ebsco.com"
+          : host.endsWith(".worldhistory.org") || host === "worldhistory.org"
+            ? "worldhistory.org"
+            : host.endsWith(".britannica.com") || host === "britannica.com"
+              ? "britannica.com"
+              : host;
       url.hash = "";
       url.search = "";
       const canonicalUrl = url.toString().replace(/\/$/, "");
-      if (!host || seenUrls.has(canonicalUrl) || seenPublishers.has(host)) continue;
+      if (!host || seenUrls.has(canonicalUrl) || seenPublishers.has(publisherKey)) continue;
       seenUrls.add(canonicalUrl);
-      seenPublishers.add(host);
+      seenPublishers.add(publisherKey);
       accepted.push(item);
       if (accepted.length >= 6) break;
     } catch {
@@ -442,13 +451,15 @@ function historicalPublisherName(item) {
 
 function buildBloodySundayVerifiedReply(results) {
   const items = (Array.isArray(results) ? results : []).slice(0, 5);
-  const evidence = items.map(item => `${item.title || ""} ${item.snippet || ""}`).join(" ");
   const casualtyNotes = [];
-  if (/at least 130|130 demonstrators|130 killed/i.test(evidence)) {
-    casualtyNotes.push("EBSCO के विवरण में कम-से-कम 130 प्रदर्शनकारियों के मारे जाने का उल्लेख है");
-  }
-  if (/1,000|1000|over 1,000/i.test(evidence)) {
-    casualtyNotes.push("Indiana University Press और/या World History Encyclopedia के उपलब्ध अंश में लगभग 1,000 या उससे अधिक मौतों का अनुमान मिलता है");
+  for (const item of items) {
+    const evidence = `${item.title || ""} ${item.snippet || ""}`;
+    if (/at least 130|130 demonstrators|130 killed/i.test(evidence)) {
+      casualtyNotes.push(`${historicalPublisherName(item)} के उपलब्ध विवरण में कम-से-कम 130 प्रदर्शनकारियों के मारे जाने का उल्लेख है`);
+    }
+    if (/1,000|1000|over 1,000/i.test(evidence)) {
+      casualtyNotes.push(`${historicalPublisherName(item)} के उपलब्ध अंश में लगभग 1,000 या उससे अधिक मौतों का अनुमान मिलता है`);
+    }
   }
   const casualtyText = casualtyNotes.length
     ? "मृतकों की संख्या पर स्रोतों में बड़ा अंतर है: " + casualtyNotes.join("; ") + "। इसलिए 90–100 जैसी एक निश्चित संख्या बताना सही नहीं होगा।"
