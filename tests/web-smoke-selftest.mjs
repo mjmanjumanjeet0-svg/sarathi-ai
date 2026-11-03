@@ -7,6 +7,17 @@ const app = await readFile(new URL("app.js", root), "utf8");
 const voice = await readFile(new URL("voice.js", root), "utf8");
 const css = await readFile(new URL("style.css", root), "utf8");
 const worker = await readFile(new URL("worker.js", root), "utf8");
+const relevantFilterStart = worker.indexOf("function filterRelevantSearchResults(query, results) {");
+const relevantFilterEnd = worker.indexOf("\\n}\\n", relevantFilterStart);
+assert.ok(relevantFilterStart >= 0 && relevantFilterEnd > relevantFilterStart, "search relevance filter must exist");
+const filterRelevantSearchResults = new Function(worker.slice(relevantFilterStart, relevantFilterEnd + 3) + "\\nreturn filterRelevantSearchResults;")();
+const metalResults = [
+  { title: "24K gold rate today", url: "https://example.com/gold", snippet: "Gold price" },
+  { title: "Silver price today", url: "https://example.com/silver", snippet: "Silver rate" },
+  { title: "Weather forecast", url: "https://example.com/weather", snippet: "Weather" }
+];
+assert.deepEqual(filterRelevantSearchResults("gold 22K and silver price", metalResults).map(item => item.title), ["24K gold rate today", "Silver price today"], "combined gold and silver searches must retain both metal result types and exclude unrelated results");
+
 
 const ids = [...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match => match[1]);
 const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
