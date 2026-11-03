@@ -52,6 +52,8 @@ assert.ok(java.includes("nativeListeningPausedForAppPause && voiceConversationAc
 assert.ok(java.includes("pauseNativeListeningForReply();"), "leaving Sarathi must release the microphone");
 assert.ok(!java.includes("WakeWordService") && !java.includes("startBackgroundConversationListening"), "Android app must contain no background microphone service or handoff");
 assert.ok(!java.includes("ACTION_WAKE_COMMAND") && !java.includes("pending_command"), "background wake commands must not be queued or delivered");
+assert.ok(java.includes('notifyVoice("onError", "ऑनलाइन आवाज़ पहचान रद्द कर दी गई। आपकी आवाज़ नहीं सुनी गई।")'), "declining online speech consent must close the voice session");
+assert.ok(java.includes('notifyVoice("onError", "आवाज़ पहचान की अनुमति विंडो बंद कर दी गई। बातचीत बंद है।")'), "dismissing online speech consent must close the voice session");
 assert.ok(java.includes("voiceRequestInProgress") && java.includes("setVoiceRequestInProgress"), "voice requests must track reply state while Sarathi is foreground");
 assert.ok(java.includes('if (voiceConversationActive) notifyVoice("onSpeechComplete", "")'), "TTS setup/start failures must resume an active foreground voice conversation");
 assert.ok(java.includes("recognizerForSession") && java.includes("isCurrentRecognizer()"), "stale speech callbacks must not restart or destroy the current microphone session");
