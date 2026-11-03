@@ -116,5 +116,13 @@ assert.ok(studySection.includes('addEventListener("input", saveProfile)'), "stud
 assert.ok(studySection.includes('addEventListener("change", saveProfile)'), "study profile fields must save after editing");
 assert.ok(studySection.includes('progress.lastDate !== today'), "study progress must prevent duplicate daily session counts");
 assert.ok(studySection.includes('localStorage.removeItem(STUDY_PROGRESS_KEY)'), "study progress reset must clear the saved progress");
+assert.ok(studySection.includes("पहले एक प्रश्न पूछो"), "flashcards must be delivered one question at a time");
+assert.ok(studySection.includes("मेरा उत्तर आने पर सही उत्तर"), "flashcards must wait for the learner's response before revealing the answer");
+assert.ok(studySection.includes("उपलब्ध आधिकारिक पेपर के स्रोत बताओ"), "old-paper help must point to available official sources");
+assert.ok(studySection.includes("पेपर न मिले तो साफ कहो"), "old-paper help must not pretend an unavailable paper exists");
+assert.ok(app.includes('submit.disabled = quiz.questions.some((_, i) => !Number.isInteger(chosen[i]))'), "MCQ test must require every answer before submission");
+assert.ok(app.includes('quiz.score = quiz.questions.reduce'), "MCQ test must calculate a score from selected answers");
+assert.ok(app.includes('quiz.submitted = true'), "MCQ test must lock answers after submission");
+
 
 console.log("WEB SMOKE SELF-TEST: " + requiredIds.length + " required IDs, duplicate-ID check, local scripts, voice wiring and core styles passed");
