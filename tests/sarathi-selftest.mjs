@@ -56,6 +56,11 @@ globalThis.fetch = async (input, init = {}) => {
         { title: "Undated current news item", url: "https://www.bbc.com/news/undated", highlights: ["A current story without a publication timestamp."] }
       ] });
     }
+    if (exaMode === "news-single-source" && exaRequest.category === "news") {
+      return Response.json({ results: [
+        { title: "Mathura food safety inspection", url: "https://www.amarujala.com/uttar-pradesh/mathura/sample-live-page", publishedDate: new Date(Date.now() - 30 * 60 * 1000).toISOString(), highlights: ["A local report about an inspection in Mathura."] }
+      ] });
+    }
     if (exaRequest.query.includes("Bloody Sunday 1905")) {
       return Response.json({
         results: [
@@ -424,6 +429,25 @@ await test("Bloody Sunday uses a deterministic date-safe answer and deduplicates
   assert.equal(calls.slice(before).some(x => x.url.includes("api.groq.com")), false,
     "Bloody Sunday answer should use the deterministic source-grounded response");
 });
+await test("current news with one publisher is not summarized as independently verified", async () => {
+  const before = calls.length;
+  exaMode = "news-single-source";
+  try {
+    const r = await request("/api/chat", "POST", {
+      messages: [{ role: "user", content: "आज की ताज़ा खबरें भरोसेमंद स्रोतों के साथ बताओ।" }]
+    }, token);
+    assert.equal(r.status, 200);
+    assert.equal(r.data.searchAttempted, true);
+    assert.equal(r.data.sources.length, 1);
+    assert.match(r.data.reply, /केवल एक स्वतंत्र समाचार स्रोत मिला/);
+    assert.match(r.data.searchWarning, /केवल एक स्वतंत्र प्रकाशक/);
+    assert.equal(calls.slice(before).some(x => x.url.includes("api.groq.com")), false,
+      "one publisher must not be passed to the language model for a news digest");
+  } finally {
+    exaMode = "success";
+  }
+});
+
 await test("latest news query uses Exa news category and publication freshness filter", async () => {
   const before = calls.length;
   const newsResponse = await request("/api/chat", "POST", {
