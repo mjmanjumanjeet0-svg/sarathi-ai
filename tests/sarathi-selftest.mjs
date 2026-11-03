@@ -354,6 +354,9 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.match(userContext, /अलग-अलग परिणामों के अधूरे अंश जोड़कर एक नई घटना या कहानी मत बनाओ/);
   assert.match(userContext, /केवल उसी परिणाम के प्रकाशक और क्रमांक को स्रोत बताओ/);
   assert.match(userContext, /प्रकाशित: .*भारतीय समय/);
+  assert.match(userContext, /दो परिणाम एक ही तथ्य पर अलग-अलग संख्या, तारीख, स्थान या स्थिति बताते हैं/);
+  assert.match(userContext, /मौत, घायल, नुकसान, गिरफ्तारी और प्रभावित लोगों की संख्या तभी लिखो/);
+  assert.match(userContext, /पुराने आँकड़े को वर्तमान स्थिति की तरह मत दिखाओ/);
 
 });
 
