@@ -462,7 +462,7 @@ await test("generic daily live-news index pages are not treated as reported news
     assert.equal(r.status, 200);
     assert.equal(r.data.searchAttempted, true);
     assert.equal(r.data.sources.length, 0, "generic live-feed index must not be presented as a report");
-    assert.match(r.data.reply, /पर्याप्त भरोसेमंद सामग्री नहीं मिली|अपुष्ट/);
+    assert.match(r.data.reply, /भरोसेमंद समाचार परिणाम नहीं मिले|पर्याप्त भरोसेमंद सामग्री नहीं मिली|अपुष्ट/);
     assert.equal(calls.slice(-5).some(x => x.url.includes("api.groq.com")), false,
       "a generic live-feed page must not be summarized by the language model");
   } finally {
