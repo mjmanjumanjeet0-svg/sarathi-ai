@@ -1169,10 +1169,10 @@ async function sendMessage(text) {
     } else if (data.sources?.length) {
       cleanAnswer = cleanAnswer
         // Validated clickable sources are rendered separately below the answer.
-        .replace(/\\n{0,2}\\s*(?:🌐\\s*)?(?:स्रोत(?: सूची)?|references?|sources?|वेबसाइट(?:ें)?|लिंक(?:\\s*सूची)?)\\s*[:：]?\\s*[\\s\\S]*$/i, "")
-        .replace(/\\[([^\\]]+)\\]\\(https?:\\/\\/[^)]+\\)/g, "$1")
-        .replace(/https?:\\/\\/\\S+|www\\.\\S+/gi, "")
-        .replace(/\\n{3,}/g, "\\n\\n")
+        .replace(/\n{0,2}\s*(?:🌐\s*)?(?:स्रोत(?: सूची)?|references?|sources?|वेबसाइट(?:ें)?|लिंक(?:\s*सूची)?)\s*[:：]?\s*[\s\S]*$/i, "")
+        .replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, "$1")
+        .replace(/https?:\/\/\S+|www\.\S+/gi, "")
+        .replace(/\n{3,}/g, "\n\n")
         .trim();
     }
 
