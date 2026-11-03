@@ -1806,6 +1806,10 @@ function bindStudyProgress() {
 
 function bindEducationHub() {
   loadStudyProfile();
+  $("studyCloseBtn")?.addEventListener("click", () => {
+    $("educationHub")?.classList.add("hidden");
+    $("messageInput")?.focus();
+  });
   $("examCenterMenuBtn")?.addEventListener("click", () => {
     const hub = $("educationHub");
     if (!hub) return;
