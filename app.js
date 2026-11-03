@@ -946,6 +946,7 @@ async function sendMessage(text) {
   const shouldSpeakReply = state.voiceReplyPending || Boolean(window.SarathiVoice?.isActive?.());
   if (shouldSpeakReply) window.SarathiVoice?.pause?.();
   state.voiceReplyPending = false;
+  // Every early media/file return must either speak its result or resume listening.
   const finishVoiceTurn = message => {
     if (!shouldSpeakReply) return;
     if (message) window.SarathiVoice?.speak?.(message);
