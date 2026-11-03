@@ -76,7 +76,7 @@ globalThis.fetch = async (input, init = {}) => {
           { title: "Cyclone Murasu update: IMD warning", url: "https://www.indianexpress.com/murasu-live", publishedDate: new Date(Date.now() - 45 * 60 * 1000).toISOString(), highlights: ["The same Indian Express newsroom repeats the cyclone warning in a live update."] },
           { title: "Supreme Court permits certified green crackers in Delhi-NCR", url: "https://thehindu.com/green-crackers", publishedDate: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(), highlights: ["The Supreme Court allowed certified green crackers in Delhi-NCR during specified hours on 7 and 8 November."] },
           { title: "Undated report", url: "https://www.bbc.com/news/undated-report", highlights: ["This report has no publication date and must not be presented as current news."] },
-          { title: "Delhi air quality update", url: "https://www.ndtv.com/india-news/delhi-air-quality", publishedDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), highlights: ["Delhi air quality remains a developing story."] },
+          { title: "Delhi air quality update", url: "https://www.ndtv.com/india-news/delhi-air-quality", publishedDate: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), highlights: ["Delhi air quality remains a developing story."] },
           { title: "Old report outside freshness window", url: "https://www.bbc.com/news/old-report", publishedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), highlights: ["This report is five days old and must not be presented as a current news result."] },
           { title: "Report older than 48 hours", url: "https://www.reuters.com/world/older-than-48-hours", publishedDate: new Date(Date.now() - 60 * 60 * 60 * 1000).toISOString(), highlights: ["This report is 60 hours old and must be filtered from current news."] },
           { title: "Future-dated report", url: "https://apnews.com/article/future-report", publishedDate: new Date(Date.now() + 60 * 1000).toISOString(), highlights: ["A future publication date must not be shown as current news."] }
@@ -575,7 +575,7 @@ await test("undated search results are not mislabeled as fresh news", async () =
   assert.equal(r.status, 200);
   assert.equal(r.data.searchUnavailable, true);
   assert.equal(r.data.sources.length, 0);
-  assert.match(r.data.reply, /प्रकाशित तारीख पिछले 48 घंटों के भीतर/);
+  assert.match(r.data.reply, /आज ही प्रकाशित और तारीख-जाँचे गए भरोसेमंद समाचार परिणाम नहीं मिले/);
   exaMode = "success";
 });
 await test("Groq HTTP 413 retries once with compact context and preserves the complete latest question", async () => {
