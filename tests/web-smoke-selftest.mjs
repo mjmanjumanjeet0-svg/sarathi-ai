@@ -178,6 +178,10 @@ assert.ok(app.includes("function limitExtractedFileText(value)"), "file extracti
 assert.ok(app.includes("केवल शुरुआती 8,500 अक्षर पढ़े गए"), "users must be told when a single file is truncated");
 assert.ok(app.includes("let limited = limitExtractedFileText(result)"), "PDF extraction must use the visible text truncation warning");
 assert.ok(app.includes("इस PDF के कुल "), "PDFs over the page limit must disclose that later pages were not read");
+assert.ok(app.includes("const pagesNeedingOcr = []"), "mixed PDFs must identify pages that need OCR even when other pages contain text");
+assert.ok(app.includes("pagesNeedingOcr.slice(0, ocrLimit)"), "OCR work on scanned PDF pages must remain bounded");
+assert.ok(app.includes("स्कैन/चित्र वाले पृष्ठ OCR की सीमा"), "users must be told when scanned PDF pages were not OCR-processed");
+
 
 assert.ok(app.includes("कुल 9,500 अक्षरों की सीमा"), "users must be told when combined attachment text is truncated");
 assert.ok(app.includes("आगे की फाइलें इस संदेश में शामिल नहीं हुईं"), "users must be told when later attachments are skipped due to text limits");
