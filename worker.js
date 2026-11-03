@@ -1,4 +1,4 @@
-// Deploy refresh: use the corrected main-branch source.
+// Deploy refresh: publish the latest factual-answer safeguards from main.
 const INDIA_TIME_ZONE = "Asia/Kolkata";
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "openai/gpt-oss-20b";
