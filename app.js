@@ -686,6 +686,7 @@ function safeSourceUrl(value) {
   try {
     const url = new URL(String(value || ""));
     if (url.protocol !== "https:" || !url.hostname || url.username || url.password) return "";
+    if (/(?:^|[\\/_-])(?:x{3,}|placeholder|replace[-_]?me|todo)(?:$|[\\/_.?-])/i.test(url.pathname + url.search)) return "";
     url.hash = "";
     return url.href;
   } catch {
@@ -1167,7 +1168,11 @@ async function sendMessage(text) {
         .trim();
     } else if (data.sources?.length) {
       cleanAnswer = cleanAnswer
-        .replace(/\n{1,2}\s*(?:स्रोत(?: सूची)?|sources?)\s*[:：][\s\S]*$/i, "")
+        // Validated clickable sources are rendered separately below the answer.
+        .replace(/\\n{0,2}\\s*(?:🌐\\s*)?(?:स्रोत(?: सूची)?|references?|sources?|वेबसाइट(?:ें)?|लिंक(?:\\s*सूची)?)\\s*[:：]?\\s*[\\s\\S]*$/i, "")
+        .replace(/\\[([^\\]]+)\\]\\(https?:\\/\\/[^)]+\\)/g, "$1")
+        .replace(/https?:\\/\\/\\S+|www\\.\\S+/gi, "")
+        .replace(/\\n{3,}/g, "\\n\\n")
         .trim();
     }
 
