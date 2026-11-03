@@ -1629,25 +1629,40 @@ function renderAttachmentPreview() {
 
 function addFiles(fileList) {
   if (!fileList) return;
-  const allowed = Array.from(fileList).filter(file =>
-    file.size <= 20 * 1024 * 1024 &&
-    (["image/png", "image/jpeg", "image/webp", "video/mp4", "video/webm", "video/quicktime"].includes(file.type) ||
-      /\.(png|jpe?g|webp)$/i.test(file.name) ||
-      file.type === "application/pdf" ||
-      file.name.toLowerCase().endsWith(".pdf") ||
-      file.type === "text/plain" ||
-      file.type === "text/csv" ||
-      /\.(txt|csv|md|json)$/i.test(file.name) ||
-      file.name.toLowerCase().endsWith(".docx") ||
-      /\.(mp4|webm|mov)$/i.test(file.name))
+  const selected = Array.from(fileList);
+  const supported = file => (
+    ["image/png", "image/jpeg", "image/webp", "video/mp4", "video/webm", "video/quicktime"].includes(file.type) ||
+    /\.(png|jpe?g|webp)$/i.test(file.name) ||
+    file.type === "application/pdf" ||
+    file.name.toLowerCase().endsWith(".pdf") ||
+    file.type === "text/plain" ||
+    file.type === "text/csv" ||
+    /\.(txt|csv|md|json)$/i.test(file.name) ||
+    file.name.toLowerCase().endsWith(".docx") ||
+    /\.(mp4|webm|mov)$/i.test(file.name)
   );
-  const files = allowed.slice(0, Math.max(0, 5 - state.attachments.length));
+  const tooLarge = selected.filter(file => file.size > 20 * 1024 * 1024);
+  const unsupported = selected.filter(file => file.size <= 20 * 1024 * 1024 && !supported(file));
+  const eligible = selected.filter(file => file.size <= 20 * 1024 * 1024 && supported(file));
+  const remaining = Math.max(0, 5 - state.attachments.length);
+  const files = eligible.slice(0, remaining);
+  const skippedByLimit = eligible.length - files.length;
   state.attachments.push(...files);
   renderAttachmentPreview();
-  if (files.length) setStatus("फाइल तैयार है। भेजने पर उसका पाठ AI को भेजा जाएगा।");
-  else if (fileList.length) setStatus("यह फाइल समर्थित नहीं है या 20 MB से बड़ी है। JPG/PNG/WEBP, MP4/WEBM/MOV, PDF, DOCX, TXT, CSV, MD या JSON चुनें।");
-}
 
+  if (files.length && !tooLarge.length && !unsupported.length && !skippedByLimit) {
+    setStatus("फाइल तैयार है। भेजने पर उसका पाठ AI को भेजा जाएगा।");
+    return;
+  }
+  const notes = [];
+  if (files.length) notes.push(files.length + " फाइल जोड़ी गईं।");
+  if (tooLarge.length) notes.push(tooLarge.length + " फाइल 20 MB से बड़ी होने के कारण नहीं जोड़ी गईं।");
+  if (unsupported.length) notes.push(unsupported.length + " फाइल का प्रारूप समर्थित नहीं है।");
+  if (skippedByLimit) notes.push("एक संदेश में अधिकतम 5 फाइलें रखी जा सकती हैं; " + skippedByLimit + " अतिरिक्त फाइल नहीं जोड़ी गईं।");
+  if (!notes.length && selected.length) notes.push("कोई नई फाइल नहीं जोड़ी गई।");
+  notes.push("समर्थित प्रारूप: JPG/PNG/WEBP, MP4/WEBM/MOV, PDF, DOCX, TXT, CSV, MD और JSON।");
+  setStatus(notes.join(" "));
+}
 function loadExternalScript(src, globalName) {
   if (window[globalName]) return Promise.resolve(window[globalName]);
   if (window.__sarathiScriptPromises?.[src]) return window.__sarathiScriptPromises[src];
