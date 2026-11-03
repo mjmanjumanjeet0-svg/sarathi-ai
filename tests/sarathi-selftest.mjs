@@ -210,9 +210,9 @@ assert.equal(solveBasicArithmetic("10 / 0"), null, "division by zero must not re
 assert.equal(solveBasicArithmetic("इतिहास 1857"), null, "a standalone year must not be treated as arithmetic");
 
 const discountStart = source.indexOf("function solveDiscountQuestion(text) {");
-const discountEnd = source.indexOf("\\nfunction solveBasicArithmetic", discountStart);
+const discountEnd = source.indexOf("\nfunction solveBasicArithmetic", discountStart);
 assert.ok(discountStart >= 0 && discountEnd > discountStart, "local discount solver must exist");
-const solveDiscountQuestion = new Function(source.slice(discountStart, discountEnd) + "\\nreturn solveDiscountQuestion;")();
+const solveDiscountQuestion = new Function(source.slice(discountStart, discountEnd) + "\nreturn solveDiscountQuestion;")();
 assert.match(solveDiscountQuestion("800 रुपये पर 15% छूट कितनी होगी और अंतिम कीमत क्या होगी?"), /छूट: 15% = ₹120/);
 assert.match(solveDiscountQuestion("₹1,250 पर 10% की छूट"), /अंतिम कीमत: ₹1125/);
 assert.equal(solveDiscountQuestion("100 रुपये पर 150% छूट"), null, "discount above 100 percent must be rejected");
