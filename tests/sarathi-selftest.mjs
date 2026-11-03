@@ -17,7 +17,9 @@ globalThis.fetch = async (input, init = {}) => {
   const url = String(input);
   calls.push({ url, init });
   if (url.includes("api.exa.ai/search")) {
-    if (exaMode === "429") return Response.json({ error: "rate limited" }, { status: 429 });
+    if (exaMode === "429") return Response.json({ error: "rate limited", tag: "RATE_LIMIT_EXCEEDED" }, { status: 429 });
+    if (exaMode === "timeout") throw new DOMException("request timed out", "AbortError");
+    if (exaMode === "network") throw new TypeError("network unavailable");
     const exaRequest = JSON.parse(init.body || "{}");
     if (exaMode === "news-undated" && exaRequest.category === "news") {
       return Response.json({ results: [
@@ -437,6 +439,29 @@ await test("Exa rate-limit is explained to the user and marked retryable", async
   assert.match(r.data.reply, /अनुरोध सीमा पूरी हो गई है/);
   assert.match(r.data.searchWarning, /अनुरोध सीमा पूरी हो गई है/);
   assert.equal(r.data.sources.length, 0);
+  exaMode = "success";
+});
+await test("Exa timeout is returned as a retryable 504 search failure", async () => {
+  exaMode = "timeout";
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज सोने का भाव बताओ" }] }, token);
+  assert.equal(r.status, 200);
+  assert.equal(r.data.searchUnavailable, true);
+  assert.equal(r.data.providerStatus, 504);
+  assert.equal(r.data.searchErrorCode, "AbortError");
+  assert.equal(r.data.retryable, true);
+  assert.match(r.data.reply, /समय अधिक लगा/);
+  exaMode = "success";
+});
+await test("Exa network failure is returned as retryable and never sent to Groq as live data", async () => {
+  exaMode = "network";
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज सोने का भाव बताओ" }] }, token);
+  assert.equal(r.status, 200);
+  assert.equal(r.data.searchUnavailable, true);
+  assert.equal(r.data.providerStatus, 502);
+  assert.equal(r.data.searchErrorCode, "TypeError");
+  assert.equal(r.data.retryable, true);
+  assert.equal(calls.slice(before).filter(x => x.url.includes("api.groq.com")).length, 0);
   exaMode = "success";
 });
 await test("undated search results are not mislabeled as fresh news", async () => {
