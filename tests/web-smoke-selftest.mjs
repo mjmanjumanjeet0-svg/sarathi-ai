@@ -143,6 +143,7 @@ const attachmentSource = app.slice(attachmentStart, attachmentEnd + 3);
 for (const extension of ["pdf", "docx", "txt", "csv", "md", "json"]) {
   assert.ok(attachmentSource.includes(extension), "attachment picker must allow ." + extension);
 }
+assert.ok(attachmentSource.includes('file.name.toLowerCase().endsWith(".pdf")'), "PDF files with a missing or generic MIME type must still be selectable by extension");
 assert.ok(attachmentSource.includes("20 * 1024 * 1024"), "attachment picker must enforce the 20 MB per-file limit");
 const extractorStart = app.indexOf("async function extractOneFile(file) {");
 const extractorEnd = app.indexOf("\n}\n", extractorStart);
