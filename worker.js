@@ -954,6 +954,7 @@ export default {
           providerStatus: search.httpStatus || null,
           sources: [],
         });
+      }
     }
 
     // This well-documented event has recurring date and casualty-count errors.
