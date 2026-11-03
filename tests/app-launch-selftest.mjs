@@ -38,6 +38,10 @@ assert.ok(java.includes("voiceRequestInProgress") && java.includes("setVoiceRequ
 assert.ok(java.includes('if (voiceConversationActive) notifyVoice("onSpeechComplete", "")'), "TTS setup/start failures must resume an active foreground voice conversation");
 assert.ok(java.includes("recognizerForSession") && java.includes("isCurrentRecognizer()"), "stale speech callbacks must not restart or destroy the current microphone session");
 assert.ok(java.includes("TYPE_TEXT_VARIATION_PASSWORD"), "Android login prompt must mask password input");
+assert.ok(app.includes("function requestLoginPassword()"), "web login must use a dedicated password dialog");
+assert.ok(app.includes('input.type = "password"') && app.includes('input.autocomplete = "current-password"'), "web login field must mask and correctly autocomplete passwords");
+assert.ok(app.includes("await requestLoginPassword()"), "login must await the masked password dialog");
+assert.equal(app.includes("window.prompt("), false, "web login must not expose passwords in a plain-text browser prompt");
 assert.ok(java.includes("APP_HOST.equalsIgnoreCase(pageUri.getHost())"), "Android login prompt must be restricted to the Sarathi host");
 const manifest = await readFile(new URL("../android-app/app/src/main/AndroidManifest.xml", import.meta.url), "utf8");
 assert.ok(!manifest.includes("WakeWordService") && !manifest.includes("FOREGROUND_SERVICE") && !manifest.includes("POST_NOTIFICATIONS"), "manifest must not declare a background microphone service or its notification permissions");
