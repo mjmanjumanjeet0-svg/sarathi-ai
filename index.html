@@ -23,6 +23,8 @@
 
     <button class="new-chat" id="newChatBtn">＋ नई चैट</button>
 
+    <button class="menu-item" id="examCenterMenuBtn">📚 SARATHI LEARNING</button>
+
     <h3 class="history-heading">पुरानी चैट</h3>
     <div id="historyList" class="history-list"></div>
 
@@ -71,7 +73,54 @@
 <button type="button" data-voice-action="start"><span>💬</span><b>मुझसे बात करें<small>बोलकर बातचीत शुरू करें</small></b></button>
 <button data-prompt="इस विषय की सही और स्पष्ट जानकारी समझाओ।"><span>💡</span><b>जानकारी खोजें<small>सही और स्पष्ट उत्तर</small></b></button>
 </div>
-      </div><div class="messages" id="messages"></div>
+      </div>
+      <section class="education-hub hidden" id="educationHub" aria-label="SARATHI LEARNING">
+        <div class="education-heading">
+          <span class="education-kicker">SARATHI LEARNING</span>
+          <h2>पढ़ाई और परीक्षा केंद्र</h2>
+          <p>अपना कोर्स और विषय भरें। फिर नोट्स, महत्वपूर्ण प्रश्न, अभ्यास टेस्ट या पढ़ाई की योजना चुनें। आपकी पढ़ाई की जानकारी इसी डिवाइस में सेव होगी।</p>
+        </div>
+        <div class="education-fields">
+          <label>कक्षा / कोर्स
+            <input id="studyLevel" type="text" placeholder="जैसे: BA, कक्षा 12">
+          </label>
+          <label>बोर्ड / विश्वविद्यालय
+            <input id="studyBoard" type="text" placeholder="जैसे: बिहार बोर्ड, JPU">
+          </label>
+          <label>विषय / पेपर
+            <input id="studySubject" type="text" placeholder="जैसे: इतिहास, गृह विज्ञान">
+          </label>
+          <label>परीक्षा / वर्ष
+            <input id="studyExam" type="text" placeholder="जैसे: सेमेस्टर 5, 2026">
+          </label>
+          <label class="study-topic">अध्याय / टॉपिक / सवाल
+            <input id="studyTopic" type="text" placeholder="किस विषय या अध्याय को पढ़ना है?">
+          </label>
+        </div>
+        <div class="study-actions">
+          <button type="button" data-study="explain">📘 समझाओ</button>
+          <button type="button" data-study="notes">📝 नोट्स</button>
+          <button type="button" data-study="questions">⭐ महत्वपूर्ण प्रश्न</button>
+          <button type="button" data-study="quiz">☑️ MCQ टेस्ट</button>
+          <button type="button" data-study="paper">📄 मॉडल पेपर</button>
+          <button type="button" data-study="plan">🗓️ पढ़ाई योजना</button>
+          <button type="button" data-study="english">🔤 A–Z अंग्रेज़ी</button>
+          <button type="button" data-study="grammar">📚 व्याकरण</button>
+          <button type="button" data-study="writing">✍️ लिखना और बोलना</button>
+          <button type="button" data-study="solve">🧮 सवाल हल करो</button>
+          <button type="button" data-study="flashcards">🗂️ फ्लैशकार्ड</button>
+          <button type="button" data-study="paperhelp">📚 पुराने पेपर</button>
+          <button type="button" data-study="career">🎓 करियर मार्गदर्शन</button>
+          <button type="button" data-study="book">📖 किताब / PDF पढ़ो</button>
+        </div>
+        <div class="study-progress">
+          <div><strong>मेरी पढ़ाई की प्रगति</strong><span id="studyProgressCount">0 अध्ययन सत्र पूरे</span></div>
+          <button type="button" id="studyDoneBtn">✓ आज का सत्र पूरा</button>
+          <button type="button" id="studyResetBtn">प्रगति रीसेट</button>
+        </div>
+        <p class="education-footnote">ध्यान दें: परीक्षा में आने की गारंटी नहीं दी जाती। सिलेबस, तारीख और नियम जैसी जानकारी आधिकारिक स्रोत से जाँची जाएगी।</p>
+      </section>
+      <div class="messages" id="messages"></div>
     </section>
 
     <div class="composer-wrap">
