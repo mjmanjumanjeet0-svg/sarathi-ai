@@ -31,6 +31,18 @@ for (const phrase of ["नई चैट क्या है", "मुझे न�
 assert.ok(app.includes('setStatus("नई चैट खोल दी गई है।")'), "new chat action must show a success status");
 assert.ok(app.includes("createChat();") && app.includes("closeSidebar();") && app.includes("closeMoreMenu();"), "new chat voice command must create a fresh local chat");
 assert.ok(app.includes("stripSarathiWakePrefix(prompt)"), "voice command parser must ignore Sarathi wake-word prefixes");
+const sendStart = app.indexOf("async function sendMessage(text) {");
+const sendEnd = app.indexOf("\nfunction ", sendStart + 10);
+const sendSource = app.slice(sendStart, sendEnd);
+assert.ok(sendSource.includes("window.SarathiVoice.stop()") && sendSource.includes("endVoiceConversation"), "quiet voice command must stop the active browser or Android voice session");
+assert.doesNotMatch(sendSource, /SarathiNative\\.endConversation\\(/, "quiet voice command must not call a nonexistent Android bridge method");
+assert.ok(sendSource.includes("finishVoiceTurn(message)") && sendSource.includes("if (!workerUrl)"), "missing Worker URL must not leave a voice reply paused");
+const voiceCallbackStart = app.indexOf("window.SarathiVoice = {");
+const voiceCallbackEnd = app.indexOf("/* ========================================\\n   ATTACHMENTS", voiceCallbackStart);
+const voiceCallbacks = app.slice(voiceCallbackStart, voiceCallbackEnd);
+assert.ok(voiceCallbacks.includes("if (window.SarathiVoice?.isActive?.()) window.SarathiVoice.stop()"), "permanent native voice errors must close the active voice session");
+assert.ok(voiceCallbacks.includes("state.voiceReplyPending = false"), "voice errors must clear pending reply state");
+
 assert.doesNotMatch(app, /detectAppLaunchCommand|getInstalledApps|openAppPackage|openPhone|SarathiNative\.openApp/, "chat must not discover or launch installed apps");
 
 const java = await readFile(new URL("../android-app/app/src/main/java/com/sarathi/ai/MainActivity.java", import.meta.url), "utf8");
