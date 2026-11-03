@@ -179,6 +179,12 @@ assert.ok(app.includes("केवल शुरुआती 8,500 अक्षर
 assert.ok(app.includes("let limited = limitExtractedFileText(pages.join"), "PDF extraction must use the visible text truncation warning");
 assert.ok(app.includes("इस PDF के कुल "), "PDFs over the page limit must disclose that later pages were not read");
 assert.ok(app.includes("const pagesNeedingOcr = []"), "mixed PDFs must identify pages that need OCR even when other pages contain text");
+assert.ok(app.includes("const pageTexts = Array(pageLimit).fill(\\"\\")"), "mixed PDF text and OCR results must be stored by page number");
+assert.ok(app.includes("pageTexts[pageNo - 1]"), "scanned PDF text must be restored to its original page position");
+assert.ok(app.includes("const readablePages = pageTexts.filter(Boolean)"), "PDF output must preserve original page order while omitting unreadable pages");
+assert.ok(app.includes("PDF पृष्ठ पढ़ने के लिए कैनवास उपलब्ध नहीं है।"), "PDF OCR must report unavailable canvas context instead of failing silently");
+assert.ok(app.includes("पहले " + " + pageLimit + " + " पृष्ठों से पढ़ने योग्य टेक्स्ट नहीं मिला।"), "empty or unreadable PDFs must return a clear notice");
+
 assert.ok(app.includes("pagesNeedingOcr.slice(0, ocrLimit)"), "OCR work on scanned PDF pages must remain bounded");
 assert.ok(app.includes("स्कैन/चित्र वाले पृष्ठ OCR की सीमा"), "users must be told when scanned PDF pages were not OCR-processed");
 
