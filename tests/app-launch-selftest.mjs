@@ -2,6 +2,15 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
 const app = await readFile(new URL("../app.js", import.meta.url), "utf8");
+const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+assert.ok(html.includes('id="examCenterMenuBtn"') && html.includes("SARATHI LEARNING"), "learning hub must be reachable from the menu");
+assert.ok(html.includes('id="educationHub"') && /class="education-hub hidden"/.test(html), "learning hub must stay hidden until opened from the menu");
+for (const id of ["studyLevel", "studyBoard", "studySubject", "studyExam", "studyTopic", "studyProgressCount", "studyDoneBtn", "studyResetBtn"]) {
+  assert.ok(html.includes('id="' + id + '"'), "learning hub control missing: " + id);
+}
+for (const action of ["explain", "notes", "questions", "quiz", "paper", "plan", "english", "grammar", "writing", "solve", "flashcards", "paperhelp", "career", "book"]) {
+  assert.ok(html.includes('data-study="' + action + '"'), "learning action missing: " + action);
+}
 const newChatStart = app.indexOf("function stripSarathiWakePrefix(prompt) {");
 const newChatEnd = app.indexOf("/* ========================================\n   SEND MESSAGE", newChatStart);
 assert.ok(newChatStart >= 0 && newChatEnd > newChatStart, "new chat command parser must exist");
