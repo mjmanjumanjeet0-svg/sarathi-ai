@@ -1685,15 +1685,19 @@ async function extractPdfText(file) {
   pdfjs.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
   const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
   const pageLimit = Math.min(pdf.numPages, 25);
-  const pages = [];
+  const pageTexts = Array(pageLimit).fill("");
   const pagesNeedingOcr = [];
+
   for (let pageNo = 1; pageNo <= pageLimit; pageNo++) {
     const page = await pdf.getPage(pageNo);
-    const content = await page.getTextContent();
-    const pageText = content.items.map(item => item.str || "").join(" ").trim();
-    if (pageText) pages.push("[पृष्ठ " + pageNo + "]\n" + pageText);
-    else pagesNeedingOcr.push(pageNo);
-    page.cleanup();
+    try {
+      const content = await page.getTextContent();
+      const pageText = content.items.map(item => item.str || "").join(" ").trim();
+      if (pageText) pageTexts[pageNo - 1] = "[पृष्ठ " + pageNo + "]\n" + pageText;
+      else pagesNeedingOcr.push(pageNo);
+    } finally {
+      page.cleanup();
+    }
   }
 
   const ocrLimit = Math.min(pagesNeedingOcr.length, 5);
@@ -1705,30 +1709,38 @@ async function extractPdfText(file) {
     try {
       for (const pageNo of pagesNeedingOcr.slice(0, ocrLimit)) {
         const page = await pdf.getPage(pageNo);
-        const viewport = page.getViewport({ scale: 1.35 });
         const canvas = document.createElement("canvas");
-        canvas.width = Math.ceil(viewport.width);
-        canvas.height = Math.ceil(viewport.height);
-        const context = canvas.getContext("2d");
-        if (!context) throw new Error("PDF पृष्ठ पढ़ने के लिए कैनवास उपलब्ध नहीं है।");
-        await page.render({ canvasContext: context, viewport }).promise;
-        const output = await worker.recognize(canvas);
-        if (output.data.text.trim()) pages.push("[पृष्ठ " + pageNo + " OCR]\n" + output.data.text.trim());
-        canvas.width = 0;
-        canvas.height = 0;
-        page.cleanup();
+        try {
+          const viewport = page.getViewport({ scale: 1.35 });
+          canvas.width = Math.ceil(viewport.width);
+          canvas.height = Math.ceil(viewport.height);
+          const context = canvas.getContext("2d");
+          if (!context) throw new Error("PDF पृष्ठ पढ़ने के लिए कैनवास उपलब्ध नहीं है।");
+          await page.render({ canvasContext: context, viewport }).promise;
+          const output = await worker.recognize(canvas);
+          const recognized = output.data.text.trim();
+          if (recognized) pageTexts[pageNo - 1] = "[पृष्ठ " + pageNo + " OCR]\n" + recognized;
+        } finally {
+          canvas.width = 0;
+          canvas.height = 0;
+          page.cleanup();
+        }
       }
     } finally {
       await worker.terminate();
     }
   }
 
-  let limited = limitExtractedFileText(pages.join("\n\n"));
+  const readablePages = pageTexts.filter(Boolean);
+  let limited = limitExtractedFileText(readablePages.join("\n\n"));
   if (pagesNeedingOcr.length > ocrLimit) {
     limited += "\n[सूचना: " + (pagesNeedingOcr.length - ocrLimit) + " स्कैन/चित्र वाले पृष्ठ OCR की सीमा के कारण नहीं पढ़े गए।]";
   }
   if (pdf.numPages > pageLimit) {
     limited += "\n[सूचना: इस PDF के कुल " + pdf.numPages + " पृष्ठ हैं; फिलहाल पहले " + pageLimit + " पृष्ठ पढ़े गए हैं।]";
+  }
+  if (!readablePages.length) {
+    limited += "\n[सूचना: पहले " + pageLimit + " पृष्ठों से पढ़ने योग्य टेक्स्ट नहीं मिला।]";
   }
   return limited;
 }
