@@ -209,6 +209,28 @@ assert.deepEqual(solveBasicArithmetic("100 / 4"), { expression: "100/4", result:
 assert.equal(solveBasicArithmetic("10 / 0"), null, "division by zero must not return a numeric answer");
 assert.equal(solveBasicArithmetic("इतिहास 1857"), null, "a standalone year must not be treated as arithmetic");
 
+const discountStart = source.indexOf("function solveDiscountQuestion(text) {");
+const discountEnd = source.indexOf("\\nfunction solveBasicArithmetic", discountStart);
+assert.ok(discountStart >= 0 && discountEnd > discountStart, "local discount solver must exist");
+const solveDiscountQuestion = new Function(source.slice(discountStart, discountEnd) + "\\nreturn solveDiscountQuestion;")();
+assert.match(solveDiscountQuestion("800 रुपये पर 15% छूट कितनी होगी और अंतिम कीमत क्या होगी?"), /छूट: 15% = ₹120/);
+assert.match(solveDiscountQuestion("₹1,250 पर 10% की छूट"), /अंतिम कीमत: ₹1125/);
+assert.equal(solveDiscountQuestion("100 रुपये पर 150% छूट"), null, "discount above 100 percent must be rejected");
+assert.equal(solveDiscountQuestion("800 रुपये की कीमत"), null, "unrelated price questions must not be treated as discount calculations");
+await test("discount calculation is answered locally without Exa or Groq", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    messages: [{ role: "user", content: "800 रुपये पर 15% छूट कितनी होगी और अंतिम कीमत क्या होगी?" }]
+  }, token);
+  assert.equal(r.status, 200);
+  assert.match(r.data.reply, /छूट: 15% = ₹120/);
+  assert.match(r.data.reply, /अंतिम कीमत: ₹680/);
+  assert.equal(r.data.webSearch, false);
+  assert.deepEqual(r.data.sources, []);
+  assert.equal(calls.length, before, "discount calculation must not call search or AI providers");
+});
+
+
 await test("general knowledge reaches the AI provider", async () => {
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "इतिहास क्या है?" }] }, token);
   assert.equal(r.status, 200);
