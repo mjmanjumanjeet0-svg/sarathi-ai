@@ -199,8 +199,14 @@ function cleanText(value) {
 function validHttpUrl(value) {
   try {
     const url = new URL(value);
-    return url.protocol === "https:" && Boolean(url.hostname) &&
-      !url.username && !url.password;
+    const hostname = url.hostname.toLowerCase().replace(/^\\[|\\]$/g, "");
+    if (url.protocol !== "https:" || !hostname || url.username || url.password) return false;
+    // Reject local names and all IP literals. Search enrichment should fetch
+    // public DNS hostnames only, never loopback, private, link-local or metadata IPs.
+    if (hostname === "localhost" || hostname.endsWith(".localhost") ||
+        hostname.endsWith(".local") || hostname.endsWith(".internal") ||
+        hostname.includes(":") || /^\\d{1,3}(?:\\.\\d{1,3}){3}$/.test(hostname)) return false;
+    return true;
   } catch {
     return false;
   }
