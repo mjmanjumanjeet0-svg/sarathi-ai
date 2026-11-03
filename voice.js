@@ -174,6 +174,25 @@
     paused = false;
     show(false);
   };
+
+  // Android calls this callback for permission, recognition, and speech errors.
+  // Keep the message visible and close the session when listening cannot continue safely.
+  window.SarathiVoice.onError = message => {
+    const errorText = String(message || "आवाज़ सुविधा में समस्या हुई।").trim();
+    const fatal = /(रद्द कर दी गई|विंडो बंद कर दी गई|माइक्रोफोन अनुमति नहीं मिली|माइक्रोफ़ोन अनुमति नहीं मिली|अनुमति नहीं मिली|कोई आवाज़ पहचान सेवा उपलब्ध नहीं|ऑफ़लाइन आवाज़ पहचान उपलब्ध नहीं|माइक्रोफ़ोन शुरू नहीं हो सका|आवाज़ पहचान विंडो नहीं खुल सकी)/i.test(errorText);
+    if (fatal && active) {
+      stop();
+      const status = $("status");
+      if (status) status.textContent = errorText;
+      return;
+    }
+    const status = $("status");
+    if (status) status.textContent = errorText;
+    if ($("voiceHint")) $("voiceHint").textContent = active
+      ? "आवाज़ में समस्या हुई। अनुमति और फ़ोन की आवाज़ सेवा जाँचें।"
+      : errorText;
+  };
+
   window.SarathiVoice.onSpeechComplete = () => window.SarathiVoice.resumeAfterSpeech();
   window.SarathiVoice.stop = stop;
   window.SarathiVoice.start = start;
