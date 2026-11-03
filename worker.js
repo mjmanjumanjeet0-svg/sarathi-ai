@@ -140,6 +140,21 @@ function getIndiaDateTime() {
 }
 
 
+function solveDiscountQuestion(text) {
+  const input = String(text || "").replace(/,/g, "");
+  const match = input.match(/([0-9]+(?:\.[0-9]+)?)\s*(?:रुपये|रूपये|रु\.?|₹|rs\.?|rupees?)\s*पर\s*([0-9]+(?:\.[0-9]+)?)\s*%\s*(?:की\s*)?छूट/i);
+  if (!match) return null;
+  const price = Number(match[1]);
+  const percent = Number(match[2]);
+  if (!Number.isFinite(price) || !Number.isFinite(percent) || price < 0 || percent < 0 || percent > 100 || price > 1e12) return null;
+  const discount = Math.round((price * percent / 100 + Number.EPSILON) * 100) / 100;
+  const finalPrice = Math.round((price - discount + Number.EPSILON) * 100) / 100;
+  const format = value => Number.isInteger(value) ? String(value) : String(value);
+  return "छूट की गणना\nमूल कीमत: ₹" + format(price) +
+    "\nछूट: " + format(percent) + "% = ₹" + format(discount) +
+    "\nअंतिम कीमत: ₹" + format(finalPrice);
+}
+
 function solveBasicArithmetic(text) {
   const input = String(text || "").replace(/,/g, "");
   const match = input.match(/(?:^|[^0-9])([0-9]+(?:[.][0-9]+)?(?:[ ]*[-+−×*÷/][ ]*[0-9]+(?:[.][0-9]+)?)+)(?=$|[^0-9])/);
@@ -869,6 +884,18 @@ export default {
         ...dateTime,
         webSearch: false,
         sources: [],
+      });
+    }
+
+    // Discount calculations are deterministic and do not need internet search or AI.
+    const discountReply = solveDiscountQuestion(userText);
+    if (discountReply) {
+      return jsonResponse({
+        success: true,
+        reply: discountReply,
+        ...dateTime,
+        webSearch: false,
+        sources: []
       });
     }
 
