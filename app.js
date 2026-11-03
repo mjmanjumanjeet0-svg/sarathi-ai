@@ -531,12 +531,21 @@ function parseSarathiQuiz(raw) {
     const data = JSON.parse(text.slice(start, end + 1));
     if (!Array.isArray(data.questions) || data.questions.length < 3 || data.questions.length > 20) return null;
     const questions = data.questions.map(q => ({
-      question: String(q.question || ""),
-      options: Array.isArray(q.options) ? q.options.slice(0, 4).map(String) : [],
-      answer: Number(q.answer),
-      explanation: String(q.explanation || "")
+      question: typeof q?.question === "string" ? q.question.trim() : "",
+      options: Array.isArray(q?.options) ? q.options.slice(0, 4).map(option =>
+        typeof option === "string" ? option.trim() : ""
+      ) : [],
+      answer: q?.answer,
+      explanation: typeof q?.explanation === "string" ? q.explanation.trim() : ""
     }));
-    if (questions.some(q => !q.question || q.options.length !== 4 || !Number.isInteger(q.answer) || q.answer < 0 || q.answer > 3)) return null;
+    if (questions.some(q =>
+      !q.question ||
+      q.options.length !== 4 ||
+      q.options.some(option => !option) ||
+      !Number.isInteger(q.answer) ||
+      q.answer < 0 ||
+      q.answer > 3
+    )) return null;
     return { title: String(data.title || "अभ्यास टेस्ट"), questions, selected: [], submitted: false, score: null };
   } catch { return null; }
 }
