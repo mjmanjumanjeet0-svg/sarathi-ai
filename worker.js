@@ -603,11 +603,11 @@ function filterFreshNewsResults(results, now = Date.now()) {
   const newestAllowed = now + 24 * 60 * 60 * 1000;
   return (Array.isArray(results) ? results : []).filter(item => {
     const publishedAt = item && typeof item.publishedAt === "string" ? item.publishedAt.trim() : "";
-    // Current-news results without a verifiable publication time are excluded.
-    if (!publishedAt) return false;
+    // Keep undated items but do not pretend their publication date is verified.
+    if (!publishedAt) return true;
     const timestamp = Date.parse(publishedAt);
-    // Invalid dates are excluded rather than silently treated as current.
-    if (!Number.isFinite(timestamp)) return false;
+    // An invalid date is treated as unverified, not silently converted into a current date.
+    if (!Number.isFinite(timestamp)) return true;
     return timestamp >= oldestAllowed && timestamp <= newestAllowed;
   });
 }
