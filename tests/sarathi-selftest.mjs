@@ -5,6 +5,16 @@ import { readFile } from "node:fs/promises";
 const source = await readFile(new URL("../worker.js", import.meta.url), "utf8");
 const appSource = await readFile(new URL("../app.js", import.meta.url), "utf8");
 assert.doesNotMatch(appSource, /detectAppLaunchCommand|getInstalledApps|openAppPackage|openPhone|SarathiNative\.openApp/, "web chat must not launch installed apps");
+const urlValidatorStart = source.indexOf("function validHttpUrl(value) {");
+const urlValidatorEnd = source.indexOf("\n}\n", urlValidatorStart);
+assert.ok(urlValidatorStart >= 0 && urlValidatorEnd > urlValidatorStart, "Worker HTTPS URL validator must exist");
+const validHttpUrl = new Function("URL", source.slice(urlValidatorStart, urlValidatorEnd + 3) + "\nreturn validHttpUrl;")(URL);
+assert.equal(validHttpUrl("https://example.com/source"), true, "HTTPS sources should be accepted");
+assert.equal(validHttpUrl("http://example.com/source"), false, "HTTP sources must be rejected");
+assert.equal(validHttpUrl("file:///etc/passwd"), false, "local file URLs must be rejected");
+assert.equal(validHttpUrl("not a URL"), false, "malformed URLs must be rejected");
+assert.match(source.slice(source.indexOf("async function enrichGoldRateResults"), source.indexOf("function isHistoricalResearchQuery")), /redirect:\s*"manual"/, "third-party enrichment must not follow redirects");
+
 const moduleUrl = "data:text/javascript;base64," + Buffer.from(source).toString("base64");
 const { default: worker } = await import(moduleUrl);
 
