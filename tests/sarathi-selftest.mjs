@@ -37,7 +37,9 @@ globalThis.fetch = async (input, init = {}) => {
           { title: "Cyclone Murasu update: IMD warning", url: "https://www.indianexpress.com/murasu-live", highlights: ["The same Indian Express newsroom repeats the cyclone warning in a live update."] },
           { title: "Supreme Court permits certified green crackers in Delhi-NCR", url: "https://thehindu.com/green-crackers", highlights: ["The Supreme Court allowed certified green crackers in Delhi-NCR during specified hours on 7 and 8 November."] },
           { title: "Delhi air quality update", url: "https://www.ndtv.com/india-news/delhi-air-quality", publishedDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), highlights: ["Delhi air quality remains a developing story."] },
-          { title: "Old report outside freshness window", url: "https://www.bbc.com/news/old-report", publishedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), highlights: ["This report is five days old and must not be presented as a current news result."] }
+          { title: "Old report outside freshness window", url: "https://www.bbc.com/news/old-report", publishedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), highlights: ["This report is five days old and must not be presented as a current news result."] },
+          { title: "Report older than 48 hours", url: "https://www.reuters.com/world/older-than-48-hours", publishedDate: new Date(Date.now() - 60 * 60 * 60 * 1000).toISOString(), highlights: ["This report is 60 hours old and must be filtered from current news."] },
+          { title: "Future-dated report", url: "https://www.bbc.com/news/future-report", publishedDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), highlights: ["A future publication date must not be shown as current news."] }
         ]
       });
     }
@@ -331,7 +333,9 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.ok(newsHosts.includes("indianexpress.com"));
   assert.ok(newsHosts.includes("thehindu.com"));
   assert.ok(newsHosts.includes("ndtv.com"));
-  assert.equal(newsHosts.includes("bbc.com"), false, "news older than three days must be filtered out");
+  assert.equal(newsHosts.includes("bbc.com"), false, "five-day-old news must be filtered out");
+  assert.equal(newsHosts.includes("reuters.com"), false, "news older than 48 hours must be filtered out");
+  assert.equal(newsHosts.includes("bbc.com"), false, "future-dated news must be filtered out");
   const exaCall = calls.slice(before).find(x => x.url.includes("api.exa.ai/search"));
   assert.ok(exaCall, "latest news must invoke Exa");
   const exaBody = JSON.parse(exaCall.init.body || "{}");
