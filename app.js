@@ -1101,11 +1101,12 @@ async function sendMessage(text) {
   // or stable basic facts such as India's capital.
   const isStableGeneralKnowledge = /(?:भारत|india).{0,18}(?:राजधानी|capital)|(?:राजधानी|capital).{0,18}(?:भारत|india)/i.test(prompt);
   const isTinyFollowUp = prompt.trim().length <= 8 && !needsCurrentInfo && !explicitlyRequestsWebSearch(prompt);
+  const isBasicArithmetic = /[0-9][0-9,.]*[ ]*[-+−×*÷/][ ]*[0-9]/.test(prompt);
   // Never search merely because the web toggle was left on.
   // Search only when the user explicitly asks for the internet, or a current fact is needed.
   const isBasicLearningQuestion = /(?:विज्ञान की उत्पत्ति|मानव शरीर|कंकाल|के बारे में (?:बताओ|जानकारी)|की जानकारी दो|क्या है|कौन थे|कौन थे\?|जीवन मंत्र|गांधी जी|गौतम बुद्ध|बुध ग्रह|समझाओ|परिभाषा|इतिहास बताओ)/i.test(prompt);
   const useWebSearch = !isSimpleGreeting(prompt) && !isStableGeneralKnowledge && !isTinyFollowUp &&
-    (explicitlyRequestsWebSearch(prompt) || needsCurrentInfo || (state.webEnabled && !isBasicLearningQuestion));
+    !isBasicArithmetic && (explicitlyRequestsWebSearch(prompt) || needsCurrentInfo || (state.webEnabled && !isBasicLearningQuestion));
 
   addMessage("user", prompt);
   setBusy(true);
