@@ -1157,7 +1157,7 @@ async function sendMessage(text) {
     if (!explicitlyRequestsWebSearch(prompt)) {
       cleanAnswer = cleanAnswer
         // Remove common source/reference sections, including English headings.
-        .replace(/\n{0,2}\s*(?:🌐\s*)?(?:इंटरनेट से मिले स्रोत|स्रोत(?: सूची)?|references?|sources?|वेबसाइट(?:ें)?|लिंक(?:\s*सूची)?)\s*[:：]?\s*[\s\S]*$/i, "")
+        .replace(/\n{0,2}\s*(?:🌐\s*)?(?:इंटरनेट से मिले स्रोत|स्रोत(?: सूची)?|references?|sources?|वेबसाइट(?:ें)?|लिंक(?:\s*सूची)?)\s*[:：]?\s*(?=\n|$)[\s\S]*$/i, "")
         // Remove standalone URLs and Markdown link lines inserted by a model.
         .replace(/^\s*(?:[-*•]\s*)?(?:\[[^\]]+\]\([^)]*https?:\/\/[^)]+\)|https?:\/\/\S+|www\.\S+)\s*$/gim, "")
         // Remove inline Markdown links while preserving their readable label.
@@ -1169,7 +1169,7 @@ async function sendMessage(text) {
     } else if (data.sources?.length) {
       cleanAnswer = cleanAnswer
         // Validated clickable sources are rendered separately below the answer.
-        .replace(/\n{0,2}\s*(?:🌐\s*)?(?:स्रोत(?: सूची)?|references?|sources?|वेबसाइट(?:ें)?|लिंक(?:\s*सूची)?)\s*[:：]?\s*[\s\S]*$/i, "")
+        .replace(/\n{0,2}\s*(?:🌐\s*)?(?:स्रोत(?: सूची)?|references?|sources?|वेबसाइट(?:ें)?|लिंक(?:\s*सूची)?)\s*[:：]?\s*(?=\n|$)[\s\S]*$/i, "")
         .replace(/\[([^\]]+)\]\(https?:\/\/[^)]+\)/g, "$1")
         .replace(/https?:\/\/\S+|www\.\S+/gi, "")
         .replace(/\n{3,}/g, "\n\n")
