@@ -455,6 +455,7 @@ await test("current news with one publisher is not summarized as independently v
 
 await test("generic daily live-news index pages are not treated as reported news articles", async () => {
   exaMode = "news-generic-live-page";
+  const before = calls.length;
   try {
     const r = await request("/api/chat", "POST", {
       messages: [{ role: "user", content: "आज की ताज़ा खबरें भरोसेमंद स्रोतों के साथ बताओ।" }]
@@ -463,7 +464,7 @@ await test("generic daily live-news index pages are not treated as reported news
     assert.equal(r.data.searchAttempted, true);
     assert.equal(r.data.sources.length, 0, "generic live-feed index must not be presented as a report");
     assert.match(r.data.reply, /भरोसेमंद समाचार परिणाम नहीं मिले|पर्याप्त भरोसेमंद सामग्री नहीं मिली|अपुष्ट/);
-    assert.equal(calls.slice(-5).some(x => x.url.includes("api.groq.com")), false,
+    assert.equal(calls.slice(before).some(x => x.url.includes("api.groq.com")), false,
       "a generic live-feed page must not be summarized by the language model");
   } finally {
     exaMode = "success";
