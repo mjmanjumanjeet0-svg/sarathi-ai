@@ -8,9 +8,9 @@ const voice = await readFile(new URL("voice.js", root), "utf8");
 const css = await readFile(new URL("style.css", root), "utf8");
 const worker = await readFile(new URL("worker.js", root), "utf8");
 const relevantFilterStart = worker.indexOf("function filterRelevantSearchResults(query, results) {");
-const relevantFilterEnd = worker.indexOf("\\n}\\n", relevantFilterStart);
+const relevantFilterEnd = worker.indexOf("\n}\n", relevantFilterStart);
 assert.ok(relevantFilterStart >= 0 && relevantFilterEnd > relevantFilterStart, "search relevance filter must exist");
-const filterRelevantSearchResults = new Function(worker.slice(relevantFilterStart, relevantFilterEnd + 3) + "\\nreturn filterRelevantSearchResults;")();
+const filterRelevantSearchResults = new Function(worker.slice(relevantFilterStart, relevantFilterEnd + 3) + "\nreturn filterRelevantSearchResults;")();
 const metalResults = [
   { title: "24K gold rate today", url: "https://example.com/gold", snippet: "Gold price" },
   { title: "Silver price today", url: "https://example.com/silver", snippet: "Silver rate" },
