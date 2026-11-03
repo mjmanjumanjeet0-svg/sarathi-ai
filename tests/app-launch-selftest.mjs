@@ -6,6 +6,9 @@ const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
 assert.ok(html.includes('id="examCenterMenuBtn"') && html.includes("SARATHI LEARNING"), "learning hub must be reachable from the menu");
 assert.ok(html.includes('id="educationHub"') && /class="education-hub hidden"/.test(html), "learning hub must stay hidden until opened from the menu");
 assert.ok(html.includes('id="studyCloseBtn"') && app.includes('$("studyCloseBtn")?.addEventListener("click"'), "learning hub must provide a working return-to-chat control");
+assert.ok(app.includes('studyTopic: "topic"'), "learning topic must be restored with the saved study profile");
+assert.ok(app.includes('"studyExam", "studyTopic"'), "changing the topic must save the study profile");
+assert.ok(app.includes('topic: $("studyTopic")?.value.trim() || ""'), "selected study topic must be persisted before an action runs");
 for (const id of ["studyLevel", "studyBoard", "studySubject", "studyExam", "studyTopic", "studyProgressCount", "studyDoneBtn", "studyResetBtn"]) {
   assert.ok(html.includes('id="' + id + '"'), "learning hub control missing: " + id);
 }
