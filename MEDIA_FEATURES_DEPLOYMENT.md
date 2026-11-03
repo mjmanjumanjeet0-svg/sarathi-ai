@@ -1,32 +1,24 @@
-# Sarathi AI feature deployment
+# Sarathi AI media and attachment scope
 
-## New media and project features
+## Supported behavior
 
-- Media Studio: local photo filters, poster text overlays, JPG export.
-- AI image generation and instruction-based image editing: authenticated `POST /api/media/image` endpoint using Cloudflare Workers AI `@cf/black-forest-labs/flux-2-klein-4b`. It returns a base64 data URI; no temporary public image URL is required.
-- Photo understanding: authenticated `POST /api/media/understand` endpoint using Cloudflare Workers AI `@cf/qwen/qwen3.8-27b`.
-- Project workspace: local project/file manager in browser storage; files can be exported individually. This is not cloud collaboration or an IDE.
+- Photos: JPG, PNG, and WEBP are read locally in the browser with Hindi/English OCR.
+- Documents: PDF, DOCX, TXT, CSV, MD, and JSON text is extracted locally in the browser.
+- Before any extracted text is sent to the AI chat service, Sarathi asks the user for explicit confirmation.
+- The original photo or document file is not uploaded by the attachment-reading flow.
+- A user can remove a selected attachment before sending.
+- Maximum 5 files per message; maximum 20 MB per file. Extracted text is limited before sending.
 
-## Cloudflare Worker deployment
+## Deliberately unavailable
 
-The repository includes `.github/workflows/deploy-worker.yml`. Add these repository Actions secrets before deployment:
+- Video upload, video trimming, frame extraction, and video understanding are not supported.
+- AI image generation, image editing, and visual photo understanding are disabled.
+- No Workers AI media model is required or called by the supported photo OCR flow.
+- The unused media-studio module and its video/image-generation interface have been removed.
 
-- `CLOUDFLARE_API_TOKEN`: a Cloudflare API token with permission to edit/deploy Workers for this account.
-- `CLOUDFLARE_ACCOUNT_ID`: the Cloudflare account ID that owns the Worker.
+## Privacy notes
 
-The Worker already declares the `AI` binding in `wrangler.toml`. Deploy from GitHub Actions after adding both secrets, or run `npx wrangler deploy` from the repository root after authenticating Wrangler locally.
-
-The existing Worker secrets `GROQ_API_KEY`, `SARATHI_LOGIN_PASSWORD`, and any configured search-provider keys remain Cloudflare Worker secrets. Do not put them in browser JavaScript or commit them to Git.
-
-## Limitations
-
-- AI image generation requires Workers AI to be enabled for the Cloudflare account and the selected model to be available to that account.
-- AI image generation/editing and visual understanding require the corresponding Workers AI models to be enabled and available to the Cloudflare account. FLUX.2 Klein is a partner model and account-level availability/billing may apply.
-- Project files are stored in this browser's local storage. They are not synced to GitHub or another device.
-- Android APK builds run through the repository's GitHub Actions workflow. A successful workflow artifact is required before calling an APK ready.
-
-## Current attachment scope
-
-- Video upload, frame extraction, and video editing are not part of the app.
-- Photo attachments (JPG/PNG/WEBP) are processed locally with Hindi/English OCR; extracted text is sent to the AI only after the user confirms.
-- Visual photo understanding and AI image generation/editing remain disabled in zero-cost mode until a verified provider and account-level availability are explicitly configured.
+- Selecting a file does not itself send it to the AI service.
+- OCR and document text extraction happen in the browser.
+- The confirmation dialog appears before extracted text is included in a chat request.
+- Do not send private or sensitive text unless you intend to share that extracted text with the AI service.
