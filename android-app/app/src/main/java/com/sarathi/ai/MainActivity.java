@@ -264,9 +264,10 @@ public class MainActivity extends Activity {
                 })
                 .setNegativeButton("रद्द करें", (dialog, which) -> {
                     notifyVoice("onError", "ऑनलाइन आवाज़ पहचान रद्द कर दी गई। आपकी आवाज़ नहीं सुनी गई।");
-                    })
-                .setOnCancelListener(dialog -> {
-                    })
+                })
+                .setOnCancelListener(dialog ->
+                    notifyVoice("onError", "आवाज़ पहचान की अनुमति विंडो बंद कर दी गई। बातचीत बंद है।")
+                )
                 .setCancelable(true)
                 .show();
     }
