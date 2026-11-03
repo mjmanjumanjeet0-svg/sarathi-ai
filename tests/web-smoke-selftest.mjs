@@ -82,6 +82,26 @@ for (const selector of [".message-content", ".message-body", ".composer", ".send
   assert.ok(css.includes(selector), "Required layout styling missing: " + selector);
 }
 
+const quizParserStart = app.indexOf("function parseSarathiQuiz(raw) {");
+const quizParserEnd = app.indexOf("\\n}\\n", quizParserStart);
+assert.ok(quizParserStart >= 0 && quizParserEnd > quizParserStart, "MCQ parser must exist");
+const parseSarathiQuiz = new Function(app.slice(quizParserStart, quizParserEnd + 3) + "\\nreturn parseSarathiQuiz;")();
+const validQuiz = {
+  title: "अभ्यास",
+  questions: Array.from({ length: 3 }, (_, i) => ({
+    question: "प्रश्न " + (i + 1),
+    options: ["विकल्प A", "विकल्प B", "विकल्प C", "विकल्प D"],
+    answer: 1,
+    explanation: "कारण"
+  }))
+};
+assert.equal(parseSarathiQuiz(JSON.stringify(validQuiz)).questions.length, 3, "valid four-option MCQ questions should parse");
+assert.equal(parseSarathiQuiz("not JSON"), null, "invalid MCQ JSON must be rejected");
+assert.equal(parseSarathiQuiz(JSON.stringify({ ...validQuiz, questions: validQuiz.questions.slice(0, 2) })), null, "too few MCQ questions must be rejected");
+assert.equal(parseSarathiQuiz(JSON.stringify({ ...validQuiz, questions: validQuiz.questions.map((q, i) => i ? q : { ...q, answer: null }) })), null, "null answer must not be treated as option A");
+assert.equal(parseSarathiQuiz(JSON.stringify({ ...validQuiz, questions: validQuiz.questions.map((q, i) => i ? q : { ...q, options: ["A", "", "C", "D"] }) })), null, "empty MCQ options must be rejected");
+assert.equal(parseSarathiQuiz(JSON.stringify({ ...validQuiz, questions: validQuiz.questions.map((q, i) => i ? q : { ...q, answer: 4 }) })), null, "out-of-range MCQ answers must be rejected");
+
 const studyActions = [...html.matchAll(/data-study="([^"]+)"/g)].map(match => match[1]);
 assert.equal(studyActions.length, 14, "SARATHI LEARNING must expose all 14 study actions");
 assert.equal(new Set(studyActions).size, 14, "SARATHI LEARNING action IDs must be unique");
