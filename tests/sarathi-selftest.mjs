@@ -56,6 +56,11 @@ globalThis.fetch = async (input, init = {}) => {
         { title: "Undated current news item", url: "https://www.bbc.com/news/undated", highlights: ["A current story without a publication timestamp."] }
       ] });
     }
+    if (exaMode === "news-generic-live-page" && exaRequest.category === "news") {
+      return Response.json({ results: [
+        { title: "पढ़ें 4 नवम्बर के मुख्य और ताजा समाचार - लाइव ब्रेकिंग न्यूज - Latest And Breaking News Today In Hindi Live 4 November 2026", url: "https://www.amarujala.com/uttar-pradesh/mathura/sample-live-page", publishedDate: new Date(Date.now() - 30 * 60 * 1000).toISOString(), highlights: ["A generic daily live-news index page without a distinct reported story."] }
+      ] });
+    }
     if (exaMode === "news-single-source" && exaRequest.category === "news") {
       return Response.json({ results: [
         { title: "Mathura food safety inspection", url: "https://www.amarujala.com/uttar-pradesh/mathura/sample-live-page", publishedDate: new Date(Date.now() - 30 * 60 * 1000).toISOString(), highlights: ["A local report about an inspection in Mathura."] }
@@ -443,6 +448,23 @@ await test("current news with one publisher is not summarized as independently v
     assert.match(r.data.searchWarning, /केवल एक स्वतंत्र प्रकाशक/);
     assert.equal(calls.slice(before).some(x => x.url.includes("api.groq.com")), false,
       "one publisher must not be passed to the language model for a news digest");
+  } finally {
+    exaMode = "success";
+  }
+});
+
+await test("generic daily live-news index pages are not treated as reported news articles", async () => {
+  exaMode = "news-generic-live-page";
+  try {
+    const r = await request("/api/chat", "POST", {
+      messages: [{ role: "user", content: "आज की ताज़ा खबरें भरोसेमंद स्रोतों के साथ बताओ।" }]
+    }, token);
+    assert.equal(r.status, 200);
+    assert.equal(r.data.searchAttempted, true);
+    assert.equal(r.data.sources.length, 0, "generic live-feed index must not be presented as a report");
+    assert.match(r.data.reply, /पर्याप्त भरोसेमंद सामग्री नहीं मिली|अपुष्ट/);
+    assert.equal(calls.slice(-5).some(x => x.url.includes("api.groq.com")), false,
+      "a generic live-feed page must not be summarized by the language model");
   } finally {
     exaMode = "success";
   }
