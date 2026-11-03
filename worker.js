@@ -567,6 +567,37 @@ function dedupeNewsResults(results) {
   }
   return accepted.map(({ _dedupeTokens, ...item }) => item);
 }
+function dedupeNewsPublishers(results) {
+  // Keep at most one article per publisher in the compact daily-news source set.
+  // Collapse subdomains (for example, hindi.news18.com and news18.com) so
+  // repeated coverage from one newsroom is not presented as independent news.
+  const multiPartSuffixes = new Set([
+    "co.in", "com.in", "net.in", "org.in", "gov.in", "ac.in",
+    "co.uk", "org.uk", "com.au", "net.au", "co.nz", "com.sg",
+    "com.br", "com.cn", "com.hk", "co.za"
+  ]);
+  const seenPublishers = new Set();
+  const accepted = [];
+  for (const item of (Array.isArray(results) ? results : [])) {
+    try {
+      const host = new URL(item.url).hostname.toLowerCase().replace(/^www\\./, "");
+      const labels = host.split(".").filter(Boolean);
+      if (labels.length < 2) continue;
+      const suffix2 = labels.slice(-2).join(".");
+      const publisherKey = multiPartSuffixes.has(suffix2)
+        ? labels.slice(-3).join(".")
+        : suffix2;
+      if (seenPublishers.has(publisherKey)) continue;
+      seenPublishers.add(publisherKey);
+      accepted.push(item);
+      if (accepted.length >= 6) break;
+    } catch {
+      // Invalid URLs are excluded from the displayed news source set.
+    }
+  }
+  return accepted;
+}
+
 function formatNewsPublishedAt(value) {
   if (!value) return "प्रकाशित तारीख उपलब्ध नहीं";
   const d = new Date(value);
@@ -865,7 +896,7 @@ export default {
       const search = await searchInternet(searchQuery, env);
       searchResults = filterRelevantSearchResults(userText, search.results);
       if (isHistoricalQuestion) searchResults = filterHistoricalSources(userText, searchResults);
-      if (isCurrentNewsQuestion) searchResults = dedupeNewsResults(searchResults);
+      if (isCurrentNewsQuestion) searchResults = dedupeNewsPublishers(dedupeNewsResults(searchResults));
       if ((isGoldRateQuestion || isSilverRateQuestion) && searchResults.length) {
         // Keep the strongest result from each publisher; repeated pages from one
         // website must not be presented as independent confirmation.
