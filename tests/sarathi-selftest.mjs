@@ -19,6 +19,11 @@ globalThis.fetch = async (input, init = {}) => {
   if (url.includes("api.exa.ai/search")) {
     if (exaMode === "429") return Response.json({ error: "rate limited" }, { status: 429 });
     const exaRequest = JSON.parse(init.body || "{}");
+    if (exaMode === "news-undated" && exaRequest.category === "news") {
+      return Response.json({ results: [
+        { title: "Undated current news item", url: "https://www.bbc.com/news/undated", highlights: ["A current story without a publication timestamp."] }
+      ] });
+    }
     if (exaRequest.query.includes("Bloody Sunday 1905")) {
       return Response.json({
         results: [
@@ -57,6 +62,7 @@ globalThis.fetch = async (input, init = {}) => {
     if (groqMode === "timeout") throw new DOMException("The operation was aborted.", "AbortError");
     if (groqMode === "429") return Response.json({ error: { message: "rate limited" } }, { status: 429 });
     if (groqMode === "500") return Response.json({ error: { message: "provider down" } }, { status: 500 });
+    if (groqMode === "413-always") return Response.json({ error: { message: "payload too large" } }, { status: 413 });
     if (groqMode === "413-once" && groq413Count++ === 0) return Response.json({ error: { message: "payload too large" } }, { status: 413 });
     const body = JSON.parse(init.body || "{}");
     const last = body.messages?.at(-1)?.content || "";
@@ -420,11 +426,26 @@ await test("long numbered prompts reach Groq without losing their beginning or e
   assert.ok(sentPrompt.includes("50. सवाल 50:"), "last question must be preserved");
   assert.equal(groqBody.max_tokens, 6000, "output budget should support longer answer lists");
 });
-await test("Exa rate-limit is handled without crashing the Worker", async () => {
+await test("Exa rate-limit is explained to the user and marked retryable", async () => {
   exaMode = "429";
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज सोने का भाव बताओ" }] }, token);
-  assert.ok([200, 502, 429].includes(r.status));
-  assert.ok(r.data.reply || r.data.error);
+  assert.equal(r.status, 200);
+  assert.equal(r.data.searchAttempted, true);
+  assert.equal(r.data.searchUnavailable, true);
+  assert.equal(r.data.providerStatus, 429);
+  assert.equal(r.data.retryable, true);
+  assert.match(r.data.reply, /अनुरोध सीमा पूरी हो गई है/);
+  assert.match(r.data.searchWarning, /अनुरोध सीमा पूरी हो गई है/);
+  assert.equal(r.data.sources.length, 0);
+  exaMode = "success";
+});
+await test("undated search results are not mislabeled as fresh news", async () => {
+  exaMode = "news-undated";
+  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज की ताजा खबरें बताओ" }] }, token);
+  assert.equal(r.status, 200);
+  assert.equal(r.data.searchUnavailable, true);
+  assert.equal(r.data.sources.length, 0);
+  assert.match(r.data.reply, /प्रकाशित तारीख पिछले 48 घंटों के भीतर/);
   exaMode = "success";
 });
 await test("Groq HTTP 413 retries once with compact context and preserves the complete latest question", async () => {
@@ -455,6 +476,21 @@ await test("Groq HTTP 413 retries once with compact context and preserves the co
   assert.match(retrySystem, /बंद हुआ या दिन का अंतिम स्तर मत लिखो/);
   assert.match(retrySystem, /समापन स्तर/);
   assert.ok(retrySystem.length < 1000, "413 retry must also compact the oversized system prompt");
+  groqMode = "success";
+});
+await test("Groq repeated HTTP 413 preserves real search results without inventing a summary", async () => {
+  groqMode = "413-always";
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    messages: [{ role: "user", content: "आज सोने और चांदी का भाव बताओ" }]
+  }, token);
+  assert.equal(r.status, 200);
+  assert.equal(r.data.providerStatus, 413);
+  assert.equal(r.data.providerBusy, true);
+  assert.equal(r.data.sources.length, 2);
+  assert.match(r.data.reply, /HTTP 413/);
+  assert.match(r.data.reply, /वास्तविक परिणाम/);
+  assert.equal(calls.slice(before).filter(x => x.url.includes("api.groq.com")).length, 2);
   groqMode = "success";
 });
 await test("Groq HTTP 413 news retry keeps market closing-price safeguards", async () => {
