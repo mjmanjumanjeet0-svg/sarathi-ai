@@ -34,7 +34,9 @@ globalThis.fetch = async (input, init = {}) => {
       return Response.json({
         results: [
           { title: "IMD issues warning for Cyclone Murasu", url: "https://indianexpress.com/murasu", highlights: ["IMD says Severe Cyclonic Storm Murasu is over the westcentral Bay of Bengal and is forecast to cross the south Andhra Pradesh coast late on 2 November."] },
-          { title: "Supreme Court permits certified green crackers in Delhi-NCR", url: "https://thehindu.com/green-crackers", highlights: ["The Supreme Court allowed certified green crackers in Delhi-NCR during specified hours on 7 and 8 November."] }
+          { title: "Cyclone Murasu update: IMD warning", url: "https://www.indianexpress.com/murasu-live", highlights: ["The same Indian Express newsroom repeats the cyclone warning in a live update."] },
+          { title: "Supreme Court permits certified green crackers in Delhi-NCR", url: "https://thehindu.com/green-crackers", highlights: ["The Supreme Court allowed certified green crackers in Delhi-NCR during specified hours on 7 and 8 November."] },
+          { title: "Delhi air quality update", url: "https://www.ndtv.com/india-news/delhi-air-quality", highlights: ["Delhi air quality remains a developing story."] }
         ]
       });
     }
@@ -334,6 +336,10 @@ await test("latest news query uses Exa news category and publication freshness f
   const userContext = groqBody.messages?.at(-1)?.content || "";
   assert.match(userContext, /पूर्वानुमानित है तो उसे हो चुकी घटना की तरह मत लिखो/);
   assert.match(userContext, /कोई अतिरिक्त घटना, स्थान, संख्या, नुकसान, उड़ान रद्द होने या असर का दावा मत जोड़ो/);
+  assert.equal((userContext.match(/indianexpress\\.com/gi) || []).length, 1,
+    "news context must not count two Indian Express articles as independent publishers");
+  assert.match(userContext, /thehindu\\.com/);
+  assert.match(userContext, /ndtv\\.com/);
 });
 
 await test("a casual sentence containing आज does not automatically trigger Exa", async () => {
