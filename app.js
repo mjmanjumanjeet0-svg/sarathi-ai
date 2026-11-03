@@ -1616,6 +1616,8 @@ function addFiles(fileList) {
     (["image/png", "image/jpeg", "image/webp", "video/mp4", "video/webm", "video/quicktime"].includes(file.type) ||
       file.type === "application/pdf" ||
       file.type === "text/plain" ||
+      file.type === "text/csv" ||
+      /\.(txt|csv|md|json)$/i.test(file.name) ||
       file.name.toLowerCase().endsWith(".docx") ||
       /\.(mp4|webm|mov)$/i.test(file.name))
   );
@@ -1623,7 +1625,7 @@ function addFiles(fileList) {
   state.attachments.push(...files);
   renderAttachmentPreview();
   if (files.length) setStatus("फाइल तैयार है। भेजने पर उसका पाठ AI को भेजा जाएगा।");
-  else if (fileList.length) setStatus("यह फाइल समर्थित नहीं है या 20 MB से बड़ी है। JPG/PNG/WEBP, MP4/WEBM/MOV, PDF, DOCX या TXT चुनें।");
+  else if (fileList.length) setStatus("यह फाइल समर्थित नहीं है या 20 MB से बड़ी है। JPG/PNG/WEBP, MP4/WEBM/MOV, PDF, DOCX, TXT, CSV, MD या JSON चुनें।");
 }
 
 function loadExternalScript(src, globalName) {
@@ -1686,7 +1688,10 @@ async function extractPdfText(file) {
 
 async function extractOneFile(file) {
   const name = file.name.toLowerCase();
-  if (file.type === "text/plain" || name.endsWith(".txt")) {
+  if (
+    file.type.startsWith("text/") ||
+    /\.(txt|csv|md|json)$/i.test(name)
+  ) {
     return (await file.text()).slice(0, 8500);
   }
   if (file.type === "application/pdf" || name.endsWith(".pdf")) {
