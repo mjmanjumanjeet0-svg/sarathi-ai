@@ -725,7 +725,7 @@ function buildNewsFallback(results, dateTime) {
 function buildProviderBusySearchFallback(results, query, reason = "AI सेवा इस समय व्यस्त है, इसलिए खोज परिणामों का हिंदी सार तैयार नहीं हो सका।") {
   const items = (Array.isArray(results) ? results : []).slice(0, 5);
   if (!items.length) return "";
-  return reason + " खोज में मिले स्रोत नीचे अलग से दिए गए हैं। उनके शीर्षक और प्रकाशन-तारीख देखकर मूल खबर पढ़ें; यह AI द्वारा सत्यापित समाचार-सार नहीं है।";
+  return reason + " नीचे खोज में मिले वास्तविक परिणाम अलग से दिए गए हैं। उनके शीर्षक और प्रकाशन-तारीख देखकर मूल खबर पढ़ें; यह AI द्वारा सत्यापित समाचार-सार नहीं है।";
 }
 
 function buildSearchContext(results, query = "") {
