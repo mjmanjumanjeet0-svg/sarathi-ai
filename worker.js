@@ -580,7 +580,7 @@ function dedupeNewsPublishers(results) {
   const accepted = [];
   for (const item of (Array.isArray(results) ? results : [])) {
     try {
-      const host = new URL(item.url).hostname.toLowerCase().replace(/^www\\./, "");
+      const host = new URL(item.url).hostname.toLowerCase().replace(/^www\./, "");
       const labels = host.split(".").filter(Boolean);
       if (labels.length < 2) continue;
       const suffix2 = labels.slice(-2).join(".");
