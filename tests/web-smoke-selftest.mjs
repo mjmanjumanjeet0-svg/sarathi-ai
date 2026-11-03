@@ -6,6 +6,7 @@ const html = await readFile(new URL("index.html", root), "utf8");
 const app = await readFile(new URL("app.js", root), "utf8");
 const voice = await readFile(new URL("voice.js", root), "utf8");
 const css = await readFile(new URL("style.css", root), "utf8");
+const worker = await readFile(new URL("worker.js", root), "utf8");
 
 const ids = [...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match => match[1]);
 const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
@@ -124,5 +125,19 @@ assert.ok(app.includes('submit.disabled = quiz.questions.some((_, i) => !Number.
 assert.ok(app.includes('quiz.score = quiz.questions.reduce'), "MCQ test must calculate a score from selected answers");
 assert.ok(app.includes('quiz.submitted = true'), "MCQ test must lock answers after submission");
 
+
+
+const sendMessageStart = app.indexOf("async function sendMessage(text) {");
+const sendMessageEnd = app.indexOf("\n}\n", sendMessageStart);
+assert.ok(sendMessageStart >= 0 && sendMessageEnd > sendMessageStart, "message sending flow must exist");
+const sendMessageSource = app.slice(sendMessageStart, sendMessageEnd + 3);
+assert.ok(sendMessageSource.indexOf("क्या भेजना है?") >= 0, "photo/video understanding must ask before sending selected media");
+assert.ok(sendMessageSource.indexOf("क्या भेजना है?") < sendMessageSource.indexOf("requestSarathiMediaUnderstanding(question, frames)"), "photo/video consent must happen before the media request");
+assert.ok(sendMessageSource.indexOf("क्या भेजना है?") < sendMessageSource.indexOf("extractVideoFrames(videoFile, 5)"), "video frames must not be processed for upload before consent");
+assert.ok(sendMessageSource.indexOf("क्या भेजना है?") < sendMessageSource.indexOf("fileToImageDataUrl(imageFile)"), "photo data must not be prepared for upload before consent");
+assert.ok(sendMessageSource.indexOf("क्या भेजना है?") < sendMessageSource.indexOf("extractAttachmentsText(state.attachments)"), "document text must not be extracted for sending before consent");
+assert.ok(worker.includes('zeroCostMode: true'), "disabled media APIs must clearly identify zero-cost mode");
+assert.ok(worker.includes('"/api/media/image"') && worker.includes('"/api/media/understand"'), "media API routes must be explicit and auditable");
+assert.ok(worker.includes("if (!env.EXA_API_KEY)"), "web search must report a missing configured Exa key rather than silently assuming search is available");
 
 console.log("WEB SMOKE SELF-TEST: " + requiredIds.length + " required IDs, duplicate-ID check, local scripts, voice wiring and core styles passed");
