@@ -1615,6 +1615,7 @@ function addFiles(fileList) {
     file.size <= 20 * 1024 * 1024 &&
     (["image/png", "image/jpeg", "image/webp", "video/mp4", "video/webm", "video/quicktime"].includes(file.type) ||
       file.type === "application/pdf" ||
+      file.name.toLowerCase().endsWith(".pdf") ||
       file.type === "text/plain" ||
       file.type === "text/csv" ||
       /\.(txt|csv|md|json)$/i.test(file.name) ||
