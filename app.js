@@ -585,8 +585,9 @@ function renderMessages() {
       sourceList.style.cssText = "margin:6px 0 0;padding-left:22px";
       for (const source of message.sources) {
         try {
-          const url = new URL(source.url);
-          if (!["http:", "https:"].includes(url.protocol)) continue;
+          const safeUrl = safeSourceUrl(source.url);
+          if (!safeUrl) continue;
+          const url = new URL(safeUrl);
           const item = document.createElement("li");
           const link = document.createElement("a");
           link.href = url.href;
@@ -672,6 +673,39 @@ function shouldShowSearchSources(data) {
     Array.isArray(data.sources) && data.sources.length > 0);
 }
 
+function safeSourceUrl(value) {
+  try {
+    const url = new URL(String(value || ""));
+    if (url.protocol !== "https:" || !url.hostname || url.username || url.password) return "";
+    url.hash = "";
+    return url.href;
+  } catch {
+    return "";
+  }
+}
+
+function sanitizeSourceRecords(sources, limit = 8) {
+  if (!Array.isArray(sources)) return [];
+  const seen = new Set();
+  const accepted = [];
+  for (const source of sources) {
+    if (!source || typeof source !== "object") continue;
+    const url = safeSourceUrl(source.url);
+    const title = typeof source.title === "string" ? source.title.trim() : "";
+    if (!url || !title || seen.has(url)) continue;
+    seen.add(url);
+    const parsed = new URL(url);
+    accepted.push({
+      title: title.slice(0, 240),
+      url,
+      publisher: String(source.publisher || parsed.hostname).slice(0, 100),
+      publishedAt: String(source.publishedAt || "").slice(0, 80)
+    });
+    if (accepted.length >= Math.max(1, Math.min(8, Number(limit) || 8))) break;
+  }
+  return accepted;
+}
+
 function shouldShowSearchWarning(data) {
   return Boolean(data && data.searchAttempted === true && data.searchWarning &&
     (data.searchUnavailable === true || data.providerBusy === true ||
@@ -687,7 +721,7 @@ function addMessage(role, content, imageUrl, sources) {
     role,
     content: String(content || ""),
     ...(imageUrl ? { imageUrl: String(imageUrl) } : {}),
-    ...(Array.isArray(sources) && sources.length ? { sources: sources.filter(source => source && typeof source.title === "string" && (String(source.url || "").startsWith("https://") || String(source.url || "").startsWith("http://"))).slice(0, 8).map(source => ({ title: source.title.slice(0, 240), url: source.url, publisher: String(source.publisher || "").slice(0, 100), publishedAt: String(source.publishedAt || "").slice(0, 80) })) } : {}),
+    ...(Array.isArray(sources) && sources.length ? { sources: sanitizeSourceRecords(sources) } : {}),
     createdAt: Date.now()
   });
 
