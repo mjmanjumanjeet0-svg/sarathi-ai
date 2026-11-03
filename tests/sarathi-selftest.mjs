@@ -8,6 +8,8 @@ assert.doesNotMatch(appSource, /detectAppLaunchCommand|getInstalledApps|openAppP
 assert.ok(!appSource.includes("extractVideoFrames") && !appSource.includes("videoFile") && !appSource.includes("वीडियो") && !appSource.includes("video/mp4") && !appSource.includes("mp4|webm|mov"), "video upload and frame-analysis code must be absent");
 assert.ok(appSource.includes('input.accept = ".pdf,.docx,.txt,.csv,.md,.json"'), "document picker must exclude video formats");
 assert.ok(appSource.includes('file.type.startsWith("image/")'), "photo attachments must remain supported");
+assert.match(appSource, /const asksToEditImage\s*=/, "image edit intent must be defined before send handling");
+assert.match(appSource, /const asksToGenerateImage\s*=/, "image generation intent must be defined before send handling");
 assert.ok(appSource.includes('Tesseract.createWorker("eng+hin")'), "photo OCR must support English and Hindi text");
 const htmlSource = await readFile(new URL("../index.html", import.meta.url), "utf8");
 assert.ok(!htmlSource.includes("वीडियो") && !htmlSource.includes("video/"), "attachment UI must not advertise video");
