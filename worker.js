@@ -522,8 +522,8 @@ function filterRelevantSearchResults(query, results) {
   }
 
   // Combined gold + silver queries must retain results for both metals.
-  if (/(सोने|सोना|gold|22\\s*k|24\\s*k|bullion)/i.test(q) && /(चांदी|चाँदी|silver)/i.test(q)) {
-    const preciousMetal = /(gold|सोना|सोने|sone|bullion|22\\s*k|24\\s*k|gold[- ]?rate|gold[- ]?price|sona|silver|चांदी|चाँदी|silver[- ]?(rate|price)|चांदी[- ]?(भाव|कीमत))/i;
+  if (/(सोने|सोना|gold|22\s*k|24\s*k|bullion)/i.test(q) && /(चांदी|चाँदी|silver)/i.test(q)) {
+    const preciousMetal = /(gold|सोना|सोने|sone|bullion|22\s*k|24\s*k|gold[- ]?rate|gold[- ]?price|sona|silver|चांदी|चाँदी|silver[- ]?(rate|price)|चांदी[- ]?(भाव|कीमत))/i;
     return list.filter(item => preciousMetal.test(textOf(item)));
   }
 
@@ -670,7 +670,7 @@ function buildSearchContext(results, query = "") {
   if (!results.length) return "";
 
   const isNewsQuery = /(खबर|समाचार|news|breaking|latest|ताज़ा|ताजा)/i.test(query);
-  const isPreciousMetalQuery = /(सोने|सोना|gold|चांदी|चाँदी|silver|bullion|22\\s*k|24\\s*k)/i.test(query);
+  const isPreciousMetalQuery = /(सोने|सोना|gold|चांदी|चाँदी|silver|bullion|22\s*k|24\s*k)/i.test(query);
   const isHistoricalQuery = isHistoricalResearchQuery(query);
   const historyInstruction = isHistoricalQuery
     ? "\\n\\nइतिहास और स्रोत-जाँच के सख्त निर्देश: केवल दिए गए खोज परिणामों के शीर्षक और उपलब्ध अंश से पुष्ट तथ्य लिखो। किसी एक स्रोत के अनुमान को सर्वमान्य तथ्य मत बताओ। तारीख, स्थान, व्यक्तियों और घटनाक्रम में स्रोतों का मेल जाँचो। खूनी रविवार (1905) पर 22 जनवरी 1905 ग्रेगोरियन और 9 जनवरी 1905 जूलियन कैलेंडर का अंतर स्पष्ट करो, यदि स्रोत इसकी पुष्टि करते हों। प्रदर्शनकारियों का लक्ष्य Winter Palace था; गोलीबारी कहाँ हुई, यह स्रोत के अनुसार सावधानी से लिखो और महल के ठीक सामने ही हुई ऐसा बिना प्रमाण मत कहो। मृतकों/घायलों की संख्या को विवादित बताओ; तत्कालीन सरकारी/राजनयिक रिपोर्ट, समकालीन समाचार और बाद के इतिहासकारों के अनुमान अलग-अलग रखो। लगभग 1,000 या 1,200 को निश्चित संख्या मत बताओ। कम-से-कम दो स्वतंत्र, विषय-संबंधित भरोसेमंद स्रोत उपलब्ध हों तभी बहु-स्रोत पुष्टि का दावा करो। हर स्रोत का वास्तविक शीर्षक, प्रकाशक/संस्था और उपलब्ध तारीख बताओ; लिंक केवल खोज परिणाम के वास्तविक URL से लो। Wikipedia, सामान्य ब्लॉग, SEO/परीक्षा-क्विज़ एग्रीगेटर या असंबंधित पेज को प्रामाणिक ऐतिहासिक प्रमाण मत मानो। स्रोत में जानकारी न हो तो सामान्य ज्ञान से खाली जगह मत भरो।"
