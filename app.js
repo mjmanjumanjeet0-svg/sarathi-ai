@@ -131,6 +131,7 @@ function requestLoginPassword() {
     const finish = value => {
       if (settled) return;
       settled = true;
+      if (dialog.open) dialog.close();
       dialog.remove();
       resolve(value);
     };
@@ -139,11 +140,9 @@ function requestLoginPassword() {
       const value = input.value;
       if (!value) return;
       finish(value);
-      dialog.close();
     });
     cancel.addEventListener("click", () => {
       finish(null);
-      dialog.close();
     });
     dialog.addEventListener("cancel", event => {
       event.preventDefault();
