@@ -423,6 +423,8 @@ await test("Groq HTTP 413 retries once with compact context and preserves the co
   assert.equal(retryBody.max_tokens, 1800);
   const retrySystem = retryBody.messages?.[0]?.content || "";
   assert.match(retrySystem, /समाचार में केवल शीर्षक और स्रोत-अंश से पुष्ट तथ्य लिखो/);
+  assert.match(retrySystem, /"बंद हुआ" या दिन का अंतिम स्तर मत लिखो/);
+  assert.match(retrySystem, /समापन स्तर/);
   assert.ok(retrySystem.length < 1000, "413 retry must also compact the oversized system prompt");
   groqMode = "success";
 });
