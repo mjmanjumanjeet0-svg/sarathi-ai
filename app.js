@@ -1721,13 +1721,19 @@ async function extractPdfText(file) {
   return result.slice(0, 8500);
 }
 
+function limitExtractedFileText(value) {
+  const text = String(value || "");
+  if (text.length <= 8500) return text;
+  return text.slice(0, 8500) + "\n[सूचना: इस फाइल का केवल शुरुआती 8,500 अक्षर पढ़े गए हैं। बाकी सामग्री इस संदेश में शामिल नहीं हुई।]";
+}
+
 async function extractOneFile(file) {
   const name = file.name.toLowerCase();
   if (
     file.type.startsWith("text/") ||
     /\.(txt|csv|md|json)$/i.test(name)
   ) {
-    return (await file.text()).slice(0, 8500);
+    return limitExtractedFileText(await file.text());
   }
   if (file.type === "application/pdf" || name.endsWith(".pdf")) {
     return await extractPdfText(file);
@@ -1737,7 +1743,7 @@ async function extractOneFile(file) {
       "https://cdn.jsdelivr.net/npm/mammoth@1.9.0/mammoth.browser.min.js", "mammoth"
     );
     const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
-    return String(result.value || "").slice(0, 8500);
+    return limitExtractedFileText(result.value || "");
   }
   if (file.type.startsWith("image/") || /\.(png|jpe?g|webp)$/i.test(name)) {
     const Tesseract = await loadExternalScript(
@@ -1746,7 +1752,7 @@ async function extractOneFile(file) {
     const worker = await Tesseract.createWorker("eng+hin");
     try {
       const result = await worker.recognize(file);
-      return String(result.data.text || "").slice(0, 8500);
+      return limitExtractedFileText(result.data.text || "");
     } finally {
       await worker.terminate();
     }
@@ -1757,7 +1763,13 @@ async function extractOneFile(file) {
 async function extractAttachmentsText(files) {
   const output = [];
   let remaining = 9500;
-  for (const file of files) {
+  let skippedFiles = 0;
+  for (let index = 0; index < files.length; index++) {
+    const file = files[index];
+    if (remaining <= 0) {
+      skippedFiles = files.length - index;
+      break;
+    }
     setStatus("फाइल पढ़ी जा रही है: " + file.name);
     const content = await extractOneFile(file);
     const clean = String(content || "").trim();
@@ -1768,8 +1780,13 @@ async function extractAttachmentsText(files) {
     const chunk = clean.slice(0, remaining);
     output.push("[फाइल: " + file.name + "]\n" + chunk);
     remaining -= chunk.length;
-    if (remaining <= 0) break;
+    if (chunk.length < clean.length) {
+      output.push("[सूचना: कुल 9,500 अक्षरों की सीमा के कारण कुछ सामग्री और आगे की फाइलें शामिल नहीं हुईं।]");
+      skippedFiles = files.length - index - 1;
+      break;
+    }
   }
+  if (skippedFiles > 0) output.push("[सूचना: " + skippedFiles + " आगे की फाइलें इस संदेश में शामिल नहीं हुईं।]");
   return output.join("\n\n");
 }
 
