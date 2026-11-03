@@ -37,6 +37,9 @@ for (const id of requiredIds) {
   assert.ok(ids.includes(id), "Required interface element missing: #" + id);
 }
 
+assert.match(html, /accept="image\/\*,video\/\*,\.pdf,\.txt,\.docx,\.csv,\.md,\.json"/, "attachment picker must expose all supported document formats");
+assert.ok(html.includes("PDF, DOCX, TXT, CSV, MD और JSON"), "attachment instructions must list every supported document format");
+
 const scriptFiles = [...html.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["']/gi)]
   .map(match => match[1])
   .filter(src => !/^(https?:)?\/\//i.test(src));
