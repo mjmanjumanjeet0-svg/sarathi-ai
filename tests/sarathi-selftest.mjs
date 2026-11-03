@@ -229,6 +229,28 @@ await test("Android app-launch capability is distinguished from website limitati
   assert.match(system, /केवल वेबसाइट\/ब्राउज़र/);
   assert.match(system, /खुलना सत्यापित नहीं हुआ/);
 });
+await test("constitution and science accuracy rules are included in the assistant system prompt", async () => {
+  for (const question of [
+    "भारत का संविधान कब लागू हुआ? विस्तार से समझाओ।",
+    "प्रकाश संश्लेषण और श्वसन में पाँच अंतर बताओ।"
+  ]) {
+    const before = calls.length;
+    const r = await request("/api/chat", "POST", {
+      messages: [{ role: "user", content: question }]
+    }, token);
+    assert.equal(r.status, 200);
+    const groqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
+    assert.ok(groqCall, "question should reach the configured assistant provider");
+    const body = JSON.parse(groqCall.init.body || "{}");
+    const system = body.messages?.find(message => message.role === "system")?.content || "";
+    assert.match(system, /9 दिसंबर 1946/);
+    assert.match(system, /26 नवंबर 1949/);
+    assert.match(system, /26 जनवरी 1950/);
+    assert.match(system, /मौलिक कर्तव्य 11 हैं/);
+    assert.match(system, /ठीक माँगी गई संख्या में/);
+    assert.match(system, /परिपक्व स्तनधारी लाल रक्त कोशिकाओं/);
+  }
+});
 await test("stable general-knowledge questions do not trigger unnecessary web search", async () => {
   const before = calls.length;
   const r = await request("/api/chat", "POST", {
