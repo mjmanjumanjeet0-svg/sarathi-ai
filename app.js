@@ -1176,6 +1176,15 @@ async function sendMessage(text) {
         .trim();
     }
 
+    // Provider-busy replies can be cut off in transit. Prefer a complete, honest
+    // fallback message while keeping the real retrieved links in the source panel.
+    if (data.providerBusy === true && Array.isArray(data.sources) && data.sources.length > 0) {
+      cleanAnswer =
+        "इंटरनेट खोज में " + data.sources.length +
+        " परिणाम मिले, लेकिन AI सेवा व्यस्त होने के कारण उनका हिंदी सार तैयार नहीं हो पाया। " +
+        "नीचे दिए गए शीर्षक और प्रकाशन-तारीख देखकर मूल खबर पढ़ें। इन्हें आज की पुष्टि की गई खबरें न मानें।";
+    }
+
     // Recover a known truncated news-fallback prefix when source metadata survived.
     // This keeps the chat from showing only "आज की खबरों की खोज में 2".
     if (
@@ -1207,7 +1216,8 @@ async function sendMessage(text) {
     }
 
     // Keep search failures visible in the chat, not only in the temporary status line.
-    if (shouldShowSearchWarning(data) && !cleanAnswer.includes(data.searchWarning)) {
+    if (!(data.providerBusy === true && Array.isArray(data.sources) && data.sources.length > 0) &&
+        shouldShowSearchWarning(data) && !cleanAnswer.includes(data.searchWarning)) {
       cleanAnswer += "\n\n⚠️ इंटरनेट खोज: " + data.searchWarning;
     }
 
