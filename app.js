@@ -1079,7 +1079,19 @@ async function sendMessage(text) {
   }
 
   const videoFile = state.attachments.find(file => file.type.startsWith("video/") || /\.(mp4|webm|mov)$/i.test(file.name));
-  const imageFile = state.attachments.find(file => file.type.startsWith("image/"));
+  const imageFile = state.attachments.find(file =>
+    file.type.startsWith("image/") || /\.(png|jpe?g|webp)$/i.test(file.name)
+  );
+  const mediaFiles = state.attachments.filter(file =>
+    file.type.startsWith("image/") || file.type.startsWith("video/") ||
+    /\.(png|jpe?g|webp|mp4|webm|mov)$/i.test(file.name)
+  );
+  if (mediaFiles.length > 1) {
+    const message = "एक बार में केवल एक फोटो या वीडियो चुनें। बाकी फाइलें हटाकर फिर भेजें, ताकि कोई फाइल गलती से छूटे नहीं।";
+    setStatus(message);
+    finishVoiceTurn(message);
+    return;
+  }
   const asksToEditImage = /(फोटो|तस्वीर|इमेज|image|photo).{0,45}(एडिट|बदल|सुधार|सुंदर|बैकग्राउंड|पृष्ठभूमि|रंग|हटाओ|जोड़ो|edit|change|modify|background)|(एडिट|बदल|सुधार|सुंदर|बैकग्राउंड|पृष्ठभूमि|रंग|हटाओ|जोड़ो|edit|change|modify|background).{0,45}(फोटो|तस्वीर|इमेज|image|photo)/i.test(prompt);
   const asksToGenerateImage = /(फोटो|तस्वीर|इमेज|image|picture).{0,55}(बनाओ|बना दो|बना लें|बनाएं|बनाकर|तैयार|generate|create|draw)|(बनाओ|बना दो|बना लें|बनाएं|बनाकर|तैयार|generate|create|draw).{0,55}(फोटो|तस्वीर|इमेज|image|picture)/i.test(prompt);
   if (!asksToEditImage && !asksToGenerateImage && (imageFile || videoFile)) {
@@ -1614,6 +1626,7 @@ function addFiles(fileList) {
   const allowed = Array.from(fileList).filter(file =>
     file.size <= 20 * 1024 * 1024 &&
     (["image/png", "image/jpeg", "image/webp", "video/mp4", "video/webm", "video/quicktime"].includes(file.type) ||
+      /\.(png|jpe?g|webp)$/i.test(file.name) ||
       file.type === "application/pdf" ||
       file.name.toLowerCase().endsWith(".pdf") ||
       file.type === "text/plain" ||
@@ -1705,7 +1718,7 @@ async function extractOneFile(file) {
     const result = await mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
     return String(result.value || "").slice(0, 8500);
   }
-  if (file.type.startsWith("image/")) {
+  if (file.type.startsWith("image/") || /\.(png|jpe?g|webp)$/i.test(name)) {
     const Tesseract = await loadExternalScript(
       "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js", "Tesseract"
     );
