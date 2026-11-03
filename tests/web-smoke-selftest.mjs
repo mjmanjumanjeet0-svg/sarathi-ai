@@ -48,7 +48,7 @@ assert.equal(shouldShowSearchWarning({ searchAttempted: true, searchWarning: "AI
 assert.equal(shouldShowSearchWarning({ searchAttempted: true, searchWarning: "No fresh articles", sources: [] }), true, "rejected or empty search results must explain why no sources are shown");
 assert.equal(shouldShowSearchWarning({ searchAttempted: false, searchWarning: "No search attempted", sources: [] }), false, "non-search replies must not show search warnings");
 assert.ok(app.includes("shouldShowSearchSources(data) ? filterSourcesForPrompt"), "assistant messages must display sources returned by automatic search");
-assert.ok(app.includes("if (data.searchAttempted && data.searchWarning)"), "automatic search failures must be surfaced in status");
+assert.ok(app.includes("if (shouldShowSearchWarning(data))"), "only meaningful search failures must be surfaced in status");
 
 assert.ok(scriptFiles.indexOf("app.js") >= 0, "Main app script must be loaded");
 assert.ok(scriptFiles.indexOf("voice.js") > scriptFiles.indexOf("app.js"), "Voice integration must load after app.js");
