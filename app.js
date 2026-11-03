@@ -672,6 +672,12 @@ function shouldShowSearchSources(data) {
     Array.isArray(data.sources) && data.sources.length > 0);
 }
 
+function shouldShowSearchWarning(data) {
+  return Boolean(data && data.searchAttempted === true && data.searchWarning &&
+    (data.searchUnavailable === true || data.providerBusy === true ||
+      !Array.isArray(data.sources) || data.sources.length === 0));
+}
+
 function addMessage(role, content, imageUrl, sources) {
   let chat = activeChat();
   if (!chat) chat = createChat();
@@ -1220,7 +1226,7 @@ async function sendMessage(text) {
     }
 
     // Keep search failures visible in the chat, not only in the temporary status line.
-    if (data.searchAttempted && data.searchWarning && !cleanAnswer.includes(data.searchWarning)) {
+    if (shouldShowSearchWarning(data) && !cleanAnswer.includes(data.searchWarning)) {
       cleanAnswer += "\n\n⚠️ इंटरनेट खोज: " + data.searchWarning;
     }
 
@@ -1243,7 +1249,7 @@ async function sendMessage(text) {
     // Typed messages stay silent; the user can still tap the per-message speaker button.
     if (shouldSpeakReply && window.SarathiVoice && typeof window.SarathiVoice.speak === "function") window.SarathiVoice.speak(cleanAnswer);
 
-    if (data.searchAttempted && data.searchWarning) {
+    if (shouldShowSearchWarning(data)) {
       setStatus("इंटरनेट खोज: " + data.searchWarning);
     } else {
       setStatus("");
