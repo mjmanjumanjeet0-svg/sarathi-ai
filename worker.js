@@ -199,7 +199,8 @@ function cleanText(value) {
 function validHttpUrl(value) {
   try {
     const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:";
+    return url.protocol === "https:" && Boolean(url.hostname) &&
+      !url.username && !url.password;
   } catch {
     return false;
   }
@@ -339,7 +340,8 @@ async function enrichGoldRateResults(results) {
           "User-Agent": "Mozilla/5.0 (compatible; SarathiAI/1.0)"
         },
         signal: controller.signal,
-        redirect: "follow"
+        // Do not follow provider-supplied redirects while fetching third-party pages.
+        redirect: "manual"
       });
       if (!response.ok) return item;
       const html = (await response.text()).slice(0, 1200000);
