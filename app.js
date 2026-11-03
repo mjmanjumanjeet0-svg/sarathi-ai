@@ -805,46 +805,6 @@ function filterSourcesForPrompt(prompt, sources) {
   ));
 }
 
-async function fileToImageDataUrl(file, maxSide = 512) {
-  const sourceUrl = URL.createObjectURL(file);
-  try {
-    const image = await new Promise((resolve, reject) => {
-      const element = new Image();
-      element.onload = () => resolve(element);
-      element.onerror = () => reject(new Error("फोटो खोली नहीं जा सकी।"));
-      element.src = sourceUrl;
-    });
-    const scale = Math.min(1, maxSide / Math.max(image.naturalWidth, image.naturalHeight));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
-    canvas.getContext("2d").drawImage(image, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", 0.76);
-  } finally {
-    URL.revokeObjectURL(sourceUrl);
-  }
-}
-
-async function requestSarathiImage(prompt, imageFile) {
-  const token = await getAuthToken();
-  let images;
-  if (imageFile) {
-    if (!/^image\/(png|jpeg|webp)$/i.test(imageFile.type) || imageFile.size > 4 * 1024 * 1024) {
-      throw new Error("फोटो PNG/JPG/WEBP में और 4 MB तक होनी चाहिए।");
-    }
-    images = [await fileToImageDataUrl(imageFile, 500)];
-  }
-  const response = await fetch(getWorkerUrl() + "/api/media/image", {
-    method: "POST",
-    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + token },
-    body: JSON.stringify({ prompt, ...(images ? { images } : {}) })
-  });
-  const data = await response.json();
-  if (data.zeroCostMode) throw new Error("सारथी में AI फोटो बनाना अभी बंद है। यह लॉगिन की गलती नहीं है।");
-  if (!response.ok || !data.imageUrl) throw new Error(data.error || "फोटो तैयार नहीं हो सकी।");
-  return data.imageUrl;
-}
-
 async function downloadSarathiImage(imageUrl, edited) {
   const response = await fetch(imageUrl);
   if (!response.ok) throw new Error("फोटो डाउनलोड नहीं हो सकी।");
@@ -1023,44 +983,15 @@ async function sendMessage(text) {
     return;
   }
 
-  // Detect image intent locally before branching. These flags must always be defined:
-  // an undefined flag here aborts every normal send with a ReferenceError.
-  const asksToEditImage = /(?:इस|इसकी|इसका|इस फोटो|फोटो को).{0,35}(?:एडिट|बदल|सुधार|हटाओ|जोड़ो|बैकग्राउंड)|(?:एडिट|बदल|सुधार).{0,25}(?:फोटो|तस्वीर|चित्र)/i.test(prompt);
-  const asksToGenerateImage = /(?:फोटो|तस्वीर|चित्र|इमेज).{0,35}(?:बनाओ|बना दो|तैयार करो|जनरेट)|(?:बनाओ|बना दो|जनरेट).{0,25}(?:फोटो|तस्वीर|चित्र|इमेज)/i.test(prompt);
-
-  const imageFile = state.attachments.find(file =>
-    file.type.startsWith("image/") || /\.(png|jpe?g|webp)$/i.test(file.name)
-  );
-  if (asksToEditImage || asksToGenerateImage) {
-    if (asksToEditImage && !imageFile) {
-      setStatus("जिस फोटो को एडिट करना है, उसे + बटन से पहले जोड़ें।");
-      finishVoiceTurn("जिस फोटो को एडिट करना है, उसे पहले जोड़ें।");
-      return;
-    }
-    if (imageFile && !asksToEditImage) {
-      setStatus("फोटो एडिट करने के लिए लिखें: इस फोटो का बैकग्राउंड बदल दो।");
-      finishVoiceTurn("फोटो एडिट करने के लिए बताइए कि उसमें क्या बदलाव करना है।");
-      return;
-    }
+  // Photo generation/editing is intentionally unavailable in zero-cost mode.
+  // Photo attachments are used only for local Hindi/English OCR below.
+  const asksForImageCreation = /(?:फोटो|तस्वीर|चित्र|इमेज).{0,35}(?:बनाओ|बना दो|तैयार करो|जनरेट|एडिट|बदल दो)|(?:बनाओ|बना दो|जनरेट|एडिट|बदल दो).{0,25}(?:फोटो|तस्वीर|चित्र|इमेज)/i.test(prompt);
+  if (asksForImageCreation) {
+    const message = "सारथी में AI फोटो बनाना या एडिट करना अभी उपलब्ध नहीं है। आप + से फोटो जोड़कर उसका हिंदी/अंग्रेज़ी पाठ OCR से पढ़वा सकते हैं। फोटो का मूल डेटा सर्वर पर नहीं भेजा जाएगा; पढ़ा गया पाठ भेजने से पहले अनुमति पूछी जाएगी।";
     addMessage("user", prompt);
-    if (imageFile) state.attachments = state.attachments.filter(file => file !== imageFile);
-    renderAttachmentPreview();
-    setBusy(true);
-    setStatus(asksToEditImage ? "फोटो एडिट हो रही है…" : "नई फोटो बनाई जा रही है…");
-    try {
-      const imageUrl = await requestSarathiImage(prompt, imageFile || null);
-      const imageReadyMessage = asksToEditImage ? "आपकी एडिट की हुई फोटो तैयार है।" : "आपकी बनाई हुई फोटो तैयार है।";
-      addMessage("assistant", imageReadyMessage, imageUrl);
-      finishVoiceTurn(imageReadyMessage);
-      setStatus("फोटो तैयार है। फोटो के कोने में ⬇ दबाकर डाउनलोड करें।");
-    } catch (error) {
-      const imageError = "फोटो तैयार नहीं हो सकी: " + (error?.message || "कृपया बाद में कोशिश करें।");
-      addMessage("assistant", imageError);
-      finishVoiceTurn(imageError);
-      setStatus("फोटो सेवा में समस्या आई।");
-    } finally {
-      setBusy(false);
-    }
+    addMessage("assistant", message);
+    setStatus("AI फोटो बनाना/एडिट करना बंद है; फोटो OCR उपलब्ध है।");
+    finishVoiceTurn(message);
     return;
   }
 
