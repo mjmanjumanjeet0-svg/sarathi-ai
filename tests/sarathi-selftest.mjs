@@ -79,7 +79,8 @@ globalThis.fetch = async (input, init = {}) => {
           { title: "Delhi air quality update", url: "https://www.ndtv.com/india-news/delhi-air-quality", publishedDate: new Date(Date.now() - 30 * 60 * 1000).toISOString(), highlights: ["Delhi air quality remains a developing story."] },
           { title: "Old report outside freshness window", url: "https://www.bbc.com/news/old-report", publishedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), highlights: ["This report is five days old and must not be presented as a current news result."] },
           { title: "Report older than 48 hours", url: "https://www.reuters.com/world/older-than-48-hours", publishedDate: new Date(Date.now() - 60 * 60 * 60 * 1000).toISOString(), highlights: ["This report is 60 hours old and must be filtered from current news."] },
-          { title: "Future-dated report", url: "https://apnews.com/article/future-report", publishedDate: new Date(Date.now() + 60 * 1000).toISOString(), highlights: ["A future publication date must not be shown as current news."] }
+          { title: "Future-dated report", url: "https://apnews.com/article/future-report", publishedDate: new Date(Date.now() + 60 * 1000).toISOString(), highlights: ["A future publication date must not be shown as current news."] },
+          { title: "Late candidate: national update", url: "https://www.hindustantimes.com/india/late-candidate", publishedDate: new Date(Date.now() - 15 * 60 * 1000).toISOString(), highlights: ["A current report after the first eight candidates must remain eligible for freshness filtering."] }
         ]
       });
     }
@@ -430,11 +431,12 @@ await test("latest news query uses Exa news category and publication freshness f
   }, token);
   assert.equal(newsResponse.status, 200);
   const newsHosts = newsResponse.data.sources.map(x => new URL(x.url).hostname.toLowerCase().replace(/^www\./, ""));
-  assert.equal(newsHosts.length, 3, "one news article per independent publisher should remain");
+  assert.equal(newsHosts.length, 4, "late current news candidates must survive pre-filter truncation");
   assert.equal(new Set(newsHosts).size, newsHosts.length, "duplicate publisher hostnames must be removed");
   assert.ok(newsHosts.includes("indianexpress.com"));
   assert.ok(newsHosts.includes("thehindu.com"));
   assert.ok(newsHosts.includes("ndtv.com"));
+  assert.ok(newsHosts.includes("hindustantimes.com"), "a valid current article after the first eight candidates must be retained");
   assert.equal(newsHosts.includes("bbc.com"), false, "five-day-old news must be filtered out");
   assert.equal(newsHosts.includes("reuters.com"), false, "news older than 48 hours must be filtered out");
   assert.equal(newsHosts.includes("apnews.com"), false, "even slightly future-dated news must be filtered out");
