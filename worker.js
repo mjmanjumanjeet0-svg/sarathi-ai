@@ -1034,6 +1034,28 @@ export default {
       if (isHistoricalQuestion) searchResults = filterHistoricalSources(userText, searchResults);
       if (isCurrentNewsQuestion) {
         searchResults = dedupeNewsPublishers(filterFreshNewsResults(dedupeNewsResults(searchResults)));
+        // A single fresh article is not enough to present a news digest as verified.
+        // Stop before the language model can turn one weakly matching page into a confident event summary.
+        if (searchResults.length > 0 && searchResults.length < 2) {
+          const todayLabel = new Intl.DateTimeFormat("hi-IN", {
+            timeZone: INDIA_TIME_ZONE, day: "numeric", month: "long", year: "numeric"
+          }).format(new Date());
+          return jsonResponse({
+            success: true,
+            reply: todayLabel + " के लिए तारीख़-जाँचा हुआ केवल एक स्वतंत्र समाचार स्रोत मिला। उससे खबर की स्वतंत्र पुष्टि नहीं हो सकती, इसलिए मैं उसे पक्की खबर या विस्तृत सार के रूप में पेश नहीं करूँगा। कम-से-कम दो स्वतंत्र प्रकाशकों से पुष्टि मिलने पर ही सार दूँगा।",
+            ...dateTime,
+            webSearch: true,
+            searchAttempted: true,
+            searchWarning: "केवल एक स्वतंत्र प्रकाशक मिला; बहु-स्रोत पुष्टि उपलब्ध नहीं है।",
+            searchUnavailable: true,
+            sources: searchResults.map(item => ({
+              title: item.title,
+              url: item.url,
+              publisher: item.publisher || "प्रकाशक उपलब्ध नहीं",
+              publishedAt: item.publishedAt || ""
+            }))
+          });
+        }
         if (!searchResults.length) {
           const todayLabel = new Intl.DateTimeFormat("hi-IN", {
             timeZone: INDIA_TIME_ZONE, day: "numeric", month: "long", year: "numeric"
