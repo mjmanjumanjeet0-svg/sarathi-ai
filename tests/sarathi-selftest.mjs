@@ -272,20 +272,22 @@ await test("explicit Hindi command इंटरनेट खोजो triggers E
   assert.deepEqual(exaBody.contents, { highlights: true });
 });
 
-await test("historical research prioritizes credible sources and marks casualty figures as disputed", async () => {
+await test("historical research automatically invokes Exa, passes real source URLs and flags disputed casualty figures", async () => {
   const before = calls.length;
   const r = await request("/api/chat", "POST", {
-    webSearch: true,
-    messages: [{ role: "user", content: "खूनी रविवार" }]
+    webSearch: false,
+    messages: [{ role: "user", content: "खूनी रविवार 1905 के बारे में बताओ और भरोसेमंद ऐतिहासिक स्रोत दो।" }]
   }, token);
   assert.equal(r.status, 200);
   assert.equal(r.data.searchAttempted, true);
   assert.equal(r.data.webSearch, true);
   const exaCall = calls.slice(before).find(x => x.url.includes("api.exa.ai/search"));
-  assert.ok(exaCall, "historical question should invoke Exa");
+  assert.ok(exaCall, "historical question should automatically invoke Exa without the web toggle");
   const exaBody = JSON.parse(exaCall.init.body || "{}");
-  assert.equal(exaBody.numResults, 8);
+  assert.equal(exaBody.numResults, 15);
   assert.match(exaBody.query, /Bloody Sunday 1905 St Petersburg/);
+  assert.ok(exaBody.includeDomains.includes("history.state.gov"));
+  assert.ok(exaBody.includeDomains.includes("iupress.indiana.edu"));
   assert.ok(r.data.sources.length >= 3);
   assert.equal(r.data.sources.some(x => x.url.includes("hindikul.com")), false);
   assert.equal(r.data.sources.some(x => x.url.includes("wikipedia.org")), false);
@@ -294,7 +296,8 @@ await test("historical research prioritizes credible sources and marks casualty 
   const groqBody = JSON.parse(groqCall.init.body || "{}");
   const enrichedPrompt = groqBody.messages?.at(-1)?.content || "";
   assert.match(enrichedPrompt, /इतिहास और स्रोत-जाँच के सख्त निर्देश/);
-  assert.match(enrichedPrompt, /मृतकों\/घायलों की संख्या अलग हो तो स्पष्ट बताओ कि आँकड़े विवादित हैं/);
+  assert.match(enrichedPrompt, /मृतकों\/घायलों की संख्या को विवादित बताओ/);
+  assert.match(enrichedPrompt, /वास्तविक स्रोत URL:/);
 });
 
 await test("latest news query uses Exa news category and publication freshness filter", async () => {
