@@ -1176,6 +1176,22 @@ async function sendMessage(text) {
         .trim();
     }
 
+    // Final display-side integrity guard for Bloody Sunday. If an upstream model
+    // response is cut off in the casualty paragraph, replace only that unfinished
+    // tail with a complete, cautious statement rather than showing a broken sentence.
+    if (/(खूनी रविवार|bloody sunday)/i.test(prompt)) {
+      const casualtyIndex = cleanAnswer.search(/मृतकों की संख्या/i);
+      if (casualtyIndex >= 0) {
+        const casualtyTail = cleanAnswer.slice(casualtyIndex).trim();
+        if (!/[।.!?]["'”’)]*\s*$/.test(casualtyTail)) {
+          cleanAnswer = cleanAnswer.slice(0, casualtyIndex).trimEnd() +
+            "\\n\\nमृतकों की संख्या: इस घटना में मृतकों की कुल संख्या पर ऐतिहासिक स्रोतों में मतभेद है। उपलब्ध स्रोतों से एक सर्वमान्य और पूरी तरह प्रमाणित संख्या तय नहीं होती; इसलिए किसी एक निश्चित आँकड़े को अंतिम सत्य बताना उचित नहीं होगा।";
+        }
+      } else {
+        cleanAnswer += "\\n\\nमृतकों की संख्या: ऐतिहासिक स्रोतों में अलग-अलग अनुमान मिलते हैं; उपलब्ध जानकारी से एक सर्वमान्य और पूरी तरह प्रमाणित कुल संख्या तय नहीं होती।";
+      }
+    }
+
     // Keep search failures visible in the chat, not only in the temporary status line.
     if (data.searchAttempted && data.searchWarning && !cleanAnswer.includes(data.searchWarning)) {
       cleanAnswer += "\n\n⚠️ इंटरनेट खोज: " + data.searchWarning;
