@@ -512,7 +512,9 @@ function renderMessages() {
       sourceBox.className = "message-sources";
       sourceBox.style.cssText = "margin-top:14px;padding-top:10px;border-top:1px solid var(--border,#ddd)";
       const sourceHeading = document.createElement("strong");
-      sourceHeading.textContent = "स्वतंत्र ऐतिहासिक स्रोत";
+      sourceHeading.textContent = /खूनी रविवार|bloody sunday/i.test(message.content || "")
+        ? "ऐतिहासिक संदर्भ और स्रोत"
+        : "खोज में मिले स्रोत";
       sourceBox.appendChild(sourceHeading);
       const sourceList = document.createElement("ol");
       sourceList.style.cssText = "margin:6px 0 0;padding-left:22px";
