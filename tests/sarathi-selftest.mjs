@@ -3,6 +3,8 @@ import { readFile } from "node:fs/promises";
 
 // Load the exact Worker source without changing its Cloudflare module format.
 const source = await readFile(new URL("../worker.js", import.meta.url), "utf8");
+const appSource = await readFile(new URL("../app.js", import.meta.url), "utf8");
+assert.doesNotMatch(appSource, /detectAppLaunchCommand|getInstalledApps|openAppPackage|openPhone|SarathiNative\.openApp/, "web chat must not launch installed apps");
 const moduleUrl = "data:text/javascript;base64," + Buffer.from(source).toString("base64");
 const { default: worker } = await import(moduleUrl);
 
