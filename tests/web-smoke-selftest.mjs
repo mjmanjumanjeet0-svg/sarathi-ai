@@ -135,6 +135,8 @@ assert.ok(sendMessageSource.indexOf("क्या भेजना है?") >= 0
 assert.ok(sendMessageSource.indexOf("क्या भेजना है?") < sendMessageSource.indexOf("requestSarathiMediaUnderstanding(question, frames)"), "photo/video consent must happen before the media request");
 assert.ok(sendMessageSource.indexOf("क्या भेजना है?") < sendMessageSource.indexOf("extractVideoFrames(videoFile, 5)"), "video frames must not be processed for upload before consent");
 assert.ok(sendMessageSource.indexOf("क्या भेजना है?") < sendMessageSource.indexOf("fileToImageDataUrl(imageFile)"), "photo data must not be prepared for upload before consent");
+assert.ok(sendMessageSource.includes("/\\.(png|jpe?g|webp)$/i.test(file.name)"), "image detection must fall back to the filename when Android provides a generic MIME type");
+assert.ok(sendMessageSource.includes("mediaFiles.length > 1"), "multiple media files must be rejected clearly instead of silently ignoring attachments");
 assert.ok(sendMessageSource.indexOf("क्या भेजना है?") < sendMessageSource.indexOf("extractAttachmentsText(state.attachments)"), "document text must not be extracted for sending before consent");
 const attachmentStart = app.indexOf("function addFiles(fileList) {");
 const attachmentEnd = app.indexOf("\n}\n", attachmentStart);
@@ -144,6 +146,7 @@ for (const extension of ["pdf", "docx", "txt", "csv", "md", "json"]) {
   assert.ok(attachmentSource.includes(extension), "attachment picker must allow ." + extension);
 }
 assert.ok(attachmentSource.includes('file.name.toLowerCase().endsWith(".pdf")'), "PDF files with a missing or generic MIME type must still be selectable by extension");
+assert.ok(attachmentSource.includes("/\\.(png|jpe?g|webp)$/i.test(file.name)"), "JPG/PNG/WEBP files with generic MIME types must still be selectable by extension");
 assert.ok(attachmentSource.includes("20 * 1024 * 1024"), "attachment picker must enforce the 20 MB per-file limit");
 const extractorStart = app.indexOf("async function extractOneFile(file) {");
 const extractorEnd = app.indexOf("\n}\n", extractorStart);
@@ -152,6 +155,7 @@ const extractorSource = app.slice(extractorStart, extractorEnd + 3);
 for (const extension of ["txt", "csv", "md", "json", "pdf", "docx"]) {
   assert.ok(extractorSource.includes(extension), "file text extraction must support ." + extension);
 }
+assert.ok(extractorSource.includes("/\\.(png|jpe?g|webp)$/i.test(name)"), "OCR must recognize image files by extension when MIME type is generic");
 assert.ok(worker.includes('zeroCostMode: true'), "disabled media APIs must clearly identify zero-cost mode");
 assert.ok(worker.includes('"/api/media/image"') && worker.includes('"/api/media/understand"'), "media API routes must be explicit and auditable");
 assert.ok(worker.includes("if (!env.EXA_API_KEY)"), "web search must report a missing configured Exa key rather than silently assuming search is available");
