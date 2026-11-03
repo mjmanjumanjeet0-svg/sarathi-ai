@@ -8,8 +8,10 @@ assert.doesNotMatch(appSource, /detectAppLaunchCommand|getInstalledApps|openAppP
 assert.ok(!appSource.includes("extractVideoFrames") && !appSource.includes("videoFile") && !appSource.includes("वीडियो") && !appSource.includes("video/mp4") && !appSource.includes("mp4|webm|mov"), "video upload and frame-analysis code must be absent");
 assert.ok(appSource.includes('input.accept = ".pdf,.docx,.txt,.csv,.md,.json"'), "document picker must exclude video formats");
 assert.ok(appSource.includes('file.type.startsWith("image/")'), "photo attachments must remain supported");
-assert.match(appSource, /const asksToEditImage\s*=/, "image edit intent must be defined before send handling");
-assert.match(appSource, /const asksToGenerateImage\s*=/, "image generation intent must be defined before send handling");
+assert.match(appSource, /const asksForImageCreation\s*=/, "image creation/edit requests must be handled locally");
+assert.match(appSource, /AI फोटो बनाना या एडिट करना अभी उपलब्ध नहीं है/, "disabled image generation/editing must be explained honestly");
+assert.doesNotMatch(appSource, /requestSarathiImage|\/api\/media\/image|fileToImageDataUrl/, "photo data must never be uploaded to the disabled image-generation endpoint");
+assert.ok(appSource.includes('if (!window.confirm("चुनी गई फाइलों से निकाला गया पाठ इंटरनेट के जरिए AI सेवा को भेजा जाएगा। क्या भेजना है?"))'), "attachment text must require explicit consent before sending");
 assert.match(appSource, /const isBasicArithmetic\s*=/, "basic arithmetic must bypass unnecessary web search");
 assert.ok(appSource.includes('Tesseract.createWorker("eng+hin")'), "photo OCR must support English and Hindi text");
 const htmlSource = await readFile(new URL("../index.html", import.meta.url), "utf8");
