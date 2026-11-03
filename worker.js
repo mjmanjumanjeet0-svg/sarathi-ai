@@ -199,19 +199,18 @@ function cleanText(value) {
 function validHttpUrl(value) {
   try {
     const url = new URL(value);
-    const hostname = url.hostname.toLowerCase().replace(/^\\[|\\]$/g, "");
+    const hostname = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
     if (url.protocol !== "https:" || !hostname || url.username || url.password) return false;
     // Reject local names and all IP literals. Search enrichment should fetch
     // public DNS hostnames only, never loopback, private, link-local or metadata IPs.
     if (hostname === "localhost" || hostname.endsWith(".localhost") ||
         hostname.endsWith(".local") || hostname.endsWith(".internal") ||
-        hostname.includes(":") || /^\\d{1,3}(?:\\.\\d{1,3}){3}$/.test(hostname)) return false;
+        hostname.includes(":") || /^\d{1,3}(?:\.\d{1,3}){3}$/.test(hostname)) return false;
     return true;
   } catch {
     return false;
   }
 }
-
 async function searchInternet(query, env) {
   const searchQuery = String(query || "").trim().slice(0, 1024);
   if (!searchQuery) return { results: [], warning: "खोज का सवाल खाली है।" };
