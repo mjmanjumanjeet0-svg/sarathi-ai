@@ -353,6 +353,7 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.match(userContext, /हर तथ्य—कौन, क्या, कहाँ, कब, संख्या और असर—उसी एक परिणाम/);
   assert.match(userContext, /अलग-अलग परिणामों के अधूरे अंश जोड़कर एक नई घटना या कहानी मत बनाओ/);
   assert.match(userContext, /केवल उसी परिणाम के प्रकाशक और क्रमांक को स्रोत बताओ/);
+  assert.match(userContext, /प्रकाशित: .*भारतीय समय/);
 
 });
 
