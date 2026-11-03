@@ -1718,7 +1718,11 @@ async function extractPdfText(file) {
       await worker.terminate();
     }
   }
-  return result.slice(0, 8500);
+  let limited = limitExtractedFileText(result);
+  if (pdf.numPages > pageLimit) {
+    limited += "\n[सूचना: इस PDF के कुल " + pdf.numPages + " पृष्ठ हैं; फिलहाल पहले " + pageLimit + " पृष्ठ पढ़े गए हैं।]";
+  }
+  return limited;
 }
 
 function limitExtractedFileText(value) {
