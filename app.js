@@ -1186,7 +1186,10 @@ async function sendMessage(text) {
     try {
       attachmentContext = await extractAttachmentsText(state.attachments);
       if (!attachmentContext.trim()) throw new Error("फाइलों से कोई पढ़ने योग्य पाठ नहीं मिला।");
-      prompt = (prompt + "\n\nसंलग्न सामग्री:\n" + attachmentContext).slice(0, 11500);
+      const combinedPrompt = prompt + "\n\nसंलग्न सामग्री:\n" + attachmentContext;
+      prompt = combinedPrompt.length > 11500
+        ? combinedPrompt.slice(0, 11350) + "\n[सूचना: अनुरोध की कुल लंबाई सीमा के कारण कुछ सामग्री शामिल नहीं हुई।]"
+        : combinedPrompt;
       state.attachments = [];
       renderAttachmentPreview();
     } catch (error) {
