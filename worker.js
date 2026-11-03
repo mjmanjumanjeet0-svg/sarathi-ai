@@ -589,9 +589,13 @@ function filterRelevantSearchResults(query, results) {
     return list.filter(item => {
       try {
         const host = new URL(item.url).hostname.toLowerCase().replace(/^www\./, "");
-        const headline = `${item.title || ""} ${item.snippet || ""}`;
-        // Do not treat astrology or calendar pages as current news.
+        const title = String(item.title || "");
+        const headline = `${title} ${item.snippet || ""}`;
+        // Do not treat astrology, calendar pages, or generic daily live-feed indexes
+        // as independent reported articles. They often repeat headlines without
+        // providing a distinct, date-stamped story.
         if (/(राशिफल|राशि फल|पंचांग|मुहूर्त|राहु.?काल|horoscope|zodiac|astrology|panchang)/i.test(headline)) return false;
+        if (/(मुख्य और ताजा समाचार|मुख्य और ताज़ा समाचार|लाइव ब्रेकिंग न्यूज|लाइव ब्रेकिंग न्यूज़|latest and breaking news today|latest news live|live news updates)/i.test(title)) return false;
         return trustedNewsHost.test(host);
       } catch {
         return false;
