@@ -209,8 +209,9 @@ async function searchInternet(query, env) {
   const searchQuery = String(query || "").trim().slice(0, 1024);
   if (!searchQuery) return { results: [], warning: "खोज का सवाल खाली है।" };
 
-  // Free-tier-only search: use Exa only. Never fall back to Cloudflare AI Gateway,
-  // because that may consume a separate paid credit balance.
+  // Use only the explicitly configured Exa provider. Exa usage may be metered
+  // by its account plan; never silently fall back to Cloudflare AI Gateway or
+  // another provider that could create separate charges.
   if (!env.EXA_API_KEY) {
     return {
       results: [],
@@ -280,7 +281,7 @@ async function searchInternet(query, env) {
       console.error("Exa search failed", response.status, tag, detail);
       let warning = "Exa सर्च सेवा ने HTTP " + response.status + " लौटाया।";
       if (response.status === 401 || response.status === 403) warning = "Exa API Key स्वीकार नहीं हुई। Cloudflare Secret का नाम EXA_API_KEY और उसकी वैधता जाँचें।";
-      else if (response.status === 402) warning = "Exa खाते में मुफ़्त सर्च क्रेडिट या उपलब्ध सीमा पूरी हो गई है। कोई दूसरा सर्च प्रदाता अपने-आप चालू नहीं होगा।";
+      else if (response.status === 402) warning = "Exa खाते के क्रेडिट या प्लान की उपलब्ध सीमा पूरी हो गई है। कोई दूसरा सर्च प्रदाता अपने-आप चालू नहीं होगा। Exa के उपयोग पर आपके खाते के प्लान के अनुसार शुल्क लग सकता है।";
       else if (response.status === 429) warning = "Exa सर्च की अनुरोध सीमा पूरी हो गई है। थोड़ी देर बाद प्रयास करें।";
       else if (response.status >= 500) warning = "Exa सर्च सेवा अभी उपलब्ध नहीं है। थोड़ी देर बाद प्रयास करें।";
       return {
