@@ -176,6 +176,9 @@ assert.ok(extractorStart >= 0 && extractorEnd > extractorStart, "file text extra
 const extractorSource = app.slice(extractorStart, extractorEnd + 3);
 assert.ok(app.includes("function limitExtractedFileText(value)"), "file extraction must explicitly mark per-file text truncation");
 assert.ok(app.includes("केवल शुरुआती 8,500 अक्षर पढ़े गए"), "users must be told when a single file is truncated");
+assert.ok(app.includes("let limited = limitExtractedFileText(result)"), "PDF extraction must use the visible text truncation warning");
+assert.ok(app.includes("इस PDF के कुल "), "PDFs over the page limit must disclose that later pages were not read");
+
 assert.ok(app.includes("कुल 9,500 अक्षरों की सीमा"), "users must be told when combined attachment text is truncated");
 assert.ok(app.includes("आगे की फाइलें इस संदेश में शामिल नहीं हुईं"), "users must be told when later attachments are skipped due to text limits");
 
