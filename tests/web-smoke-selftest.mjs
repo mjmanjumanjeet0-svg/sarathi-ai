@@ -191,6 +191,9 @@ assert.ok(app.includes("स्कैन/चित्र वाले पृष�
 
 assert.ok(app.includes("कुल 9,500 अक्षरों की सीमा"), "users must be told when combined attachment text is truncated");
 assert.ok(app.includes("आगे की फाइलें इस संदेश में शामिल नहीं हुईं"), "users must be told when later attachments are skipped due to text limits");
+assert.ok(app.includes("const combinedPrompt = prompt +"), "attachment content must be combined before the final request-length check");
+assert.ok(app.includes("अनुरोध की कुल लंबाई सीमा के कारण कुछ सामग्री शामिल नहीं हुई"), "users must be told if the final prompt limit removes attachment content");
+
 
 for (const extension of ["txt", "csv", "md", "json", "pdf", "docx"]) {
   assert.ok(extractorSource.includes(extension), "file text extraction must support ." + extension);
