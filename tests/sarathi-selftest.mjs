@@ -195,6 +195,16 @@ await test("India capital is answered locally without Groq quota", async () => {
   assert.match(r.data.reply, /नई दिल्ली/);
   assert.equal(calls.length, before);
 });
+const arithmeticStart = source.indexOf("function solveBasicArithmetic(text) {");
+const arithmeticEnd = source.indexOf("\nfunction isDateQuestion", arithmeticStart);
+assert.ok(arithmeticStart >= 0 && arithmeticEnd > arithmeticStart, "local arithmetic solver must exist");
+const solveBasicArithmetic = new Function(source.slice(arithmeticStart, arithmeticEnd) + "\nreturn solveBasicArithmetic;")();
+assert.deepEqual(solveBasicArithmetic("125 × 24 कितना होता है?"), { expression: "125*24", result: "3000" });
+assert.deepEqual(solveBasicArithmetic("18 + 7 × 2"), { expression: "18+7*2", result: "32" });
+assert.deepEqual(solveBasicArithmetic("100 / 4"), { expression: "100/4", result: "25" });
+assert.equal(solveBasicArithmetic("10 / 0"), null, "division by zero must not return a numeric answer");
+assert.equal(solveBasicArithmetic("इतिहास 1857"), null, "a standalone year must not be treated as arithmetic");
+
 await test("general knowledge reaches the AI provider", async () => {
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "इतिहास क्या है?" }] }, token);
   assert.equal(r.status, 200);
