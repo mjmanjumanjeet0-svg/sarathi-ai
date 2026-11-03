@@ -95,8 +95,73 @@ function safeDialogOpen(dialog) {
    LOGIN AND TOKEN
 ======================================== */
 
+function requestLoginPassword() {
+  return new Promise(resolve => {
+    const dialog = document.createElement("dialog");
+    dialog.setAttribute("aria-labelledby", "sarathiLoginTitle");
+    dialog.style.cssText = "width:min(92vw,380px);border:1px solid var(--border,#ddd);border-radius:16px;padding:22px;color:var(--text,inherit);background:var(--panel,#fff)";
+    const form = document.createElement("form");
+    form.method = "dialog";
+    const heading = document.createElement("h2");
+    heading.id = "sarathiLoginTitle";
+    heading.textContent = "सारथी AI लॉगिन";
+    const label = document.createElement("label");
+    label.textContent = "अपना लॉगिन पासवर्ड लिखें";
+    label.style.cssText = "display:block;margin:14px 0 6px";
+    const input = document.createElement("input");
+    input.type = "password";
+    input.name = "password";
+    input.autocomplete = "current-password";
+    input.required = true;
+    input.style.cssText = "box-sizing:border-box;width:100%;padding:12px;border:1px solid var(--border,#aaa);border-radius:10px";
+    label.appendChild(input);
+    const actions = document.createElement("div");
+    actions.style.cssText = "display:flex;justify-content:flex-end;gap:10px;margin-top:18px";
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.textContent = "रद्द करें";
+    const submit = document.createElement("button");
+    submit.type = "submit";
+    submit.textContent = "लॉगिन";
+    actions.append(cancel, submit);
+    form.append(heading, label, actions);
+    dialog.appendChild(form);
+    document.body.appendChild(dialog);
+    let settled = false;
+    const finish = value => {
+      if (settled) return;
+      settled = true;
+      dialog.remove();
+      resolve(value);
+    };
+    form.addEventListener("submit", event => {
+      event.preventDefault();
+      const value = input.value;
+      if (!value) return;
+      finish(value);
+      dialog.close();
+    });
+    cancel.addEventListener("click", () => {
+      finish(null);
+      dialog.close();
+    });
+    dialog.addEventListener("cancel", event => {
+      event.preventDefault();
+      finish(null);
+      dialog.close();
+    });
+    dialog.addEventListener("close", () => finish(null), { once: true });
+    try {
+      dialog.showModal();
+      input.focus();
+    } catch {
+      finish(null);
+    }
+  });
+}
+
 async function loginWorker() {
-  const password = window.prompt("अपना Sarathi AI लॉगिन पासवर्ड लिखें:");
+  const password = await requestLoginPassword();
 
   if (!password) {
     throw new Error("लॉगिन पासवर्ड जरूरी है।");
