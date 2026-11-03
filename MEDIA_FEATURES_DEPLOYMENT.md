@@ -22,7 +22,6 @@ The existing Worker secrets `GROQ_API_KEY`, `SARATHI_LOGIN_PASSWORD`, and any co
 
 - AI image generation requires Workers AI to be enabled for the Cloudflare account and the selected model to be available to that account.
 - AI image generation/editing and visual understanding require the corresponding Workers AI models to be enabled and available to the Cloudflare account. FLUX.2 Klein is a partner model and account-level availability/billing may apply.
-- Video export is browser-dependent and currently provides trim/filter/speed/title processing. Text-to-video generation and AI video effects are not implemented.
 - Project files are stored in this browser's local storage. They are not synced to GitHub or another device.
 - Android APK builds run through the repository's GitHub Actions workflow. A successful workflow artifact is required before calling an APK ready.
 
