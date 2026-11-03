@@ -1176,6 +1176,20 @@ async function sendMessage(text) {
         .trim();
     }
 
+    // Recover a known truncated news-fallback prefix when source metadata survived.
+    // This keeps the chat from showing only "आज की खबरों की खोज में 2".
+    if (
+      Array.isArray(data.sources) &&
+      data.sources.length > 0 &&
+      /^आज की खबरों की खोज में\\s+\\d+\\s*$/i.test(cleanAnswer)
+    ) {
+      cleanAnswer =
+        "आज की खबरों की खोज में " + data.sources.length +
+        " भरोसेमंद स्रोत मिले, लेकिन AI सेवा अभी उनका सार तैयार नहीं कर सकी। " +
+        "इसलिए मैं बिना पुष्टि के खबरों का सार नहीं बनाऊँगी। नीचे उपलब्ध स्रोत दिए गए हैं; " +
+        "उनके शीर्षक और प्रकाशन-तारीख देखकर मूल खबर पढ़ें। थोड़ी देर बाद फिर कोशिश करें।";
+    }
+
     // Final display-side integrity guard for Bloody Sunday. If an upstream model
     // response is cut off in the casualty paragraph, replace only that unfinished
     // tail with a complete, cautious statement rather than showing a broken sentence.
