@@ -320,9 +320,16 @@ await test("Bloody Sunday uses a deterministic date-safe answer and deduplicates
 });
 await test("latest news query uses Exa news category and publication freshness filter", async () => {
   const before = calls.length;
-  await request("/api/chat", "POST", {
+  const newsResponse = await request("/api/chat", "POST", {
     messages: [{ role: "user", content: "आज की ताजा खबरें बताओ" }]
   }, token);
+  assert.equal(newsResponse.status, 200);
+  const newsHosts = newsResponse.data.sources.map(x => new URL(x.url).hostname.toLowerCase().replace(/^www\\./, ""));
+  assert.equal(newsHosts.length, 3, "one news article per independent publisher should remain");
+  assert.equal(new Set(newsHosts).size, newsHosts.length, "duplicate publisher hostnames must be removed");
+  assert.ok(newsHosts.includes("indianexpress.com"));
+  assert.ok(newsHosts.includes("thehindu.com"));
+  assert.ok(newsHosts.includes("ndtv.com"));
   const exaCall = calls.slice(before).find(x => x.url.includes("api.exa.ai/search"));
   assert.ok(exaCall, "latest news must invoke Exa");
   const exaBody = JSON.parse(exaCall.init.body || "{}");
@@ -336,10 +343,7 @@ await test("latest news query uses Exa news category and publication freshness f
   const userContext = groqBody.messages?.at(-1)?.content || "";
   assert.match(userContext, /पूर्वानुमानित है तो उसे हो चुकी घटना की तरह मत लिखो/);
   assert.match(userContext, /कोई अतिरिक्त घटना, स्थान, संख्या, नुकसान, उड़ान रद्द होने या असर का दावा मत जोड़ो/);
-  assert.equal((userContext.match(/indianexpress\\.com/gi) || []).length, 1,
-    "news context must not count two Indian Express articles as independent publishers");
-  assert.match(userContext, /thehindu\\.com/);
-  assert.match(userContext, /ndtv\\.com/);
+
 });
 
 await test("a casual sentence containing आज does not automatically trigger Exa", async () => {
