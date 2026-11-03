@@ -1523,15 +1523,14 @@ function addFiles(fileList) {
   if (!fileList) return;
   const selected = Array.from(fileList);
   const supported = file => (
-    ["image/png", "image/jpeg", "image/webp", "video/mp4", "video/webm", "video/quicktime"].includes(file.type) ||
+    ["image/png", "image/jpeg", "image/webp"].includes(file.type) ||
     /\.(png|jpe?g|webp)$/i.test(file.name) ||
     file.type === "application/pdf" ||
     file.name.toLowerCase().endsWith(".pdf") ||
     file.type === "text/plain" ||
     file.type === "text/csv" ||
     /\.(txt|csv|md|json)$/i.test(file.name) ||
-    file.name.toLowerCase().endsWith(".docx") ||
-    /\.(mp4|webm|mov)$/i.test(file.name)
+    file.name.toLowerCase().endsWith(".docx")
   );
   const tooLarge = selected.filter(file => file.size > 20 * 1024 * 1024);
   const unsupported = selected.filter(file => file.size <= 20 * 1024 * 1024 && !supported(file));
@@ -1744,7 +1743,7 @@ function chooseFiles() {
   const input = $("fileInput");
   if (!input) return;
 
-  input.accept = "*/*";
+  input.accept = ".pdf,.docx,.txt,.csv,.md,.json";
   input.multiple = true;
   input.click();
   closeAttachmentDialog();
