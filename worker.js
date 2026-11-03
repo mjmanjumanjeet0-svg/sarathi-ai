@@ -1001,11 +1001,11 @@ export default {
           : latestPrompt;
         const compactMessages = [{
           role: "user",
-          content: compactPrompt + (searchContext ? searchContext.slice(0, isHistoricalQuestion ? 5200 : 800) : "")
+          content: compactPrompt + (searchContext ? searchContext.slice(0, isHistoricalResearchQuery(userText) ? 5200 : 800) : "")
         }];
         // The original system prompt is intentionally extensive. A 413 retry
         // must compact that too; otherwise the same oversized prompt is resent.
-        const compactSystemPrompt = isHistoricalQuestion
+        const compactSystemPrompt = isHistoricalResearchQuery(userText)
           ? "तुम सारथी AI हो। ऐतिहासिक सवाल का उत्तर केवल दिए गए ऐतिहासिक खोज-स्रोतों से पुष्ट जानकारी के आधार पर दो। खूनी रविवार (1905) को दंगा या हिंसक प्रदर्शन मत कहो: यह फादर जॉर्जी गैपॉन के नेतृत्व में मजदूरों का शांतिपूर्ण जुलूस था, जो अपनी याचिका ज़ार निकोलस द्वितीय तक पहुँचाने के लिए Winter Palace की ओर जा रहा था; सैनिकों ने जुलूस/भीड़ पर गोलीबारी की। 9 जनवरी 1905 जूलियन कैलेंडर और 22 जनवरी 1905 ग्रेगोरियन कैलेंडर की एक ही तारीख है। गोलीबारी का सटीक स्थान स्रोत से पुष्ट किए बिना Winter Palace के ठीक सामने मत बताओ। मृतकों और घायलों की संख्या विवादित है; कोई एक निश्चित संख्या मत गढ़ो। कम-से-कम दो स्वतंत्र भरोसेमंद स्रोत हों तभी ऐसा दावा करो। हर स्रोत का वास्तविक शीर्षक, प्रकाशक और वास्तविक URL दो; स्रोत न हो तो साफ कहो। उपयोगकर्ता की भाषा में उत्तर दो।"
           : "तुम सारथी AI हो। उपयोगकर्ता की भाषा में स्पष्ट, सही और उपयोगी उत्तर दो। सवाल का पूरा उत्तर दो; तथ्य, तारीख, संख्या, स्रोत या लिंक मत गढ़ो। इंटरनेट खोज के परिणाम दिए हों तो हर बदलती/ताज़ा जानकारी केवल उन्हीं परिणामों से लो। समाचार में केवल शीर्षक और स्रोत-अंश से पुष्ट तथ्य लिखो; पूर्वानुमान को घटित घटना मत बताओ। जानकारी अपर्याप्त हो तो साफ कहो। हिंदी में सहज देवनागरी हिंदी लिखो।";
         groqResponse = await sendGroqRequest(compactMessages, 1800, compactSystemPrompt);
