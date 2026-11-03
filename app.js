@@ -1018,9 +1018,10 @@ async function sendMessage(text) {
     if (window.SarathiNative && typeof window.SarathiNative.stopSpeaking === "function") {
       window.SarathiNative.stopSpeaking();
     }
-    if (window.SarathiNative && typeof window.SarathiNative.endConversation === "function") {
-      window.SarathiNative.endConversation();
-    }
+    // Use the actual voice controller so Android receives endVoiceConversation
+    // and browser recognition is stopped as well.
+    if (window.SarathiVoice?.isActive?.()) window.SarathiVoice.stop();
+    else window.SarathiNative?.endVoiceConversation?.();
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     setStatus("ठीक है। बातचीत समाप्त। दोबारा बुलाने के लिए “हेलो सारथी” कहें।");
     const input = $("messageInput");
@@ -1061,8 +1062,10 @@ async function sendMessage(text) {
   const workerUrl = getWorkerUrl();
 
   if (!workerUrl) {
+    const message = "सारथी की सेटिंग में Worker URL उपलब्ध नहीं है। सेटिंग खोलकर सही पता भरें।";
     setStatus("सेटिंग्स में Worker URL भरें।");
     openSettings();
+    finishVoiceTurn(message);
     return;
   }
 
@@ -1553,8 +1556,10 @@ window.SarathiVoice = {
     }
   },
   onError(message) {
-    window.SarathiVoice?.nativeComplete?.();
-    setStatus(message || "ऑफ़लाइन आवाज़ सुविधा अभी उपलब्ध नहीं है।");
+    state.voiceReplyPending = false;
+    if (window.SarathiVoice?.isActive?.()) window.SarathiVoice.stop();
+    else window.SarathiVoice?.nativeComplete?.();
+    setStatus(message || "आवाज़ सुविधा अभी उपलब्ध नहीं है।");
   },
   onStatus(message) {
     setStatus(message || "");
