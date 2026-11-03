@@ -142,7 +142,7 @@ function getIndiaDateTime() {
 
 function solveBasicArithmetic(text) {
   const input = String(text || "").replace(/,/g, "");
-  const match = input.match(/(?:^|[^0-9])(([0-9]+(?:[.][0-9]+)?(?:[ ]*[+−×*÷/\\-][ ]*[0-9]+(?:[.][0-9]+)?)+)(?=$|[^0-9])/);
+  const match = input.match(/(?:^|[^0-9])(([0-9]+(?:[.][0-9]+)?(?:[ ]*[-+−×*÷/][ ]*[0-9]+(?:[.][0-9]+)?)+)(?=$|[^0-9])/);
   if (!match) return null;
   const expression = match[1].replace(/[ ]+/g, "").replace(/×/g, "*").replace(/÷/g, "/").replace(/−/g, "-");
   const tokens = expression.match(/[0-9]+(?:[.][0-9]+)?|[()+*/-]/g) || [];
