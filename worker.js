@@ -305,7 +305,7 @@ async function searchInternet(query, env) {
       // News needs a larger candidate pool because the final safety filters
       // remove untrusted publishers, undated pages, and articles not published
       // on the current India calendar day.
-      numResults: isHistoricalResearchQuery(searchQuery) ? 15 : (isNewsQuery ? 20 : (isPreciousMetalQuery || isEducationQuery ? 8 : 5)),
+      numResults: isHistoricalResearchQuery(searchQuery) ? 15 : (isNewsQuery ? 40 : (isPreciousMetalQuery || isEducationQuery ? 8 : 5)),
       contents: { highlights: true }
     };
     if (isHistoricalResearchQuery(searchQuery)) {
@@ -379,7 +379,7 @@ async function searchInternet(query, env) {
     const items = Array.isArray(payload?.results) ? payload.results : [];
     const results = items
       .filter(item => item && typeof item.title === "string" && typeof item.url === "string" && validHttpUrl(item.url))
-      .slice(0, isHistoricalResearchQuery(searchQuery) ? 15 : (isNewsQuery ? 20 : 5))
+      .slice(0, isHistoricalResearchQuery(searchQuery) ? 15 : (isNewsQuery ? 40 : 5))
       .map(item => {
         let publisher = "वेबसाइट";
         try { publisher = new URL(item.url).hostname.replace(/^www\./i, ""); } catch {}
