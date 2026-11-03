@@ -1092,6 +1092,12 @@ async function sendMessage(text) {
     finishVoiceTurn(message);
     return;
   }
+  if (mediaFiles.length === 1 && state.attachments.length > 1) {
+    const message = "फोटो/वीडियो के साथ दस्तावेज़ एक ही संदेश में नहीं भेजे जा सकते। पहले बाकी फाइलें हटाएँ या मीडिया फाइल अलग से भेजें।";
+    setStatus(message);
+    finishVoiceTurn(message);
+    return;
+  }
   const asksToEditImage = /(फोटो|तस्वीर|इमेज|image|photo).{0,45}(एडिट|बदल|सुधार|सुंदर|बैकग्राउंड|पृष्ठभूमि|रंग|हटाओ|जोड़ो|edit|change|modify|background)|(एडिट|बदल|सुधार|सुंदर|बैकग्राउंड|पृष्ठभूमि|रंग|हटाओ|जोड़ो|edit|change|modify|background).{0,45}(फोटो|तस्वीर|इमेज|image|photo)/i.test(prompt);
   const asksToGenerateImage = /(फोटो|तस्वीर|इमेज|image|picture).{0,55}(बनाओ|बना दो|बना लें|बनाएं|बनाकर|तैयार|generate|create|draw)|(बनाओ|बना दो|बना लें|बनाएं|बनाकर|तैयार|generate|create|draw).{0,55}(फोटो|तस्वीर|इमेज|image|picture)/i.test(prompt);
   if (!asksToEditImage && !asksToGenerateImage && (imageFile || videoFile)) {
