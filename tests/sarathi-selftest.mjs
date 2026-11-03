@@ -246,6 +246,10 @@ await test("constitution and science accuracy rules are included in the assistan
     assert.match(system, /9 दिसंबर 1946/);
     assert.match(system, /26 नवंबर 1949/);
     assert.match(system, /26 जनवरी 1950/);
+    assert.match(system, /4 नवंबर 1948/);
+    assert.match(system, /26 जनवरी 1930/);
+    assert.match(system, /भारत छोड़ो आंदोलन 8 अगस्त 1942/);
+    assert.match(system, /उसमें 7 सदस्य थे/);
     assert.match(system, /मौलिक कर्तव्य 11 हैं/);
     assert.match(system, /ठीक माँगी गई संख्या में/);
     assert.match(system, /परिपक्व स्तनधारी लाल रक्त कोशिकाओं/);
