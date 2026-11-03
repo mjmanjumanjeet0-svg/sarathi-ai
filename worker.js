@@ -599,7 +599,7 @@ function dedupeNewsPublishers(results) {
 }
 
 function filterFreshNewsResults(results, now = Date.now()) {
-  const oldestAllowed = now - 3 * 24 * 60 * 60 * 1000;
+  const oldestAllowed = now - 48 * 60 * 60 * 1000;
   const newestAllowed = now + 24 * 60 * 60 * 1000;
   return (Array.isArray(results) ? results : []).filter(item => {
     const publishedAt = item && typeof item.publishedAt === "string" ? item.publishedAt.trim() : "";
