@@ -137,6 +137,7 @@ assert.ok(sendMessageSource.indexOf("क्या भेजना है?") < se
 assert.ok(sendMessageSource.indexOf("क्या भेजना है?") < sendMessageSource.indexOf("fileToImageDataUrl(imageFile)"), "photo data must not be prepared for upload before consent");
 assert.ok(sendMessageSource.includes("/\\.(png|jpe?g|webp)$/i.test(file.name)"), "image detection must fall back to the filename when Android provides a generic MIME type");
 assert.ok(sendMessageSource.includes("mediaFiles.length > 1"), "multiple media files must be rejected clearly instead of silently ignoring attachments");
+assert.ok(sendMessageSource.includes("mediaFiles.length === 1 && state.attachments.length > 1"), "a media file mixed with documents must be rejected instead of silently skipping the documents");
 assert.ok(sendMessageSource.indexOf("क्या भेजना है?") < sendMessageSource.indexOf("extractAttachmentsText(state.attachments)"), "document text must not be extracted for sending before consent");
 const attachmentStart = app.indexOf("function addFiles(fileList) {");
 const attachmentEnd = app.indexOf("\n}\n", attachmentStart);
