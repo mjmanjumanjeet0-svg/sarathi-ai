@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 
 const app = await readFile(new URL("../app.js", import.meta.url), "utf8");
 const html = await readFile(new URL("../index.html", import.meta.url), "utf8");
+const voice = await readFile(new URL("../voice.js", import.meta.url), "utf8");
 assert.ok(html.includes('id="examCenterMenuBtn"') && html.includes("SARATHI LEARNING"), "learning hub must be reachable from the menu");
 assert.ok(html.includes('id="educationHub"') && /class="education-hub hidden"/.test(html), "learning hub must stay hidden until opened from the menu");
 assert.ok(html.includes('id="studyCloseBtn"') && app.includes('$("studyCloseBtn")?.addEventListener("click"'), "learning hub must provide a working return-to-chat control");
@@ -75,6 +76,10 @@ assert.ok(java.includes("settings.setAllowFileAccess(false)") && java.includes("
 assert.ok(java.includes("new Intent(Intent.ACTION_OPEN_DOCUMENT)") && java.includes("onShowFileChooser"), "files may only be selected through the system picker after the user chooses an attachment");
 assert.ok(app.includes('$("attachBtn")?.addEventListener("click", openAttachmentDialog)'), "attachment picker must require an explicit user click");
 await assert.rejects(readFile(new URL("../android-app/app/src/main/java/com/sarathi/ai/WakeWordService.java", import.meta.url), "utf8"), "background wake-word service source must be deleted");
+
+assert.match(voice, /window\\.SarathiVoice\\.onError\\s*=\\s*message\\s*=>/, "Android voice errors must have a JavaScript callback");
+assert.match(voice, /विंडो बंद कर दी गई|माइक्रोफोन अनुमति नहीं मिली/, "permission cancellation must stop the active voice session");
+assert.match(voice, /if \\(fatal && active\\) \\{[\\s\\S]*?stop\\(\\);/, "fatal native voice errors must stop the session");
 console.log("SAFETY SELF-TEST: no background microphone, app-launch bridge, overlays or broad storage permissions; files require explicit picker selection");
 console.log("ANDROID LOGIN PROMPT SELF-TEST: password masking and same-origin prompt guard passed");
 console.log("CHAT SELF-TEST: new-chat command and chat-only app access passed");
