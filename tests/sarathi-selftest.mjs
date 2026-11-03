@@ -246,6 +246,9 @@ await test("constitution and science accuracy rules are included in the assistan
     assert.match(system, /9 दिसंबर 1946/);
     assert.match(system, /26 नवंबर 1949/);
     assert.match(system, /26 जनवरी 1950/);
+    assert.match(system, /26 जनवरी 1930/);
+    assert.match(system, /8 अगस्त 1942/);
+    assert.match(system, /395 वोटों से/);
     assert.match(system, /4 नवंबर 1948/);
     assert.match(system, /26 जनवरी 1930/);
     assert.match(system, /भारत छोड़ो आंदोलन 8 अगस्त 1942/);
