@@ -10,6 +10,7 @@ assert.ok(appSource.includes('input.accept = ".pdf,.docx,.txt,.csv,.md,.json"'),
 assert.ok(appSource.includes('file.type.startsWith("image/")'), "photo attachments must remain supported");
 assert.match(appSource, /const asksToEditImage\s*=/, "image edit intent must be defined before send handling");
 assert.match(appSource, /const asksToGenerateImage\s*=/, "image generation intent must be defined before send handling");
+assert.match(appSource, /const isBasicArithmetic\s*=/, "basic arithmetic must bypass unnecessary web search");
 assert.ok(appSource.includes('Tesseract.createWorker("eng+hin")'), "photo OCR must support English and Hindi text");
 const htmlSource = await readFile(new URL("../index.html", import.meta.url), "utf8");
 assert.ok(!htmlSource.includes("वीडियो") && !htmlSource.includes("video/"), "attachment UI must not advertise video");
