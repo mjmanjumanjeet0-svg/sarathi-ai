@@ -598,6 +598,20 @@ function dedupeNewsPublishers(results) {
   return accepted;
 }
 
+function filterFreshNewsResults(results, now = Date.now()) {
+  const oldestAllowed = now - 3 * 24 * 60 * 60 * 1000;
+  const newestAllowed = now + 24 * 60 * 60 * 1000;
+  return (Array.isArray(results) ? results : []).filter(item => {
+    const publishedAt = item && typeof item.publishedAt === "string" ? item.publishedAt.trim() : "";
+    // Keep undated items but do not pretend their publication date is verified.
+    if (!publishedAt) return true;
+    const timestamp = Date.parse(publishedAt);
+    // An invalid date is treated as unverified, not silently converted into a current date.
+    if (!Number.isFinite(timestamp)) return true;
+    return timestamp >= oldestAllowed && timestamp <= newestAllowed;
+  });
+}
+
 function formatNewsPublishedAt(value) {
   if (!value) return "प्रकाशित तारीख उपलब्ध नहीं";
   const d = new Date(value);
@@ -896,7 +910,7 @@ export default {
       const search = await searchInternet(searchQuery, env);
       searchResults = filterRelevantSearchResults(userText, search.results);
       if (isHistoricalQuestion) searchResults = filterHistoricalSources(userText, searchResults);
-      if (isCurrentNewsQuestion) searchResults = dedupeNewsPublishers(dedupeNewsResults(searchResults));
+      if (isCurrentNewsQuestion) searchResults = dedupeNewsPublishers(filterFreshNewsResults(dedupeNewsResults(searchResults)));
       if ((isGoldRateQuestion || isSilverRateQuestion) && searchResults.length) {
         // Keep the strongest result from each publisher; repeated pages from one
         // website must not be presented as independent confirmation.
