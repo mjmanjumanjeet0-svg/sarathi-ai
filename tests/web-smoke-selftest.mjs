@@ -175,6 +175,10 @@ const extractorEnd = app.indexOf("\n}\n", extractorStart);
 assert.ok(extractorStart >= 0 && extractorEnd > extractorStart, "file text extraction function must exist");
 const extractorSource = app.slice(extractorStart, extractorEnd + 3);
 assert.ok(app.includes("function limitExtractedFileText(value)"), "file extraction must explicitly mark per-file text truncation");
+assert.ok(app.includes("delete window.__sarathiScriptPromises[src]"), "failed CDN script loads must be cleared so users can retry after network recovery");
+assert.ok(app.includes("script.remove()"), "failed external library script elements must be removed before retry");
+assert.ok(app.includes("PDF पढ़ने की लाइब्रेरी डाउनलोड नहीं हो सकी"), "PDF CDN failures must show a clear Hindi retry message");
+
 assert.ok(app.includes("केवल शुरुआती 8,500 अक्षर पढ़े गए"), "users must be told when a single file is truncated");
 assert.ok(app.includes("let limited = limitExtractedFileText(readablePages.join"), "PDF extraction must use the visible text truncation warning");
 assert.ok(app.includes("इस PDF के कुल "), "PDFs over the page limit must disclose that later pages were not read");
