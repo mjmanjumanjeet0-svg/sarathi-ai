@@ -13,6 +13,12 @@ assert.equal(validHttpUrl("https://example.com/source"), true, "HTTPS sources sh
 assert.equal(validHttpUrl("http://example.com/source"), false, "HTTP sources must be rejected");
 assert.equal(validHttpUrl("file:///etc/passwd"), false, "local file URLs must be rejected");
 assert.equal(validHttpUrl("not a URL"), false, "malformed URLs must be rejected");
+assert.equal(validHttpUrl("https://localhost/secret"), false, "localhost sources must be rejected");
+assert.equal(validHttpUrl("https://127.0.0.1/secret"), false, "IPv4 literal sources must be rejected");
+assert.equal(validHttpUrl("https://192.168.1.1/secret"), false, "private network IP sources must be rejected");
+assert.equal(validHttpUrl("https://[::1]/secret"), false, "IPv6 literal sources must be rejected");
+assert.equal(validHttpUrl("https://metadata.google.internal/"), false, "internal metadata hostnames must be rejected");
+
 assert.match(source.slice(source.indexOf("async function enrichGoldRateResults"), source.indexOf("function isHistoricalResearchQuery")), /redirect:\s*"manual"/, "third-party enrichment must not follow redirects");
 
 const moduleUrl = "data:text/javascript;base64," + Buffer.from(source).toString("base64");
