@@ -302,7 +302,10 @@ async function searchInternet(query, env) {
       query: searchQuery,
       type: "auto",
       // Education queries need a broader candidate pool to compare official notices.
-      numResults: isHistoricalResearchQuery(searchQuery) ? 15 : (isNewsQuery || isPreciousMetalQuery || isEducationQuery ? 8 : 5),
+      // News needs a larger candidate pool because the final safety filters
+      // remove untrusted publishers, undated pages, and articles not published
+      // on the current India calendar day.
+      numResults: isHistoricalResearchQuery(searchQuery) ? 15 : (isNewsQuery ? 20 : (isPreciousMetalQuery || isEducationQuery ? 8 : 5)),
       contents: { highlights: true }
     };
     if (isHistoricalResearchQuery(searchQuery)) {
@@ -329,6 +332,16 @@ async function searchInternet(query, env) {
     }
     if (isNewsQuery) {
       requestBody.category = "news";
+      // Search only publishers accepted by filterRelevantSearchResults. This
+      // prevents a small general-results pool from being exhausted by unrelated
+      // domains before trusted publishers are considered.
+      requestBody.includeDomains = [
+        "indianexpress.com", "thehindu.com", "ndtv.com", "hindustantimes.com",
+        "bbc.com", "reuters.com", "apnews.com", "news18.com", "aajtak.in",
+        "abplive.com", "amarujala.com", "jagran.com", "zeenews.india.com",
+        "indiatoday.in", "theprint.in", "livemint.com", "indiatimes.com",
+        "pti.in", "aninews.in"
+      ];
       const now = new Date();
       const since = new Date(now.getTime() - 48 * 60 * 60 * 1000);
       requestBody.startPublishedDate = since.toISOString();
