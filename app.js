@@ -1779,7 +1779,7 @@ function readStudyProfile() {
 
 function loadStudyProfile() {
   const profile = readStudyProfile();
-  const fields = { studyLevel: "level", studyBoard: "board", studySubject: "subject", studyExam: "exam" };
+  const fields = { studyLevel: "level", studyBoard: "board", studySubject: "subject", studyExam: "exam", studyTopic: "topic" };
   for (const [id, key] of Object.entries(fields)) {
     const element = $(id);
     if (element && profile[key]) element.value = profile[key];
@@ -1791,12 +1791,13 @@ function runStudyAction(action) {
     level: $("studyLevel")?.value.trim() || "",
     board: $("studyBoard")?.value.trim() || "",
     subject: $("studySubject")?.value.trim() || "",
-    exam: $("studyExam")?.value.trim() || ""
+    exam: $("studyExam")?.value.trim() || "",
+    topic: $("studyTopic")?.value.trim() || ""
   };
   try { localStorage.setItem(STUDY_PROFILE_KEY, JSON.stringify(profile)); }
   catch { setStatus("पढ़ाई की जानकारी डिवाइस में सेव नहीं हो सकी।"); }
 
-  const topic = $("studyTopic")?.value.trim() || "";
+  const topic = profile.topic;
   const context = [
     profile.level && "कक्षा/कोर्स: " + profile.level,
     profile.board && "बोर्ड/विश्वविद्यालय: " + profile.board,
@@ -1885,13 +1886,14 @@ function bindEducationHub() {
     const button = event.target.closest("[data-study]");
     if (button) runStudyAction(button.dataset.study);
   });
-  for (const id of ["studyLevel", "studyBoard", "studySubject", "studyExam"]) {
+  for (const id of ["studyLevel", "studyBoard", "studySubject", "studyExam", "studyTopic"]) {
     $(id)?.addEventListener("change", () => {
       const profile = {
         level: $("studyLevel")?.value || "",
         board: $("studyBoard")?.value || "",
         subject: $("studySubject")?.value || "",
-        exam: $("studyExam")?.value || ""
+        exam: $("studyExam")?.value || "",
+        topic: $("studyTopic")?.value || ""
       };
       try { localStorage.setItem(STUDY_PROFILE_KEY, JSON.stringify(profile)); } catch {}
     });
