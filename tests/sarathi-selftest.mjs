@@ -349,6 +349,10 @@ await test("latest news query uses Exa news category and publication freshness f
   const userContext = groqBody.messages?.at(-1)?.content || "";
   assert.match(userContext, /पूर्वानुमानित है तो उसे हो चुकी घटना की तरह मत लिखो/);
   assert.match(userContext, /कोई अतिरिक्त घटना, स्थान, संख्या, नुकसान, उड़ान रद्द होने या असर का दावा मत जोड़ो/);
+  assert.match(userContext, /हर खोज परिणाम को उसके क्रमांक \(1, 2, 3\.\.\.\) से पहचानो/);
+  assert.match(userContext, /हर तथ्य—कौन, क्या, कहाँ, कब, संख्या और असर—उसी एक परिणाम/);
+  assert.match(userContext, /अलग-अलग परिणामों के अधूरे अंश जोड़कर एक नई घटना या कहानी मत बनाओ/);
+  assert.match(userContext, /केवल उसी परिणाम के प्रकाशक और क्रमांक को स्रोत बताओ/);
 
 });
 
