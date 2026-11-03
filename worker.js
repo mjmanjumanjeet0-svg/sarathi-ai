@@ -688,15 +688,21 @@ function dedupeNewsPublishers(results) {
 }
 
 function filterFreshNewsResults(results, now = Date.now()) {
-  const oldestAllowed = now - 48 * 60 * 60 * 1000;
+  // "Today's news" means the current calendar day in India, not merely any
+  // article from the previous 48 hours. This prevents yesterday's digest from
+  // being presented as today's headlines after midnight IST.
+  const todayIndia = new Intl.DateTimeFormat("en-CA", {
+    timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit"
+  }).format(new Date(now));
   return (Array.isArray(results) ? results : []).filter(item => {
     const publishedAt = item && typeof item.publishedAt === "string" ? item.publishedAt.trim() : "";
-    // Current-news lists must have a parseable publication date; unknown dates
-    // cannot be safely presented as fresh, and future dates are excluded.
     if (!publishedAt) return false;
     const timestamp = Date.parse(publishedAt);
-    if (!Number.isFinite(timestamp)) return false;
-    return timestamp >= oldestAllowed && timestamp <= now;
+    if (!Number.isFinite(timestamp) || timestamp > now) return false;
+    const publishedIndia = new Intl.DateTimeFormat("en-CA", {
+      timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit"
+    }).format(new Date(timestamp));
+    return publishedIndia === todayIndia;
   });
 }
 
@@ -716,19 +722,10 @@ function buildNewsFallback(results, dateTime) {
   return "आज की खबरों की खोज में " + items.length + " स्रोत मिले, लेकिन उनका भरोसेमंद हिंदी सार तैयार नहीं हो पाया। इसलिए अंग्रेज़ी लेखों को ज्यों-का-त्यों दिखाने या अधूरी जानकारी को खबर बताने के बजाय मैं इस बार अपुष्ट सार नहीं दे रहा हूँ। कृपया थोड़ी देर बाद फिर पूछें।";
 }
 
-function buildProviderBusySearchFallback(results, query, reason = "AI सेवा इस समय व्यस्त है, इसलिए खोज परिणामों का विस्तृत सार तैयार नहीं हो सका।") {
+function buildProviderBusySearchFallback(results, query, reason = "AI सेवा इस समय व्यस्त है, इसलिए खोज परिणामों का हिंदी सार तैयार नहीं हो सका।") {
   const items = (Array.isArray(results) ? results : []).slice(0, 5);
   if (!items.length) return "";
-  const lines = items.map((item, index) => {
-    const snippet = cleanText(item.snippet || "").slice(0, 500);
-    const publisher = item.publisher || "प्रकाशक उपलब्ध नहीं";
-    const published = item.publishedAt || "प्रकाशित तारीख उपलब्ध नहीं";
-    return (index + 1) + ". " + item.title + "\nप्रकाशक: " + publisher +
-      "\nप्रकाशित: " + published +
-      (snippet ? "\nउपलब्ध जानकारी: " + snippet : "\nविस्तृत जानकारी स्रोत पर देखें।");
-  });
-  return reason + " नीचे इंटरनेट खोज में मिले वास्तविक परिणाम दिए जा रहे हैं। इन्हें पढ़ते समय स्रोत और तारीख जाँचें; अधूरी जानकारी को अंतिम पुष्टि न मानें।\n\n" +
-    lines.join("\n\n");
+  return reason + " खोज में मिले स्रोत नीचे अलग से दिए गए हैं। उनके शीर्षक और प्रकाशन-तारीख देखकर मूल खबर पढ़ें; यह AI द्वारा सत्यापित समाचार-सार नहीं है।";
 }
 
 function buildSearchContext(results, query = "") {
@@ -1022,7 +1019,23 @@ export default {
       const search = await searchInternet(searchQuery, env);
       searchResults = filterRelevantSearchResults(userText, search.results);
       if (isHistoricalQuestion) searchResults = filterHistoricalSources(userText, searchResults);
-      if (isCurrentNewsQuestion) searchResults = dedupeNewsPublishers(filterFreshNewsResults(dedupeNewsResults(searchResults)));
+      if (isCurrentNewsQuestion) {
+        searchResults = dedupeNewsPublishers(filterFreshNewsResults(dedupeNewsResults(searchResults)));
+        if (!searchResults.length) {
+          const todayLabel = new Intl.DateTimeFormat("hi-IN", {
+            timeZone: INDIA_TIME_ZONE, day: "numeric", month: "long", year: "numeric"
+          }).format(new Date());
+          return jsonResponse({
+            success: true,
+            reply: todayLabel + " के लिए आज ही प्रकाशित और तारीख-जाँचे गए भरोसेमंद समाचार परिणाम नहीं मिले। इसलिए मैं 3 नवंबर या उससे पुरानी खबरों को आज की खबर बताकर नहीं दिखाऊँगा। कृपया कुछ देर बाद फिर खोजें।",
+            ...dateTime,
+            webSearch: true,
+            searchAttempted: true,
+            searchWarning: "आज की तारीख के अनुरूप कोई सत्यापित खोज परिणाम नहीं मिला।",
+            sources: []
+          });
+        }
+      }
       if ((isGoldRateQuestion || isSilverRateQuestion) && searchResults.length) {
         // Keep the strongest result from each publisher; repeated pages from one
         // website must not be presented as independent confirmation.
