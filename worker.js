@@ -212,7 +212,12 @@ async function searchInternet(query, env) {
   // Free-tier-only search: use Exa only. Never fall back to Cloudflare AI Gateway,
   // because that may consume a separate paid credit balance.
   if (!env.EXA_API_KEY) {
-    return { results: [], warning: "मुफ़्त Exa सर्च सेटअप उपलब्ध नहीं है। Cloudflare में EXA_API_KEY Secret जोड़ें।" };
+    return {
+      results: [],
+      warning: "Exa सर्च की API Key उपलब्ध नहीं है। Cloudflare में EXA_API_KEY Secret की जाँच आवश्यक है।",
+      errorCode: "MISSING_API_KEY",
+      retryable: false
+    };
   }
 
   const controller = new AbortController();
@@ -278,7 +283,13 @@ async function searchInternet(query, env) {
       else if (response.status === 402) warning = "Exa खाते में मुफ़्त सर्च क्रेडिट या उपलब्ध सीमा पूरी हो गई है। कोई दूसरा सर्च प्रदाता अपने-आप चालू नहीं होगा।";
       else if (response.status === 429) warning = "Exa सर्च की अनुरोध सीमा पूरी हो गई है। थोड़ी देर बाद प्रयास करें।";
       else if (response.status >= 500) warning = "Exa सर्च सेवा अभी उपलब्ध नहीं है। थोड़ी देर बाद प्रयास करें।";
-      return { results: [], warning, errorCode: tag, httpStatus: response.status };
+      return {
+        results: [],
+        warning,
+        errorCode: tag || (response.status === 401 || response.status === 403 ? "INVALID_API_KEY" : response.status === 402 ? "NO_MORE_CREDITS" : response.status === 429 ? "RATE_LIMIT_EXCEEDED" : "HTTP_ERROR"),
+        httpStatus: response.status,
+        retryable: response.status === 429 || response.status >= 500
+      };
     }
     const items = Array.isArray(payload?.results) ? payload.results : [];
     const results = items
@@ -303,10 +314,13 @@ async function searchInternet(query, env) {
   } catch (error) {
     const code = String(error?.name || error?.code || "").slice(0, 80);
     console.error("Exa search request failed", code, error?.message || error);
+    const timedOut = error?.name === "AbortError";
     return {
       results: [],
-      warning: error?.name === "AbortError" ? "Exa सर्च में समय अधिक लगा। दोबारा प्रयास करें।" : "Exa सर्च सेवा से संपर्क नहीं हो सका।",
-      errorCode: code
+      warning: timedOut ? "Exa सर्च में समय अधिक लगा। थोड़ी देर बाद फिर प्रयास करें।" : "Exa सर्च सेवा से संपर्क नहीं हो सका। नेटवर्क कनेक्शन जाँचकर फिर प्रयास करें।",
+      errorCode: code || (timedOut ? "TIMEOUT" : "NETWORK_ERROR"),
+      httpStatus: timedOut ? 504 : 502,
+      retryable: true
     };
   } finally {
     clearTimeout(timeout);
@@ -940,7 +954,7 @@ export default {
       // Never let the model pretend it has current web information when every
       // search provider returned no usable results. Explain the actual failure.
       if (searchResults.length === 0) {
-        const retryableSearchFailure = search.httpStatus === 429 || search.httpStatus >= 500;
+        const retryableSearchFailure = search.retryable === true;
         return jsonResponse({
           success: true,
           reply: "मैंने वेब पर खोजने की कोशिश की, लेकिन अभी उपयोग करने योग्य परिणाम नहीं मिले। " + searchWarning + " इसलिए कोई तथ्य या लिंक गढ़कर नहीं बताऊँगा। " +
@@ -952,6 +966,7 @@ export default {
           searchWarning,
           retryable: retryableSearchFailure,
           providerStatus: search.httpStatus || null,
+          searchErrorCode: search.errorCode || null,
           sources: [],
         });
       }
