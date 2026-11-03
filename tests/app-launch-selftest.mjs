@@ -79,7 +79,7 @@ await assert.rejects(readFile(new URL("../android-app/app/src/main/java/com/sara
 
 assert.match(voice, /window\\.SarathiVoice\\.onError\\s*=\\s*message\\s*=>/, "Android voice errors must have a JavaScript callback");
 assert.match(voice, /विंडो बंद कर दी गई|माइक्रोफोन अनुमति नहीं मिली/, "permission cancellation must stop the active voice session");
-assert.match(voice, /if \\(fatal && active\\) \\{[\\s\\S]*?stop\\(\\);/, "fatal native voice errors must stop the session");
+assert.match(voice, /if \(fatal && active\) \{[\s\S]*?stop\(\);/, "fatal native voice errors must stop the session");
 console.log("SAFETY SELF-TEST: no background microphone, app-launch bridge, overlays or broad storage permissions; files require explicit picker selection");
 console.log("ANDROID LOGIN PROMPT SELF-TEST: password masking and same-origin prompt guard passed");
 console.log("CHAT SELF-TEST: new-chat command and chat-only app access passed");
