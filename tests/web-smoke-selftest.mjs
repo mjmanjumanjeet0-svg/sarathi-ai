@@ -136,6 +136,21 @@ assert.ok(sendMessageSource.indexOf("क्या भेजना है?") < se
 assert.ok(sendMessageSource.indexOf("क्या भेजना है?") < sendMessageSource.indexOf("extractVideoFrames(videoFile, 5)"), "video frames must not be processed for upload before consent");
 assert.ok(sendMessageSource.indexOf("क्या भेजना है?") < sendMessageSource.indexOf("fileToImageDataUrl(imageFile)"), "photo data must not be prepared for upload before consent");
 assert.ok(sendMessageSource.indexOf("क्या भेजना है?") < sendMessageSource.indexOf("extractAttachmentsText(state.attachments)"), "document text must not be extracted for sending before consent");
+const attachmentStart = app.indexOf("function addFiles(fileList) {");
+const attachmentEnd = app.indexOf("\n}\n", attachmentStart);
+assert.ok(attachmentStart >= 0 && attachmentEnd > attachmentStart, "attachment selection filter must exist");
+const attachmentSource = app.slice(attachmentStart, attachmentEnd + 3);
+for (const extension of ["pdf", "docx", "txt", "csv", "md", "json"]) {
+  assert.ok(attachmentSource.includes(extension), "attachment picker must allow ." + extension);
+}
+assert.ok(attachmentSource.includes("20 * 1024 * 1024"), "attachment picker must enforce the 20 MB per-file limit");
+const extractorStart = app.indexOf("async function extractOneFile(file) {");
+const extractorEnd = app.indexOf("\n}\n", extractorStart);
+assert.ok(extractorStart >= 0 && extractorEnd > extractorStart, "file text extraction function must exist");
+const extractorSource = app.slice(extractorStart, extractorEnd + 3);
+for (const extension of ["txt", "csv", "md", "json", "pdf", "docx"]) {
+  assert.ok(extractorSource.includes(extension), "file text extraction must support ." + extension);
+}
 assert.ok(worker.includes('zeroCostMode: true'), "disabled media APIs must clearly identify zero-cost mode");
 assert.ok(worker.includes('"/api/media/image"') && worker.includes('"/api/media/understand"'), "media API routes must be explicit and auditable");
 assert.ok(worker.includes("if (!env.EXA_API_KEY)"), "web search must report a missing configured Exa key rather than silently assuming search is available");
