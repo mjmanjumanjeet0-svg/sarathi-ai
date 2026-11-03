@@ -653,7 +653,8 @@ await test("Groq 429 preserves available web results with an honest fallback", a
   assert.equal(r.data.success, true);
   assert.equal(r.data.providerBusy, true);
   assert.match(r.data.reply, /AI सेवा इस समय व्यस्त है/);
-  assert.match(r.data.reply, /भारत में सोने का भाव/);
+  assert.match(r.data.reply, /वास्तविक परिणाम अलग से दिए गए हैं/);
+  assert.match(r.data.reply, /प्रकाशन-तारीख देखकर मूल खबर पढ़ें/);
   assert.ok(r.data.sources.length >= 1, "at least one verified source should be preserved");
   assert.match(r.data.searchWarning, /AI सेवा व्यस्त थी/);
   groqMode = "success";
