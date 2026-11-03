@@ -73,6 +73,9 @@ assert.equal(safeSourceUrl("http://example.com/article"), "", "HTTP links must b
 assert.equal(safeSourceUrl(["java", "script:"].join("") + "alert(1)"), "", "non-web protocols must be rejected");
 assert.equal(safeSourceUrl("https://user:pass@example.com/"), "", "URLs containing credentials must be rejected");
 assert.equal(safeSourceUrl("not a URL"), "", "malformed source URLs must be rejected");
+assert.equal(safeSourceUrl("https://thehindu.com/news/article-xxxxxx"), "", "placeholder article IDs must be rejected");
+assert.equal(safeSourceUrl("https://example.com/placeholder/story"), "", "placeholder path segments must be rejected");
+assert.equal(safeSourceUrl("https://example.com/real-article-2026"), "https://example.com/real-article-2026", "realistic article paths must remain valid");
 const sanitizerStart = app.indexOf("function sanitizeSourceRecords(sources, limit = 8) {");
 const sanitizerEnd = app.indexOf("\n}\n", sanitizerStart);
 assert.ok(sanitizerStart >= 0 && sanitizerEnd > sanitizerStart, "source record sanitizer must exist");
