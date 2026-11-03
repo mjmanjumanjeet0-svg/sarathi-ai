@@ -10,8 +10,8 @@ assert.ok(app.includes('studyTopic: "topic"'), "learning topic must be restored 
 assert.ok(app.includes('$("studyTopic")?.addEventListener("input", saveProfile)'), "changing the topic must save the study profile");
 assert.ok(app.includes('topic: $("studyTopic")?.value.trim() || ""'), "selected study topic must be persisted before an action runs");
 assert.ok(app.includes('$("studyTopic")?.addEventListener("input", saveProfile)'), "study topic must autosave while the user types");
-assert.ok(app.includes("function handleNewChat() {\\n  $(\"educationHub\")?.classList.add(\"hidden\");"), "new chat must return from the learning hub to chat");
-assert.ok(app.includes("$ (\"educationHub\")"), "opening a saved chat must hide the learning hub");
+assert.ok(app.includes("function handleNewChat() {\n  $(\"educationHub\")?.classList.add(\"hidden\");"), "new chat must return from the learning hub to chat");
+assert.ok(app.includes('$(\"educationHub\")?.classList.add(\"hidden\");\n      state.activeId = chat.id;'), "opening a saved chat must hide the learning hub before switching chats");
 for (const id of ["studyLevel", "studyBoard", "studySubject", "studyExam", "studyTopic", "studyProgressCount", "studyDoneBtn", "studyResetBtn"]) {
   assert.ok(html.includes('id="' + id + '"'), "learning hub control missing: " + id);
 }
