@@ -83,9 +83,9 @@ for (const selector of [".message-content", ".message-body", ".composer", ".send
 }
 
 const quizParserStart = app.indexOf("function parseSarathiQuiz(raw) {");
-const quizParserEnd = app.indexOf("\\n}\\n", quizParserStart);
+const quizParserEnd = app.indexOf("\n}\n", quizParserStart);
 assert.ok(quizParserStart >= 0 && quizParserEnd > quizParserStart, "MCQ parser must exist");
-const parseSarathiQuiz = new Function(app.slice(quizParserStart, quizParserEnd + 3) + "\\nreturn parseSarathiQuiz;")();
+const parseSarathiQuiz = new Function(app.slice(quizParserStart, quizParserEnd + 3) + "\nreturn parseSarathiQuiz;")();
 const validQuiz = {
   title: "अभ्यास",
   questions: Array.from({ length: 3 }, (_, i) => ({
