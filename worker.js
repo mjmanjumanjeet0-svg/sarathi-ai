@@ -180,7 +180,8 @@ function shouldSearchAutomatically(text) {
     || prices
     || official
     || verification
-    || education;
+    || education
+    || isHistoricalResearchQuery(q);
 }
 
 function cleanText(value) {
@@ -227,6 +228,15 @@ async function searchInternet(query, env) {
       numResults: isHistoricalResearchQuery(searchQuery) ? 15 : (isNewsQuery || isPreciousMetalQuery || isEducationQuery ? 8 : 5),
       contents: { highlights: true }
     };
+    if (isHistoricalResearchQuery(searchQuery)) {
+      // Prefer primary archives and scholarly publishers for historical research.
+      requestBody.includeDomains = [
+        "history.state.gov", "loc.gov", "archives.gov", "iupress.indiana.edu",
+        "cambridge.org", "oxfordreference.com", "oup.com", "jstor.org",
+        "tandfonline.com", "worldhistory.org", "britannica.com",
+        "history.com", "miami.edu", "preslib.ru"
+      ];
+    }
     if (isEducationQuery) {
       // Hard-scope current education facts to official government, regulator,
       // board, university, and recognized professional-body domains.
@@ -368,7 +378,7 @@ function historicalSourceRank(item) {
     // Established academic publishers, reference works, and scholarly databases.
     if (/(^|\.)(oup\.com|oxfordreference\.com|cambridge\.org|jstor\.org|iupress\.indiana\.edu|press\.princeton\.edu|ebsco\.com|worldhistory\.org|britannica\.com|encyclopedia\.com|history\.com)$/.test(host)) return 3;
     // Reputable reporting and museum/science institutions for contextual coverage.
-    if (/(^|\.)(reuters\.com|apnews\.com|bbc\.com|theguardian\.com|nytimes\.com|indianexpress\.com|thehindu\.com|smithsonianmag\.com|nationalgeographic\.com|historytoday\.com)$/.test(host)) return 2;
+    if (/(^|\.)(reuters\.com|apnews\.com|bbc\.com|theguardian\.com|nytimes\.com|indianexpress\.com|thehindu\.com|smithsonianmag\.com|nationalgeographic\.com|historytoday\.com|tandfonline\.com)$/.test(host)) return 2;
     return 0;
   } catch {
     return 0;
@@ -532,7 +542,7 @@ function buildSearchContext(results, query = "") {
 
   return "\n\nइंटरनेट खोज के परिणाम:\n" + results.map(
     (item, i) =>
-      `${i + 1}. ${item.title}\nप्रकाशक: ${item.publisher || "उपलब्ध नहीं"}\nप्रकाशित: ${item.publishedAt || "तारीख उपलब्ध नहीं"}\nजानकारी: ${item.snippet || "जानकारी उपलब्ध नहीं है।"}`
+      `${i + 1}. ${item.title}\nप्रकाशक: ${item.publisher || "उपलब्ध नहीं"}\nप्रकाशित: ${item.publishedAt || "तारीख उपलब्ध नहीं"}${isHistoricalQuery ? `\nवास्तविक स्रोत URL: ${item.url}` : ""}\nजानकारी: ${item.snippet || "जानकारी उपलब्ध नहीं है।"}`
   ).join("\n\n") +
   "\n\nपरिणाम पर्याप्त न हों तो स्पष्ट बताओ। तथ्य या लिंक मत गढ़ो।" + newsInstruction + preciousMetalInstruction + historyInstruction;
 }
@@ -775,7 +785,7 @@ export default {
             ? userText + " official website government university board site:gov.in OR site:ac.in"
             : isHistoricalQuestion
               ? (/(खूनी रविवार|bloody sunday)/i.test(userText)
-                  ? "Bloody Sunday 1905 St Petersburg Russia historical encyclopedia university press scholarly sources"
+                  ? "Bloody Sunday 1905 St Petersburg 9 January 22 January historical academic archive casualty figures Nicholas II absent"
                   : userText + " historical encyclopedia academic university press sources")
               : userText;
       const search = await searchInternet(searchQuery, env);
