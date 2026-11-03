@@ -510,9 +510,9 @@ function renderMessages() {
     if (message.role !== "user" && Array.isArray(message.sources) && message.sources.length) {
       const sourceBox = document.createElement("section");
       sourceBox.className = "message-sources";
-      sourceBox.style.cssText = "margin-top:12px;padding-top:9px;border-top:1px solid var(--border,#ddd)";
+      sourceBox.style.cssText = "margin-top:14px;padding-top:10px;border-top:1px solid var(--border,#ddd)";
       const sourceHeading = document.createElement("strong");
-      sourceHeading.textContent = "स्रोत और आगे पढ़ें";
+      sourceHeading.textContent = "स्वतंत्र ऐतिहासिक स्रोत";
       sourceBox.appendChild(sourceHeading);
       const sourceList = document.createElement("ol");
       sourceList.style.cssText = "margin:6px 0 0;padding-left:22px";
@@ -526,10 +526,13 @@ function renderMessages() {
           link.target = "_blank";
           link.rel = "noopener noreferrer";
           link.textContent = String(source.title || source.publisher || url.hostname).slice(0, 240);
+          link.style.cssText = "display:block;font-weight:600;line-height:1.45;overflow-wrap:anywhere";
           item.appendChild(link);
           const meta = document.createElement("small");
           meta.textContent = [source.publisher, source.publishedAt].filter(Boolean).join(" · ");
+          meta.style.cssText = "display:block;margin:2px 0 7px;color:var(--muted,#777);line-height:1.4";
           if (meta.textContent) item.appendChild(meta);
+          item.style.cssText = "margin:8px 0;";
           sourceList.appendChild(item);
         } catch {}
       }
