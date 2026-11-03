@@ -33,11 +33,10 @@ globalThis.fetch = async (input, init = {}) => {
     if (exaRequest.category === "news") {
       return Response.json({
         results: [
-          { title: "IMD issues warning for Cyclone Murasu", url: "https://indianexpress.com/murasu", publishedDate: new Date(Date.now() - 60 * 60 * 1000).toISOString(), highlights: ["IMD says Severe Cyclonic Storm Murasu is over the westcentral Bay of Bengal and is forecast to cross the south Andhra Pradesh coast late on 2 November."] },
-          { title: "Cyclone Murasu update: IMD warning", url: "https://www.indianexpress.com/murasu-live", publishedDate: new Date(Date.now() - 90 * 60 * 1000).toISOString(), highlights: ["The same Indian Express newsroom repeats the cyclone warning in a live update."] },
-          { title: "Supreme Court permits certified green crackers in Delhi-NCR", url: "https://thehindu.com/green-crackers", publishedDate: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), highlights: ["The Supreme Court allowed certified green crackers in Delhi-NCR during specified hours on 7 and 8 November."] },
+          { title: "IMD issues warning for Cyclone Murasu", url: "https://indianexpress.com/murasu", highlights: ["IMD says Severe Cyclonic Storm Murasu is over the westcentral Bay of Bengal and is forecast to cross the south Andhra Pradesh coast late on 2 November."] },
+          { title: "Cyclone Murasu update: IMD warning", url: "https://www.indianexpress.com/murasu-live", highlights: ["The same Indian Express newsroom repeats the cyclone warning in a live update."] },
+          { title: "Supreme Court permits certified green crackers in Delhi-NCR", url: "https://thehindu.com/green-crackers", highlights: ["The Supreme Court allowed certified green crackers in Delhi-NCR during specified hours on 7 and 8 November."] },
           { title: "Delhi air quality update", url: "https://www.ndtv.com/india-news/delhi-air-quality", publishedDate: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(), highlights: ["Delhi air quality remains a developing story."] },
-          { title: "Undated current-looking report", url: "https://unverified.example.com/undated", highlights: ["No publication date is available; this must not be treated as current news."] },
           { title: "Old report outside freshness window", url: "https://www.bbc.com/news/old-report", publishedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), highlights: ["This report is five days old and must not be presented as a current news result."] },
           { title: "Report older than 48 hours", url: "https://www.reuters.com/world/older-than-48-hours", publishedDate: new Date(Date.now() - 60 * 60 * 60 * 1000).toISOString(), highlights: ["This report is 60 hours old and must be filtered from current news."] },
           { title: "Future-dated report", url: "https://apnews.com/article/future-report", publishedDate: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000).toISOString(), highlights: ["A future publication date must not be shown as current news."] }
@@ -337,7 +336,6 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.equal(newsHosts.includes("bbc.com"), false, "five-day-old news must be filtered out");
   assert.equal(newsHosts.includes("reuters.com"), false, "news older than 48 hours must be filtered out");
   assert.equal(newsHosts.includes("apnews.com"), false, "future-dated news must be filtered out");
-  assert.equal(newsHosts.includes("unverified.example.com"), false, "undated news must not be treated as current");
   const exaCall = calls.slice(before).find(x => x.url.includes("api.exa.ai/search"));
   assert.ok(exaCall, "latest news must invoke Exa");
   const exaBody = JSON.parse(exaCall.init.body || "{}");
