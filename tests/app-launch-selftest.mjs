@@ -48,7 +48,7 @@ assert.ok(app.includes("function requestLoginPassword()"), "web login must use a
 assert.ok(app.includes('input.type = "password"') && app.includes('input.autocomplete = "current-password"'), "web login field must mask and correctly autocomplete passwords");
 assert.ok(app.includes("await requestLoginPassword()"), "login must await the masked password dialog");
 const loginStart = app.indexOf("async function loginWorker()");
-const loginEnd = app.indexOf("/* ========================================\\n   SAFE TEXT FORMATTING", loginStart);
+const loginEnd = app.indexOf("/* ========================================\n   SAFE TEXT FORMATTING", loginStart);
 assert.ok(loginStart >= 0 && loginEnd > loginStart, "login function boundaries must be present");
 assert.equal(app.slice(loginStart, loginEnd).includes("window.prompt("), false, "web login must not expose passwords in a plain-text browser prompt");
 assert.ok(java.includes("APP_HOST.equalsIgnoreCase(pageUri.getHost())"), "Android login prompt must be restricted to the Sarathi host");
