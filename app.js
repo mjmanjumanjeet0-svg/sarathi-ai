@@ -896,30 +896,6 @@ function detectNewChatCommand(prompt) {
   return /^(?:(?:कृपया|प्लीज)\s*)?(?:(?:एक\s+)?(?:नई|न्यू)\s+(?:चैट|चैटिंग|बातचीत)(?:\s+(?:को|खोलने के लिए))?\s*(?:खोलो|खोल दो|ओपन करो|ओपन|वन करो|बना दो|बनाओ|शुरू करो|स्टार्ट करो|start|open|new chat)|(?:नई|न्यू)\s+(?:बातचीत|चैट)\s*(?:शुरू|आरंभ)\s*(?:करो|करें)|new\s+chat|(?:start|open)\s+(?:a\s+)?new\s+(?:chat|conversation))$/i.test(value);
 }
 
-function detectAppLaunchCommand(prompt, installedApps = []) {
-  const value = stripSarathiWakePrefix(prompt).replace(/[।.!?]+$/g, "").trim();
-  const commands = [
-    ["youtube", /^(?:कृपया\s*)?(?:यूट्यूब|यूटुब|युटुब|youtube)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
-    ["chatgpt", /^(?:कृपया\s*)?(?:चैट\s*जीपीटी|chatgpt)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
-    ["whatsapp", /^(?:कृपया\s*)?(?:व्हाट्सऐप|व्हाट्सएप|whatsapp)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
-    ["chrome", /^(?:कृपया\s*)?(?:क्रोम|chrome)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
-    ["maps", /^(?:कृपया\s*)?(?:गूगल\s*मैप्स|google\s*maps|maps)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
-    ["gmail", /^(?:कृपया\s*)?(?:जीमेल|gmail)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
-    ["instagram", /^(?:कृपया\s*)?(?:इंस्टाग्राम|instagram)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
-    ["telegram", /^(?:कृपया\s*)?(?:टेलीग्राम|telegram)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i],
-    ["phone", /^(?:कृपया\s*)?(?:फोन|फ़ोन|डायलर|phone|dialer)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i]
-  ];
-  const known = commands.find(([, pattern]) => pattern.test(value));
-  if (known) return { type: "known", key: known[0] };
-
-  const match = value.match(/^(?:कृपया\s*)?(.+?)(?:\s+ऐप)?\s*(?:खोलो|खोल दो|ओपन करो|चालू करो|open|open करो)$/i);
-  if (!match) return null;
-  const requested = match[1].trim().replace(/\s+/g, " ");
-  const normalize = text => String(text || "").toLowerCase().normalize("NFKC").replace(/[^\p{L}\p{N}]+/gu, "");
-  const wanted = normalize(requested);
-  const found = installedApps.find(item => normalize(item.label) === wanted);
-  return found && found.packageName ? { type: "package", packageName: found.packageName, label: found.label } : null;
-}
 
 /* ========================================
    SEND MESSAGE
@@ -963,45 +939,6 @@ async function sendMessage(text) {
       if (window.SarathiNative?.speak) window.SarathiNative.speak(confirmation);
       else window.SarathiVoice?.speak?.(confirmation);
     }
-    return;
-  }
-
-  let installedApps = [];
-  if (window.SarathiNative?.getInstalledApps) {
-    try {
-      const rawApps = window.SarathiNative.getInstalledApps();
-      installedApps = JSON.parse(rawApps || "[]");
-      if (!Array.isArray(installedApps)) installedApps = [];
-    } catch (_) { installedApps = []; }
-  }
-  const appCommand = detectAppLaunchCommand(prompt, installedApps);
-  if (appCommand) {
-    const input = $("messageInput");
-    if (input) { input.value = ""; input.style.height = ""; }
-    addMessage("user", prompt);
-    if (window.SarathiNative) {
-      if (appCommand.type === "known" && appCommand.key === "phone" && window.SarathiNative.openPhone) {
-        window.SarathiNative.openPhone();
-      } else if (appCommand.type === "known" && window.SarathiNative.openApp) {
-        window.SarathiNative.openApp(appCommand.key);
-      } else if (appCommand.type === "package" && window.SarathiNative.openAppPackage) {
-        window.SarathiNative.openAppPackage(appCommand.packageName);
-      }
-      addMessage("assistant", "मैंने " + (appCommand.label || appCommand.key || "ऐप") + " खोलने की कोशिश की है।");
-    } else {
-      addMessage("assistant", "ऐप खोलने की सुविधा अभी Android सारथी ऐप में उपलब्ध है।");
-    }
-    // Voice app commands return before the normal chat request path. Confirm
-    // completion through TTS so the native bridge releases the pending request
-    // and resumes listening only after the confirmation has finished.
-    const shouldSpeakAppConfirmation = state.voiceReplyPending || Boolean(window.SarathiVoice?.isActive?.());
-    state.voiceReplyPending = false;
-    if (shouldSpeakAppConfirmation) {
-      const confirmation = "मैंने " + (appCommand.label || appCommand.key || "ऐप") + " खोलने की कोशिश की है।";
-      if (window.SarathiNative?.speak) window.SarathiNative.speak(confirmation);
-      else window.SarathiVoice?.speak?.(confirmation);
-    }
-    setStatus("");
     return;
   }
 
