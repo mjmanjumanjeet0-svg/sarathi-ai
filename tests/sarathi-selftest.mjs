@@ -576,6 +576,8 @@ await test("undated search results are not mislabeled as fresh news", async () =
   assert.equal(r.data.searchUnavailable, true);
   assert.equal(r.data.sources.length, 0);
   assert.match(r.data.reply, /आज ही प्रकाशित और तारीख-जाँचे गए भरोसेमंद समाचार परिणाम नहीं मिले/);
+  assert.match(r.data.reply, /कल या उससे पुरानी खबरों को आज की खबर बताकर नहीं दिखाऊँगा/);
+  assert.doesNotMatch(r.data.reply, /3 नवंबर/);
   exaMode = "success";
 });
 await test("Groq HTTP 413 retries once with compact context and preserves the complete latest question", async () => {
