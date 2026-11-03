@@ -27,8 +27,6 @@ import android.text.InputType;
 import android.webkit.ValueCallback;
 import android.webkit.WebResourceRequest;
 
-import org.json.JSONObject;
-import org.json.JSONArray;
 
 import java.util.ArrayList;
 import java.util.Locale;
