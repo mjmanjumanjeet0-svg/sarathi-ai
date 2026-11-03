@@ -311,8 +311,8 @@ await test("Bloody Sunday uses a deterministic date-safe answer and deduplicates
   assert.match(r.data.reply, /कम-से-कम 130/);
   assert.match(r.data.reply, /लगभग 1,000/);
   assert.match(r.data.reply, /संख्या पर स्रोतों में बड़ा अंतर/);
-  assert.ok(r.data.reply.includes("https://publish.iupress.indiana.edu/"));
-  assert.ok(r.data.reply.includes("https://www.ebsco.com/"));
+  assert.ok(r.data.sources.some(x => x.url.startsWith("https://publish.iupress.indiana.edu/")));
+  assert.ok(r.data.sources.some(x => x.url.startsWith("https://www.ebsco.com/")));
   assert.equal(calls.slice(before).some(x => x.url.includes("api.groq.com")), false,
     "Bloody Sunday answer should use the deterministic source-grounded response");
 });
