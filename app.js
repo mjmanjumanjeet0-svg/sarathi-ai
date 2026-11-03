@@ -1181,7 +1181,7 @@ async function sendMessage(text) {
     if (
       Array.isArray(data.sources) &&
       data.sources.length > 0 &&
-      /^आज की खबरों की खोज में\\s+\\d+\\s*$/i.test(cleanAnswer)
+      /^आज की खबरों की खोज में\s+\d+\s*$/i.test(cleanAnswer)
     ) {
       cleanAnswer =
         "आज की खबरों की खोज में " + data.sources.length +
