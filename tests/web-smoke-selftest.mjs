@@ -59,7 +59,7 @@ assert.equal(safeSourceUrl("not a URL"), "", "malformed source URLs must be reje
 const sanitizerStart = app.indexOf("function sanitizeSourceRecords(sources, limit = 8) {");
 const sanitizerEnd = app.indexOf("\n}\n", sanitizerStart);
 assert.ok(sanitizerStart >= 0 && sanitizerEnd > sanitizerStart, "source record sanitizer must exist");
-const sanitizeSourceRecords = new Function("URL", app.slice(sanitizerStart, sanitizerEnd + 3) + "\nreturn sanitizeSourceRecords;")(URL);
+const sanitizeSourceRecords = new Function("URL", app.slice(safeSourceStart, sanitizerEnd + 3) + "\nreturn sanitizeSourceRecords;")(URL);
 const safeRecords = sanitizeSourceRecords([
   { title: "First", url: "https://example.com/story#top" },
   { title: "Duplicate", url: "https://example.com/story" },
