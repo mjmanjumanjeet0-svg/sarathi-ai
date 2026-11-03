@@ -1022,6 +1022,11 @@ async function sendMessage(text) {
     return;
   }
 
+  // Detect image intent locally before branching. These flags must always be defined:
+  // an undefined flag here aborts every normal send with a ReferenceError.
+  const asksToEditImage = /(?:इस|इसकी|इसका|इस फोटो|फोटो को).{0,35}(?:एडिट|बदल|सुधार|हटाओ|जोड़ो|बैकग्राउंड)|(?:एडिट|बदल|सुधार).{0,25}(?:फोटो|तस्वीर|चित्र)/i.test(prompt);
+  const asksToGenerateImage = /(?:फोटो|तस्वीर|चित्र|इमेज).{0,35}(?:बनाओ|बना दो|तैयार करो|जनरेट)|(?:बनाओ|बना दो|जनरेट).{0,25}(?:फोटो|तस्वीर|चित्र|इमेज)/i.test(prompt);
+
   const imageFile = state.attachments.find(file =>
     file.type.startsWith("image/") || /\.(png|jpe?g|webp)$/i.test(file.name)
   );
