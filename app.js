@@ -1686,39 +1686,47 @@ async function extractPdfText(file) {
   const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
   const pageLimit = Math.min(pdf.numPages, 25);
   const pages = [];
+  const pagesNeedingOcr = [];
   for (let pageNo = 1; pageNo <= pageLimit; pageNo++) {
     const page = await pdf.getPage(pageNo);
     const content = await page.getTextContent();
-    const text = content.items.map(item => item.str || "").join(" ").trim();
-    if (text) pages.push("[पृष्ठ " + pageNo + "]\n" + text);
+    const pageText = content.items.map(item => item.str || "").join(" ").trim();
+    if (pageText) pages.push("[पृष्ठ " + pageNo + "]\n" + pageText);
+    else pagesNeedingOcr.push(pageNo);
     page.cleanup();
   }
-  let result = pages.join("\n\n");
-  if (!result.trim()) {
+
+  const ocrLimit = Math.min(pagesNeedingOcr.length, 5);
+  if (ocrLimit > 0) {
     const Tesseract = await loadExternalScript(
       "https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js", "Tesseract"
     );
     const worker = await Tesseract.createWorker("eng+hin");
     try {
-      const ocrPages = [];
-      for (let pageNo = 1; pageNo <= Math.min(pageLimit, 5); pageNo++) {
+      for (const pageNo of pagesNeedingOcr.slice(0, ocrLimit)) {
         const page = await pdf.getPage(pageNo);
         const viewport = page.getViewport({ scale: 1.35 });
         const canvas = document.createElement("canvas");
         canvas.width = Math.ceil(viewport.width);
         canvas.height = Math.ceil(viewport.height);
-        await page.render({ canvasContext: canvas.getContext("2d"), viewport }).promise;
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("PDF पृष्ठ पढ़ने के लिए कैनवास उपलब्ध नहीं है।");
+        await page.render({ canvasContext: context, viewport }).promise;
         const output = await worker.recognize(canvas);
-        if (output.data.text.trim()) ocrPages.push("[पृष्ठ " + pageNo + " OCR]\n" + output.data.text.trim());
-        canvas.width = 0; canvas.height = 0;
+        if (output.data.text.trim()) pages.push("[पृष्ठ " + pageNo + " OCR]\n" + output.data.text.trim());
+        canvas.width = 0;
+        canvas.height = 0;
         page.cleanup();
       }
-      result = ocrPages.join("\n\n");
     } finally {
       await worker.terminate();
     }
   }
-  let limited = limitExtractedFileText(result);
+
+  let limited = limitExtractedFileText(pages.join("\n\n"));
+  if (pagesNeedingOcr.length > ocrLimit) {
+    limited += "\n[सूचना: " + (pagesNeedingOcr.length - ocrLimit) + " स्कैन/चित्र वाले पृष्ठ OCR की सीमा के कारण नहीं पढ़े गए।]";
+  }
   if (pdf.numPages > pageLimit) {
     limited += "\n[सूचना: इस PDF के कुल " + pdf.numPages + " पृष्ठ हैं; फिलहाल पहले " + pageLimit + " पृष्ठ पढ़े गए हैं।]";
   }
