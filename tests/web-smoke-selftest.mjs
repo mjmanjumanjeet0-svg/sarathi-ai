@@ -47,6 +47,29 @@ assert.equal(shouldShowSearchWarning({ searchAttempted: true, searchWarning: "Ex
 assert.equal(shouldShowSearchWarning({ searchAttempted: true, searchWarning: "AI provider busy", providerBusy: true, sources: [{ title: "Real result", url: "https://example.com" }] }), true, "provider fallback must explain that a generated summary was unavailable");
 assert.equal(shouldShowSearchWarning({ searchAttempted: true, searchWarning: "No fresh articles", sources: [] }), true, "rejected or empty search results must explain why no sources are shown");
 assert.equal(shouldShowSearchWarning({ searchAttempted: false, searchWarning: "No search attempted", sources: [] }), false, "non-search replies must not show search warnings");
+const safeSourceStart = app.indexOf("function safeSourceUrl(value) {");
+const safeSourceEnd = app.indexOf("\n}\n", safeSourceStart);
+assert.ok(safeSourceStart >= 0 && safeSourceEnd > safeSourceStart, "safe source URL helper must exist");
+const safeSourceUrl = new Function("URL", app.slice(safeSourceStart, safeSourceEnd + 3) + "\nreturn safeSourceUrl;")(URL);
+assert.equal(safeSourceUrl("https://example.com/article#section"), "https://example.com/article", "HTTPS links should be normalized");
+assert.equal(safeSourceUrl("http://example.com/article"), "", "HTTP links must be rejected");
+assert.equal(safeSourceUrl(["java", "script:"].join("") + "alert(1)"), "", "non-web protocols must be rejected");
+assert.equal(safeSourceUrl("https://user:pass@example.com/"), "", "URLs containing credentials must be rejected");
+assert.equal(safeSourceUrl("not a URL"), "", "malformed source URLs must be rejected");
+const sanitizerStart = app.indexOf("function sanitizeSourceRecords(sources, limit = 8) {");
+const sanitizerEnd = app.indexOf("\n}\n", sanitizerStart);
+assert.ok(sanitizerStart >= 0 && sanitizerEnd > sanitizerStart, "source record sanitizer must exist");
+const sanitizeSourceRecords = new Function("URL", app.slice(sanitizerStart, sanitizerEnd + 3) + "\nreturn sanitizeSourceRecords;")(URL);
+const safeRecords = sanitizeSourceRecords([
+  { title: "First", url: "https://example.com/story#top" },
+  { title: "Duplicate", url: "https://example.com/story" },
+  { title: "Insecure", url: "http://example.org/story" },
+  { title: "Missing title", url: "https://example.net/story" },
+  null
+]);
+assert.equal(safeRecords.length, 1, "only unique titled HTTPS sources should remain");
+assert.equal(safeRecords[0].url, "https://example.com/story");
+
 assert.ok(app.includes("shouldShowSearchSources(data) ? filterSourcesForPrompt"), "assistant messages must display sources returned by automatic search");
 assert.ok(app.includes("if (shouldShowSearchWarning(data))"), "only meaningful search failures must be surfaced in status");
 
