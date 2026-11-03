@@ -1670,21 +1670,37 @@ function loadExternalScript(src, globalName) {
   if (window[globalName]) return Promise.resolve(window[globalName]);
   if (window.__sarathiScriptPromises?.[src]) return window.__sarathiScriptPromises[src];
   window.__sarathiScriptPromises = window.__sarathiScriptPromises || {};
+  const clearFailedLoad = script => {
+    delete window.__sarathiScriptPromises[src];
+    script.remove();
+  };
   window.__sarathiScriptPromises[src] = new Promise((resolve, reject) => {
     const script = document.createElement("script");
     script.src = src;
     script.async = true;
-    script.onload = () => window[globalName]
-      ? resolve(window[globalName])
-      : reject(new Error("लाइब्रेरी लोड हुई, लेकिन उपलब्ध नहीं है।"));
-    script.onerror = () => reject(new Error("फाइल पढ़ने की लाइब्रेरी डाउनलोड नहीं हो सकी। इंटरनेट जाँचें।"));
+    script.onload = () => {
+      if (window[globalName]) resolve(window[globalName]);
+      else {
+        clearFailedLoad(script);
+        reject(new Error("लाइब्रेरी लोड हुई, लेकिन उपलब्ध नहीं है। दोबारा कोशिश करें।"));
+      }
+    };
+    script.onerror = () => {
+      clearFailedLoad(script);
+      reject(new Error("फाइल पढ़ने की लाइब्रेरी डाउनलोड नहीं हो सकी। इंटरनेट जाँचें और दोबारा कोशिश करें।"));
+    };
     document.head.appendChild(script);
   });
   return window.__sarathiScriptPromises[src];
 }
 
 async function extractPdfText(file) {
-  const pdfjs = await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs");
+  let pdfjs;
+  try {
+    pdfjs = await import("https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs");
+  } catch {
+    throw new Error("PDF पढ़ने की लाइब्रेरी डाउनलोड नहीं हो सकी। इंटरनेट कनेक्शन जाँचकर दोबारा कोशिश करें।");
+  }
   pdfjs.GlobalWorkerOptions.workerSrc = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
   const pdf = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise;
   const pageLimit = Math.min(pdf.numPages, 25);
