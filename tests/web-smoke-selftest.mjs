@@ -64,7 +64,7 @@ const safeRecords = sanitizeSourceRecords([
   { title: "First", url: "https://example.com/story#top" },
   { title: "Duplicate", url: "https://example.com/story" },
   { title: "Insecure", url: "http://example.org/story" },
-  { title: "Missing title", url: "https://example.net/story" },
+  { title: "", url: "https://example.net/story" },
   null
 ]);
 assert.equal(safeRecords.length, 1, "only unique titled HTTPS sources should remain");
