@@ -1032,6 +1032,7 @@ export default {
             webSearch: true,
             searchAttempted: true,
             searchWarning: "आज की तारीख के अनुरूप कोई सत्यापित खोज परिणाम नहीं मिला।",
+            searchUnavailable: true,
             sources: []
           });
         }
