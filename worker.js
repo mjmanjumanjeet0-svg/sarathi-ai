@@ -141,11 +141,11 @@ function getIndiaDateTime() {
 
 
 function solveBasicArithmetic(text) {
-  const input = String(text || "");
-  const match = input.match(/(?:^|[^\\d])((?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?(?:\\s*[+\\-−×*÷/]\\s*(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?)+)(?=$|[^\\d])/);
+  const input = String(text || "").replace(/,/g, "");
+  const match = input.match(/(?:^|[^0-9])(([0-9]+(?:[.][0-9]+)?(?:[ ]*[+−×*÷/\\-][ ]*[0-9]+(?:[.][0-9]+)?)+)(?=$|[^0-9])/);
   if (!match) return null;
-  const expression = match[1].replace(/,/g, "").replace(/×/g, "*").replace(/÷/g, "/").replace(/−/g, "-").replace(/\\s+/g, "");
-  const tokens = expression.match(/(?:\\d+(?:\\.\\d*)?|\\.\\d+|[()+*/-])/g) || [];
+  const expression = match[1].replace(/[ ]+/g, "").replace(/×/g, "*").replace(/÷/g, "/").replace(/−/g, "-");
+  const tokens = expression.match(/[0-9]+(?:[.][0-9]+)?|[()+*/-]/g) || [];
   if (tokens.join("") !== expression) return null;
   let index = 0;
   function factor() {
@@ -154,12 +154,7 @@ function solveBasicArithmetic(text) {
       const value = factor();
       return token === "-" ? -value : value;
     }
-    if (token === "(") {
-      const value = sum();
-      if (tokens[index++] !== ")") throw new Error("parenthesis");
-      return value;
-    }
-    if (!token || !/^\\d/.test(token)) throw new Error("number");
+    if (!token || !/^[0-9]/.test(token)) throw new Error("number");
     return Number(token);
   }
   function product() {
@@ -185,12 +180,12 @@ function solveBasicArithmetic(text) {
     const result = sum();
     if (index !== tokens.length || !Number.isFinite(result) || Math.abs(result) > 1e15) return null;
     const rounded = Math.round((result + Number.EPSILON) * 1e8) / 1e8;
-    const display = Number.isInteger(rounded) ? String(rounded) : String(rounded);
-    return { expression, result: display };
+    return { expression, result: String(rounded) };
   } catch {
     return null;
   }
 }
+
 
 function isDateQuestion(text) {
   return /आज की तारीख|आज कौन.?सा दिन|आज का दिन|आज डेट|आज की डेट|आज तारीख|वर्तमान तारीख|current date|today.?s date|what day is it today/i.test(text);
