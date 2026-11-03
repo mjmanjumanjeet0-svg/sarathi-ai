@@ -86,7 +86,7 @@ const studyActions = [...html.matchAll(/data-study="([^"]+)"/g)].map(match => ma
 assert.equal(studyActions.length, 14, "SARATHI LEARNING must expose all 14 study actions");
 assert.equal(new Set(studyActions).size, 14, "SARATHI LEARNING action IDs must be unique");
 const studySectionStart = app.indexOf("function runStudyAction(action) {");
-const studySectionEnd = app.indexOf("const STUDY_PROGRESS_KEY", studySectionStart);
+const studySectionEnd = app.indexOf("/* ========================================\\n   EVENT LISTENERS", studySectionStart);
 assert.ok(studySectionStart >= 0 && studySectionEnd > studySectionStart, "study action handler and progress logic must exist");
 const studySection = app.slice(studySectionStart, studySectionEnd);
 for (const action of studyActions) {
