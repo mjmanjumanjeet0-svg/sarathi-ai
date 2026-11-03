@@ -450,29 +450,31 @@ function historicalPublisherName(item) {
 }
 
 function buildBloodySundayVerifiedReply(results) {
-  const items = (Array.isArray(results) ? results : []).slice(0, 5);
+  const items = (Array.isArray(results) ? results : []).slice(0, 6);
   const casualtyNotes = [];
   for (const item of items) {
     const evidence = `${item.title || ""} ${item.snippet || ""}`;
     if (/at least 130|130 demonstrators|130 killed/i.test(evidence)) {
-      casualtyNotes.push(`${historicalPublisherName(item)} के उपलब्ध विवरण में कम-से-कम 130 प्रदर्शनकारियों के मारे जाने का उल्लेख है`);
+      casualtyNotes.push(`${historicalPublisherName(item)} के उपलब्ध विवरण में कम-से-कम 130 मृतकों का उल्लेख है`);
     }
     if (/1,000|1000|over 1,000/i.test(evidence)) {
       casualtyNotes.push(`${historicalPublisherName(item)} के उपलब्ध अंश में लगभग 1,000 या उससे अधिक मौतों का अनुमान मिलता है`);
     }
   }
-  const casualtyText = casualtyNotes.length
-    ? "मृतकों की संख्या पर स्रोतों में बड़ा अंतर है: " + casualtyNotes.join("; ") + "। इसलिए 90–100 जैसी एक निश्चित संख्या बताना सही नहीं होगा।"
-    : "मृतकों और घायलों की सटीक संख्या पर उपलब्ध स्रोतों से एक सर्वमान्य आँकड़ा स्थापित नहीं होता; इसलिए कोई निश्चित संख्या नहीं दी जा रही है।";
-  const sourceLines = items.map((item, index) =>
-    `${index + 1}. [${cleanText(item.title || "ऐतिहासिक स्रोत")}] (${item.url}) — ${historicalPublisherName(item)}`
-  );
-  return "खूनी रविवार (Bloody Sunday) 1905 रूस के सेंट पीटर्सबर्ग में हुई एक ऐतिहासिक गोलीबारी थी। इसकी तारीख 22 जनवरी 1905 ग्रेगोरियन कैलेंडर के अनुसार थी; रूस में उस समय लागू जूलियन कैलेंडर के अनुसार यही तारीख 9 जनवरी 1905 थी।\n\n" +
-    "फादर जॉर्जी गैपोन के नेतृत्व में मजदूरों का शांतिपूर्ण जुलूस अपनी शिकायतों और सुधारों की याचिका ज़ार निकोलस द्वितीय तक पहुँचाने के लिए Winter Palace की ओर बढ़ा। शाही सैनिकों ने प्रदर्शनकारियों पर गोलीबारी की। इसे दंगा कहना गलत है।\n\n" +
-    "परिणाम: इस घटना से रूस में व्यापक आक्रोश और हड़तालें फैलीं तथा 1905 की रूसी क्रांति को गति मिली।\n\n" +
-    "मृतकों की संख्या: " + casualtyText + "\n\n" +
-    "इस उत्तर में उपयोग किए गए खोज परिणाम:\n" + sourceLines.join("\n") +
-    (items.length < 2 ? "\n\nध्यान दें: इस खोज में दो स्वतंत्र भरोसेमंद स्रोत उपलब्ध नहीं हुए, इसलिए बहु-स्रोत पुष्टि का दावा नहीं किया जा रहा है।" : "");
+  const uniqueCasualtyNotes = [...new Set(casualtyNotes)];
+  const casualtyText = uniqueCasualtyNotes.length
+    ? "मृतकों की संख्या पर स्रोतों में बड़ा अंतर है: " + uniqueCasualtyNotes.join("; ") + "। ये अलग-अलग स्रोतों के अनुमान हैं, किसी एक सर्वमान्य आधिकारिक कुल संख्या का प्रमाण नहीं। इसलिए 90–100 जैसी निश्चित संख्या बताना उचित नहीं होगा।"
+    : "मृतकों की सटीक संख्या पर उपलब्ध स्वतंत्र स्रोतों से एक सर्वमान्य आँकड़ा प्रमाणित नहीं होता। इसलिए कोई निश्चित संख्या बताना उचित नहीं होगा।";
+  const publisherCount = new Set(items.map(historicalPublisherName)).size;
+  const sourceNote = publisherCount >= 3
+    ? `नीचे ${publisherCount} अलग-अलग प्रकाशकों के स्रोत दिए गए हैं।`
+    : `चेतावनी: इस खोज में केवल ${publisherCount} अलग-अलग प्रकाशक मिले। कम-से-कम तीन स्वतंत्र प्रकाशकों से पुष्टि नहीं हो सकी; इसलिए इसे तीन-स्रोत सत्यापन न मानें।`;
+
+  return "खूनी रविवार (Bloody Sunday) 1905 रूस के सेंट पीटर्सबर्ग में हुई एक ऐतिहासिक गोलीबारी थी। इसकी तारीख 22 जनवरी 1905 ग्रेगोरियन कैलेंडर के अनुसार थी; रूस में उस समय लागू जूलियन कैलेंडर के अनुसार यही तारीख 9 जनवरी 1905 थी।\\n\\n" +
+    "फादर जॉर्जी गैपोन के नेतृत्व में मजदूरों और उनके परिवारों का शांतिपूर्ण जुलूस अपनी शिकायतों और सुधारों की याचिका ज़ार निकोलस द्वितीय तक पहुँचाने के लिए Winter Palace की ओर बढ़ा। सैनिकों ने प्रदर्शनकारियों पर गोलीबारी की। इसे दंगा कहना ऐतिहासिक रूप से गलत है।\\n\\n" +
+    "परिणाम: गोलीबारी से रूस में व्यापक आक्रोश और हड़तालें फैलीं तथा 1905 की रूसी क्रांति को गति मिली।\\n\\n" +
+    "मृतकों की संख्या: " + casualtyText + "\\n\\n" +
+    sourceNote;
 }
 
 function filterRelevantSearchResults(query, results) {
