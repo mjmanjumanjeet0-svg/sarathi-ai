@@ -389,6 +389,7 @@ function renderHistory() {
     if (chat.id === state.activeId) button.classList.add("active");
 
     button.addEventListener("click", () => {
+      $("educationHub")?.classList.add("hidden");
       state.activeId = chat.id;
       renderHistory();
       renderMessages();
@@ -1376,6 +1377,7 @@ function assignCurrentChatToProject() {
 }
 
 function handleNewChat() {
+  $("educationHub")?.classList.add("hidden");
   createChat();
   closeSidebar();
   closeMoreMenu();
@@ -1886,18 +1888,21 @@ function bindEducationHub() {
     const button = event.target.closest("[data-study]");
     if (button) runStudyAction(button.dataset.study);
   });
-  for (const id of ["studyLevel", "studyBoard", "studySubject", "studyExam", "studyTopic"]) {
-    $(id)?.addEventListener("change", () => {
-      const profile = {
-        level: $("studyLevel")?.value || "",
-        board: $("studyBoard")?.value || "",
-        subject: $("studySubject")?.value || "",
-        exam: $("studyExam")?.value || "",
-        topic: $("studyTopic")?.value || ""
-      };
-      try { localStorage.setItem(STUDY_PROFILE_KEY, JSON.stringify(profile)); } catch {}
-    });
+  const saveProfile = () => {
+    const profile = {
+      level: $("studyLevel")?.value || "",
+      board: $("studyBoard")?.value || "",
+      subject: $("studySubject")?.value || "",
+      exam: $("studyExam")?.value || "",
+      topic: $("studyTopic")?.value || ""
+    };
+    try { localStorage.setItem(STUDY_PROFILE_KEY, JSON.stringify(profile)); } catch {}
+  };
+  for (const id of ["studyLevel", "studyBoard", "studySubject", "studyExam"]) {
+    $(id)?.addEventListener("change", saveProfile);
   }
+  $("studyTopic")?.addEventListener("input", saveProfile);
+  $("studyTopic")?.addEventListener("change", saveProfile);
 }
 
 /* ========================================
