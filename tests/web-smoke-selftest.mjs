@@ -164,6 +164,12 @@ for (const extension of ["pdf", "docx", "txt", "csv", "md", "json"]) {
 assert.ok(attachmentSource.includes('file.name.toLowerCase().endsWith(".pdf")'), "PDF files with a missing or generic MIME type must still be selectable by extension");
 assert.ok(attachmentSource.includes("/\\.(png|jpe?g|webp)$/i.test(file.name)"), "JPG/PNG/WEBP files with generic MIME types must still be selectable by extension");
 assert.ok(attachmentSource.includes("20 * 1024 * 1024"), "attachment picker must enforce the 20 MB per-file limit");
+assert.ok(attachmentSource.includes("const tooLarge = selected.filter"), "oversized files must be counted and explained");
+assert.ok(attachmentSource.includes("const unsupported = selected.filter"), "unsupported files must be counted and explained");
+assert.ok(attachmentSource.includes("const skippedByLimit = eligible.length - files.length"), "files beyond the five-file cap must be reported");
+assert.ok(attachmentSource.includes("20 MB से बड़ी होने के कारण नहीं जोड़ी गईं"), "the user must be told when a file exceeds 20 MB");
+assert.ok(attachmentSource.includes("अधिकतम 5 फाइलें"), "the user must be told when the attachment count limit is reached");
+
 const extractorStart = app.indexOf("async function extractOneFile(file) {");
 const extractorEnd = app.indexOf("\n}\n", extractorStart);
 assert.ok(extractorStart >= 0 && extractorEnd > extractorStart, "file text extraction function must exist");
