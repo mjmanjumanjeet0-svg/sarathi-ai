@@ -3,9 +3,9 @@ import { readFile } from "node:fs/promises";
 
 const app = await readFile(new URL("../app.js", import.meta.url), "utf8");
 const newChatStart = app.indexOf("function stripSarathiWakePrefix(prompt) {");
-const newChatEnd = app.indexOf("\n}\n\n/* ========================================\n   SEND MESSAGE", newChatStart);
+const newChatEnd = app.indexOf("/* ========================================\n   SEND MESSAGE", newChatStart);
 assert.ok(newChatStart >= 0 && newChatEnd > newChatStart, "new chat command parser must exist");
-const detectNewChat = new Function(app.slice(newChatStart, newChatEnd + 2) + "\nreturn detectNewChatCommand;")();
+const detectNewChat = new Function(app.slice(newChatStart, newChatEnd) + "\nreturn detectNewChatCommand;")();
 for (const phrase of ["नई चैट खोलो", "नई चैट ओपन करो", "नई चैट वन करो", "नई बातचीत शुरू करो", "सारथी न्यू चैट ओपन करो", "हेलो सारथी नई चैट खोलो", "new chat", "start new chat", "open new conversation"]) {
   assert.equal(detectNewChat(phrase), true, "new chat command not detected: " + phrase);
 }
