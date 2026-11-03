@@ -5,8 +5,6 @@
 - Media Studio: local photo filters, poster text overlays, JPG export.
 - AI image generation and instruction-based image editing: authenticated `POST /api/media/image` endpoint using Cloudflare Workers AI `@cf/black-forest-labs/flux-2-klein-4b`. It returns a base64 data URI; no temporary public image URL is required.
 - Photo understanding: authenticated `POST /api/media/understand` endpoint using Cloudflare Workers AI `@cf/qwen/qwen3.8-27b`.
-- Video understanding: the browser extracts up to five representative frames from an uploaded video and sends those still frames to the vision endpoint. This is frame-based analysis, not full continuous video/audio understanding.
-- Video tools: browser-based trimming, playback speed, filter, title overlay and WebM export. Browser codec support varies.
 - Project workspace: local project/file manager in browser storage; files can be exported individually. This is not cloud collaboration or an IDE.
 
 ## Cloudflare Worker deployment
@@ -24,7 +22,12 @@ The existing Worker secrets `GROQ_API_KEY`, `SARATHI_LOGIN_PASSWORD`, and any co
 
 - AI image generation requires Workers AI to be enabled for the Cloudflare account and the selected model to be available to that account.
 - AI image generation/editing and visual understanding require the corresponding Workers AI models to be enabled and available to the Cloudflare account. FLUX.2 Klein is a partner model and account-level availability/billing may apply.
-- Video understanding samples up to five still frames. It does not currently transcribe the video's audio or inspect every frame.
 - Video export is browser-dependent and currently provides trim/filter/speed/title processing. Text-to-video generation and AI video effects are not implemented.
 - Project files are stored in this browser's local storage. They are not synced to GitHub or another device.
 - Android APK builds run through the repository's GitHub Actions workflow. A successful workflow artifact is required before calling an APK ready.
+
+## Current attachment scope
+
+- Video upload, frame extraction, and video editing are not part of the app.
+- Photo attachments (JPG/PNG/WEBP) are processed locally with Hindi/English OCR; extracted text is sent to the AI only after the user confirms.
+- Visual photo understanding and AI image generation/editing remain disabled in zero-cost mode until a verified provider and account-level availability are explicitly configured.
