@@ -487,7 +487,7 @@ await test("Groq repeated HTTP 413 preserves real search results without inventi
   assert.equal(r.status, 200);
   assert.equal(r.data.providerStatus, 413);
   assert.equal(r.data.providerBusy, true);
-  assert.equal(r.data.sources.length, 2);
+  assert.equal(r.data.sources.length, 1, "duplicate pages from the same publisher should remain deduplicated");
   assert.match(r.data.reply, /HTTP 413/);
   assert.match(r.data.reply, /वास्तविक परिणाम/);
   assert.equal(calls.slice(before).filter(x => x.url.includes("api.groq.com")).length, 2);
