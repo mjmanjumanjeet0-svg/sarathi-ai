@@ -817,7 +817,9 @@ function hasUnsupportedNumericClaim(generatedText, sourceEvidence) {
 
 function hasMixedScriptToken(text) {
   return String(text || "").split(/\s+/).some(token =>
-    /[A-Za-z]/.test(token) && /[\u0900-\u097F]/.test(token)
+    token.split(/[-‐‑‒–—/|()[\]{}.,:;!?]+/).some(part =>
+      /[A-Za-z]/.test(part) && /[\u0900-\u097F]/.test(part)
+    )
   );
 }
 
