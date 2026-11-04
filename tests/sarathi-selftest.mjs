@@ -799,7 +799,7 @@ await test("current news accepts concise Hindi summaries without the literal स
     }, token);
     assert.equal(r.status, 200);
     assert.equal(r.data.sources.length, 4);
-    assert.equal((r.data.reply.match(/(^|\\n)खबर [1-4]: /g) || []).length, 4);
+    assert.equal((r.data.reply.match(/(^|\n)खबर [1-4]: /g) || []).length, 4);
     assert.equal((r.data.reply.match(/सार:/g) || []).length, 4);
     assert.doesNotMatch(r.data.reply, /AI सेवा ने खबरों का सही हिंदी सार तैयार नहीं किया/);
   } finally {
