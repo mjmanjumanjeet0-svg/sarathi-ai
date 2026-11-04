@@ -729,6 +729,16 @@ function filterFreshNewsResults(results, now = Date.now()) {
   });
 }
 
+function sortNewsByPublicationTime(results) {
+  return (Array.isArray(results) ? [...results] : []).sort((a, b) => {
+    const aTime = Date.parse(a?.publishedAt || "");
+    const bTime = Date.parse(b?.publishedAt || "");
+    const safeA = Number.isFinite(aTime) ? aTime : 0;
+    const safeB = Number.isFinite(bTime) ? bTime : 0;
+    return safeB - safeA;
+  });
+}
+
 function formatNewsPublishedAt(value) {
   if (!value) return "प्रकाशित तारीख उपलब्ध नहीं";
   const d = new Date(value);
@@ -1044,7 +1054,9 @@ export default {
       searchResults = filterRelevantSearchResults(userText, search.results);
       if (isHistoricalQuestion) searchResults = filterHistoricalSources(userText, searchResults);
       if (isCurrentNewsQuestion) {
-        searchResults = dedupeNewsPublishers(filterFreshNewsResults(dedupeNewsResults(searchResults)));
+        // Keep the newest same-day report for a repeated event, then deduplicate
+        // event headlines and publishers. Exa relevance order is not chronological.
+        searchResults = dedupeNewsPublishers(dedupeNewsResults(sortNewsByPublicationTime(filterFreshNewsResults(searchResults))));
         // A single fresh article is not enough to present a news digest as verified.
         // Stop before the language model can turn one weakly matching page into a confident event summary.
         if (searchResults.length > 0 && searchResults.length < 2) {
