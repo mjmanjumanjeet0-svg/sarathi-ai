@@ -633,13 +633,14 @@ function filterRelevantSearchResults(query, results) {
   return required ? list.filter(item => required.test(textOf(item))) : list;
 }
 
-function isSameIndianMarketOpeningStory(a, b) {
+function isSameIndianMarketEvent(a, b) {
   const titleA = cleanText(a?.title || "").toLowerCase();
   const titleB = cleanText(b?.title || "").toLowerCase();
+  // A same-day report mentioning both benchmark indices is usually coverage
+  // of the same broad market movement, even when one headline says "closes"
+  // and another uses "Dalal Street" wording.
   const hasBothBenchmarks = value => /sensex/.test(value) && /nifty/.test(value);
-  const isOpeningCoverage = value => /opening|early trade|opening trade|live updates|stock market live/.test(value);
-  return hasBothBenchmarks(titleA) && hasBothBenchmarks(titleB) &&
-    isOpeningCoverage(titleA) && isOpeningCoverage(titleB);
+  return hasBothBenchmarks(titleA) && hasBothBenchmarks(titleB);
 }
 
 function dedupeNewsResults(results) {
@@ -671,7 +672,7 @@ function dedupeNewsResults(results) {
     const titleTokens = tokensFor(item.title);
     if (!titleTokens.size) continue;
     const duplicateEvent = accepted.some(previous => {
-      if (isSameIndianMarketOpeningStory(item, previous)) return true;
+      if (isSameIndianMarketEvent(item, previous)) return true;
       const previousTokens = previous._dedupeTokens;
       let shared = 0;
       for (const token of titleTokens) if (previousTokens.has(token)) shared++;
@@ -781,7 +782,7 @@ function buildCurrentNewsHeadlineReply(results) {
     } catch {}
     const title = cleanText(item?.title || "").slice(0, 260);
     const publishedAt = formatNewsPublishedAt(item?.publishedAt || "");
-    return (index + 1) + ". " + title + "\n   प्रकाशक: " + publisher +
+    return "**खबर " + (index + 1) + ":** " + title + "\n   प्रकाशक: " + publisher +
       "\n   प्रकाशित: " + publishedAt;
   });
   const prefix = items.length === 1
