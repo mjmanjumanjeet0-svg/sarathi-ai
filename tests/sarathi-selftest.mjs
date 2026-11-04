@@ -114,6 +114,7 @@ globalThis.fetch = async (input, init = {}) => {
     if (groqMode === "empty") return Response.json({ choices: [{ message: { content: null }, finish_reason: "stop" }] });
     if (groqMode === "malformed-news") return Response.json({ choices: [{ message: { content: "आज की खबरें जल्द पढ़ें।" } }] });
     if (groqMode === "news-plain-summary") return Response.json({ choices: [{ message: { content: "**खबर 1 – ऊर्जा भंडारण योजना को मंजूरी**\nसरकार ने बड़े स्तर पर ऊर्जा भंडारण विकसित करने के लिए योजना को मंजूरी दी।\n**खबर 2 – शेयर बाजार में तेजी**\nसेंसेक्स और निफ्टी में कारोबार के दौरान बढ़त दर्ज हुई।\n**खबर 3 – दिल्ली की हवा की गुणवत्ता**\nदिल्ली में वायु गुणवत्ता खराब होने की खबर प्रकाशित हुई।\n**खबर 4 – अग्निवीर सेवा अवधि**\nअग्निवीरों की सेवा अवधि बढ़ाने के फैसले की खबर प्रकाशित हुई।" } }] });
+    if (groqMode === "news-unsupported-cause") return Response.json({ choices: [{ message: { content: "खबर 1: ऊर्जा भंडारण योजना को मंजूरी\nसार: सरकार ने ऊर्जा भंडारण योजना को मंजूरी दी।\nखबर 2: शेयर बाजार में तेजी\nसार: सेंसेक्स और निफ्टी में बढ़त दर्ज हुई।\nखबर 3: दिल्ली की हवा की गुणवत्ता\nसार: दिवाली के कारण दिल्ली की हवा खराब हुई।\nखबर 4: अग्निवीर सेवा अवधि\nसार: अग्निवीरों की सेवा अवधि बढ़ाने की खबर प्रकाशित हुई।" } }] });
     if (groqMode === "429") return Response.json({ error: { message: "rate limited" } }, { status: 429 });
     if (groqMode === "500") return Response.json({ error: { message: "provider down" } }, { status: 500 });
     if (groqMode === "413-always") return Response.json({ error: { message: "payload too large" } }, { status: 413 });
@@ -802,6 +803,24 @@ await test("current news accepts concise Hindi summaries without the literal स
     assert.equal((r.data.reply.match(/(^|\n)खबर [1-4]: /g) || []).length, 4);
     assert.equal((r.data.reply.match(/सार:/g) || []).length, 4);
     assert.doesNotMatch(r.data.reply, /AI सेवा ने खबरों का सही हिंदी सार तैयार नहीं किया/);
+  } finally {
+    groqMode = "success";
+    exaMode = "success";
+  }
+});
+
+await test("current news keeps valid summaries when one generated item adds an unsupported cause", async () => {
+  groqMode = "news-unsupported-cause";
+  exaMode = "success";
+  try {
+    const r = await request("/api/chat", "POST", {
+      messages: [{ role: "user", content: "आज की भारत की 5 अलग-अलग ताज़ा खबरें बताओ।" }]
+    }, token);
+    assert.equal(r.status, 200);
+    assert.equal(r.data.sources.length, 4);
+    assert.doesNotMatch(r.data.reply, /AI सेवा ने खबरों का सही हिंदी सार तैयार नहीं किया/);
+    assert.match(r.data.reply, /उपलब्ध स्रोत-अंश इस कारण की पुष्टि नहीं करता/);
+    assert.equal((r.data.reply.match(/सार:/g) || []).length, 4);
   } finally {
     groqMode = "success";
     exaMode = "success";
