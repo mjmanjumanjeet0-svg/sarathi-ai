@@ -1455,6 +1455,8 @@ window.SarathiVoice = {
    ATTACHMENTS
 ======================================== */
 
+const attachmentObjectUrls = new WeakMap();
+
 function renderAttachmentPreview() {
   const preview = $("attachmentPreview");
   if (!preview) return;
@@ -1464,25 +1466,60 @@ function renderAttachmentPreview() {
   for (const file of state.attachments) {
     const item = document.createElement("div");
     item.className = "attachment-item";
+    item.setAttribute("role", "group");
+    item.setAttribute("aria-label", file.name);
 
-    const name = document.createElement("span");
+    const isImage = file.type.startsWith("image/") || /\.(png|jpe?g|webp)$/i.test(file.name);
+    if (isImage) {
+      let objectUrl = attachmentObjectUrls.get(file);
+      if (!objectUrl) {
+        objectUrl = URL.createObjectURL(file);
+        attachmentObjectUrls.set(file, objectUrl);
+      }
+      const thumbnail = document.createElement("img");
+      thumbnail.className = "attachment-thumbnail";
+      thumbnail.src = objectUrl;
+      thumbnail.alt = file.name;
+      item.appendChild(thumbnail);
+    } else {
+      const fileIcon = document.createElement("span");
+      fileIcon.className = "attachment-file-icon";
+      fileIcon.textContent = /\.pdf$/i.test(file.name) || file.type === "application/pdf" ? "PDF" : "FILE";
+      fileIcon.setAttribute("aria-hidden", "true");
+      item.appendChild(fileIcon);
+    }
+
+    const details = document.createElement("span");
+    details.className = "attachment-details";
+    const name = document.createElement("strong");
     name.textContent = file.name;
+    const size = document.createElement("small");
+    size.textContent = file.size < 1024 * 1024
+      ? Math.max(1, Math.round(file.size / 1024)) + " KB"
+      : (file.size / (1024 * 1024)).toFixed(1) + " MB";
+    details.append(name, size);
 
     const remove = document.createElement("button");
     remove.type = "button";
+    remove.className = "attachment-remove";
     remove.textContent = "×";
     remove.title = "फाइल हटाएँ";
-
+    remove.setAttribute("aria-label", file.name + " हटाएँ");
     remove.addEventListener("click", () => {
+      const objectUrl = attachmentObjectUrls.get(file);
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
       state.attachments = state.attachments.filter(item => item !== file);
       renderAttachmentPreview();
     });
 
-    item.append(name, remove);
+    item.append(details, remove);
     preview.appendChild(item);
   }
 
-  preview.hidden = state.attachments.length === 0;
+  const hasAttachments = state.attachments.length > 0;
+  preview.hidden = !hasAttachments;
+  preview.classList.toggle("hidden", !hasAttachments);
+  $("chatForm")?.classList.toggle("has-attachments", hasAttachments);
 }
 
 function addFiles(fileList) {
