@@ -111,6 +111,7 @@ globalThis.fetch = async (input, init = {}) => {
   }
   if (url.includes("api.groq.com")) {
     if (groqMode === "timeout") throw new DOMException("The operation was aborted.", "AbortError");
+    if (groqMode === "empty") return Response.json({ choices: [{ message: { content: null }, finish_reason: "stop" }] });
     if (groqMode === "429") return Response.json({ error: { message: "rate limited" } }, { status: 429 });
     if (groqMode === "500") return Response.json({ error: { message: "provider down" } }, { status: 500 });
     if (groqMode === "413-always") return Response.json({ error: { message: "payload too large" } }, { status: 413 });
@@ -762,6 +763,29 @@ await test("Groq repeated HTTP 413 preserves real search results without inventi
   assert.match(r.data.reply, /वास्तविक परिणाम/);
   assert.equal(calls.slice(before).filter(x => x.url.includes("api.groq.com")).length, 2);
   groqMode = "success";
+});
+
+await test("current news keeps real source headlines when Groq returns an empty completion", async () => {
+  groqMode = "empty";
+  exaMode = "success";
+  const before = calls.length;
+  try {
+    const r = await request("/api/chat", "POST", {
+      messages: [{ role: "user", content: "आज की भारत की 5 अलग-अलग ताज़ा खबरें बताओ।" }]
+    }, token);
+    assert.equal(r.status, 200);
+    assert.equal(r.data.success, true);
+    assert.equal(r.data.providerBusy, true);
+    assert.equal(r.data.providerStatus, 502);
+    assert.match(r.data.reply, /AI सेवा से हिंदी सार नहीं मिल पाया/);
+    assert.match(r.data.reply, /प्रकाशकों के मूल शीर्षक/);
+    assert.ok(r.data.sources.length > 1, "date-checked search results should be preserved");
+    assert.match(r.data.searchWarning, /खाली उत्तर दिया/);
+    assert.equal(calls.slice(before).filter(x => x.url.includes("api.groq.com")).length, 1);
+  } finally {
+    groqMode = "success";
+    exaMode = "success";
+  }
 });
 
 await test("Groq 429 preserves available web results with an honest fallback", async () => {
