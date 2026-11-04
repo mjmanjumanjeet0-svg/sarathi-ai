@@ -110,6 +110,8 @@ globalThis.fetch = async (input, init = {}) => {
       ]
     });
   }
+  if (url === "https://example.com/gold-rate") return new Response("<html><body>24K gold rate ₹7800 per gram and 22K gold rate ₹7150 per gram in India.</body></html>", { status: 200, headers: { "Content-Type": "text/html" } });
+  if (url === "https://example.com/silver-rate") return new Response("<html><body>999 silver rate ₹95 per gram in India.</body></html>", { status: 200, headers: { "Content-Type": "text/html" } });
   if (url.includes("api.groq.com")) {
     if (groqMode === "timeout") throw new DOMException("The operation was aborted.", "AbortError");
     if (groqMode === "empty") return Response.json({ choices: [{ message: { content: null }, finish_reason: "stop" }] });
@@ -702,6 +704,9 @@ await test("current price query invokes web search and AI", async () => {
   assert.match(enrichedUserPrompt, /सोना-चाँदी भाव उत्तर का अनिवार्य प्रारूप/);
   assert.match(enrichedUserPrompt, /24 कैरेट और 22 कैरेट/);
   assert.match(enrichedUserPrompt, /999 शुद्धता/);
+  assert.match(enrichedUserPrompt, /24K gold rate ₹7800 per gram/);
+  assert.match(enrichedUserPrompt, /22K gold rate ₹7150 per gram/);
+  assert.match(enrichedUserPrompt, /999 silver rate ₹95 per gram/);
   assert.match(enrichedUserPrompt, /13,888 × 10 = 1,38,880/);
   assert.match(enrichedUserPrompt, /179 × 1000 = 1,79,000/);
   assert.match(enrichedUserPrompt, /विसंगति बताओ/);
