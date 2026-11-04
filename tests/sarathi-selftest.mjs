@@ -884,7 +884,7 @@ await test("current news keeps valid summaries when one generated item adds an u
   }
 });
 
-await test("current news preserves dated source headlines when Groq returns malformed summary text", async () => {
+await test("current news refuses headline-only output when Groq returns malformed summary text", async () => {
   groqMode = "malformed-news";
   exaMode = "success";
   const before = calls.length;
@@ -899,10 +899,6 @@ await test("current news preserves dated source headlines when Groq returns malf
     assert.doesNotMatch(r.data.reply, /प्रकाशकों के मूल शीर्षक|प्रकाशित:|खबर 1:/);
     assert.doesNotMatch(r.data.reply, /\\\\n\\\\n/, "fallback text must contain real line breaks, not visible escape sequences");
     assert.doesNotMatch(r.data.reply, /कृपया थोड़ी देर बाद फिर पूछें/);
-    for (const source of r.data.sources) {
-      assert.ok(r.data.reply.includes(new URL(source.url).hostname.toLowerCase().replace("www.", "")),
-        "every fallback headline should retain its actual publisher");
-    }
   } finally {
     groqMode = "success";
     exaMode = "success";
