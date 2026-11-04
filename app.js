@@ -1127,14 +1127,14 @@ async function sendMessage(text) {
           ? new Date(source.publishedAt).toLocaleString("hi-IN", { dateStyle: "medium", timeStyle: "short" })
           : "प्रकाशन समय उपलब्ध नहीं";
         return (index + 1) + ". " + source.title +
-          "\\n   प्रकाशक: " + source.publisher +
-          "\\n   प्रकाशित: " + published;
+          "\n   प्रकाशक: " + source.publisher +
+          "\n   प्रकाशित: " + published;
       });
       cleanAnswer =
         "इंटरनेट खोज में " + fallbackSources.length +
         " परिणाम मिले, लेकिन AI सेवा व्यस्त होने के कारण उनका हिंदी सार तैयार नहीं हो पाया। " +
         "नीचे खोज में मिले मूल शीर्षक और प्रकाशन-तारीख दी गई हैं। इन्हें आज की पुष्टि की गई खबरें न मानें।" +
-        (headlineLines.length ? "\\n\\nखोज में मिले मूल शीर्षक:\\n\\n" + headlineLines.join("\\n\\n") : "");
+        (headlineLines.length ? "\n\nखोज में मिले मूल शीर्षक:\n\n" + headlineLines.join("\n\n") : "");
     }
 
     // Recover a known truncated news-fallback prefix when source metadata survived.
