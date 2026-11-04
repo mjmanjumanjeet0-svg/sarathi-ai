@@ -762,6 +762,9 @@ await test("current price query invokes web search and AI", async () => {
   assert.match(enrichedUserPrompt, /13,888 × 10 = 1,38,880/);
   assert.match(enrichedUserPrompt, /179 × 1000 = 1,79,000/);
   assert.match(enrichedUserPrompt, /विसंगति बताओ/);
+  assert.match(enrichedUserPrompt, /हर प्रकाशक के आँकड़े उसी प्रकाशक के अलग खंड में रखो/);
+  assert.match(enrichedUserPrompt, /अधूरा या कटा हुआ अंक/);
+  assert.match(enrichedUserPrompt, /उसी स्रोत के निकाले गए मूल मूल्य-संदर्भ/);
 });
 await test("long numbered prompts reach Groq without losing their beginning or ending", async () => {
   const longPrompt = Array.from({ length: 50 }, (_, i) => `${i + 1}. सवाल ${i + 1}: सामान्य ज्ञान का छोटा परीक्षण`).join("\n");
