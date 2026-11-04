@@ -1560,11 +1560,11 @@ export default {
       if (groqResponse.status === 429 && isCurrentNewsReply && searchResults.length) {
         const compactNewsContext = searchResults.slice(0, 5).map((item, index) =>
           "स्रोत " + (index + 1) + ": " + cleanText(item.title || "").slice(0, 180) +
-          "\\nप्रकाशक: " + cleanText(item.publisher || "").slice(0, 80) +
-          "\\nप्रकाशित: " + formatNewsPublishedAt(item.publishedAt || "") +
-          "\\nलेख-अंश: " + cleanText(item.snippet || "").slice(0, 320)
-        ).join("\\n\\n");
-        const compactRetryMessages = [{ role: "user", content: "इन ताज़ा खोज परिणामों का संक्षिप्त हिंदी सार दो। हर खबर के लिए खबर 1: सही हिंदी शीर्षक और अगली पंक्ति सार: 2 छोटे तथ्यात्मक वाक्य लिखो। केवल दिए गए तथ्य लिखो, अनुमान मत लगाओ।\\n\\n" + compactNewsContext }];
+          "\nप्रकाशक: " + cleanText(item.publisher || "").slice(0, 80) +
+          "\nप्रकाशित: " + formatNewsPublishedAt(item.publishedAt || "") +
+          "\nलेख-अंश: " + cleanText(item.snippet || "").slice(0, 320)
+        ).join("\n\n");
+        const compactRetryMessages = [{ role: "user", content: "इन ताज़ा खोज परिणामों का संक्षिप्त हिंदी सार दो। हर खबर के लिए खबर 1: सही हिंदी शीर्षक और अगली पंक्ति सार: 2 छोटे तथ्यात्मक वाक्य लिखो। केवल दिए गए तथ्य लिखो, अनुमान मत लगाओ।\n\n" + compactNewsContext }];
         try {
           groqResponse = await sendGroqRequest(
             compactRetryMessages,
