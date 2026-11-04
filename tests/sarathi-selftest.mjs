@@ -534,7 +534,7 @@ await test("generic daily live-news index pages are not treated as reported news
 await test("latest news query uses Exa news category and publication freshness filter", async () => {
   const before = calls.length;
   const newsResponse = await request("/api/chat", "POST", {
-    messages: [{ role: "user", content: "आज की ताजा खबरें बताओ" }]
+    messages: [{ role: "user", content: "आज 4 नवंबर 2026 की भारत की 5 ताज़ा और अलग-अलग प्रमुख खबरें बताओ। हर खबर का प्रकाशक और प्रकाशन समय दिखाओ।" }]
   }, token);
   assert.equal(newsResponse.status, 200);
   const newsHosts = newsResponse.data.sources.map(x => new URL(x.url).hostname.toLowerCase().replace(/^www\./, ""));
@@ -552,6 +552,15 @@ await test("latest news query uses Exa news category and publication freshness f
     "current-news headlines must bypass generative summarization to prevent unsupported claims");
   assert.ok(newsResponse.data.reply.includes("1."), "news headline list should be numbered");
   assert.match(newsResponse.data.reply, /मूल शीर्षक/);
+  const displayedHeadlines = (newsResponse.data.reply.match(/^\\s*[1-5]\\. /gm) || []).length;
+  assert.equal(displayedHeadlines, newsResponse.data.sources.length,
+    "explicitly dated news requests must display every accepted headline, not a model-selected subset");
+  assert.match(newsResponse.data.reply, /प्रकाशक:/);
+  assert.match(newsResponse.data.reply, /प्रकाशित:/);
+  for (const source of newsResponse.data.sources) {
+    assert.ok(newsResponse.data.reply.includes(new URL(source.url).hostname.replace(/^www\\./, "")),
+      "each displayed publisher must match the URL host of its own source");
+  }
   assert.equal(newsHosts.includes("timesofindia.indiatimes.com"), false,
     "near-identical Sensex/Nifty opening stories must be collapsed to one event");
   assert.equal(newsResponse.data.sources.filter(x => /sensex/i.test(x.title) && /nifty/i.test(x.title)).length, 1,
