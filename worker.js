@@ -227,7 +227,7 @@ function shouldSearchAutomatically(text) {
     && /(कब|कितने बजे|समय|स्थिति|स्टेटस|प्लेटफॉर्म|चलेगी|आएगी|पहुंचेगी|रद्द|देरी|delay|status|schedule|when|time)/i.test(q);
   const prices = /(सोना|सोने|चांदी|चाँदी|हीरा|हीरे|भाव|कीमत|दाम|रेट|price|rate)/i.test(q)
     && (recent || /(भाव|कीमत|दाम|रेट|price|rate)/i.test(q));
-  const official = /(परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|परिणाम|आवेदन|फॉर्म|फीस|पात्रता|सरकारी योजना|आधिकारिक|सिलेबस|पाठ्यक्रम|मान्यता|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(q);
+  const official = /(परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|(?:परीक्षा|बोर्ड|विश्वविद्यालय|चुनाव)\s*(?:का|के)?\s*परिणाम|परिणाम\s*(?:घोषित|जारी|देखें|चेक)|आवेदन|फॉर्म|फीस|पात्रता|सरकारी योजना|आधिकारिक|सिलेबस|पाठ्यक्रम|मान्यता|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(q);
   const verification = /(किसने कहा|क्या सही है|सच है या नहीं|जांच करो|जाँच करो|सत्यापित करो|verify|fact.?check)/i.test(q);
   // Education and career pathways can change by academic session and regulator.
   const educationUpdate = /(प्रवेश|एडमिशन|admission|पात्रता|योग्यता|eligibility|फीस|शुल्क|आवेदन|फॉर्म|सिलेबस|पाठ्यक्रम|कट.?ऑफ|काउंसलिंग|मान्यता|recognition|recognized|नया कोर्स|नए कोर्स|आगामी|आने वाला|अगले सत्र|शैक्षणिक सत्र|academic session|course list|courses in india|छात्रवृत्ति|स्कॉलरशिप|scholarship|fellowship|stipend|छात्रवृत्ति योजना)/i.test(q);
@@ -1020,7 +1020,7 @@ export default {
       const isDiamondPriceQuestion = /(हीरा|हीरे|हीरों|diamond)/i.test(userText);
       const isHistoricalQuestion = isHistoricalResearchQuery(userText);
       const indiaToday = new Intl.DateTimeFormat("en-CA", { timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
-      const isOfficialEducationQuestion = /(सिलेबस|पाठ्यक्रम|परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|परिणाम|आवेदन|फॉर्म|फीस|पात्रता|नियम|छात्रवृत्ति|स्कॉलरशिप|scholarship|fellowship|stipend|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(userText);
+      const isOfficialEducationQuestion = /(सिलेबस|पाठ्यक्रम|परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|(?:परीक्षा|बोर्ड|विश्वविद्यालय|चुनाव)\s*(?:का|के)?\s*परिणाम|परिणाम\s*(?:घोषित|जारी|देखें|चेक)|आवेदन|फॉर्म|फीस|पात्रता|नियम|छात्रवृत्ति|स्कॉलरशिप|scholarship|fellowship|stipend|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(userText);
       const searchQuery = isCurrentNewsQuestion
         ? "India latest news when:2d " + indiaToday
         : isGoldRateQuestion || isSilverRateQuestion
