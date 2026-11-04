@@ -1638,7 +1638,7 @@ export default {
     // by the exact same source-by-source parser before it can be shown.
     if (isCurrentNewsReply && !formattedNewsReply && !looksLikeRawEnglishArticle && searchResults.length) {
       try {
-        const repairPrompt = "नीचे दिए गए " + searchResults.length + " खोज परिणामों के लिए केवल हिंदी सार दो। ठीक " + searchResults.length + " प्रविष्टियाँ लिखो। हर प्रविष्टि में दो पंक्तियाँ अनिवार्य हैं: खबर 1: हिंदी शीर्षक और अगली पंक्ति सार: एक तथ्यात्मक वाक्य। इसी तरह क्रमांक जारी रखो। कोई बुलेट, बोल्ड, भूमिका, स्रोत या अतिरिक्त पंक्ति नहीं। केवल दिए गए स्रोत-अंश की जानकारी लिखो; जानकारी न हो तो अनुमान मत लगाओ।\\n\\n" + buildCompactNewsSourceContext(searchResults);
+        const repairPrompt = "नीचे दिए गए " + searchResults.length + " खोज परिणामों के लिए केवल हिंदी सार दो। ठीक " + searchResults.length + " प्रविष्टियाँ लिखो। हर प्रविष्टि में दो पंक्तियाँ अनिवार्य हैं: खबर 1: हिंदी शीर्षक और अगली पंक्ति सार: एक तथ्यात्मक वाक्य। इसी तरह क्रमांक जारी रखो। कोई बुलेट, बोल्ड, भूमिका, स्रोत या अतिरिक्त पंक्ति नहीं। केवल दिए गए स्रोत-अंश की जानकारी लिखो; जानकारी न हो तो अनुमान मत लगाओ।\n\n" + buildCompactNewsSourceContext(searchResults);
         const repairResponse = await sendGroqRequest(
           [{ role: "user", content: repairPrompt }],
           1800,
