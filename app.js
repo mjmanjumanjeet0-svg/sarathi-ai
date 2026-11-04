@@ -681,8 +681,11 @@ function shouldShowSearchSources(data) {
   // Current-news replies already print each headline, publisher and timestamp.
   // Suppress the second, duplicate source panel for those replies.
   const replyText = String(data?.reply || "");
-  const isInlineNewsList = replyText.includes("खबर 1:") &&
-    replyText.includes("प्रकाशक:") && replyText.includes("प्रकाशित:");
+  const isInlineNewsList = (
+    replyText.includes("खबर 1:") &&
+    replyText.includes("प्रकाशक:") &&
+    replyText.includes("प्रकाशित:")
+  ) || replyText.includes("खोज में मिले मूल शीर्षक:");
   return Boolean(data && data.searchAttempted === true && !isInlineNewsList &&
     Array.isArray(data.sources) && data.sources.length > 0);
 }
@@ -1118,10 +1121,20 @@ async function sendMessage(text) {
     // Provider-busy replies can be cut off in transit. Prefer a complete, honest
     // fallback message while keeping the real retrieved links in the source panel.
     if (data.providerBusy === true && Array.isArray(data.sources) && data.sources.length > 0) {
+      const fallbackSources = sanitizeSourceRecords(data.sources, 5);
+      const headlineLines = fallbackSources.map((source, index) => {
+        const published = source.publishedAt && Number.isFinite(Date.parse(source.publishedAt))
+          ? new Date(source.publishedAt).toLocaleString("hi-IN", { dateStyle: "medium", timeStyle: "short" })
+          : "प्रकाशन समय उपलब्ध नहीं";
+        return (index + 1) + ". " + source.title +
+          "\\n   प्रकाशक: " + source.publisher +
+          "\\n   प्रकाशित: " + published;
+      });
       cleanAnswer =
-        "इंटरनेट खोज में " + data.sources.length +
+        "इंटरनेट खोज में " + fallbackSources.length +
         " परिणाम मिले, लेकिन AI सेवा व्यस्त होने के कारण उनका हिंदी सार तैयार नहीं हो पाया। " +
-        "नीचे दिए गए शीर्षक और प्रकाशन-तारीख देखकर मूल खबर पढ़ें। इन्हें आज की पुष्टि की गई खबरें न मानें।";
+        "नीचे खोज में मिले मूल शीर्षक और प्रकाशन-तारीख दी गई हैं। इन्हें आज की पुष्टि की गई खबरें न मानें।" +
+        (headlineLines.length ? "\\n\\nखोज में मिले मूल शीर्षक:\\n\\n" + headlineLines.join("\\n\\n") : "");
     }
 
     // Recover a known truncated news-fallback prefix when source metadata survived.
