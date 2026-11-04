@@ -37,7 +37,7 @@ for (const id of requiredIds) {
   assert.ok(ids.includes(id), "Required interface element missing: #" + id);
 }
 
-assert.match(html, /accept="image\\/\\*,\\.pdf,\\.txt,\\.docx,\\.csv,\\.md,\\.json"/, "attachment picker must expose photos and supported document formats without video");
+assert.ok(html.includes('accept="image/*,.pdf,.txt,.docx,.csv,.md,.json"'), "attachment picker must expose photos and supported document formats without video");
 assert.ok(html.indexOf('id="attachmentPreview"') < html.indexOf('id="messageInput"'), "attachment tray must appear inside the composer above the message input");
 assert.ok(app.includes('preview.classList.toggle("hidden", !hasAttachments)'), "attachment preview must remove the hidden class when files are selected");
 assert.ok(app.includes("attachment-thumbnail"), "selected photos must show a local thumbnail");
