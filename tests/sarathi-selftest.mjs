@@ -177,8 +177,7 @@ await test("Sarathi identity question is answered locally without web search eve
   const r = await request("/api/chat", "POST", {
     webSearch: true,
     messages: [{ role: "user", content: "नमस्ते सारथी, तुम कौन हो?" }]
-  }, token);
-  assert.equal(r.status, 200);
+  }, token);  assert.equal(r.status, 200);
   assert.match(r.data.reply, /मैं सारथी AI हूँ/);
   assert.equal(r.data.webSearch, false);
   assert.equal(calls.length, before, "identity questions must not consume Exa or Groq requests");
@@ -286,11 +285,288 @@ await test("Android app-launch capability is distinguished from website limitati
     messages: [{ role: "user", content: "क्या तुम Android में इंस्टॉल ऐप खोल सकते हो?" }]
   }, token);
   assert.equal(r.status, 200);
+  const groqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
+  assert.ok(groqCall, "request should reach the assistant provider");
+  const body = JSON.parse(groqCall.init.body || "{}");
+  const system = body.messages?.find(message => message.role === "system")?.content || "";
+  assert.match(system, /Android सारथी ऐप/);
+  assert.match(system, /केवल वेबसाइट\/ब्राउज़र/);
+  assert.match(system, /खुलना सत्यापित नहीं हुआ/);
+});
+await test("constitution and science accuracy rules are included in the assistant system prompt", async () => {
+  for (const question of [
+    "भारत का संविधान कब लागू हुआ? विस्तार से समझाओ।",
+    "प्रकाश संश्लेषण और श्वसन में पाँच अंतर बताओ।"
+  ]) {
+    const before = calls.length;
+    const r = await request("/api/chat", "POST", {
+      messages: [{ role: "user", content: question }]
+    }, token);
+    assert.equal(r.status, 200);
+    const groqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
+    assert.ok(groqCall, "question should reach the configured assistant provider");
+    const body = JSON.parse(groqCall.init.body || "{}");
+    const system = body.messages?.find(message => message.role === "system")?.content || "";
+    assert.match(system, /9 दिसंबर 1946/);
+    assert.match(system, /26 नवंबर 1949/);
+    assert.match(system, /26 जनवरी 1950/);
+    assert.match(system, /26 जनवरी 1930/);
+    assert.match(system, /8 अगस्त 1942/);
+    assert.match(system, /395 वोटों से/);
+    assert.match(system, /4 नवंबर 1948/);
+    assert.match(system, /26 जनवरी 1930/);
+    assert.match(system, /भारत छोड़ो आंदोलन 8 अगस्त 1942/);
+    assert.match(system, /उसमें 7 सदस्य थे/);
+    assert.match(system, /मौलिक कर्तव्य 11 हैं/);
+    assert.match(system, /ठीक माँगी गई संख्या में/);
+    assert.match(system, /परिपक्व स्तनधारी लाल रक्त कोशिकाओं/);
+  }
+});
+await test("ordinary mango-benefit and expected-result prompts never trigger education web search", async () => {
+  for (const question of [
+    "मुझे आम के दो फायदे बताओ।",
+    "अपेक्षित परिणाम: सीधे दो फायदे बताए, कोई इंटरनेट खोज या स्रोत सूची न दिखाए।"
+  ]) {
+    const before = calls.length;
+    const r = await request("/api/chat", "POST", {
+      webSearch: true,
+      internet: true,
+      messages: [{ role: "user", content: question }]
+    }, token);
+    assert.equal(r.status, 200);
+    assert.equal(r.data.searchAttempted, false, question);
+    assert.equal(r.data.webSearch, false, question);
+    assert.deepEqual(r.data.sources, [], question);
+    assert.equal(calls.slice(before).some(x => x.url.includes("api.exa.ai/search")), false,
+      "ordinary fruit and expected-result wording must not invoke web search");
+    assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")),
+      "ordinary questions should still reach the AI provider");
+  }
+});
+await test("explicit board examination result questions still trigger official search", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    webSearch: false,
+    messages: [{ role: "user", content: "बिहार बोर्ड परीक्षा परिणाम 2026 कब जारी होगा?" }]
+  }, token);
+  assert.equal(r.status, 200);
+  assert.ok(calls.slice(before).some(x => x.url.includes("api.exa.ai/search")));
+});
+await test("stable general-knowledge questions do not trigger unnecessary web search", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    messages: [{ role: "user", content: "गौतम बुद्ध कौन थे?" }]
+  }, token);  assert.equal(r.status, 200);
+  assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")));
+  assert.equal(calls.slice(before).some(x => x.url.includes("api.exa.ai/search")), false,
+    "stable biography/general knowledge should not spend search requests");
+});
+await test("regulated career pathways trigger current education search and strict official-source rules", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    webSearch: false,
+    messages: [{ role: "user", content: "भारत में डॉक्टर बनने के लिए वर्तमान योग्यता और सही प्रवेश परीक्षा क्या है?" }]
+  }, token);
+  assert.equal(r.status, 200);
+  const exaCall = calls.slice(before).find(x => x.url.includes("api.exa.ai/search"));
+  assert.ok(exaCall, "regulated career pathways must trigger current web verification");
+  const exaBody = JSON.parse(exaCall.init.body || "{}");
+  assert.equal(exaBody.numResults, 8, "education searches should compare a wider source pool");
+  assert.ok(exaBody.includeDomains.includes("*.gov.in"));
+  assert.ok(exaBody.includeDomains.includes("*.ac.in"));
+  assert.ok(exaBody.includeDomains.includes("nmc.org.in"));
+  const groqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
+  assert.ok(groqCall, "the searched education question should reach the assistant");
+  const groqBody = JSON.parse(groqCall.init.body || "{}");
+  const system = groqBody.messages?.find(message => message.role === "system")?.content || "";
+  assert.match(system, /शिक्षा और करियर में उच्च-सटीकता नियम/);
+  assert.match(system, /आधिकारिक पुष्टि नहीं मिली/);
+  assert.match(system, /NEET-UG/);
+  assert.match(system, /Doctorate of Medicine \(DM\)/);
+  assert.match(system, /Magister Chirurgiae \(MCh\)/);
+  assert.match(system, /सभी कोर्स में 60% या Maths अनिवार्य मत कहो/);
+});
+
+await test("scholarship deadlines and eligibility trigger official education-source search", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    webSearch: false,
+    messages: [{ role: "user", content: "बिहार छात्रवृत्ति 2026 की आवेदन अंतिम तिथि और पात्रता क्या है?" }]
+  }, token);
+  assert.equal(r.status, 200);
+  const exaCall = calls.slice(before).find(x => x.url.includes("api.exa.ai/search"));
+  assert.ok(exaCall, "current scholarship rules must trigger official-source search");
+  const body = JSON.parse(exaCall.init.body || "{}");
+  assert.equal(body.numResults, 8);
+  assert.ok(body.includeDomains.includes("*.gov.in"), "scholarship search must be scoped to official government sources");
+  assert.ok(body.query.includes("official website"), "scholarship search query should request official sources");
+  assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")));
+});
+
+await test("Indian course catalog questions trigger official-source search even with web toggle off", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    webSearch: false,
+    messages: [{ role: "user", content: "भारत में ITI के कौन-कौन से कोर्स उपलब्ध हैं?" }]
+  }, token);
+  assert.equal(r.status, 200);
+  const exaCall = calls.slice(before).find(x => x.url.includes("api.exa.ai/search"));
+  assert.ok(exaCall, "Indian course catalog questions must trigger current verification");
+  const body = JSON.parse(exaCall.init.body || "{}");
+  assert.equal(body.numResults, 8);
+  assert.ok(body.includeDomains.includes("*.gov.in"));
+  assert.ok(body.includeDomains.includes("ncvet.gov.in"));
+  assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")));
+});
+
+await test("medical super-specialty degree abbreviations use verified local definitions", async () => {
+  for (const [question, expected] of [
+    ["MCh का मतलब क्या है?", "Magister Chirurgiae"],
+    ["DM का मतलब क्या है?", "Doctorate of Medicine"]
+  ]) {
+    const before = calls.length;
+    const r = await request("/api/chat", "POST", {
+      messages: [{ role: "user", content: question }]
+    }, token);
+    assert.equal(r.status, 200);
+    assert.match(r.data.reply, new RegExp(expected));
+    assert.equal(calls.slice(before).some(x => x.url.includes("api.exa.ai/search")), false);
+    assert.equal(calls.slice(before).some(x => x.url.includes("api.groq.com")), false,
+      "verified degree names should not depend on an uncertain generated answer");
+  }
+});
+
+await test("explicit Hindi command इंटरनेट खोजो triggers Exa even when webSearch toggle is off", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    webSearch: false,
+    messages: [{ role: "user", content: "इंटरनेट खोजो भारत की नई शिक्षा नीति के बारे में" }]
+  }, token);
+  assert.equal(r.status, 200);
+  assert.ok(calls.slice(before).some(x => x.url.includes("api.exa.ai/search")),
+    "explicit Hindi search command must invoke Exa");
+  const exaCall = calls.slice(before).find(x => x.url.includes("api.exa.ai/search"));
+  const exaBody = JSON.parse(exaCall.init.body || "{}");
+  assert.equal(exaBody.type, "auto");
+  assert.deepEqual(exaBody.contents, { highlights: true });
+});
+
+await test("Bloody Sunday uses a deterministic date-safe answer and deduplicates historical publishers", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    webSearch: false,
+    messages: [{ role: "user", content: "खूनी रविवार 1905 के बारे में बताओ और भरोसेमंद ऐतिहासिक स्रोत दो।" }]
+  }, token);
+  assert.equal(r.status, 200);
+  assert.equal(r.data.searchAttempted, true);
+  assert.equal(r.data.webSearch, true);
+  const exaCall = calls.slice(before).find(x => x.url.includes("api.exa.ai/search"));
+  assert.ok(exaCall, "historical question should automatically invoke Exa without the web toggle");
+  const exaBody = JSON.parse(exaCall.init.body || "{}");
+  assert.equal(exaBody.numResults, 15);
+  assert.match(exaBody.query, /Bloody Sunday 1905 St Petersburg/);
+  assert.ok(exaBody.includeDomains.includes("history.state.gov"));
+  assert.ok(exaBody.includeDomains.includes("iupress.indiana.edu"));
+  assert.ok(r.data.sources.length >= 3);
+  assert.equal(r.data.sources.some(x => x.url.includes("hindikul.com")), false);
+  assert.equal(r.data.sources.some(x => x.url.includes("wikipedia.org")), false);
+  const publisherHosts = r.data.sources.map(x => new URL(x.url).hostname);
+  assert.equal(new Set(publisherHosts).size, publisherHosts.length,
+    "only one result per hostname should be displayed");
+  const publishers = r.data.sources.map(x => x.publisher);
+  assert.equal(new Set(publishers).size, publishers.length,
+    "one source per normalized publisher should be displayed");
+  assert.ok(r.data.sources.length >= 3, "at least three independent publishers are required");
+  assert.match(r.data.reply, /मृतकों की संख्या पर स्रोतों में बड़ा अंतर|मृतकों की सटीक संख्या/);
+  assert.match(r.data.reply, /अलग-अलग प्रकाशकों के स्रोत/);
+  assert.doesNotMatch(r.data.reply, /https?:\/\//,
+    "source links must be rendered once in the dedicated clickable source list");
+  assert.match(r.data.reply, /22 जनवरी 1905 ग्रेगोरियन/);
+  assert.match(r.data.reply, /9 जनवरी 1905/);
+  assert.match(r.data.reply, /शांतिपूर्ण जुलूस/);
+  assert.match(r.data.reply, /दंगा कहना गलत है/);
+  assert.doesNotMatch(r.data.reply, /10 मई 1905|May 10, 1905/i);
+  assert.match(r.data.reply, /कम-से-कम 130/);
+  assert.match(r.data.reply, /लगभग 1,000/);
+  assert.match(r.data.reply, /संख्या पर स्रोतों में बड़ा अंतर/);
+  assert.ok(r.data.sources.some(x => x.url.startsWith("https://publish.iupress.indiana.edu/")));
+  assert.ok(r.data.sources.some(x => x.url.startsWith("https://www.ebsco.com/")));
+  assert.equal(calls.slice(before).some(x => x.url.includes("api.groq.com")), false,
+    "Bloody Sunday answer should use the deterministic source-grounded response");
+});
+await test("current news with one publisher is not summarized as independently verified", async () => {
+  const before = calls.length;
+  exaMode = "news-single-source";
+  try {
+    const r = await request("/api/chat", "POST", {
+      messages: [{ role: "user", content: "आज की ताज़ा खबरें भरोसेमंद स्रोतों के साथ बताओ।" }]
+    }, token);
+    assert.equal(r.status, 200);
+    assert.equal(r.data.searchAttempted, true);
+    assert.equal(r.data.sources.length, 1);
+    assert.match(r.data.reply, /केवल एक स्वतंत्र समाचार स्रोत मिला/);
+    assert.match(r.data.searchWarning, /केवल एक स्वतंत्र प्रकाशक/);
+    assert.equal(calls.slice(before).some(x => x.url.includes("api.groq.com")), false,
+      "one publisher must not be passed to the language model for a news digest");
+  } finally {
+    exaMode = "success";
+  }
+});
+
+await test("generic daily live-news index pages are not treated as reported news articles", async () => {
+  exaMode = "news-generic-live-page";
+  const before = calls.length;
+  try {
+    const r = await request("/api/chat", "POST", {
+      messages: [{ role: "user", content: "आज की ताज़ा खबरें भरोसेमंद स्रोतों के साथ बताओ।" }]
+    }, token);
+    assert.equal(r.status, 200);
+    assert.equal(r.data.searchAttempted, true);
+    assert.equal(r.data.sources.length, 0, "generic live-feed index must not be presented as a report");
+    assert.match(r.data.reply, /भरोसेमंद समाचार परिणाम नहीं मिले|पर्याप्त भरोसेमंद सामग्री नहीं मिली|अपुष्ट/);
+    assert.equal(calls.slice(before).some(x => x.url.includes("api.groq.com")), false,
+      "a generic live-feed page must not be summarized by the language model");
+  } finally {
+    exaMode = "success";
+  }
+});
+
+await test("latest news query uses Exa news category and publication freshness filter", async () => {
+  const before = calls.length;
+  const newsResponse = await request("/api/chat", "POST", {
+    messages: [{ role: "user", content: "आज की ताजा खबरें बताओ" }]
+  }, token);  assert.equal(newsResponse.status, 200);
+  const newsHosts = newsResponse.data.sources.map(x => new URL(x.url).hostname.toLowerCase().replace(/^www\./, ""));
+  assert.equal(newsHosts.length, 4, "late current news candidates must survive pre-filter truncation");
+  assert.equal(new Set(newsHosts).size, newsHosts.length, "duplicate publisher hostnames must be removed");
+  assert.ok(newsHosts.includes("indianexpress.com"));
+  assert.ok(newsHosts.includes("thehindu.com"));
+  assert.ok(newsHosts.includes("ndtv.com"));
+  assert.ok(newsHosts.includes("hindustantimes.com"), "a valid current article after the first eight candidates must be retained");
+  assert.equal(newsHosts.includes("bbc.com"), false, "five-day-old news must be filtered out");
+  assert.equal(newsHosts.includes("reuters.com"), false, "news older than 48 hours must be filtered out");
+  assert.equal(newsHosts.includes("apnews.com"), false, "even slightly future-dated news must be filtered out");
+  assert.equal(newsHosts.includes("bbc.com"), false, "undated news must not be presented as current");
+  const exaCall = calls.slice(before).find(x => x.url.includes("api.exa.ai/search"));
+  assert.ok(exaCall, "latest news must invoke Exa");
+  const exaBody = JSON.parse(exaCall.init.body || "{}");
+  assert.equal(exaBody.type, "auto");
+  assert.equal(exaBody.category, "news");
+  assert.equal(exaBody.numResults, 40, "news search should request a wider candidate pool for strict publisher/date filters");
+  assert.deepEqual(exaBody.includeDomains, [
+    "indianexpress.com", "thehindu.com", "ndtv.com", "hindustantimes.com",
+    "bbc.com", "reuters.com", "apnews.com", "news18.com", "aajtak.in",
+    "abplive.com", "amarujala.com", "jagran.com", "zeenews.india.com",
+    "indiatoday.in", "theprint.in", "livemint.com", "indiatimes.com",
+    "pti.in", "aninews.in"
+  ], "news search should be scoped to supported trusted publishers");
+  assert.ok(exaBody.startPublishedDate, "news search must constrain the 48-hour publication window");
+  assert.ok(exaBody.endPublishedDate, "news search must exclude future publication dates at the provider");
+  assert.deepEqual(exaBody.contents, { highlights: true });
   assert.match(newsResponse.data.reply, /अभी केवल मूल स्रोत दिखा रहा हूँ/);
   assert.equal(newsResponse.data.searchUnavailable, true);
   assert.equal(calls.slice(before).some(x => x.url.includes("api.groq.com")), false,
     "current news must not be summarized by the model until a source-grounded summarizer is available");
-
 });
 
 await test("a casual sentence containing आज does not automatically trigger Exa", async () => {
@@ -466,77 +742,3 @@ await test("Groq HTTP 413 news retry keeps market closing-price safeguards", asy
   assert.equal(r.status, 200);
   const groqCalls = calls.slice(before).filter(x => x.url.includes("api.groq.com"));
   assert.equal(groqCalls.length, 2, "news query should retry exactly once after HTTP 413");
-  const retryBody = JSON.parse(groqCalls[1].init.body || "{}");
-  const retrySystem = retryBody.messages?.[0]?.content || "";
-  assert.match(retrySystem, /समाचार के तथ्य केवल खोज परिणामों से लो/);
-  assert.match(retrySystem, /बंद हुआ या दिन का अंतिम स्तर मत लिखो/);
-  assert.match(retrySystem, /समापन तभी बताओ/);
-  groqMode = "success";
-});
-await test("Groq 429 preserves available web results with an honest fallback", async () => {
-  groqMode = "429";
-  exaMode = "success";
-  const r = await request("/api/chat", "POST", {
-    webSearch: true,
-    messages: [{ role: "user", content: "आज सोने का भाव इंटरनेट पर खोजो" }]
-  }, token);
-  assert.equal(r.status, 200);
-  assert.equal(r.data.success, true);
-  assert.equal(r.data.providerBusy, true);
-  assert.match(r.data.reply, /AI सेवा इस समय व्यस्त है/);
-  assert.match(r.data.reply, /वास्तविक परिणाम अलग से दिए गए हैं/);
-  assert.match(r.data.reply, /प्रकाशन-तारीख देखकर मूल खबर पढ़ें/);
-  assert.ok(r.data.sources.length >= 1, "at least one verified source should be preserved");
-  assert.match(r.data.searchWarning, /AI सेवा व्यस्त थी/);
-  groqMode = "success";
-});
-await test("Groq 429 without search results remains a clear retryable error", async () => {
-  groqMode = "429";
-  exaMode = "429";
-  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "भारत का इतिहास बताओ" }] }, token);
-  assert.equal(r.status, 429);
-  assert.equal(r.data.retryable, true);
-  groqMode = "success";
-  exaMode = "success";
-});
-await test("Groq 5xx is handled as a provider outage", async () => {
-  groqMode = "500";
-  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "भारत का इतिहास बताओ" }] }, token);
-  assert.equal(r.status, 502);
-  groqMode = "success";
-});
-await test("Groq timeout returns a clear retryable gateway timeout", async () => {
-  groqMode = "timeout";
-  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "भारत का इतिहास बताओ" }] }, token);
-  assert.equal(r.status, 504);
-  assert.equal(r.data.retryable, true);
-  assert.equal(r.data.providerStatus, 504);
-  assert.match(r.data.error, /समय अधिक लगा/);
-  groqMode = "success";
-});
-await test("empty question is rejected", async () => {
-  const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: " " }] }, token);
-  assert.equal(r.status, 400);
-});
-await test("oversized user question is rejected before provider calls", async () => {
-  const before = calls.length;
-  const r = await request("/api/chat", "POST", {
-    messages: [{ role: "user", content: "क".repeat(12001) }]
-  }, token);
-  assert.equal(r.status, 400);
-  assert.equal(calls.length, before, "oversized input must not reach Exa or Groq");
-});
-await test("non-text user message is rejected as an empty question", async () => {
-  const before = calls.length;
-  const r = await request("/api/chat", "POST", {
-    messages: [{ role: "user", content: { text: "भारत का इतिहास" } }]
-  }, token);
-  assert.equal(r.status, 400);
-  assert.equal(calls.length, before, "non-text content must not reach providers");
-});
-await test("media-disabled status is honest and explicit", async () => {
-  const r = await request("/api/media/image", "POST", { prompt: "test" }, token);
-  assert.equal(r.status, 503);
-  assert.equal(r.data.zeroCostMode, true);
-});
-console.log(`\nSarathi Worker self-test: ${passed}/${passed} passed (mock provider mode; no real API credits used).`);
