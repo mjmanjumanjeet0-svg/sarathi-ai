@@ -804,7 +804,7 @@ await test("current news preserves dated source headlines when Groq returns malf
     assert.match(r.data.reply, /प्रकाशित:/);
     assert.doesNotMatch(r.data.reply, /कृपया थोड़ी देर बाद फिर पूछें/);
     for (const source of r.data.sources) {
-      assert.ok(r.data.reply.includes(new URL(source.url).hostname.replace(/^www\\./, "")),
+      assert.ok(r.data.reply.includes(new URL(source.url).hostname.toLowerCase().replace("www.", "")),
         "every fallback headline should retain its actual publisher");
     }
   } finally {
