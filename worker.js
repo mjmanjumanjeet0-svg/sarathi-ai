@@ -638,11 +638,16 @@ function filterRelevantSearchResults(query, results) {
 function isSameIndianMarketEvent(a, b) {
   const titleA = cleanText(a?.title || "").toLowerCase();
   const titleB = cleanText(b?.title || "").toLowerCase();
-  // A same-day report mentioning both benchmark indices is usually coverage
-  // of the same broad market movement, even when one headline says "closes"
-  // and another uses "Dalal Street" wording.
+  // Same-day reports about both benchmark indices describe one market event.
   const hasBothBenchmarks = value => /sensex/.test(value) && /nifty/.test(value);
-  return hasBothBenchmarks(titleA) && hasBothBenchmarks(titleB);
+  if (hasBothBenchmarks(titleA) && hasBothBenchmarks(titleB)) return true;
+
+  // Different publishers often phrase the same Agniveer policy decision
+  // differently. Do not count those reports as two separate daily headlines.
+  const isAgniveerTenureUpdate = value =>
+    /agniveer|अग्निवीर/.test(value) &&
+    /(two years|2 years|दो साल|दो वर्ष|service period|service tenure|tenure|extension|extend|सेवा अवधि|अवधि बढ़|अवधि बढ़|विस्तार)/.test(value);
+  return isAgniveerTenureUpdate(titleA) && isAgniveerTenureUpdate(titleB);
 }
 
 function dedupeNewsResults(results) {
@@ -803,8 +808,13 @@ function formatCurrentNewsSummaryReply(rawReply, results) {
       entries.get(current).summary = cleanText(summary[1]).slice(0, 420);
       continue;
     }
-    // Accept a plain next-line summary too: models sometimes omit the literal
-    // "सार:" label despite returning a valid numbered Hindi digest.
+    // Allow a second summary sentence on the following line, but never absorb
+    // publisher metadata or the next numbered headline into the summary.
+    if (entries.get(current).summary && !/^(?:प्रकाशक|स्रोत|प्रकाशित|लिंक)\s*[:：]/i.test(line)) {
+      entries.get(current).summary = (entries.get(current).summary + " " + cleanText(line)).slice(0, 420);
+      continue;
+    }
+    // Accept a plain first summary line when the model omits the "सार:" label.
     if (!entries.get(current).summary && !/^(?:प्रकाशक|स्रोत|प्रकाशित|लिंक)\s*[:：]/i.test(line)) {
       entries.get(current).summary = cleanText(line).slice(0, 420);
     }
@@ -814,6 +824,10 @@ function formatCurrentNewsSummaryReply(rawReply, results) {
   for (let index = 0; index < items.length; index++) {
     const entry = entries.get(index + 1);
     if (!entry?.headline || !entry?.summary) return "";
+    // Enforce the requested 2-sentence summary. If the model returns only one
+    // sentence, the constrained repair runs instead of silently accepting it.
+    const sentenceEnds = entry.summary.match(/[।!?]+|(?<![0-9])\.(?![0-9])/g) || [];
+    if (sentenceEnds.length < 2) return "";
     const sourceEvidence = cleanText((items[index]?.title || "") + " " + (items[index]?.snippet || ""));
     const generatedText = entry.headline + " " + entry.summary;
     const claimsCause = /(?:के कारण|की वजह से|के चलते|के फलस्वरूप|का कारण बना|कारण बना|की बदौलत)/i.test(generatedText);
@@ -1687,7 +1701,7 @@ export default {
     // by the exact same source-by-source parser before it can be shown.
     if (isCurrentNewsReply && !formattedNewsReply && !looksLikeRawEnglishArticle && searchResults.length) {
       try {
-        const repairPrompt = "नीचे दिए गए " + searchResults.length + " खोज परिणामों के लिए केवल हिंदी सार दो। ठीक " + searchResults.length + " प्रविष्टियाँ लिखो। हर प्रविष्टि में दो पंक्तियाँ अनिवार्य हैं: खबर 1: हिंदी शीर्षक और अगली पंक्ति सार: एक तथ्यात्मक वाक्य। इसी तरह क्रमांक जारी रखो। कोई बुलेट, बोल्ड, भूमिका, स्रोत या अतिरिक्त पंक्ति नहीं। केवल दिए गए स्रोत-अंश की जानकारी लिखो; जानकारी न हो तो अनुमान मत लगाओ।\n\n" + buildCompactNewsSourceContext(searchResults);
+        const repairPrompt = "नीचे दिए गए " + searchResults.length + " खोज परिणामों के लिए केवल हिंदी सार दो। ठीक " + searchResults.length + " अलग-अलग खबरें लिखो। एक ही घटना की दो रिपोर्टों को दो खबर मत बनाओ। हर प्रविष्टि में दो पंक्तियाँ अनिवार्य हैं: खबर 1: हिंदी शीर्षक और अगली पंक्ति सार: ठीक 2 छोटे, तथ्यात्मक वाक्य। इसी तरह क्रमांक जारी रखो। कोई बुलेट, बोल्ड, भूमिका, स्रोत या अतिरिक्त पंक्ति नहीं। केवल दिए गए स्रोत-अंश की जानकारी लिखो; जानकारी न हो तो अनुमान मत लगाओ।\n\n" + buildCompactNewsSourceContext(searchResults);
         const repairResponse = await sendGroqRequest(
           [{ role: "user", content: repairPrompt }],
           1800,
