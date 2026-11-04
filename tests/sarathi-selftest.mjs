@@ -114,6 +114,19 @@ globalThis.fetch = async (input, init = {}) => {
     if (groqMode === "timeout") throw new DOMException("The operation was aborted.", "AbortError");
     if (groqMode === "empty") return Response.json({ choices: [{ message: { content: null }, finish_reason: "stop" }] });
     if (groqMode === "malformed-news") return Response.json({ choices: [{ message: { content: "आज की खबरें जल्द पढ़ें।" } }] });
+    if (groqMode === "malformed-news-secondary" && requestBody.model === "qwen/qwen3.8-27b") {
+      return Response.json({ choices: [{ message: { content: [
+        "खबर 1: ऊर्जा भंडारण योजना",
+        "सार: सरकार ने ऊर्जा भंडारण योजना को मंजूरी दी। योजना के विवरण स्रोत में दिए गए हैं।",
+        "खबर 2: शेयर बाजार की खबर",
+        "सार: शेयर बाजार में कारोबार की जानकारी प्रकाशित हुई। उपलब्ध अंश में अतिरिक्त आँकड़े नहीं दिए गए।",
+        "खबर 3: दिल्ली की वायु गुणवत्ता",
+        "सार: दिल्ली की वायु गुणवत्ता पर खबर प्रकाशित हुई। उपलब्ध अंश में स्थिति का संक्षिप्त उल्लेख है।",
+        "खबर 4: अग्निवीर सेवा अवधि",
+        "सार: अग्निवीरों की सेवा अवधि से जुड़ी खबर प्रकाशित हुई। उपलब्ध अंश में चयन की शर्तों का विवरण नहीं है।"
+      ].join("\\n") } }] });
+    }
+    if (groqMode === "malformed-news-secondary") return Response.json({ choices: [{ message: { content: "आज की खबरें जल्द पढ़ें।" } }] });
     if (groqMode === "news-plain-summary") return Response.json({ choices: [{ message: { content: "**खबर 1 – ऊर्जा भंडारण योजना को मंजूरी**\nसरकार ने बड़े स्तर पर ऊर्जा भंडारण विकसित करने के लिए योजना को मंजूरी दी।\n**खबर 2 – शेयर बाजार में तेजी**\nसेंसेक्स और निफ्टी में कारोबार के दौरान बढ़त दर्ज हुई।\n**खबर 3 – दिल्ली की हवा की गुणवत्ता**\nदिल्ली में वायु गुणवत्ता खराब होने की खबर प्रकाशित हुई।\n**खबर 4 – अग्निवीर सेवा अवधि**\nअग्निवीरों की सेवा अवधि बढ़ाने के फैसले की खबर प्रकाशित हुई।" } }] });
     if (groqMode === "news-unsupported-cause") return Response.json({ choices: [{ message: { content: "खबर 1: ऊर्जा भंडारण योजना को मंजूरी\nसार: सरकार ने ऊर्जा भंडारण योजना को मंजूरी दी।\nखबर 2: शेयर बाजार में तेजी\nसार: सेंसेक्स और निफ्टी में बढ़त दर्ज हुई।\nखबर 3: दिल्ली की हवा की गुणवत्ता\nसार: दिवाली के कारण दिल्ली की हवा खराब हुई।\nखबर 4: अग्निवीर सेवा अवधि\nसार: अग्निवीरों की सेवा अवधि बढ़ाने की खबर प्रकाशित हुई।" } }] });
     const requestBody = JSON.parse(init.body || "{}");
@@ -878,6 +891,26 @@ await test("current news keeps valid summaries when one generated item adds an u
     assert.doesNotMatch(r.data.reply, /AI सेवा ने खबरों का सही हिंदी सार तैयार नहीं किया/);
     assert.match(r.data.reply, /उपलब्ध स्रोत-अंश इस कारण की पुष्टि नहीं करता/);
     assert.equal((r.data.reply.match(/सार:/g) || []).length, 4);
+  } finally {
+    groqMode = "success";
+    exaMode = "success";
+  }
+});
+
+await test("current news retries malformed Hindi summary with secondary model", async () => {
+  groqMode = "malformed-news-secondary";
+  exaMode = "success";
+  const before = calls.length;
+  try {
+    const r = await request("/api/chat", "POST", {
+      messages: [{ role: "user", content: "आज की भारत की ताजा खबरें बताओ" }]
+    }, token);
+    assert.equal(r.status, 200);
+    assert.match(r.data.reply, /खबर 1:/);
+    assert.equal((r.data.reply.match(/सार:/g) || []).length, r.data.sources.length);
+    const groqCalls = calls.slice(before).filter(x => x.url.includes("api.groq.com"));
+    assert.ok(groqCalls.some(x => JSON.parse(x.init.body).model === "qwen/qwen3.8-27b"),
+      "secondary model must retry when the primary model's summary format is invalid");
   } finally {
     groqMode = "success";
     exaMode = "success";
