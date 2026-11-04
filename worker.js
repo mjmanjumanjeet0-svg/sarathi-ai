@@ -208,6 +208,12 @@ function isDateQuestion(text) {
 
 function explicitlyRequestsWebSearch(text) {
   const q = String(text || "").toLocaleLowerCase("hi-IN").trim();
+
+  // A search phrase inside a prohibition is not permission to search.
+  // Examples: "कोई इंटरनेट खोज मत करना", "इंटरनेट खोज या स्रोत सूची न दिखाए".
+  const searchIsForbidden = /(?:कोई|बिना)\s*(?:भी\s*)?(?:इंटरनेट|वेब|online)\s*(?:पर\s*)?(?:खोज|सर्च)|(?:इंटरनेट|वेब)\s*(?:पर\s*)?(?:खोज|सर्च).{0,45}(?:न\s*(?:करो|करें|करना|दिखाओ|दिखाए|दिखाना)|मत\s*(?:करो|करें|करना)|नहीं\s*(?:करना|चाहिए|दिखाना|दिखाए))/i.test(q);
+  if (searchIsForbidden) return false;
+
   return /(?:इंटरनेट|वेब|online)\s*(?:पर\s*)?(?:खोज(?:ो|ें|ना)?|सर्च(?:ो| करें| करना)?|search(?:\s+for)?|ढूँढ(?:ो|ें)?|देख(?:ो|ें)?)/i.test(q)
     || /(?:google|गूगल)\s*(?:पर\s*)?(?:खोज(?:ो|ें)?|सर्च(?:ो| करें)?|करो|करें)/i.test(q)
     || /(?:search|खोज|सर्च|ढूँढो|ढूंढो)\s+(?:the\s+)?(?:internet|web|online|इंटरनेट|वेब)/i.test(q);
