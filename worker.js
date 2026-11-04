@@ -452,7 +452,7 @@ async function enrichGoldRateResults(results) {
       if (!contexts.length) return item;
       const combined = [item.title || "", item.snippet || "", ...contexts].join(" | ");
       const rateFor = (karat) => {
-        const re = new RegExp("(?:\\b" + karat + "\\s*(?:K|karat|carat)|" + karat + "\\s*कैरेट)[^₹]{0,120}(?:₹|Rs\\.?|INR)\\s*([0-9,]+(?:\\.[0-9]+)?)", "i");
+        const re = new RegExp("(?:\\b" + karat + "\s*(?:K|karat|carat)|" + karat + "\s*कैरेट)[^₹]{0,120}(?:₹|Rs\\.?|INR)\s*([0-9,]+(?:\\.[0-9]+)?)", "i");
         const m = combined.match(re);
         return m ? Number(m[1].replace(/,/g, "")) : null;
       };
@@ -816,7 +816,7 @@ function hasUnsupportedNumericClaim(generatedText, sourceEvidence) {
 }
 
 function hasMixedScriptToken(text) {
-  return String(text || "").split(/\\s+/).some(token =>
+  return String(text || "").split(/\s+/).some(token =>
     /[A-Za-z]/.test(token) && /[\\u0900-\\u097F]/.test(token)
   );
 }
@@ -878,8 +878,8 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     // the 75% who were otherwise due to exit; do not publish a generic
     // all-Agniveers tenure headline when the source specifies that group.
     const isAgniveerExtension = /agniveer|अग्निवीर/i.test(sourceEvidence) &&
-      /(?:75\\s*%|७५\\s*प्रतिशत|remaining\\s+75|शेष\\s+७५)/i.test(sourceEvidence);
-    if (isAgniveerExtension && !/(?:75\\s*%|७५\\s*प्रतिशत|शेष\\s+७५)/i.test(generatedText)) return "";
+      /(?:75\s*%|७५\s*प्रतिशत|remaining\s+75|शेष\s+७५)/i.test(sourceEvidence);
+    if (isAgniveerExtension && !/(?:75\s*%|७५\s*प्रतिशत|शेष\s+७५)/i.test(generatedText)) return "";
     // Reject accidental half-English/half-Devanagari words (e.g. "pऐse").
     // Such output must be repaired rather than shown as polished Hindi.
     if (hasMixedScriptToken(generatedText)) return "";
