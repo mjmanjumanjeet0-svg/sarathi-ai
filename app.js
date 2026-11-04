@@ -1465,11 +1465,11 @@ function renderAttachmentPreview() {
 
   for (const file of state.attachments) {
     const item = document.createElement("div");
-    item.className = "attachment-item";
+    const isImage = file.type.startsWith("image/") || /\.(png|jpe?g|webp)$/i.test(file.name);
+    item.className = isImage ? "attachment-item attachment-image-item" : "attachment-item attachment-document-item";
     item.setAttribute("role", "group");
     item.setAttribute("aria-label", file.name);
 
-    const isImage = file.type.startsWith("image/") || /\.(png|jpe?g|webp)$/i.test(file.name);
     if (isImage) {
       let objectUrl = attachmentObjectUrls.get(file);
       if (!objectUrl) {
