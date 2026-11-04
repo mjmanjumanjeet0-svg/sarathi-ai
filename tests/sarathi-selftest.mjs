@@ -794,7 +794,7 @@ await test("current news keeps real source headlines when Groq returns an empty 
     assert.doesNotMatch(r.data.reply, /प्रकाशकों के मूल शीर्षक/);
     assert.doesNotMatch(r.data.reply, /खबर 1:/);
     assert.ok(r.data.sources.length > 1, "date-checked search results should be preserved");
-    assert.match(r.data.searchWarning, /खाली उत्तर दिया/);
+    assert.match(r.data.searchWarning, /हिंदी सार तैयार नहीं किया/);
     assert.equal(calls.slice(before).filter(x => x.url.includes("api.groq.com")).length, 1);
   } finally {
     groqMode = "success";
