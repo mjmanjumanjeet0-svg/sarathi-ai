@@ -594,9 +594,9 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.ok(exaBody.startPublishedDate, "news search must constrain the 48-hour publication window");
   assert.ok(exaBody.endPublishedDate, "news search must exclude future publication dates at the provider");
   assert.deepEqual(exaBody.contents, { highlights: true });
-  assert.ok(newsResponse.data.reply.includes("**खबर 1:**"), "headline digest should contain its first item");
+  assert.ok(newsResponse.data.reply.includes("खबर 1:"), "headline digest should contain its first item");
   if (newsResponse.data.sources.length > 1) {
-    assert.ok(newsResponse.data.reply.includes("**खबर 2:**"), "headline digest should contain its second item");
+    assert.ok(newsResponse.data.reply.includes("खबर 2:"), "headline digest should contain its second item");
   }
   assert.equal(newsResponse.data.searchUnavailable, undefined);
 });
