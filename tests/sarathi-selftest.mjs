@@ -539,6 +539,8 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.equal(newsResponse.status, 200);
   const newsHosts = newsResponse.data.sources.map(x => new URL(x.url).hostname.toLowerCase().replace(/^www\./, ""));
   assert.equal(newsHosts.length, 4, "late current news candidates must survive pre-filter truncation");
+  assert.match(newsResponse.data.reply, /आज केवल 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं/,
+    "when fewer than five distinct same-day articles survive, the reply must disclose the shortfall honestly");
   assert.equal(new Set(newsHosts).size, newsHosts.length, "duplicate publisher hostnames must be removed");
   const publishedTimes = newsResponse.data.sources.map(x => Date.parse(x.publishedAt));
   assert.ok(publishedTimes.every(Number.isFinite), "every displayed news source must have a valid publication timestamp");
