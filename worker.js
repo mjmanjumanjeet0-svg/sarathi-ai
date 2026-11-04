@@ -1468,7 +1468,7 @@ export default {
       return jsonResponse({ success: false, error: "AI सेवा से खाली उत्तर मिला।" }, 502);
     }
 
-    const isCurrentNewsReply = /(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(userText);
+    // isCurrentNewsReply was computed before the compact news request.
     let rawReply = reply.trim();
     // Final factual guard for the well-known 1905 event: prevent the model from
     // reintroducing the specific "riot" misclassification after retrieval.
