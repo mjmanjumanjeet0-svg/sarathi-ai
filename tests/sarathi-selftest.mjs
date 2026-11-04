@@ -114,8 +114,8 @@ globalThis.fetch = async (input, init = {}) => {
       ]
     });
   }
-  if (url === "https://example.com/gold-rate") return new Response("<html><body>24K gold rate ₹7800 per gram and 22K gold rate ₹7150 per gram in India.</body></html>", { status: 200, headers: { "Content-Type": "text/html" } });
-  if (url === "https://silver.example.net/silver-rate") return new Response("<html><body>999 silver rate ₹95 per gram in India.</body></html>", { status: 200, headers: { "Content-Type": "text/html" } });
+  if (url === "https://example.com/gold-rate") return new Response("<html><body>24K gold rate ₹7800 per gram and 22K gold rate ₹7150 per gram in India. <table><tr><td>24 karat gold rate in New Delhi</td><td>₹1,39,850 per 10 gm</td></tr><tr><td>22 karat gold rate in New Delhi</td><td>₹1,27,683 per 10 gm</td></tr></table></body></html>", { status: 200, headers: { "Content-Type": "text/html" } });
+  if (url === "https://silver.example.net/silver-rate") return new Response("<html><body>999 silver rate ₹95 per gram in India. <table><tr><td>Silver 999 Fine rate in New Delhi</td><td>₹1,77,940 per 1 kg</td></tr></table></body></html>", { status: 200, headers: { "Content-Type": "text/html" } });
   if (url.includes("api.groq.com")) {
     if (groqMode === "timeout") throw new DOMException("The operation was aborted.", "AbortError");
     if (groqMode === "empty") return Response.json({ choices: [{ message: { content: null }, finish_reason: "stop" }] });
@@ -755,6 +755,10 @@ await test("current price query invokes web search and AI", async () => {
   assert.match(enrichedUserPrompt, /24K gold rate ₹7800 per gram/);
   assert.match(enrichedUserPrompt, /22K gold rate ₹7150 per gram/);
   assert.match(enrichedUserPrompt, /999 silver rate ₹95 per gram/);
+  assert.match(enrichedUserPrompt, /24 karat gold rate in New Delhi.*₹1,39,850 per 10 gm/);
+  assert.match(enrichedUserPrompt, /22 karat gold rate in New Delhi.*₹1,27,683 per 10 gm/);
+  assert.match(enrichedUserPrompt, /Silver 999 Fine rate in New Delhi.*₹1,77,940 per 1 kg/);
+  assert.match(enrichedUserPrompt, /पेज से निकाले गए मूल मूल्य-संदर्भ/);
   assert.match(enrichedUserPrompt, /13,888 × 10 = 1,38,880/);
   assert.match(enrichedUserPrompt, /179 × 1000 = 1,79,000/);
   assert.match(enrichedUserPrompt, /विसंगति बताओ/);
