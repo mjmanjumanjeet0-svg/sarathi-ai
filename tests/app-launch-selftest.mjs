@@ -58,7 +58,7 @@ assert.ok(java.includes('notifyVoice("onError", "आवाज़ पहचान
 assert.ok(java.includes("voiceRequestInProgress") && java.includes("setVoiceRequestInProgress"), "voice requests must track reply state while Sarathi is foreground");
 assert.ok(java.includes('if (voiceConversationActive) notifyVoice("onSpeechComplete", "")'), "TTS setup/start failures must resume an active foreground voice conversation");
 const ttsStopStart = java.indexOf("@Override public void onStop(String utteranceId, boolean interrupted)");
-const ttsStopEnd = java.indexOf("@Override public void", ttsStopStart + 20);
+const ttsStopEnd = java.indexOf("\n                        }", ttsStopStart);
 assert.ok(ttsStopStart >= 0 && ttsStopEnd > ttsStopStart, "TTS stop callback must exist");
 assert.equal(java.slice(ttsStopStart, ttsStopEnd).includes("onSpeechComplete"), false, "stopping an older queued TTS utterance must not restart microphone while a replacement reply is playing");
 
