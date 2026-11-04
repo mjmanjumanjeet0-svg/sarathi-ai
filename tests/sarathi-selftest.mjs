@@ -537,6 +537,10 @@ await test("latest news query uses Exa news category and publication freshness f
   const newsHosts = newsResponse.data.sources.map(x => new URL(x.url).hostname.toLowerCase().replace(/^www\./, ""));
   assert.equal(newsHosts.length, 4, "late current news candidates must survive pre-filter truncation");
   assert.equal(new Set(newsHosts).size, newsHosts.length, "duplicate publisher hostnames must be removed");
+  const publishedTimes = newsResponse.data.sources.map(x => Date.parse(x.publishedAt));
+  assert.ok(publishedTimes.every(Number.isFinite), "every displayed news source must have a valid publication timestamp");
+  assert.deepEqual(publishedTimes, [...publishedTimes].sort((a, b) => b - a),
+    "same-day sources should be displayed newest first, not in Exa relevance order");
   assert.ok(newsHosts.includes("indianexpress.com"));
   assert.ok(newsHosts.includes("thehindu.com"));
   assert.ok(newsHosts.includes("ndtv.com"));
