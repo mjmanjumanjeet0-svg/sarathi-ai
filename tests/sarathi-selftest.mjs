@@ -790,8 +790,9 @@ await test("current news keeps real source headlines when Groq returns an empty 
     assert.equal(r.data.success, true);
     assert.equal(r.data.providerBusy, true);
     assert.equal(r.data.providerStatus, 502);
-    assert.match(r.data.reply, /AI सेवा से हिंदी सार नहीं मिल पाया/);
-    assert.match(r.data.reply, /प्रकाशकों के मूल शीर्षक/);
+    assert.match(r.data.reply, /भरोसेमंद हिंदी सार तैयार नहीं हो सका/);
+    assert.doesNotMatch(r.data.reply, /प्रकाशकों के मूल शीर्षक/);
+    assert.doesNotMatch(r.data.reply, /खबर 1:/);
     assert.ok(r.data.sources.length > 1, "date-checked search results should be preserved");
     assert.match(r.data.searchWarning, /खाली उत्तर दिया/);
     assert.equal(calls.slice(before).filter(x => x.url.includes("api.groq.com")).length, 1);
@@ -894,8 +895,8 @@ await test("current news preserves dated source headlines when Groq returns malf
     assert.equal(r.status, 200);
     assert.equal(r.data.success, true);
     assert.ok(r.data.sources.length > 1, "date-checked search results should remain available");
-    assert.match(r.data.reply, /प्रकाशकों के मूल शीर्षक/);
-    assert.match(r.data.reply, /प्रकाशित:/);
+    assert.match(r.data.reply, /भरोसेमंद हिंदी सार तैयार नहीं हो सका/);
+    assert.doesNotMatch(r.data.reply, /प्रकाशकों के मूल शीर्षक|प्रकाशित:|खबर 1:/);
     assert.doesNotMatch(r.data.reply, /\\\\n\\\\n/, "fallback text must contain real line breaks, not visible escape sequences");
     assert.doesNotMatch(r.data.reply, /कृपया थोड़ी देर बाद फिर पूछें/);
     for (const source of r.data.sources) {
