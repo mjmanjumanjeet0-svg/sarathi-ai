@@ -58,6 +58,13 @@ assert.ok(java.includes('notifyVoice("onError", "आवाज़ पहचान
 assert.ok(java.includes("voiceRequestInProgress") && java.includes("setVoiceRequestInProgress"), "voice requests must track reply state while Sarathi is foreground");
 assert.ok(java.includes('if (voiceConversationActive) notifyVoice("onSpeechComplete", "")'), "TTS setup/start failures must resume an active foreground voice conversation");
 assert.ok(java.includes("recognizerForSession") && java.includes("isCurrentRecognizer()"), "stale speech callbacks must not restart or destroy the current microphone session");
+const offlineErrorStart = java.indexOf("} else if (!useOnlineService");
+const offlineSilenceBranch = java.indexOf("error == SpeechRecognizer.ERROR_NO_MATCH", offlineErrorStart);
+const offlineConsentBranch = java.indexOf("// If the offline provider fails", offlineSilenceBranch);
+assert.ok(offlineErrorStart >= 0 && offlineSilenceBranch > offlineErrorStart && offlineConsentBranch > offlineSilenceBranch, "offline silence must be handled before offering online recognition");
+assert.ok(java.slice(offlineSilenceBranch, offlineConsentBranch).includes("scheduleVoiceRecognitionRetry(false)"), "offline silence must retry offline without switching providers");
+assert.ok(java.slice(offlineSilenceBranch, offlineConsentBranch).includes("ERROR_SPEECH_TIMEOUT"), "offline speech timeout must retry without online consent");
+
 assert.ok(java.includes("TYPE_TEXT_VARIATION_PASSWORD"), "Android login prompt must mask password input");
 assert.ok(app.includes("function requestLoginPassword()"), "web login must use a dedicated password dialog");
 assert.ok(app.includes('input.type = "password"') && app.includes('input.autocomplete = "current-password"'), "web login field must mask and correctly autocomplete passwords");
