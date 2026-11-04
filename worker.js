@@ -1602,7 +1602,10 @@ export default {
       ? formatCurrentNewsSummaryReply(rawReply, searchResults)
       : "";
     const finalReply = isCurrentNewsReply
-      ? (formattedNewsReply || "आज की " + searchResults.length + " तारीख़-जाँची खबरें मिलीं, लेकिन AI सेवा उनका भरोसेमंद हिंदी सार तैयार नहीं कर सकी। अधूरा या अंग्रेज़ी शीर्षक दिखाने के बजाय कृपया थोड़ी देर बाद फिर पूछें।")
+      ? (formattedNewsReply || (
+          "AI सेवा ने खबरों का सही हिंदी सार तैयार नहीं किया। इसलिए नीचे केवल खोज में मिले प्रकाशकों के मूल शीर्षक दिए जा रहे हैं; इन्हें हिंदी सार या स्वतंत्र सत्यापन न मानें।\\n\\n" +
+          buildCurrentNewsHeadlineReply(searchResults)
+        ))
       : rawReply;
 
     return jsonResponse({
