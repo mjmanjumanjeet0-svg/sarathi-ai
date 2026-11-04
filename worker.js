@@ -771,16 +771,22 @@ function buildCurrentNewsHeadlineReply(results) {
     return "आज की ताज़ा खबरों के लिए तारीख़-जाँचे हुए भरोसेमंद समाचार परिणाम नहीं मिले। कृपया कुछ देर बाद फिर कोशिश करें।";
   }
   const lines = items.map((item, index) => {
-    let host = "प्रकाशक उपलब्ध नहीं";
-    try { host = new URL(item.url).hostname.toLowerCase().replace(/^www\\./, ""); } catch {}
-    const title = cleanText(item.title || "").slice(0, 260);
-    return (index + 1) + ". " + title + "\\n   स्रोत: " + host;
+    let publisher = cleanText(item?.publisher || "").trim();
+    if (!publisher) {
+      try {
+        publisher = new URL(item?.url).hostname.toLowerCase().replace(/^www\\./i, "");
+      } catch {
+        publisher = "प्रकाशक उपलब्ध नहीं";
+      }
+    }
+    const title = cleanText(item?.title || "").slice(0, 260);
+    return (index + 1) + ". " + title + "\n   स्रोत: " + publisher;
   });
   const prefix = items.length === 1
     ? "आज के लिए केवल एक स्वतंत्र समाचार स्रोत मिला। इसलिए इसे बहु-स्रोत से पुष्ट खबर न मानें।"
     : "नीचे आज प्रकाशित खबरों के मूल शीर्षक दिए गए हैं।";
-  return prefix + "\\n\\n" + lines.join("\\n\\n") +
-    "\\n\\nध्यान दें: ये प्रकाशकों के मूल शीर्षक हैं, पूरे लेख का हिंदी सार या स्वतंत्र सत्यापन नहीं।";
+  return prefix + "\n\n" + lines.join("\n\n") +
+    "\n\nध्यान दें: ये प्रकाशकों के मूल शीर्षक हैं, पूरे लेख का हिंदी सार या स्वतंत्र सत्यापन नहीं।";
 }
 
 function buildCompactNewsSourceContext(results) {
