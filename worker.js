@@ -1129,6 +1129,31 @@ export default {
       }
     }
 
+    // Current-news summaries are temporarily source-list-only. The model has
+    // repeatedly invented or merged details (including conflicting live AQI
+    // readings) despite source-grounding instructions. Preserve the real,
+    // date-filtered source cards, but do not generate an unverified digest.
+    if (wantsSearch && /(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(userText) && searchResults.length >= 2) {
+      const todayLabel = new Intl.DateTimeFormat("hi-IN", {
+        timeZone: INDIA_TIME_ZONE, day: "numeric", month: "long", year: "numeric"
+      }).format(new Date());
+      return jsonResponse({
+        success: true,
+        reply: todayLabel + " के लिए " + searchResults.length + " तारीख़-जाँचे गए समाचार स्रोत मिले हैं। पिछले उत्तरों में खबरों के विवरण और आँकड़े स्रोतों से पूरी तरह मेल नहीं खा रहे थे, इसलिए गलत सार देने से बचने के लिए अभी केवल मूल स्रोत दिखा रहा हूँ। हर खबर की सही जानकारी उसके मूल लेख में पढ़ें; बिना पुष्टि के किसी विवरण को तथ्य न मानें।",
+        ...dateTime,
+        webSearch: true,
+        searchAttempted: true,
+        searchWarning: "समाचारों का हिंदी सार अस्थायी रूप से रोका गया है; केवल वास्तविक खोज स्रोत दिखाए जा रहे हैं।",
+        searchUnavailable: true,
+        sources: searchResults.map(item => ({
+          title: item.title,
+          url: item.url,
+          publisher: item.publisher || "",
+          publishedAt: item.publishedAt || ""
+        }))
+      });
+    }
+
     // This well-documented event has recurring date and casualty-count errors.
     // Use a deterministic, source-grounded response instead of relying on a
     // generated paragraph to preserve the calendar conversion and uncertainty.
