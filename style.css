@@ -256,3 +256,17 @@ body,.app,.main{background:radial-gradient(ellipse at 50% 45%,#09265a,#041633 52
   .dropdown button{color:#222}
   .dropdown button:hover{background:#f3f3f3}
 }
+
+
+/* ChatGPT-style attachment tray inside the composer */
+.composer{flex-wrap:wrap;align-items:center}
+.attachment-preview:not(.hidden){display:flex;order:-1;flex:0 0 100%;width:100%;max-width:none;gap:9px;padding:2px 2px 9px;overflow-x:auto;overflow-y:hidden}
+.attachment-item{position:relative;display:flex;align-items:center;gap:9px;flex:0 0 auto;min-width:0;max-width:min(240px,72vw);min-height:68px;padding:7px 34px 7px 7px;border:1px solid #d8d8d8;border-radius:14px;background:#f7f7f7;color:#202123}
+.attachment-thumbnail{display:block;width:54px;height:54px;flex:0 0 54px;object-fit:cover;border-radius:9px;background:#e8e8e8}
+.attachment-file-icon{display:grid;place-items:center;width:54px;height:54px;flex:0 0 54px;border-radius:9px;background:#e7edf7;color:#23466f;font-size:12px;font-weight:800}
+.attachment-details{display:flex;flex-direction:column;min-width:0;gap:3px}
+.attachment-details strong{max-width:135px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;font-weight:600;color:#303030}
+.attachment-details small{font-size:11px;color:#777}
+.attachment-remove{position:absolute;top:5px;right:5px;display:grid;place-items:center;width:25px;height:25px;border:0;border-radius:50%;background:#e5e5e5;color:#333;font-size:20px;line-height:1}
+.composer.has-attachments{padding-top:10px}
+@media(max-width:700px){.attachment-preview:not(.hidden){padding-bottom:8px}.attachment-item{min-height:64px}.attachment-thumbnail,.attachment-file-icon{width:50px;height:50px;flex-basis:50px}}
