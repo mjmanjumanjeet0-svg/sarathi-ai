@@ -784,7 +784,7 @@ function formatCurrentNewsSummaryReply(rawReply, results) {
   let current = null;
   for (const rawLine of String(rawReply || "").split(/\r?\n/)) {
     const line = rawLine.replace(/\*\*/g, "").replace(/^[-•]\s*/, "").trim();
-    const headline = line.match(/^(?:खबर\s*)?(\d+)\s*[.):]\s*(.+)$/i) || line.match(/^खबर\s*(\d+)\s*:\s*(.+)$/i);
+    const headline = line.match(/^(?:खबर\s*)?(\d+)\s*[:：.)\-–—]\s*(.+)$/i) || line.match(/^खबर\s*(\d+)\s*[:：]\s*(.+)$/i);
     if (headline) {
       current = Number(headline[1]);
       if (current >= 1 && current <= items.length) {
@@ -1623,12 +1623,10 @@ export default {
     // already validates that every dated source has a matching Hindi summary.
     // Without this normalization, **खबर 1:** was missed by the pre-check and
     // a valid Hindi digest was incorrectly replaced by the headline fallback.
-    const normalizedNewsReply = rawReply.replace(/\*\*/g, "").replace(/^\s*[-•]\s*/gm, "");
-    const newsListCount = (normalizedNewsReply.match(/(^|\n)\s*(?:खबर\s*[1-8]\s*:|[1-8][.)])\s*[^\n]{8,}/gim) || []).length;
     const looksLikeRawEnglishArticle = isCurrentNewsReply &&
       /\b(Updated:|By:|India News Live Updates|Published:|Read more|Breaking News)\b/i.test(rawReply);
-    const malformedNewsReply = isCurrentNewsReply && searchResults.length > 0 &&
-      (newsListCount !== searchResults.length || looksLikeRawEnglishArticle);
+    // The summary parser itself validates every source-summary pair. Avoid a
+    // separate brittle heading counter that can reject harmless punctuation.
     const formattedNewsReply = isCurrentNewsReply && !looksLikeRawEnglishArticle
       ? formatCurrentNewsSummaryReply(rawReply, searchResults)
       : "";
