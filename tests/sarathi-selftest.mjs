@@ -106,12 +106,12 @@ globalThis.fetch = async (input, init = {}) => {
     }
     return Response.json({      results: [
         { title: "भारत में सोने का भाव", url: "https://example.com/gold-rate", highlights: ["24K gold rate ₹7800 per gram and 22K gold rate ₹7150 per gram in India."] },
-        { title: "भारत में चांदी का भाव", url: "https://example.com/silver-rate", highlights: ["Silver rate ₹95 per gram in India."] }
+        { title: "भारत में चांदी का भाव", url: "https://silver.example.net/silver-rate", highlights: ["Silver rate ₹95 per gram in India."] }
       ]
     });
   }
   if (url === "https://example.com/gold-rate") return new Response("<html><body>24K gold rate ₹7800 per gram and 22K gold rate ₹7150 per gram in India.</body></html>", { status: 200, headers: { "Content-Type": "text/html" } });
-  if (url === "https://example.com/silver-rate") return new Response("<html><body>999 silver rate ₹95 per gram in India.</body></html>", { status: 200, headers: { "Content-Type": "text/html" } });
+  if (url === "https://silver.example.net/silver-rate") return new Response("<html><body>999 silver rate ₹95 per gram in India.</body></html>", { status: 200, headers: { "Content-Type": "text/html" } });
   if (url.includes("api.groq.com")) {
     if (groqMode === "timeout") throw new DOMException("The operation was aborted.", "AbortError");
     if (groqMode === "empty") return Response.json({ choices: [{ message: { content: null }, finish_reason: "stop" }] });
