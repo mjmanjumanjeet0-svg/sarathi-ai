@@ -684,7 +684,7 @@ await test("exact requested five-news prompt accepts four distinct dated Hindi s
     }, token);
     assert.equal(r.status, 200);
     assert.equal(r.data.sources.length, 4, "only four distinct, dated source articles are available in this fixture");
-    assert.match(r.data.reply, /आज केवल 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं/);
+    assert.match(r.data.reply, /आज केवल 4 अलग-अलग, तारीख़-जाँची खबरों के सार तैयार हो सके/);
     assert.doesNotMatch(r.data.reply, /भरोसेमंद हिंदी सार तैयार नहीं हो सका/);
     const summaries = r.data.reply.split(String.fromCharCode(10)).filter(line => /^सार: /.test(line));
     assert.equal(summaries.length, 4, "every accepted article must have a Hindi summary");
