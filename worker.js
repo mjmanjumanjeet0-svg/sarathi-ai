@@ -1619,17 +1619,22 @@ export default {
         /(?:राजनीतिक\s+दंगा|दंगों?\s+के\s+दौरान|दंगा\s+हुआ|riot(?:s)?)/i.test(rawReply)) {
       rawReply = "खूनी रविवार (Bloody Sunday) 1905 कोई दंगा नहीं था। यह 9 जनवरी 1905 (पुराने जूलियन कैलेंडर) / 22 जनवरी 1905 (ग्रेगोरियन कैलेंडर) को सेंट पीटर्सबर्ग में हुआ। फादर जॉर्जी गैपॉन के नेतृत्व में मजदूरों का शांतिपूर्ण जुलूस अपनी याचिका ज़ार निकोलस द्वितीय तक पहुँचाने के लिए Winter Palace की ओर जा रहा था। सैनिकों ने जुलूस/भीड़ पर गोलीबारी की। गोलीबारी के सटीक स्थान और मृतकों-घायलों की संख्या के बारे में स्रोतों में अंतर है, इसलिए किसी एक संख्या या महल के ठीक सामने गोलीबारी होने का दावा बिना पुष्ट स्रोत के नहीं करना चाहिए। नीचे केवल इस खोज में मिले वास्तविक स्रोत दिए गए हैं।";
     }
-    const newsListCount = (rawReply.match(/(^|\n)\s*(?:खबर\s*[1-8]\s*:|[1-8][.)]|[-•])\s*[^\n]{8,}/gim) || []).length;
+    // Normalize Markdown before counting numbered news headings. The formatter
+    // already validates that every dated source has a matching Hindi summary.
+    // Without this normalization, **खबर 1:** was missed by the pre-check and
+    // a valid Hindi digest was incorrectly replaced by the headline fallback.
+    const normalizedNewsReply = rawReply.replace(/\*\*/g, "").replace(/^\s*[-•]\s*/gm, "");
+    const newsListCount = (normalizedNewsReply.match(/(^|\n)\s*(?:खबर\s*[1-8]\s*:|[1-8][.)])\s*[^\n]{8,}/gim) || []).length;
     const looksLikeRawEnglishArticle = isCurrentNewsReply &&
       /\b(Updated:|By:|India News Live Updates|Published:|Read more|Breaking News)\b/i.test(rawReply);
     const malformedNewsReply = isCurrentNewsReply && searchResults.length > 0 &&
       (newsListCount !== searchResults.length || looksLikeRawEnglishArticle);
-    const formattedNewsReply = isCurrentNewsReply && !malformedNewsReply
+    const formattedNewsReply = isCurrentNewsReply && !looksLikeRawEnglishArticle
       ? formatCurrentNewsSummaryReply(rawReply, searchResults)
       : "";
     const finalReply = isCurrentNewsReply
       ? (formattedNewsReply || (
-          "AI सेवा ने खबरों का सही हिंदी सार तैयार नहीं किया। इसलिए नीचे केवल खोज में मिले प्रकाशकों के मूल शीर्षक दिए जा रहे हैं; इन्हें हिंदी सार या स्वतंत्र सत्यापन न मानें।\\n\\n" +
+          "AI सेवा ने खबरों का सही हिंदी सार तैयार नहीं किया। इसलिए नीचे केवल खोज में मिले प्रकाशकों के मूल शीर्षक दिए जा रहे हैं; इन्हें हिंदी सार या स्वतंत्र सत्यापन न मानें।\n\n" +
           buildCurrentNewsHeadlineReply(searchResults)
         ))
       : rawReply;
