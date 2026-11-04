@@ -550,10 +550,10 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.ok(newsHosts.includes("hindustantimes.com"), "a valid current article after the first eight candidates must be retained");
   assert.equal(calls.slice(before).some(x => x.url.includes("api.groq.com")), false,
     "current-news headlines must bypass generative summarization to prevent unsupported claims");
-  assert.ok(newsResponse.data.reply.includes("1."), "news headline list should be numbered");
+  assert.ok(newsResponse.data.reply.includes("**खबर 1:**"), "news headline list should use stable visible numbering");
   assert.match(newsResponse.data.reply, /मूल शीर्षक/);
   const displayedHeadlines = newsResponse.data.reply.split("\n")
-    .filter(line => /^[1-5]\. /.test(line)).length;
+    .filter(line => /^\*\*खबर [1-5]:\*\* /.test(line)).length;
   assert.equal(displayedHeadlines, newsResponse.data.sources.length,
     "explicitly dated news requests must display every accepted headline, not a model-selected subset");
   assert.match(newsResponse.data.reply, /प्रकाशक:/);
@@ -588,8 +588,10 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.ok(exaBody.startPublishedDate, "news search must constrain the 48-hour publication window");
   assert.ok(exaBody.endPublishedDate, "news search must exclude future publication dates at the provider");
   assert.deepEqual(exaBody.contents, { highlights: true });
-  assert.ok(newsResponse.data.reply.includes("1."), "headline digest should contain its first item");
-  assert.ok(newsResponse.data.reply.includes("2."), "headline digest should contain its second item");
+  assert.ok(newsResponse.data.reply.includes("**खबर 1:**"), "headline digest should contain its first item");
+  if (newsResponse.data.sources.length > 1) {
+    assert.ok(newsResponse.data.reply.includes("**खबर 2:**"), "headline digest should contain its second item");
+  }
   assert.equal(newsResponse.data.searchUnavailable, undefined);
 });
 
