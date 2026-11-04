@@ -431,7 +431,15 @@ public class MainActivity extends Activity {
                             && !hasMicrophonePermission()) {
                         pendingListen = false;
                         notifyVoice("onError", "Android ने माइक्रोफ़ोन अनुमति नहीं दी। सेटिंग में Sarathi AI → माइक्रोफ़ोन → केवल ऐप इस्तेमाल करते समय अनुमति चुनें।");
-                        } else if (!useOnlineService) {
+                        } else if (!useOnlineService
+                            && (error == SpeechRecognizer.ERROR_NO_MATCH
+                                || error == SpeechRecognizer.ERROR_SPEECH_TIMEOUT)
+                            && voiceConversationActive) {
+                        // Silence or an unclear phrase is not a reason to switch
+                        // recognition providers or ask for online consent.
+                        notifyVoice("onStatus", "आवाज़ साफ़ नहीं मिली। सारथी फिर सुन रहा है…");
+                        scheduleVoiceRecognitionRetry(false);
+                    } else if (!useOnlineService) {
                         // If the offline provider fails (including provider-side error 9),
                         // offer the normal recognizer only after explicit per-use consent.
                         mainHandler.post(() -> showOnlineVoiceConsent(
