@@ -35,6 +35,7 @@ assert.equal(validHttpUrl("https://[::1]/secret"), false, "IPv6 literal sources 
 assert.equal(validHttpUrl("https://metadata.google.internal/"), false, "internal metadata hostnames must be rejected");
 
 assert.match(source.slice(source.indexOf("async function enrichGoldRateResults"), source.indexOf("function isHistoricalResearchQuery")), /redirect:\s*"manual"/, "third-party enrichment must not follow redirects");
+assert.ok(source.includes("आम में विटामिन E प्रचुर होने") && source.includes("स्थापित पोषण-तथ्य"), "health answers must avoid unsupported nutrient and skin/hair claims");
 
 const moduleUrl = "data:text/javascript;base64," + Buffer.from(source).toString("base64");
 const { default: worker } = await import(moduleUrl);
