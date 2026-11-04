@@ -9,6 +9,7 @@
   let paused = false;
   let nativeMode = false;
   let conversationMode = false;
+  let activeBrowserUtterance = null;
 
   function show(activeNow, hint) {
     ["voicePanel", "voiceWave", "voiceActiveNote"].forEach(id => $(id)?.classList.toggle("hidden", !activeNow));
@@ -35,6 +36,7 @@
       try { recognition.stop(); } catch (_) {}
       recognition = null;
     }
+    activeBrowserUtterance = null;
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     if (window.SarathiNative?.stopSpeaking) window.SarathiNative.stopSpeaking();
     if (nativeMode && window.SarathiNative?.endVoiceConversation) {
@@ -66,15 +68,23 @@
       return;
     }
     try { recognition?.stop(); } catch (_) {}
+    // Invalidate the previous browser utterance before cancel(): browsers may
+    // dispatch its onend/onerror asynchronously while the replacement is speaking.
+    activeBrowserUtterance = null;
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(answer);
+    activeBrowserUtterance = utterance;
     utterance.lang = /[अ-ह]/.test(answer) ? "hi-IN" : "en-IN";
     utterance.rate = 0.96;
-    utterance.onend = utterance.onerror = () => {
+    const finishUtterance = () => {
+      if (activeBrowserUtterance !== utterance) return;
+      activeBrowserUtterance = null;
       speaking = false;
       paused = false;
       startRecognition();
     };
+    utterance.onend = finishUtterance;
+    utterance.onerror = finishUtterance;
     window.speechSynthesis.speak(utterance);
   }
 
