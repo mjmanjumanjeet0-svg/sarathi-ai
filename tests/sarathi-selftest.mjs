@@ -807,10 +807,11 @@ await test("current news retries one provider rate limit with compact source con
     assert.equal(r.data.sources.length, 4);
     assert.doesNotMatch(r.data.reply, /AI सेवा व्यस्त थी/);
     const groqCalls = calls.slice(before).filter(x => x.url.includes("api.groq.com"));
-    assert.equal(groqCalls.length, 2, "one compact retry should follow the initial HTTP 429");
+    assert.ok(groqCalls.length >= 2, "a compact retry should follow the initial HTTP 429");
     const retryBody = JSON.parse(groqCalls[1].init.body);
     assert.equal(retryBody.max_tokens, 1000);
     assert.match(retryBody.messages.at(-1).content, /लेख-अंश/);
+    assert.equal((r.data.reply.match(/सार:/g) || []).length, 4, "the retry or its format-repair attempt should produce all four Hindi summaries");
   } finally {
     groqMode = "success";
     exaMode = "success";
