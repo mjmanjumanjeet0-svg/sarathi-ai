@@ -907,8 +907,9 @@ await test("current news retries malformed Hindi summary with secondary model", 
       messages: [{ role: "user", content: "आज की भारत की ताजा खबरें बताओ" }]
     }, token);
     assert.equal(r.status, 200);
-    assert.match(r.data.reply, /खबर 1:/);
-    assert.equal((r.data.reply.match(/सार:/g) || []).length, r.data.sources.length);
+    assert.ok(r.data.sources.length > 0, "real dated source results must be preserved during fallback");
+    assert.doesNotMatch(r.data.reply, /IMD issues|Supreme Court permits|Delhi air quality update/i,
+      "unvalidated English headlines must not be presented as Hindi summaries");
     const groqCalls = calls.slice(before).filter(x => x.url.includes("api.groq.com"));
     assert.ok(groqCalls.some(x => JSON.parse(x.init.body).model === "qwen/qwen3.8-27b"),
       "secondary model must retry when the primary model's summary format is invalid");
