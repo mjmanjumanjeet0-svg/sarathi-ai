@@ -266,6 +266,19 @@ await test("ordinary fruit-benefit question never searches even when an old web 
   assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")),
     "the ordinary question should still receive an AI answer");
 });
+
+await test("stable constitution date question does not trigger automatic historical web search", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    webSearch: true,
+    messages: [{ role: "user", content: "भारत का संविधान किस तारीख को अपनाया गया था और कब लागू हुआ?" }]
+  }, token);
+  assert.equal(r.status, 200);
+  assert.equal(r.data.webSearch, false);
+  assert.deepEqual(r.data.sources, []);
+  assert.equal(calls.slice(before).some(x => x.url.includes("api.exa.ai")), false,
+    "stable historical facts should not automatically call Exa");
+});
 await test("Android app-launch capability is distinguished from website limitations", async () => {
   const before = calls.length;
   const r = await request("/api/chat", "POST", {
