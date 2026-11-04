@@ -97,8 +97,9 @@ assert.equal(safeRecords[0].url, "https://example.com/story");
 assert.ok(app.includes("shouldShowSearchSources(data) ? filterSourcesForPrompt"), "assistant messages must display sources returned by automatic search");
 assert.ok(app.includes("if (shouldShowSearchWarning(data))"), "only meaningful search failures must be surfaced in status");
 
-assert.ok(scriptFiles.indexOf("app.js") >= 0, "Main app script must be loaded");
-assert.ok(scriptFiles.indexOf("voice.js") > scriptFiles.indexOf("app.js"), "Voice integration must load after app.js");
+const scriptPaths = scriptFiles.map(src => src.split("?")[0]);
+assert.ok(scriptPaths.indexOf("app.js") >= 0, "Main app script must be loaded");
+assert.ok(scriptPaths.indexOf("voice.js") > scriptPaths.indexOf("app.js"), "Voice integration must load after app.js");
 assert.match(html, /data-voice-action=["']start["']/, "Welcome voice action must be present");
 assert.match(app, /data-voice-action/, "Main app must wire the welcome voice action");
 assert.match(voice, /window\.SarathiVoice\.start = start/, "Voice start API must be exposed");
