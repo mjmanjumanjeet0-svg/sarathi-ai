@@ -96,6 +96,13 @@ assert.equal(safeRecords[0].url, "https://example.com/story");
 
 assert.ok(app.includes("shouldShowSearchSources(data) ? filterSourcesForPrompt"), "assistant messages must display sources returned by automatic search");
 assert.ok(app.includes("if (shouldShowSearchWarning(data))"), "only meaningful search failures must be surfaced in status");
+const providerBusyStart = app.indexOf('if (data.providerBusy === true');
+const providerBusyEnd = app.indexOf('    // Recover a known truncated news-fallback prefix', providerBusyStart);
+assert.ok(providerBusyStart >= 0 && providerBusyEnd > providerBusyStart, "provider-busy news fallback must exist");
+const providerBusyFallback = app.slice(providerBusyStart, providerBusyEnd);
+assert.match(providerBusyFallback, /"\\\\n   प्रकाशक:/, "provider-busy fallback must use a JavaScript newline escape before publisher metadata");
+assert.doesNotMatch(providerBusyFallback, /"\\\\\\\\n/, "provider-busy fallback must not print literal backslash-n text");
+
 
 const scriptPaths = scriptFiles.map(src => src.split("?")[0]);
 assert.ok(scriptPaths.indexOf("app.js") >= 0, "Main app script must be loaded");
