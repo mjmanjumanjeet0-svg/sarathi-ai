@@ -54,6 +54,8 @@ public class MainActivity extends Activity {
     private TextToSpeech textToSpeech;
     private boolean ttsReady = false;
     private String pendingSpeechText = null;
+    private long speechUtteranceSequence = 0;
+    private String activeSpeechUtteranceId = null;
     private Voice localHindiVoice;
     private Voice localEnglishVoice;
     private boolean pendingListen = false;
@@ -599,15 +601,21 @@ public class MainActivity extends Activity {
                     if (selectedVoice != null) textToSpeech.setVoice(selectedVoice);
                     textToSpeech.setSpeechRate(0.94f);
                     textToSpeech.setPitch(1.04f);
+                    final String currentUtteranceId = "sarathi-local-voice-" + (++speechUtteranceSequence);
+                    activeSpeechUtteranceId = currentUtteranceId;
                     textToSpeech.setOnUtteranceProgressListener(new UtteranceProgressListener() {
                         @Override public void onStart(String utteranceId) {}
                         @Override public void onDone(String utteranceId) {
                             mainHandler.post(() -> {
+                                if (!currentUtteranceId.equals(activeSpeechUtteranceId)) return;
+                                activeSpeechUtteranceId = null;
                                 if (voiceConversationActive) notifyVoice("onSpeechComplete", "");
                             });
                         }
                         @Override public void onError(String utteranceId) {
                             mainHandler.post(() -> {
+                                if (!currentUtteranceId.equals(activeSpeechUtteranceId)) return;
+                                activeSpeechUtteranceId = null;
                                 if (voiceConversationActive) {
                                     notifyVoice("onStatus", "जवाब की आवाज़ में रुकावट आई। अब आप बोल सकते हैं।");
                                     notifyVoice("onSpeechComplete", "");
@@ -622,7 +630,7 @@ public class MainActivity extends Activity {
                             // onDone/onError for the active utterance owns resumption.
                         }
                     });
-                    int result = textToSpeech.speak(toSpeak, TextToSpeech.QUEUE_FLUSH, null, "sarathi-local-voice");
+                    int result = textToSpeech.speak(toSpeak, TextToSpeech.QUEUE_FLUSH, null, currentUtteranceId);
                     if (result == TextToSpeech.ERROR) {
                         notifyVoice("onError", "जवाब बोलना शुरू नहीं हुआ। फ़ोन की Text-to-Speech सेटिंग जाँचें।");
                         if (voiceConversationActive) notifyVoice("onSpeechComplete", "");
@@ -637,6 +645,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface
         public void stopSpeaking() {
             runOnUiThread(() -> {
+                activeSpeechUtteranceId = null;
                 if (textToSpeech != null) textToSpeech.stop();
             });
         }
