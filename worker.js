@@ -243,7 +243,8 @@ function shouldSearchAutomatically(text) {
     || prices
     || official
     || verification
-    || education;
+    || education
+    || (isHistoricalResearchQuery(q) && /(स्रोत|संदर्भ|reference|source|verify|जाँच|जांच)/i.test(q));
 }
 
 function cleanText(value) {
