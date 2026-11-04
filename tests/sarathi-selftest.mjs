@@ -116,6 +116,16 @@ globalThis.fetch = async (input, init = {}) => {
     if (groqMode === "timeout") throw new DOMException("The operation was aborted.", "AbortError");
     if (groqMode === "empty") return Response.json({ choices: [{ message: { content: null }, finish_reason: "stop" }] });
     const requestBody = JSON.parse(init.body || "{}");
+    if (groqMode === "news-partial-two-sentence") return Response.json({ choices: [{ message: { content: [
+      "खबर 1: शेयर बाजार में शुरुआती तेजी",
+      "सार: शुरुआती कारोबार में प्रमुख शेयर सूचकांकों में बढ़त दर्ज हुई। उपलब्ध अंश में कारोबार के इस रुझान का ही उल्लेख है।",
+      "खबर 2: सुप्रीम कोर्ट का हरित पटाखों पर आदेश",
+      "सार: अदालत ने दिल्ली-एनसीआर में प्रमाणित हरित पटाखों की अनुमति दी। यह अनुमति तय समय के दौरान लागू होगी।",
+      "खबर 3: दिल्ली की वायु गुणवत्ता पर अपडेट",
+      "सार: दिल्ली की वायु गुणवत्ता पर नई रिपोर्ट प्रकाशित हुई। उपलब्ध अंश में प्रदूषण के स्तर का विस्तृत आँकड़ा नहीं दिया गया है।",
+      "खबर 4: चक्रवात मुरासु पर चेतावनी",
+      "सार: मौसम विभाग ने चक्रवात मुरासु को लेकर चेतावनी जारी की।"
+    ].join(String.fromCharCode(10)) } }] });
     if (groqMode === "news-two-sentence") return Response.json({ choices: [{ message: { content: [
       "खबर 1: शुरुआती कारोबार में शेयर बाजार में तेजी",
       "सार: शुरुआती कारोबार में सेंसेक्स और निफ्टी में बढ़त दर्ज हुई। लेख में कारोबार के इस रुझान का कोई और विवरण नहीं दिया गया है।",
@@ -572,6 +582,27 @@ await test("generic daily live-news index pages are not treated as reported news
     assert.equal(calls.slice(before).some(x => x.url.includes("api.groq.com")), false,
       "a generic live-feed page must not be summarized by the language model");
   } finally {
+    exaMode = "success";
+  }
+});
+
+await test("one invalid news summary does not erase individually verified Hindi summaries", async () => {
+  const before = calls.length;
+  groqMode = "news-partial-two-sentence";
+  try {
+    const r = await request("/api/chat", "POST", {
+      messages: [{ role: "user", content: "आज की भारत की 5 अलग-अलग ताज़ा खबरें बताओ। हर खबर का हिंदी में 2–3 वाक्यों में सार बताओ।" }]
+    }, token);
+    assert.equal(r.status, 200);
+    assert.match(r.data.reply, /स्रोत-जाँच के बाद 3 खबरों के हिंदी सार/);
+    const headlines = r.data.reply.split("\n").filter(line => /^खबर [1-5]: /.test(line));
+    assert.equal(headlines.length, 3, "three individually valid summaries should survive one invalid short summary");
+    assert.match(r.data.reply, /सार:/);
+    assert.doesNotMatch(r.data.reply, /AI सेवा से उनका भरोसेमंद हिंदी सार तैयार नहीं हो सका/);
+    assert.equal(r.data.sources.length, 4, "the original source list remains available for transparency");
+    assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")));
+  } finally {
+    groqMode = "success";
     exaMode = "success";
   }
 });
