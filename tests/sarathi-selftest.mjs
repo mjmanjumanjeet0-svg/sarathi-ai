@@ -116,6 +116,13 @@ globalThis.fetch = async (input, init = {}) => {
     if (groqMode === "malformed-news") return Response.json({ choices: [{ message: { content: "आज की खबरें जल्द पढ़ें।" } }] });
     if (groqMode === "news-plain-summary") return Response.json({ choices: [{ message: { content: "**खबर 1 – ऊर्जा भंडारण योजना को मंजूरी**\nसरकार ने बड़े स्तर पर ऊर्जा भंडारण विकसित करने के लिए योजना को मंजूरी दी।\n**खबर 2 – शेयर बाजार में तेजी**\nसेंसेक्स और निफ्टी में कारोबार के दौरान बढ़त दर्ज हुई।\n**खबर 3 – दिल्ली की हवा की गुणवत्ता**\nदिल्ली में वायु गुणवत्ता खराब होने की खबर प्रकाशित हुई।\n**खबर 4 – अग्निवीर सेवा अवधि**\nअग्निवीरों की सेवा अवधि बढ़ाने के फैसले की खबर प्रकाशित हुई।" } }] });
     if (groqMode === "news-unsupported-cause") return Response.json({ choices: [{ message: { content: "खबर 1: ऊर्जा भंडारण योजना को मंजूरी\nसार: सरकार ने ऊर्जा भंडारण योजना को मंजूरी दी।\nखबर 2: शेयर बाजार में तेजी\nसार: सेंसेक्स और निफ्टी में बढ़त दर्ज हुई।\nखबर 3: दिल्ली की हवा की गुणवत्ता\nसार: दिवाली के कारण दिल्ली की हवा खराब हुई।\nखबर 4: अग्निवीर सेवा अवधि\nसार: अग्निवीरों की सेवा अवधि बढ़ाने की खबर प्रकाशित हुई।" } }] });
+    const requestBody = JSON.parse(init.body || "{}");
+    if (groqMode === "primary-429-fallback-success" && requestBody.model === "openai/gpt-oss-20b") {
+      return Response.json({ error: { message: "rate limited" } }, { status: 429 });
+    }
+    if (groqMode === "primary-429-fallback-success" && requestBody.model === "qwen/qwen3.8-27b") {
+      return Response.json({ choices: [{ message: { content: "खबर 1: ऊर्जा भंडारण योजना को मंजूरी\\nसार: केंद्र सरकार ने बड़े स्तर पर ऊर्जा भंडारण विकसित करने के लिए 14,500 करोड़ रुपये की योजना को मंजूरी दी।\\nखबर 2: महत्वपूर्ण खनिज प्रसंस्करण योजना\\nसार: सरकार ने लिथियम और निकेल प्रसंस्करण संयंत्रों के लिए 2,814 करोड़ रुपये की योजना को मंजूरी दी।\\nखबर 3: अग्निवीर सेवा अवधि\\nसार: अग्निवीरों की सेवा अवधि दो साल बढ़ाने की खबर प्रकाशित हुई।\\nखबर 4: दिल्ली में वायु गुणवत्ता\\nसार: दिवाली से पहले दिल्ली की वायु गुणवत्ता और खराब होने की खबर प्रकाशित हुई।" } }] });
+    }
     if (groqMode === "429") return Response.json({ error: { message: "rate limited" } }, { status: 429 });
     if (groqMode === "429-once" && groq429Count++ === 0) return Response.json({ error: { message: "token rate limited" } }, { status: 429 });
     if (groqMode === "429-once") groqMode = "news-plain-summary";
@@ -812,6 +819,28 @@ await test("current news retries one provider rate limit with compact source con
     assert.equal(retryBody.max_tokens, 1000);
     assert.match(retryBody.messages.at(-1).content, /लेख-अंश/);
     assert.equal((r.data.reply.match(/सार:/g) || []).length, 4, "the retry or its format-repair attempt should produce all four Hindi summaries");
+  } finally {
+    groqMode = "success";
+    exaMode = "success";
+  }
+});
+
+await test("current news automatically switches to a secondary Groq model when the primary stays rate-limited", async () => {
+  groqMode = "primary-429-fallback-success";
+  exaMode = "success";
+  const before = calls.length;
+  try {
+    const r = await request("/api/chat", "POST", {
+      messages: [{ role: "user", content: "आज की भारत की 5 अलग-अलग ताज़ा खबरें बताओ।" }]
+    }, token);
+    assert.equal(r.status, 200);
+    assert.equal(r.data.sources.length, 4);
+    assert.equal((r.data.reply.match(/सार:/g) || []).length, 4);
+    const groqCalls = calls.slice(before).filter(x => x.url.includes("api.groq.com"));
+    assert.ok(groqCalls.some(x => JSON.parse(x.init.body).model === "openai/gpt-oss-20b"));
+    assert.ok(groqCalls.some(x => JSON.parse(x.init.body).model === "qwen/qwen3.8-27b"), "secondary model must be attempted after primary HTTP 429");
+    const secondaryBody = JSON.parse(groqCalls.find(x => JSON.parse(x.init.body).model === "qwen/qwen3.8-27b").init.body);
+    assert.equal(secondaryBody.max_tokens, 1200);
   } finally {
     groqMode = "success";
     exaMode = "success";
