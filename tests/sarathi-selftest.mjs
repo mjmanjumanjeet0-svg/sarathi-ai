@@ -93,7 +93,8 @@ globalThis.fetch = async (input, init = {}) => {
           { title: "Old report outside freshness window", url: "https://www.bbc.com/news/old-report", publishedDate: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000).toISOString(), highlights: ["This report is five days old and must not be presented as a current news result."] },
           { title: "Report older than 48 hours", url: "https://www.reuters.com/world/older-than-48-hours", publishedDate: new Date(Date.now() - 60 * 60 * 60 * 1000).toISOString(), highlights: ["This report is 60 hours old and must be filtered from current news."] },
           { title: "Future-dated report", url: "https://apnews.com/article/future-report", publishedDate: new Date(Date.now() + 60 * 1000).toISOString(), highlights: ["A future publication date must not be shown as current news."] },
-          { title: "Late candidate: national update", url: "https://www.hindustantimes.com/india/late-candidate", publishedDate: new Date(Date.now() - 15 * 60 * 1000).toISOString(), highlights: ["A current report after the first eight candidates must remain eligible for freshness filtering."] }
+          { title: "Sensex and Nifty rise in early trade as investors watch global cues", url: "https://timesofindia.indiatimes.com/business/markets/sensex-nifty-early-trade", publishedDate: new Date(Date.now() - 25 * 60 * 1000).toISOString(), highlights: ["Sensex and Nifty move higher in early trade."] },
+          { title: "Stock Market Live: Sensex rises 288 points, Nifty up 77 in early trade", url: "https://www.hindustantimes.com/business/markets/late-candidate", publishedDate: new Date(Date.now() - 15 * 60 * 1000).toISOString(), highlights: ["Sensex and Nifty move higher in early trade."] }
         ]
       });
     }
@@ -547,13 +548,14 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.ok(newsHosts.includes("thehindu.com"));
   assert.ok(newsHosts.includes("ndtv.com"));
   assert.ok(newsHosts.includes("hindustantimes.com"), "a valid current article after the first eight candidates must be retained");
-  assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")),
-    "multiple independent news publishers should be summarized using the existing AI provider");
-  const newsGroqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
-  const newsGroqBody = JSON.parse(newsGroqCall.init.body || "{}");
-  assert.match(newsGroqBody.messages?.at(-1)?.content || "", /स्रोत 1:/);
-  assert.match(newsGroqBody.messages?.at(-1)?.content || "", /उपलब्ध लेख-अंश/);
-  assert.ok(newsResponse.data.reply.includes("1."), "news digest should be numbered");
+  assert.equal(calls.slice(before).some(x => x.url.includes("api.groq.com")), false,
+    "current-news headlines must bypass generative summarization to prevent unsupported claims");
+  assert.ok(newsResponse.data.reply.includes("1."), "news headline list should be numbered");
+  assert.match(newsResponse.data.reply, /मूल शीर्षक/);
+  assert.equal(newsHosts.includes("timesofindia.indiatimes.com"), false,
+    "near-identical Sensex/Nifty opening stories must be collapsed to one event");
+  assert.equal(newsResponse.data.sources.filter(x => /sensex/i.test(x.title) && /nifty/i.test(x.title)).length, 1,
+    "the same market opening event must appear only once");
 
   assert.equal(newsHosts.includes("bbc.com"), false, "five-day-old news must be filtered out");
   assert.equal(newsHosts.includes("reuters.com"), false, "news older than 48 hours must be filtered out");
@@ -575,12 +577,9 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.ok(exaBody.startPublishedDate, "news search must constrain the 48-hour publication window");
   assert.ok(exaBody.endPublishedDate, "news search must exclude future publication dates at the provider");
   assert.deepEqual(exaBody.contents, { highlights: true });
-  assert.ok(newsResponse.data.reply.startsWith("1."), "digest should start with its first numbered item");
-  assert.ok(newsResponse.data.reply.includes("2."), "digest should contain a second numbered item");
-  assert.equal(newsResponse.data.searchUnavailable, undefined,
-    "a successfully summarized multi-publisher digest should not be marked unavailable");
-  assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")),
-    "current news should use the compact source-grounded summarizer");
+  assert.ok(newsResponse.data.reply.includes("1."), "headline digest should contain its first item");
+  assert.ok(newsResponse.data.reply.includes("2."), "headline digest should contain its second item");
+  assert.equal(newsResponse.data.searchUnavailable, undefined);
 });
 
 await test("a casual sentence containing आज does not automatically trigger Exa", async () => {
