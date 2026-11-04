@@ -783,15 +783,28 @@ function formatCurrentNewsSummaryReply(rawReply, results) {
   const entries = new Map();
   let current = null;
   for (const rawLine of String(rawReply || "").split(/\r?\n/)) {
-    const line = rawLine.replace(/\*\*/g, "").trim();
+    const line = rawLine.replace(/\*\*/g, "").replace(/^[-•]\s*/, "").trim();
     const headline = line.match(/^(?:खबर\s*)?(\d+)\s*[.):]\s*(.+)$/i) || line.match(/^खबर\s*(\d+)\s*:\s*(.+)$/i);
     if (headline) {
       current = Number(headline[1]);
-      entries.set(current, { headline: cleanText(headline[2]).slice(0, 220), summary: "" });
+      if (current >= 1 && current <= items.length) {
+        entries.set(current, { headline: cleanText(headline[2]).slice(0, 220), summary: "" });
+      } else {
+        current = null;
+      }
       continue;
     }
-    const summary = line.match(/^(?:सार|संक्षेप)\s*[:：]\s*(.+)$/i);
-    if (summary && current !== null && entries.has(current)) entries.get(current).summary = cleanText(summary[1]).slice(0, 420);
+    if (current === null || !entries.has(current) || !line) continue;
+    const summary = line.match(/^(?:सार|सारांश|संक्षेप|विवरण)\s*[:：-]\s*(.+)$/i);
+    if (summary) {
+      entries.get(current).summary = cleanText(summary[1]).slice(0, 420);
+      continue;
+    }
+    // Accept a plain next-line summary too: models sometimes omit the literal
+    // "सार:" label despite returning a valid numbered Hindi digest.
+    if (!entries.get(current).summary && !/^(?:प्रकाशक|स्रोत|प्रकाशित|लिंक)\s*[:：]/i.test(line)) {
+      entries.get(current).summary = cleanText(line).slice(0, 420);
+    }
   }
   if (entries.size !== items.length) return "";
   const lines = [];
