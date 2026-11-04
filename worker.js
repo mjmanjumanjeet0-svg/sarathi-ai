@@ -777,7 +777,7 @@ function isCurrentNewsQuery(text) {
   return /(?:ताज़ा|ताजा|मुख्य|प्रमुख).{0,35}खबर|आज.{0,60}(?:खबर|समाचार)|(?:latest|breaking|current)\s+news|today.?s\s+news|समाचार/i.test(String(text || ""));
 }
 
-function formatCurrentNewsSummaryReply(rawReply, results) {
+function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false) {
   const items = dedupeNewsResults(results).filter(item => {
     const title = cleanText(item?.title || "");
     const publishedAt = Date.parse(item?.publishedAt || "");
@@ -827,7 +827,7 @@ function formatCurrentNewsSummaryReply(rawReply, results) {
     // Enforce the requested 2-sentence summary. If the model returns only one
     // sentence, the constrained repair runs instead of silently accepting it.
     const sentenceEnds = entry.summary.match(/[।!?]+|(?<![0-9])\.(?![0-9])/g) || [];
-    if (sentenceEnds.length < 2) return "";
+    if (requireTwoSentences && (sentenceEnds.length < 2 || sentenceEnds.length > 3)) return "";
     const sourceEvidence = cleanText((items[index]?.title || "") + " " + (items[index]?.snippet || ""));
     const generatedText = entry.headline + " " + entry.summary;
     const claimsCause = /(?:के कारण|की वजह से|के चलते|के फलस्वरूप|का कारण बना|कारण बना|की बदौलत)/i.test(generatedText);
