@@ -113,6 +113,7 @@ globalThis.fetch = async (input, init = {}) => {
   if (url.includes("api.groq.com")) {
     if (groqMode === "timeout") throw new DOMException("The operation was aborted.", "AbortError");
     if (groqMode === "empty") return Response.json({ choices: [{ message: { content: null }, finish_reason: "stop" }] });
+    const requestBody = JSON.parse(init.body || "{}");
     if (groqMode === "malformed-news") return Response.json({ choices: [{ message: { content: "आज की खबरें जल्द पढ़ें।" } }] });
     if (groqMode === "malformed-news-secondary" && requestBody.model === "qwen/qwen3.8-27b") {
       return Response.json({ choices: [{ message: { content: [
@@ -142,7 +143,7 @@ globalThis.fetch = async (input, init = {}) => {
     if (groqMode === "500") return Response.json({ error: { message: "provider down" } }, { status: 500 });
     if (groqMode === "413-always") return Response.json({ error: { message: "payload too large" } }, { status: 413 });
     if (groqMode === "413-once" && groq413Count++ === 0) return Response.json({ error: { message: "payload too large" } }, { status: 413 });
-    const body = JSON.parse(init.body || "{}");
+    const body = requestBody;
     const last = body.messages?.at(-1)?.content || "";
     groqReply = last.includes("स्रोत 1:") && last.includes("शीर्षक:")
       ? "खबर 1: चक्रवात को लेकर मौसम विभाग की चेतावनी\nसार: मौसम विभाग ने चक्रवात के तट पार करने का पूर्वानुमान दिया है।\nखबर 2: हरित पटाखों पर सुप्रीम कोर्ट का फैसला\nसार: अदालत ने दिल्ली-एनसीआर में तय समय के दौरान प्रमाणित हरित पटाखों की अनुमति दी है।\nखबर 3: दिल्ली की हवा की गुणवत्ता\nसार: दिल्ली की वायु गुणवत्ता पर निगरानी रखी जा रही है।\nखबर 4: शेयर बाजार में शुरुआती तेजी\nसार: शुरुआती कारोबार में सेंसेक्स और निफ्टी ऊपर चले।"
