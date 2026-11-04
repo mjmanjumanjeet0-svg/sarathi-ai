@@ -112,6 +112,7 @@ globalThis.fetch = async (input, init = {}) => {
   if (url.includes("api.groq.com")) {
     if (groqMode === "timeout") throw new DOMException("The operation was aborted.", "AbortError");
     if (groqMode === "empty") return Response.json({ choices: [{ message: { content: null }, finish_reason: "stop" }] });
+    if (groqMode === "malformed-news") return Response.json({ choices: [{ message: { content: "आज की खबरें जल्द पढ़ें।" } }] });
     if (groqMode === "429") return Response.json({ error: { message: "rate limited" } }, { status: 429 });
     if (groqMode === "500") return Response.json({ error: { message: "provider down" } }, { status: 500 });
     if (groqMode === "413-always") return Response.json({ error: { message: "payload too large" } }, { status: 413 });
@@ -782,6 +783,30 @@ await test("current news keeps real source headlines when Groq returns an empty 
     assert.ok(r.data.sources.length > 1, "date-checked search results should be preserved");
     assert.match(r.data.searchWarning, /खाली उत्तर दिया/);
     assert.equal(calls.slice(before).filter(x => x.url.includes("api.groq.com")).length, 1);
+  } finally {
+    groqMode = "success";
+    exaMode = "success";
+  }
+});
+
+await test("current news preserves dated source headlines when Groq returns malformed summary text", async () => {
+  groqMode = "malformed-news";
+  exaMode = "success";
+  const before = calls.length;
+  try {
+    const r = await request("/api/chat", "POST", {
+      messages: [{ role: "user", content: "आज की भारत की 5 अलग-अलग ताज़ा खबरें बताओ।" }]
+    }, token);
+    assert.equal(r.status, 200);
+    assert.equal(r.data.success, true);
+    assert.ok(r.data.sources.length > 1, "date-checked search results should remain available");
+    assert.match(r.data.reply, /प्रकाशकों के मूल शीर्षक/);
+    assert.match(r.data.reply, /प्रकाशित:/);
+    assert.doesNotMatch(r.data.reply, /कृपया थोड़ी देर बाद फिर पूछें/);
+    for (const source of r.data.sources) {
+      assert.ok(r.data.reply.includes(new URL(source.url).hostname.replace(/^www\\./, "")),
+        "every fallback headline should retain its actual publisher");
+    }
   } finally {
     groqMode = "success";
     exaMode = "success";
