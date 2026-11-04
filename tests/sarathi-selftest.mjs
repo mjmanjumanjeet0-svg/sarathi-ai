@@ -575,7 +575,10 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.ok(exaBody.startPublishedDate, "news search must constrain the 48-hour publication window");
   assert.ok(exaBody.endPublishedDate, "news search must exclude future publication dates at the provider");
   assert.deepEqual(exaBody.contents, { highlights: true });
-  assert.match(newsResponse.data.reply, /अभी केवल मूल स्रोत दिखा रहा हूँ/);
+  assert.match(newsResponse.data.reply, /^1\\./);
+  assert.match(newsResponse.data.reply, /2\\./);
+  assert.equal(newsResponse.data.searchUnavailable, undefined,
+    "a successfully summarized multi-publisher digest should not be marked unavailable");
   assert.equal(newsResponse.data.searchUnavailable, true);
   assert.equal(calls.slice(before).some(x => x.url.includes("api.groq.com")), false,
     "current news must not be summarized by the model until a source-grounded summarizer is available");
