@@ -104,9 +104,13 @@ globalThis.fetch = async (input, init = {}) => {
         ]
       });
     }
+    if (exaMode === "gold-stale") return Response.json({ results: [
+      { title: "Gold rate today", url: "https://example.com/gold-old", publishedDate: "2025-08-26T18:30:00.000Z", highlights: ["Old gold rate ₹7000 per gram."] },
+      { title: "Silver rate today", url: "https://example.com/silver-fresh", publishedDate: new Date().toISOString(), highlights: ["999 silver rate ₹95 per gram in India."] }
+    ] });
     return Response.json({      results: [
-        { title: "भारत में सोने का भाव", url: "https://example.com/gold-rate", highlights: ["24K gold rate ₹7800 per gram and 22K gold rate ₹7150 per gram in India."] },
-        { title: "भारत में चांदी का भाव", url: groqMode === "413-always" ? "https://example.com/silver-rate" : "https://silver.example.net/silver-rate", highlights: ["Silver rate ₹95 per gram in India."] }
+        { title: "भारत में सोने का भाव", url: "https://example.com/gold-rate", publishedDate: new Date().toISOString(), highlights: ["24K gold rate ₹7800 per gram and 22K gold rate ₹7150 per gram in India."] },
+        { title: "भारत में चांदी का भाव", url: groqMode === "413-always" ? "https://example.com/silver-rate" : "https://silver.example.net/silver-rate", publishedDate: new Date().toISOString(), highlights: ["Silver rate ₹95 per gram in India."] }
       ]
     });
   }
@@ -722,6 +726,19 @@ await test("failed web search is explicitly marked as attempted and unavailable"
   exaMode = "success";
 });
 
+await test("today's gold and silver search excludes stale price pages", async () => {
+  exaMode = "gold-stale";
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    messages: [{ role: "user", content: "आज सोने और चांदी का भाव बताओ" }]
+  }, token);
+  assert.equal(r.status, 200);
+  assert.equal(r.data.sources.length, 1);
+  assert.match(r.data.sources[0].url, /silver-fresh/);
+  assert.doesNotMatch(JSON.stringify(r.data.sources), /gold-old|2025/);
+  assert.equal(calls.slice(before).filter(x => x.url.includes("api.groq.com")).length, 1);
+  exaMode = "success";
+});
 await test("current price query invokes web search and AI", async () => {
   const before = calls.length;
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज सोने और चांदी का भाव बताओ" }] }, token);
