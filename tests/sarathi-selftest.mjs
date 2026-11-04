@@ -742,7 +742,7 @@ await test("Groq HTTP 413 retries once with compact context and preserves the co
   assert.match(retryPrompt, /अभी का पूरा सवाल/);
   assert.match(retryPrompt, /सबका उत्तर दो/);
   assert.equal(retryBody.messages.length, 2, "compact retry should combine context into one user message");
-  assert.equal(retryBody.max_tokens, 1800);
+  assert.equal(retryBody.max_tokens, 2200);
   const retrySystem = retryBody.messages?.[0]?.content || "";
   assert.match(retrySystem, /समाचार में केवल शीर्षक और स्रोत-अंश से पुष्ट तथ्य लिखो/);
   assert.match(retrySystem, /बंद हुआ या दिन का अंतिम स्तर मत लिखो/);
