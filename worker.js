@@ -803,6 +803,18 @@ function isCurrentNewsQuery(text) {
   return /(?:ताज़ा|ताजा|मुख्य|प्रमुख).{0,35}खबर|आज.{0,60}(?:खबर|समाचार)|(?:latest|breaking|current)\s+news|today.?s\s+news|समाचार/i.test(String(text || ""));
 }
 
+function hasUnsupportedNumericClaim(generatedText, sourceEvidence) {
+  const hindiNumbers = {"शून्य":"0","एक":"1","दो":"2","तीन":"3","चार":"4","पाँच":"5","पांच":"5","छह":"6","छः":"6","सात":"7","आठ":"8","नौ":"9","दस":"10","ग्यारह":"11","बारह":"12","पंद्रह":"15","बीस":"20","पच्चीस":"25","तीस":"30","चालीस":"40","पचास":"50","साठ":"60","सत्तर":"70","पचहत्तर":"75","अस्सी":"80","नब्बे":"90","सौ":"100","हजार":"1000","लाख":"100000","करोड़":"10000000"};
+  const englishNumbers = {"zero":"0","one":"1","two":"2","three":"3","four":"4","five":"5","six":"6","seven":"7","eight":"8","nine":"9","ten":"10","eleven":"11","twelve":"12","fifteen":"15","twenty":"20","thirty":"30","forty":"40","fifty":"50","sixty":"60","seventy":"70","seventy-five":"75","eighty":"80","ninety":"90","hundred":"100","thousand":"1000","lakh":"100000","crore":"10000000"};
+  const normalize = value => String(value || "")
+    .replace(/[०-९]/g, digit => String("०१२३४५६७८९".indexOf(digit)))
+    .replace(/\b(seventy-five|zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|lakh|crore)\b/gi, word => englishNumbers[word.toLowerCase()] || word)
+    .replace(/शून्य|एक|दो|तीन|चार|पाँच|पांच|छह|छः|सात|आठ|नौ|दस|ग्यारह|बारह|पंद्रह|बीस|पच्चीस|तीस|चालीस|पचास|साठ|सत्तर|पचहत्तर|अस्सी|नब्बे|सौ|हजार|लाख|करोड़/g, word => hindiNumbers[word] || word);
+  const sourceNumbers = new Set(normalize(sourceEvidence).match(/\d+(?:[.,]\d+)?%?/g) || []);
+  const generatedNumbers = normalize(generatedText).match(/\d+(?:[.,]\d+)?%?/g) || [];
+  return generatedNumbers.some(number => !sourceNumbers.has(number));
+}
+
 function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false) {
   const items = dedupeNewsResults(results).filter(item => {
     const title = cleanText(item?.title || "");
@@ -856,7 +868,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     if (requireTwoSentences && (sentenceEnds.length < 2 || sentenceEnds.length > 3)) return "";
     const sourceEvidence = cleanText((items[index]?.title || "") + " " + (items[index]?.snippet || ""));
     const generatedText = entry.headline + " " + entry.summary;
-    const claimsCause = /(?:के कारण|की वजह से|के चलते|के फलस्वरूप|का कारण बना|कारण बना|की बदौलत)/i.test(generatedText);
+    // Reject figures or number-words absent from this exact article.\n    if (hasUnsupportedNumericClaim(generatedText, sourceEvidence)) return "";\n    const claimsCause = /(?:के कारण|की वजह से|के चलते|के फलस्वरूप|का कारण बना|कारण बना|की बदौलत)/i.test(generatedText);
     const sourceExplicitlyStatesCause = /(?:because of|due to|caused by|attributed to|triggered by|owing to|as a result of|के कारण|की वजह से|के चलते|की बदौलत)/i.test(sourceEvidence);
     if (claimsCause && !sourceExplicitlyStatesCause) {
       // Do not discard the entire digest because one generated sentence adds
@@ -874,7 +886,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     : "आज की 5 अलग-अलग, तारीख़-जाँची खबरें:";
   return prefix + "\n\n" + lines.join("\n\n") + "\n\nध्यान दें: हर सार संबंधित समाचार के उपलब्ध लेख-अंश पर आधारित है।";
 }
-function buildCurrentNewsHeadlineReply(results) {
+function buildCurrentNewsHeadlineReply(results) {\n  // Count only distinct, displayable articles with a real HTTPS publisher URL; never emit headline-only output.
   // A headline-only list does not satisfy a request for Hindi summaries.
   // If the summarizer and repair attempt both fail, do not expose English
   // headlines as though they were a useful substitute for the requested digest.
@@ -1738,14 +1750,7 @@ export default {
       }
     }
 
-    const finalReply = isCurrentNewsReply
-      ? (formattedNewsReply || (
-          "AI सेवा ने खबरों का सही हिंदी सार तैयार नहीं किया। इसलिए नीचे केवल खोज में मिले प्रकाशकों के मूल शीर्षक दिए जा रहे हैं; इन्हें हिंदी सार या स्वतंत्र सत्यापन न मानें।\n\n" +
-          buildCurrentNewsHeadlineReply(searchResults)
-        ))
-      : rawReply;
-
-    return jsonResponse({
+    const finalReply = isCurrentNewsReply\n      ? (formattedNewsReply || buildCurrentNewsHeadlineReply(searchResults))\n      : rawReply;\n\n    return jsonResponse({
       success: true,
       reply: finalReply,
       ...dateTime,
