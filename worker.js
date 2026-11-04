@@ -633,6 +633,15 @@ function filterRelevantSearchResults(query, results) {
   return required ? list.filter(item => required.test(textOf(item))) : list;
 }
 
+function isSameIndianMarketOpeningStory(a, b) {
+  const titleA = cleanText(a?.title || "").toLowerCase();
+  const titleB = cleanText(b?.title || "").toLowerCase();
+  const hasBothBenchmarks = value => /sensex/.test(value) && /nifty/.test(value);
+  const isOpeningCoverage = value => /opening|early trade|opening trade|live updates|stock market live/.test(value);
+  return hasBothBenchmarks(titleA) && hasBothBenchmarks(titleB) &&
+    isOpeningCoverage(titleA) && isOpeningCoverage(titleB);
+}
+
 function dedupeNewsResults(results) {
   // Apply deterministic, conservative headline-level event grouping before the model sees results.
   const seenUrls = new Set();
@@ -662,6 +671,7 @@ function dedupeNewsResults(results) {
     const titleTokens = tokensFor(item.title);
     if (!titleTokens.size) continue;
     const duplicateEvent = accepted.some(previous => {
+      if (isSameIndianMarketOpeningStory(item, previous)) return true;
       const previousTokens = previous._dedupeTokens;
       let shared = 0;
       for (const token of titleTokens) if (previousTokens.has(token)) shared++;
@@ -753,6 +763,24 @@ function buildNewsFallback(results, dateTime) {
   const items = dedupeNewsResults(results);
   if (!items.length) return "आज की खबरों के लिए पर्याप्त भरोसेमंद सामग्री नहीं मिली।";
   return "आज की खबरों की खोज में " + items.length + " स्रोत मिले, लेकिन उनका भरोसेमंद हिंदी सार तैयार नहीं हो पाया। इसलिए अंग्रेज़ी लेखों को ज्यों-का-त्यों दिखाने या अधूरी जानकारी को खबर बताने के बजाय मैं इस बार अपुष्ट सार नहीं दे रहा हूँ। कृपया थोड़ी देर बाद फिर पूछें।";
+}
+
+function buildCurrentNewsHeadlineReply(results) {
+  const items = Array.isArray(results) ? results.slice(0, 5) : [];
+  if (!items.length) {
+    return "आज की ताज़ा खबरों के लिए तारीख़-जाँचे हुए भरोसेमंद समाचार परिणाम नहीं मिले। कृपया कुछ देर बाद फिर कोशिश करें।";
+  }
+  const lines = items.map((item, index) => {
+    let host = "प्रकाशक उपलब्ध नहीं";
+    try { host = new URL(item.url).hostname.toLowerCase().replace(/^www\\./, ""); } catch {}
+    const title = cleanText(item.title || "").slice(0, 260);
+    return (index + 1) + ". " + title + "\\n   स्रोत: " + host;
+  });
+  const prefix = items.length === 1
+    ? "आज के लिए केवल एक स्वतंत्र समाचार स्रोत मिला। इसलिए इसे बहु-स्रोत से पुष्ट खबर न मानें।"
+    : "नीचे आज प्रकाशित खबरों के मूल शीर्षक दिए गए हैं।";
+  return prefix + "\\n\\n" + lines.join("\\n\\n") +
+    "\\n\\nध्यान दें: ये प्रकाशकों के मूल शीर्षक हैं, पूरे लेख का हिंदी सार या स्वतंत्र सत्यापन नहीं।";
 }
 
 function buildCompactNewsSourceContext(results) {
@@ -1346,8 +1374,27 @@ export default {
 
     const isNewsQueryForPrompt = /(खबर|समाचार|news|breaking|latest|ताज़ा|ताजा)/i.test(userText);
     const isCurrentNewsReply = wantsSearch &&
-      /(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(userText) &&
-      searchResults.length >= 2;
+      /(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news)/i.test(userText);
+    if (isCurrentNewsReply) {
+      const headlineReply = buildCurrentNewsHeadlineReply(searchResults);
+      const singlePublisher = searchResults.length === 1;
+      return jsonResponse({
+        success: true,
+        reply: headlineReply,
+        ...dateTime,
+        webSearch: searchResults.length > 0,
+        searchAttempted: true,
+        searchWarning: singlePublisher
+          ? "केवल एक स्वतंत्र प्रकाशक मिला; बहु-स्रोत पुष्टि उपलब्ध नहीं है।"
+          : (searchResults.length ? "" : "कोई योग्य, तारीख़-जाँचा समाचार स्रोत नहीं मिला।"),
+        sources: searchResults.map(item => ({
+          title: item.title,
+          url: item.url,
+          publisher: item.publisher || "",
+          publishedAt: item.publishedAt || "",
+        })),
+      });
+    }
     const compactNewsSystemPrompt = "तुम सारथी AI हो। नीचे दिए गए समाचार स्रोतों के शीर्षक, प्रकाशक, प्रकाशित समय और लेख-अंश ही तथ्यात्मक आधार हैं। केवल उन्हीं अंशों में साफ लिखी बातों का सहज हिंदी में सार दो। अधिकतम 6 खबरें, हर खबर एक छोटा वाक्य और अलग क्रमांक में लिखो। विवरण न हो तो खबर छोड़ दो। दो स्रोतों के तथ्य आपस में मत मिलाओ। अनुमान, कारण, संख्या, स्थान, असर या घटना की स्थिति मत जोड़ो। चेतावनी/पूर्वानुमान को घटित घटना मत बताओ। बाजार के शुरुआती आँकड़ों को बंद भाव मत बताओ। हर पंक्ति के अंत में उसी स्रोत का प्रकाशक लिखो। कोई अंग्रेज़ी शीर्षक या अलग स्रोत-सूची मत बनाओ।";
     let groqResponse;
     try {
