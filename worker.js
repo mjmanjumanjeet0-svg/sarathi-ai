@@ -627,7 +627,9 @@ function filterRelevantSearchResults(query, results) {
         // as independent reported articles. They often repeat headlines without
         // providing a distinct, date-stamped story.
         if (/(राशिफल|राशि फल|पंचांग|मुहूर्त|राहु.?काल|horoscope|zodiac|astrology|panchang)/i.test(headline)) return false;
-        if (/(मुख्य और ताजा समाचार|मुख्य और ताज़ा समाचार|लाइव ब्रेकिंग न्यूज|लाइव ब्रेकिंग न्यूज़|latest and breaking news today|latest news live|live news updates)/i.test(title)) return false;
+        // Exclude live blogs, rolling feeds and publisher roundups: they are not
+        // one independently reported story and often bundle unrelated events.
+        if (/(मुख्य और ताजा समाचार|मुख्य और ताज़ा समाचार|लाइव ब्रेकिंग न्यूज|लाइव ब्रेकिंग न्यूज़|latest and breaking news today|latest news live|live news updates|india news live updates|news live updates|live updates|live blog|liveblogs|sports wrap|news roundup|evening brief|morning brief|daily brief|top stories|दिनभर की खबर|दिनभर के समाचार)/i.test(title)) return false;
         return trustedNewsHost.test(host);
       } catch {
         return false;
@@ -873,8 +875,9 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
   return prefix + "\n\n" + lines.join("\n\n") + "\n\nध्यान दें: हर सार संबंधित समाचार के उपलब्ध लेख-अंश पर आधारित है।";
 }
 function buildCurrentNewsHeadlineReply(results) {
-  // Count only distinct, displayable articles with a real HTTPS publisher URL
-  // and a parseable publication timestamp. This keeps the 1–5 headline count honest.
+  // A headline-only list does not satisfy a request for Hindi summaries.
+  // If the summarizer and repair attempt both fail, do not expose English
+  // headlines as though they were a useful substitute for the requested digest.
   const items = dedupeNewsResults(results).filter(item => {
     const title = cleanText(item?.title || "");
     const publishedAt = Date.parse(item?.publishedAt || "");
@@ -889,23 +892,7 @@ function buildCurrentNewsHeadlineReply(results) {
   if (!items.length) {
     return "आज की ताज़ा खबरों के लिए तारीख़-जाँचे हुए भरोसेमंद समाचार परिणाम नहीं मिले। कृपया कुछ देर बाद फिर कोशिश करें।";
   }
-  const lines = items.map((item, index) => {
-    let publisher = "प्रकाशक उपलब्ध नहीं";
-    try {
-      publisher = new URL(item?.url).hostname.toLowerCase().replace(/^www\./i, "");
-    } catch {}
-    const title = cleanText(item?.title || "").slice(0, 260);
-    const publishedAt = formatNewsPublishedAt(item?.publishedAt || "");
-    return "**खबर " + (index + 1) + ":** " + title + "\n   प्रकाशक: " + publisher +
-      "\n   प्रकाशित: " + publishedAt;
-  });
-  const prefix = items.length === 1
-    ? "आज के लिए केवल एक स्वतंत्र समाचार स्रोत मिला। इसलिए इसे बहु-स्रोत से पुष्ट खबर न मानें।"
-    : items.length < 5
-      ? "आज केवल " + items.length + " अलग-अलग, तारीख़-जाँची खबरें मिलीं। पाँचवीं खबर के लिए पर्याप्त भरोसेमंद परिणाम नहीं मिला, इसलिए कोई खबर बनाकर नहीं जोड़ी गई।"
-      : "नीचे आज प्रकाशित खबरों के मूल शीर्षक दिए गए हैं।";
-  return prefix + "\n\n" + lines.join("\n\n") +
-    "\n\nध्यान दें: ये प्रकाशकों के मूल शीर्षक हैं, पूरे लेख का हिंदी सार या स्वतंत्र सत्यापन नहीं।";
+  return "खोज में " + items.length + " तारीख़-जाँचे समाचार परिणाम मिले, लेकिन AI सेवा से उनका भरोसेमंद हिंदी सार तैयार नहीं हो सका। आपकी माँग के अनुसार 2–3 वाक्यों का सार देना आवश्यक है; इसलिए अंग्रेज़ी शीर्षकों की सूची को सार बताकर नहीं दिखाया जा रहा। कृपया थोड़ी देर बाद फिर कोशिश करें।";
 }
 
 function buildCompactNewsSourceContext(results) {
