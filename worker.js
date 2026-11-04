@@ -587,6 +587,29 @@ function buildBloodySundayVerifiedReply(results) {
     sourceNote;
 }
 
+function isIndiaFocusedNewsItem(item) {
+  const title = cleanText(item?.title || "");
+  const snippet = cleanText(item?.snippet || "");
+  const headline = (title + " " + snippet).toLocaleLowerCase("hi-IN");
+
+  // Exclude multi-topic publisher digests: they can mix one Indian item with
+  // unrelated international stories under a single article title.
+  if (/(?:^|\\b)(?:ht|toi|ndtv)?\\s*(?:morning|evening|daily)\\s+brief\\b|news roundup|daily roundup|top headlines/i.test(title)) {
+    return false;
+  }
+
+  // A general international headline is not an Indian news item merely because
+  // it appears on a publisher that also covers India.
+  const indiaSignals = [
+    /\\bindia\\b|\\bindian\\b|भारत|भारतीय/,
+    /दिल्ली|नई दिल्ली|मुंबई|बेंगलुरु|बंगलौर|चेन्नई|कोलकाता|हैदराबाद|अहमदाबाद|पुणे|लखनऊ|पटना|जयपुर|भोपाल|चंडीगढ़|गुवाहाटी|श्रीनगर|सिवान|बिहार/,
+    /sensex|nifty|बीएसई|एनएसई|रुपया|reserve bank of india|rbi|भारतीय रिजर्व बैंक/,
+    /लोकसभा|राज्यसभा|संसद|सुप्रीम कोर्ट ऑफ इंडिया|सर्वोच्च न्यायालय|चुनाव आयोग|निर्वाचन आयोग|केंद्र सरकार|भारत सरकार|कैबिनेट|अग्निवीर|isro|इसरो|चंद्रयान|navic/,
+    /indian army|indian navy|indian air force|भारतीय सेना|भारतीय नौसेना|भारतीय वायुसेना/
+  ];
+  return indiaSignals.some(pattern => pattern.test(headline));
+}
+
 function filterRelevantSearchResults(query, results) {
   const q = String(query || "").toLocaleLowerCase("hi-IN");
   const textOf = (item) => `${item.title || ""} ${item.url || ""} ${item.snippet || ""}`.toLocaleLowerCase("hi-IN");
@@ -599,6 +622,7 @@ function filterRelevantSearchResults(query, results) {
         const host = new URL(item.url).hostname.toLowerCase().replace(/^www\./, "");
         const title = String(item.title || "");
         const headline = `${title} ${item.snippet || ""}`;
+        if (!isIndiaFocusedNewsItem(item)) return false;
         // Do not treat astrology, calendar pages, or generic daily live-feed indexes
         // as independent reported articles. They often repeat headlines without
         // providing a distinct, date-stamped story.
