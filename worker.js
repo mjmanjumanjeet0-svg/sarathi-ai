@@ -443,10 +443,12 @@ async function enrichGoldRateResults(results) {
         .replace(/&nbsp;|&#160;/gi, " ")
         .replace(/&#8377;|&#x20b9;/gi, "₹"));
       const contexts = [];
-      const labelPattern = /(?:22\s*(?:k|karat|carat)|24\s*(?:k|karat|carat)|22 कैरेट|24 कैरेट|999(?:\s*(?:fine\s*)?silver)?|silver\s*999|चाँदी|चांदी)/gi;
+      // Price tables may separate city/purity labels and amounts into adjacent
+      // cells. Keep a wider evidence window so the model can read the full row.
+      const labelPattern = /(?:22\s*[- ]?\s*(?:k|karat|carat)|24\s*[- ]?\s*(?:k|karat|carat)|22 कैरेट|24 कैरेट|999(?:\s*(?:fine\s*)?silver)?|silver\s*999|999\s*fine|चाँदी|चांदी)/gi;
       let match;
-      while ((match = labelPattern.exec(visible)) && contexts.length < 14) {
-        const context = visible.slice(Math.max(0, match.index - 120), Math.min(visible.length, match.index + 260)).replace(/\s+/g, " ").trim();
+      while ((match = labelPattern.exec(visible)) && contexts.length < 24) {
+        const context = visible.slice(Math.max(0, match.index - 240), Math.min(visible.length, match.index + 420)).replace(/\s+/g, " ").trim();
         if (/(₹|rs\.?|inr|रुपये|रु\.?)/i.test(context) && /[0-9][0-9,]*(?:\.[0-9]+)?/.test(context)) contexts.push(context);
       }
       if (!contexts.length) return item;
@@ -994,8 +996,15 @@ function buildSearchContext(results, query = "") {
     : "";
 
   return "\n\nइंटरनेट खोज के परिणाम:\n" + results.map(
-    (item, i) =>
-      `${i + 1}. ${item.title}\nप्रकाशक: ${item.publisher || "उपलब्ध नहीं"}\nप्रकाशित: ${isNewsQuery ? formatNewsPublishedAt(item.publishedAt) : (item.publishedAt || "तारीख उपलब्ध नहीं")}${isHistoricalQuery ? `\nवास्तविक स्रोत URL: ${item.url}` : ""}\nजानकारी: ${item.snippet || "जानकारी उपलब्ध नहीं है।"}`
+    (item, i) => {
+      const published = (isNewsQuery || isPreciousMetalQuery)
+        ? formatNewsPublishedAt(item.publishedAt)
+        : (item.publishedAt || "तारीख उपलब्ध नहीं");
+      const rateEvidence = isPreciousMetalQuery && Array.isArray(item.rateContexts) && item.rateContexts.length
+        ? "\nपेज से निकाले गए मूल मूल्य-संदर्भ (शहर/शुद्धता/इकाई सहित): " + item.rateContexts.join(" || ").slice(0, 5200)
+        : "";
+      return `${i + 1}. ${item.title}\nप्रकाशक: ${item.publisher || "उपलब्ध नहीं"}\nप्रकाशित: ${published}${isHistoricalQuery ? `\nवास्तविक स्रोत URL: ${item.url}` : ""}\nजानकारी: ${item.snippet || "जानकारी उपलब्ध नहीं है।"}${rateEvidence}`;
+    }
   ).join("\n\n") +
   "\n\nपरिणाम पर्याप्त न हों तो स्पष्ट बताओ। तथ्य या लिंक मत गढ़ो।" + newsInstruction + preciousMetalInstruction + historyInstruction;
 }
@@ -1622,8 +1631,11 @@ export default {
         const metalContext = searchResults.slice(0, 6).map((item, index) =>
           "स्रोत " + (index + 1) + ": " + cleanText(item.title || "").slice(0, 180) +
           "\nप्रकाशक: " + cleanText(item.publisher || "").slice(0, 80) +
-          "\nप्रकाशित/अपडेट: " + cleanText(item.publishedAt || "समय उपलब्ध नहीं") +
-          "\nमूल अंश: " + cleanText(item.snippet || "").slice(0, 700)
+          "\nप्रकाशित/अपडेट: " + cleanText(item.publishedAt ? formatNewsPublishedAt(item.publishedAt) : "समय उपलब्ध नहीं") +
+          "\nमूल अंश: " + cleanText(item.snippet || "").slice(0, 1400) +
+          (Array.isArray(item.rateContexts) && item.rateContexts.length
+            ? "\nपेज से निकाले गए मूल्य-संदर्भ: " + item.rateContexts.join(" || ").slice(0, 2400)
+            : "")
         ).join("\n\n");
         const metalSystemPrompt = "तुम सारथी AI हो। केवल दिए गए स्रोत-अंश से सोना-चाँदी के भाव का उत्तर सहज हिंदी में दो। तारीख और स्रोत बताओ। 22K, 24K और 999 चाँदी अलग रखो। भाव, इकाई, शहर या अपडेट समय स्रोत में स्पष्ट न हो तो उसे मत गढ़ो; स्पष्ट लिखो कि उपलब्ध नहीं। खुदरा भाव, IBJA और MCX को न मिलाओ। अलग स्रोतों के भाव अलग हों तो अलग-अलग बताओ।";
         const metalRetryMessages = [{ role: "user", content: "सवाल: " + userText + "\nनीचे दिए स्रोतों के आधार पर भाव और तारीख बताओ। संख्या/इकाई स्पष्ट न हो तो साफ कहो कि उपलब्ध नहीं। कोई अनुमान नहीं।\n\n" + metalContext }];
