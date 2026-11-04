@@ -765,22 +765,24 @@ function buildNewsFallback(results, dateTime) {
   return "आज की खबरों की खोज में " + items.length + " स्रोत मिले, लेकिन उनका भरोसेमंद हिंदी सार तैयार नहीं हो पाया। इसलिए अंग्रेज़ी लेखों को ज्यों-का-त्यों दिखाने या अधूरी जानकारी को खबर बताने के बजाय मैं इस बार अपुष्ट सार नहीं दे रहा हूँ। कृपया थोड़ी देर बाद फिर पूछें।";
 }
 
+function isCurrentNewsQuery(text) {
+  return /(?:ताज़ा|ताजा|मुख्य|प्रमुख).{0,35}खबर|आज.{0,60}(?:खबर|समाचार)|(?:latest|breaking|current)\s+news|today.?s\s+news|समाचार/i.test(String(text || ""));
+}
+
 function buildCurrentNewsHeadlineReply(results) {
   const items = Array.isArray(results) ? results.slice(0, 5) : [];
   if (!items.length) {
     return "आज की ताज़ा खबरों के लिए तारीख़-जाँचे हुए भरोसेमंद समाचार परिणाम नहीं मिले। कृपया कुछ देर बाद फिर कोशिश करें।";
   }
   const lines = items.map((item, index) => {
-    let publisher = cleanText(item?.publisher || "").trim();
-    if (!publisher) {
-      try {
-        publisher = new URL(item?.url).hostname.toLowerCase().replace(/^www\\./i, "");
-      } catch {
-        publisher = "प्रकाशक उपलब्ध नहीं";
-      }
-    }
+    let publisher = "प्रकाशक उपलब्ध नहीं";
+    try {
+      publisher = new URL(item?.url).hostname.toLowerCase().replace(/^www\./i, "");
+    } catch {}
     const title = cleanText(item?.title || "").slice(0, 260);
-    return (index + 1) + ". " + title + "\n   स्रोत: " + publisher;
+    const publishedAt = formatNewsPublishedAt(item?.publishedAt || "");
+    return (index + 1) + ". " + title + "\n   प्रकाशक: " + publisher +
+      "\n   प्रकाशित: " + publishedAt;
   });
   const prefix = items.length === 1
     ? "आज के लिए केवल एक स्वतंत्र समाचार स्रोत मिला। इसलिए इसे बहु-स्रोत से पुष्ट खबर न मानें।"
@@ -1076,7 +1078,7 @@ export default {
     // Keep this block as normal JavaScript lines; never insert literal \\n separators here.
     // Deploy marker: search syntax fix is included in this revision.
     if (wantsSearch) {
-      const isCurrentNewsQuestion = /(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(userText);
+      const isCurrentNewsQuestion = isCurrentNewsQuery(userText);
       const isGoldRateQuestion = /(सोने|सोना|gold|22\s*k|24\s*k|bullion)/i.test(userText);
       const isSilverRateQuestion = /(चांदी|चाँदी|silver)/i.test(userText);
       const isDiamondPriceQuestion = /(हीरा|हीरे|हीरों|diamond)/i.test(userText);
@@ -1379,8 +1381,7 @@ export default {
     };
 
     const isNewsQueryForPrompt = /(खबर|समाचार|news|breaking|latest|ताज़ा|ताजा)/i.test(userText);
-    const isCurrentNewsReply = wantsSearch &&
-      /(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news)/i.test(userText);
+    const isCurrentNewsReply = wantsSearch && isCurrentNewsQuery(userText);
     if (isCurrentNewsReply) {
       const headlineReply = buildCurrentNewsHeadlineReply(searchResults);
       const singlePublisher = searchResults.length === 1;
