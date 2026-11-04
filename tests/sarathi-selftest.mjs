@@ -322,6 +322,36 @@ await test("constitution and science accuracy rules are included in the assistan
     assert.match(system, /परिपक्व स्तनधारी लाल रक्त कोशिकाओं/);
   }
 });
+await test("ordinary mango-benefit and expected-result prompts never trigger education web search", async () => {
+  for (const question of [
+    "मुझे आम के दो फायदे बताओ।",
+    "अपेक्षित परिणाम: सीधे दो फायदे बताए, कोई इंटरनेट खोज या स्रोत सूची न दिखाए।"
+  ]) {
+    const before = calls.length;
+    const r = await request("/api/chat", "POST", {
+      webSearch: true,
+      internet: true,
+      messages: [{ role: "user", content: question }]
+    }, token);
+    assert.equal(r.status, 200);
+    assert.equal(r.data.searchAttempted, false, question);
+    assert.equal(r.data.webSearch, false, question);
+    assert.deepEqual(r.data.sources, [], question);
+    assert.equal(calls.slice(before).some(x => x.url.includes("api.exa.ai/search")), false,
+      "ordinary fruit and expected-result wording must not invoke web search");
+    assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")),
+      "ordinary questions should still reach the AI provider");
+  }
+});
+await test("explicit board examination result questions still trigger official search", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    webSearch: false,
+    messages: [{ role: "user", content: "बिहार बोर्ड परीक्षा परिणाम 2026 कब जारी होगा?" }]
+  }, token);
+  assert.equal(r.status, 200);
+  assert.ok(calls.slice(before).some(x => x.url.includes("api.exa.ai/search")));
+});
 await test("stable general-knowledge questions do not trigger unnecessary web search", async () => {
   const before = calls.length;
   const r = await request("/api/chat", "POST", {
