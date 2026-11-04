@@ -452,7 +452,7 @@ async function enrichGoldRateResults(results) {
       if (!contexts.length) return item;
       const combined = [item.title || "", item.snippet || "", ...contexts].join(" | ");
       const rateFor = (karat) => {
-        const re = new RegExp("(?:\\b" + karat + "\s*(?:K|karat|carat)|" + karat + "\s*कैरेट)[^₹]{0,120}(?:₹|Rs\\.?|INR)\s*([0-9,]+(?:\\.[0-9]+)?)", "i");
+        const re = new RegExp("(?:\\b" + karat + "\\s*(?:K|karat|carat)|" + karat + "\\s*कैरेट)[^₹]{0,120}(?:₹|Rs\\.?|INR)\\s*([0-9,]+(?:\\.[0-9]+)?)", "i");
         const m = combined.match(re);
         return m ? Number(m[1].replace(/,/g, "")) : null;
       };
