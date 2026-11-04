@@ -755,6 +755,18 @@ function buildNewsFallback(results, dateTime) {
   return "आज की खबरों की खोज में " + items.length + " स्रोत मिले, लेकिन उनका भरोसेमंद हिंदी सार तैयार नहीं हो पाया। इसलिए अंग्रेज़ी लेखों को ज्यों-का-त्यों दिखाने या अधूरी जानकारी को खबर बताने के बजाय मैं इस बार अपुष्ट सार नहीं दे रहा हूँ। कृपया थोड़ी देर बाद फिर पूछें।";
 }
 
+function buildCompactNewsSourceContext(results) {
+  return (Array.isArray(results) ? results : []).slice(0, 6).map((item, index) => {
+    const title = cleanText(item?.title || "").slice(0, 240);
+    const snippet = cleanText(item?.snippet || "").slice(0, 900);
+    const publisher = cleanText(item?.publisher || "").slice(0, 100);
+    const publishedAt = formatNewsPublishedAt(item?.publishedAt || "");
+    return "स्रोत " + (index + 1) + ":\nशीर्षक: " + title +
+      "\nप्रकाशक: " + publisher + "\nप्रकाशित: " + publishedAt +
+      "\nउपलब्ध लेख-अंश: " + (snippet || "लेख का पर्याप्त अंश उपलब्ध नहीं है।");
+  }).join("\n\n");
+}
+
 function buildProviderBusySearchFallback(results, query, reason = "AI सेवा इस समय व्यस्त है, इसलिए खोज परिणामों का हिंदी सार तैयार नहीं हो सका।") {
   const items = (Array.isArray(results) ? results : []).slice(0, 5);
   if (!items.length) return "";
@@ -1141,30 +1153,6 @@ export default {
       }
     }
 
-    // Current-news summaries are temporarily source-list-only. The model has
-    // repeatedly invented or merged details (including conflicting live AQI
-    // readings) despite source-grounding instructions. Preserve the real,
-    // date-filtered source cards, but do not generate an unverified digest.
-    if (wantsSearch && /(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(userText) && searchResults.length >= 2) {
-      const todayLabel = new Intl.DateTimeFormat("hi-IN", {
-        timeZone: INDIA_TIME_ZONE, day: "numeric", month: "long", year: "numeric"
-      }).format(new Date());
-      return jsonResponse({
-        success: true,
-        reply: todayLabel + " के लिए " + searchResults.length + " तारीख़-जाँचे गए समाचार स्रोत मिले हैं। पिछले उत्तरों में खबरों के विवरण और आँकड़े स्रोतों से पूरी तरह मेल नहीं खा रहे थे, इसलिए गलत सार देने से बचने के लिए अभी केवल मूल स्रोत दिखा रहा हूँ। हर खबर की सही जानकारी उसके मूल लेख में पढ़ें; बिना पुष्टि के किसी विवरण को तथ्य न मानें।",
-        ...dateTime,
-        webSearch: true,
-        searchAttempted: true,
-        searchWarning: "समाचारों का हिंदी सार अस्थायी रूप से रोका गया है; केवल वास्तविक खोज स्रोत दिखाए जा रहे हैं।",
-        searchUnavailable: true,
-        sources: searchResults.map(item => ({
-          title: item.title,
-          url: item.url,
-          publisher: item.publisher || "",
-          publishedAt: item.publishedAt || ""
-        }))
-      });
-    }
 
     // This well-documented event has recurring date and casualty-count errors.
     // Use a deterministic, source-grounded response instead of relying on a
@@ -1357,9 +1345,18 @@ export default {
     };
 
     const isNewsQueryForPrompt = /(खबर|समाचार|news|breaking|latest|ताज़ा|ताजा)/i.test(userText);
+    const isCurrentNewsReply = wantsSearch &&
+      /(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(userText) &&
+      searchResults.length >= 2;
+    const compactNewsSystemPrompt = "तुम सारथी AI हो। नीचे दिए गए समाचार स्रोतों के शीर्षक, प्रकाशक, प्रकाशित समय और लेख-अंश ही तथ्यात्मक आधार हैं। केवल उन्हीं अंशों में साफ लिखी बातों का सहज हिंदी में सार दो। अधिकतम 6 खबरें, हर खबर एक छोटा वाक्य और अलग क्रमांक में लिखो। विवरण न हो तो खबर छोड़ दो। दो स्रोतों के तथ्य आपस में मत मिलाओ। अनुमान, कारण, संख्या, स्थान, असर या घटना की स्थिति मत जोड़ो। चेतावनी/पूर्वानुमान को घटित घटना मत बताओ। बाजार के शुरुआती आँकड़ों को बंद भाव मत बताओ। हर पंक्ति के अंत में उसी स्रोत का प्रकाशक लिखो। कोई अंग्रेज़ी शीर्षक या अलग स्रोत-सूची मत बनाओ।";
     let groqResponse;
     try {
-      groqResponse = await sendGroqRequest(safeMessages, 6000);
+      if (isCurrentNewsReply) {
+        const newsMessage = "सवाल: " + userText + "\n\nकेवल इन वास्तविक खोज परिणामों का हिंदी सार लिखो:\n\n" + buildCompactNewsSourceContext(searchResults);
+        groqResponse = await sendGroqRequest([{ role: "user", content: newsMessage }], 1100, compactNewsSystemPrompt);
+      } else {
+        groqResponse = await sendGroqRequest(safeMessages, 6000);
+      }
       // On provider HTTP 413, retry once with compact context. Keep the preceding
       // user turn as well as the latest follow-up (e.g. "सबका उत्तर दो").
       if (groqResponse.status === 413) {
@@ -1368,17 +1365,20 @@ export default {
           ? "पिछला सवाल/संदर्भ:\n" + priorUser.content.slice(-1200) +
             "\n\nअभी का पूरा सवाल (इसे प्राथमिकता से पूरा उत्तर देना):\n" + latestPrompt
           : latestPrompt;
-        const compactMessages = [{
-          role: "user",
-          content: compactPrompt + (searchContext ? searchContext.slice(0, isHistoricalResearchQuery(userText) ? 5200 : 800) : "")
-        }];
+        const compactMessages = isCurrentNewsReply
+          ? [{ role: "user", content: "सवाल: " + userText + "\n\nकेवल इन वास्तविक खोज परिणामों का हिंदी सार लिखो:\n\n" + buildCompactNewsSourceContext(searchResults) }]
+          : [{
+              role: "user",
+              content: compactPrompt + (searchContext ? searchContext.slice(0, isHistoricalResearchQuery(userText) ? 5200 : 800) : "")
+            }];
         // The original system prompt is intentionally extensive. A 413 retry
         // must compact that too; otherwise the same oversized prompt is resent.
-        const compactSystemPrompt = isHistoricalResearchQuery(userText)
-          ? "तुम सारथी AI हो। ऐतिहासिक सवाल का उत्तर केवल दिए गए ऐतिहासिक खोज-स्रोतों से पुष्ट जानकारी के आधार पर दो। खूनी रविवार (1905) को दंगा या हिंसक प्रदर्शन मत कहो: यह फादर जॉर्जी गैपॉन के नेतृत्व में मजदूरों का शांतिपूर्ण जुलूस था, जो अपनी याचिका ज़ार निकोलस द्वितीय तक पहुँचाने के लिए Winter Palace की ओर जा रहा था; सैनिकों ने जुलूस/भीड़ पर गोलीबारी की। 9 जनवरी 1905 जूलियन कैलेंडर और 22 जनवरी 1905 ग्रेगोरियन कैलेंडर की एक ही तारीख है। गोलीबारी का सटीक स्थान स्रोत से पुष्ट किए बिना Winter Palace के ठीक सामने मत बताओ। मृतकों और घायलों की संख्या विवादित है; कोई एक निश्चित संख्या मत गढ़ो। कम-से-कम दो स्वतंत्र भरोसेमंद स्रोत हों तभी ऐसा दावा करो। हर स्रोत का वास्तविक शीर्षक, प्रकाशक और वास्तविक URL दो; स्रोत न हो तो साफ कहो। उपयोगकर्ता की भाषा में उत्तर दो।"
+        const compactSystemPrompt = isCurrentNewsReply ? compactNewsSystemPrompt : isHistoricalResearchQuery(userText)
+          ? "तुम सारथी AI हो। ऐतिहासिक सवाल का उत्तर केवल दिए गए ऐतिहासिक खोज-स्रोतों से पुष्ट जानकारी के आधार पर दो। खूनी रविवार (1905) को दंगा मत कहो। 9 जनवरी 1905 जूलियन और 22 जनवरी 1905 ग्रेगोरियन कैलेंडर की एक ही तारीख है। मृतकों और घायलों की संख्या विवादित है; कोई निश्चित संख्या मत गढ़ो। उपयोगकर्ता की भाषा में उत्तर दो।"
           : isNewsQueryForPrompt
-            ? "तुम सारथी AI हो। समाचार के तथ्य केवल खोज परिणामों से लो। पूर्वानुमान को घटित घटना मत बताओ। बाजार के सुबह के आँकड़ों को बंद हुआ या दिन का अंतिम स्तर मत लिखो; समापन तभी बताओ जब स्रोत उसी दिन का closing स्तर स्पष्ट करे। हिंदी में सहज उत्तर दो और तथ्य मत गढ़ो।"
-            : "तुम सारथी AI हो। उपयोगकर्ता की भाषा में स्पष्ट, सही और उपयोगी उत्तर दो। सवाल का पूरा उत्तर दो; तथ्य, तारीख, संख्या, स्रोत या लिंक मत गढ़ो। इंटरनेट खोज के परिणाम दिए हों तो हर बदलती/ताज़ा जानकारी केवल उन्हीं परिणामों से लो। समाचार में केवल शीर्षक और स्रोत-अंश से पुष्ट तथ्य लिखो; पूर्वानुमान को घटित घटना मत बताओ। बाजार के सुबह के आँकड़ों को बंद हुआ या दिन का अंतिम स्तर मत लिखो; समापन स्तर तभी बताओ जब स्रोत उसी दिन का closing स्तर स्पष्ट करे। जानकारी अपर्याप्त हो तो साफ कहो। हिंदी में सहज देवनागरी हिंदी लिखो।";
+            ? "तुम सारथी AI हो। समाचार के तथ्य केवल खोज परिणामों से लो। पूर्वानुमान को घटित घटना मत बताओ। हिंदी में सहज उत्तर दो और तथ्य मत गढ़ो।"
+            : "तुम सारथी AI हो। उपयोगकर्ता की भाषा में स्पष्ट और सही उत्तर दो। तथ्य, तारीख, संख्या या स्रोत मत गढ़ो। जानकारी अपर्याप्त हो तो साफ कहो।";
+
         groqResponse = await sendGroqRequest(compactMessages, 1800, compactSystemPrompt);
       }
       // If the compact retry is still rejected, preserve retrieved sources.
