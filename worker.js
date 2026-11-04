@@ -874,6 +874,12 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     if (requireTwoSentences && (sentenceEnds.length < 2 || sentenceEnds.length > 3)) return "";
     const sourceEvidence = cleanText((items[index]?.title || "") + " " + (items[index]?.snippet || ""));
     const generatedText = entry.headline + " " + entry.summary;
+    // Agniveer policy reports apply the additional two-year engagement to
+    // the 75% who were otherwise due to exit; do not publish a generic
+    // all-Agniveers tenure headline when the source specifies that group.
+    const isAgniveerExtension = /agniveer|अग्निवीर/i.test(sourceEvidence) &&
+      /(?:75\\s*%|७५\\s*प्रतिशत|remaining\\s+75|शेष\\s+७५)/i.test(sourceEvidence);
+    if (isAgniveerExtension && !/(?:75\\s*%|७५\\s*प्रतिशत|शेष\\s+७५)/i.test(generatedText)) return "";
     // Reject accidental half-English/half-Devanagari words (e.g. "pऐse").
     // Such output must be repaired rather than shown as polished Hindi.
     if (hasMixedScriptToken(generatedText)) return "";
