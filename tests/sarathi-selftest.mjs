@@ -250,6 +250,22 @@ await test("general knowledge reaches the AI provider", async () => {
   assert.match(r.data.reply, /परीक्षण उत्तर|1857/);
   assert.ok(calls.some(x => x.url.includes("api.groq.com")));
 });
+
+await test("ordinary fruit-benefit question never searches even when an old web toggle flag is sent", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    webSearch: true,
+    internet: true,
+    messages: [{ role: "user", content: "मुझे आम के दो फायदे बताओ।" }]
+  }, token);
+  assert.equal(r.status, 200);
+  assert.equal(r.data.webSearch, false);
+  assert.deepEqual(r.data.sources, []);
+  assert.equal(calls.slice(before).some(x => x.url.includes("api.exa.ai")), false,
+    "ordinary learning questions must not call Exa, even if stale client flags are true");
+  assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")),
+    "the ordinary question should still receive an AI answer");
+});
 await test("Android app-launch capability is distinguished from website limitations", async () => {
   const before = calls.length;
   const r = await request("/api/chat", "POST", {
