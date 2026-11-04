@@ -1726,22 +1726,47 @@ export default {
       try {
         const repairSummaryRule = requireTwoSentenceNews ? "ठीक 2 छोटे, तथ्यात्मक वाक्य" : "1 छोटा, तथ्यात्मक वाक्य";
         const repairPrompt = "नीचे दिए गए " + searchResults.length + " खोज परिणामों के लिए केवल हिंदी सार दो। ठीक " + searchResults.length + " अलग-अलग खबरें लिखो। एक ही घटना की दो रिपोर्टों को दो खबर मत बनाओ। हर प्रविष्टि में दो पंक्तियाँ अनिवार्य हैं: खबर 1: हिंदी शीर्षक और अगली पंक्ति सार: " + repairSummaryRule + "। इसी तरह क्रमांक जारी रखो। कोई बुलेट, बोल्ड, भूमिका, स्रोत या अतिरिक्त पंक्ति नहीं। केवल दिए गए स्रोत-अंश की जानकारी लिखो; जानकारी न हो तो अनुमान मत लगाओ।\n\n" + buildCompactNewsSourceContext(searchResults);
-        const repairResponse = await sendGroqRequest(
-          [{ role: "user", content: repairPrompt }],
-          1800,
-          compactNewsSystemPrompt,
-          "low",
-          activeGroqModel
-        );
-        if (repairResponse.ok) {
-          const repairPayload = await repairResponse.json();
+        const repairMessages = [{ role: "user", content: repairPrompt }];
+        const parseRepairResponse = async response => {
+          if (!response?.ok) return "";
+          const repairPayload = await response.json();
           const repairContent = repairPayload?.choices?.[0]?.message?.content;
           const repairText = Array.isArray(repairContent)
             ? repairContent.map(part => typeof part === "string" ? part : (part?.text || part?.content || "")).join("")
             : repairContent;
-          if (typeof repairText === "string" && repairText.trim()) {
-            const repaired = formatCurrentNewsSummaryReply(repairText.trim(), searchResults, requireTwoSentenceNews);
-            if (repaired) formattedNewsReply = repaired;
+          return typeof repairText === "string" && repairText.trim()
+            ? formatCurrentNewsSummaryReply(repairText.trim(), searchResults, requireTwoSentenceNews)
+            : "";
+        };
+        let repairResponse;
+        try {
+          repairResponse = await sendGroqRequest(
+            repairMessages,
+            1800,
+            compactNewsSystemPrompt,
+            "low",
+            activeGroqModel
+          );
+          formattedNewsReply = await parseRepairResponse(repairResponse);
+        } catch (error) {
+          console.warn("Primary news format repair failed", error?.name || "unknown");
+        }
+        // If the primary model cannot produce a valid, source-checked Hindi
+        // digest (not only on HTTP 429), make one bounded attempt with the
+        // secondary model. The same strict parser remains the final gate.
+        if (!formattedNewsReply && activeGroqModel !== GROQ_FALLBACK_MODEL) {
+          try {
+            const secondaryRepairResponse = await sendGroqRequest(
+              repairMessages,
+              1800,
+              compactNewsSystemPrompt,
+              null,
+              GROQ_FALLBACK_MODEL
+            );
+            formattedNewsReply = await parseRepairResponse(secondaryRepairResponse);
+            if (formattedNewsReply) activeGroqModel = GROQ_FALLBACK_MODEL;
+          } catch (error) {
+            console.warn("Secondary news format repair failed", error?.name || "unknown");
           }
         }
       } catch (error) {
