@@ -886,7 +886,8 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     : "आज की 5 अलग-अलग, तारीख़-जाँची खबरें:";
   return prefix + "\n\n" + lines.join("\n\n") + "\n\nध्यान दें: हर सार संबंधित समाचार के उपलब्ध लेख-अंश पर आधारित है।";
 }
-function buildCurrentNewsHeadlineReply(results) {\n  // Count only distinct, displayable articles with a real HTTPS publisher URL; never emit headline-only output.
+function buildCurrentNewsHeadlineReply(results) {
+  // Count only distinct, displayable articles with a real HTTPS publisher URL; never emit headline-only output.
   // A headline-only list does not satisfy a request for Hindi summaries.
   // If the summarizer and repair attempt both fail, do not expose English
   // headlines as though they were a useful substitute for the requested digest.
@@ -1750,7 +1751,11 @@ export default {
       }
     }
 
-    const finalReply = isCurrentNewsReply\n      ? (formattedNewsReply || buildCurrentNewsHeadlineReply(searchResults))\n      : rawReply;\n\n    return jsonResponse({
+    const finalReply = isCurrentNewsReply
+      ? (formattedNewsReply || buildCurrentNewsHeadlineReply(searchResults))
+      : rawReply;
+
+    return jsonResponse({
       success: true,
       reply: finalReply,
       ...dateTime,
