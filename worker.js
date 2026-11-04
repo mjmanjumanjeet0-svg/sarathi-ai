@@ -770,6 +770,44 @@ function isCurrentNewsQuery(text) {
   return /(?:ताज़ा|ताजा|मुख्य|प्रमुख).{0,35}खबर|आज.{0,60}(?:खबर|समाचार)|(?:latest|breaking|current)\s+news|today.?s\s+news|समाचार/i.test(String(text || ""));
 }
 
+function formatCurrentNewsSummaryReply(rawReply, results) {
+  const items = dedupeNewsResults(results).filter(item => {
+    const title = cleanText(item?.title || "");
+    const publishedAt = Date.parse(item?.publishedAt || "");
+    try {
+      const url = new URL(item?.url || "");
+      return title.length > 0 && url.protocol === "https:" && Boolean(url.hostname) && Number.isFinite(publishedAt);
+    } catch { return false; }
+  }).slice(0, 5);
+  if (!items.length) return "";
+  const entries = new Map();
+  let current = null;
+  for (const rawLine of String(rawReply || "").split(/\r?\n/)) {
+    const line = rawLine.replace(/\*\*/g, "").trim();
+    const headline = line.match(/^(?:खबर\s*)?(\d+)\s*[.):]\s*(.+)$/i) || line.match(/^खबर\s*(\d+)\s*:\s*(.+)$/i);
+    if (headline) {
+      current = Number(headline[1]);
+      entries.set(current, { headline: cleanText(headline[2]).slice(0, 220), summary: "" });
+      continue;
+    }
+    const summary = line.match(/^(?:सार|संक्षेप)\s*[:：]\s*(.+)$/i);
+    if (summary && current !== null && entries.has(current)) entries.get(current).summary = cleanText(summary[1]).slice(0, 420);
+  }
+  if (entries.size !== items.length) return "";
+  const lines = [];
+  for (let index = 0; index < items.length; index++) {
+    const entry = entries.get(index + 1);
+    if (!entry?.headline || !entry?.summary) return "";
+    let publisher = "प्रकाशक उपलब्ध नहीं";
+    try { publisher = new URL(items[index].url).hostname.toLowerCase().replace(/^www\./i, ""); } catch {}
+    lines.push("खबर " + (index + 1) + ": " + entry.headline + "\nसार: " + entry.summary +
+      "\nप्रकाशक: " + publisher + "\nप्रकाशित: " + formatNewsPublishedAt(items[index].publishedAt));
+  }
+  const prefix = items.length < 5
+    ? "आज केवल " + items.length + " अलग-अलग, तारीख़-जाँची खबरें मिलीं। पाँचवीं खबर के लिए पर्याप्त भरोसेमंद परिणाम नहीं मिला, इसलिए कोई खबर बनाकर नहीं जोड़ी गई।"
+    : "आज की 5 अलग-अलग, तारीख़-जाँची खबरें:";
+  return prefix + "\n\n" + lines.join("\n\n") + "\n\nध्यान दें: हर सार संबंधित समाचार के उपलब्ध लेख-अंश पर आधारित है।";
+}
 function buildCurrentNewsHeadlineReply(results) {
   // Count only distinct, displayable articles with a real HTTPS publisher URL
   // and a parseable publication timestamp. This keeps the 1–5 headline count honest.
@@ -1525,13 +1563,16 @@ export default {
         /(?:राजनीतिक\s+दंगा|दंगों?\s+के\s+दौरान|दंगा\s+हुआ|riot(?:s)?)/i.test(rawReply)) {
       rawReply = "खूनी रविवार (Bloody Sunday) 1905 कोई दंगा नहीं था। यह 9 जनवरी 1905 (पुराने जूलियन कैलेंडर) / 22 जनवरी 1905 (ग्रेगोरियन कैलेंडर) को सेंट पीटर्सबर्ग में हुआ। फादर जॉर्जी गैपॉन के नेतृत्व में मजदूरों का शांतिपूर्ण जुलूस अपनी याचिका ज़ार निकोलस द्वितीय तक पहुँचाने के लिए Winter Palace की ओर जा रहा था। सैनिकों ने जुलूस/भीड़ पर गोलीबारी की। गोलीबारी के सटीक स्थान और मृतकों-घायलों की संख्या के बारे में स्रोतों में अंतर है, इसलिए किसी एक संख्या या महल के ठीक सामने गोलीबारी होने का दावा बिना पुष्ट स्रोत के नहीं करना चाहिए। नीचे केवल इस खोज में मिले वास्तविक स्रोत दिए गए हैं।";
     }
-    const newsListCount = (rawReply.match(/(^|\n)\s*(?:[1-8][.)]|[-•])\s*[^\n]{12,}/gm) || []).length;
+    const newsListCount = (rawReply.match(/(^|\n)\s*(?:खबर\s*[1-8]\s*:|[1-8][.)]|[-•])\s*[^\n]{8,}/gim) || []).length;
     const looksLikeRawEnglishArticle = isCurrentNewsReply &&
       /\b(Updated:|By:|India News Live Updates|Published:|Read more|Breaking News)\b/i.test(rawReply);
     const malformedNewsReply = isCurrentNewsReply && searchResults.length > 0 &&
-      (newsListCount < Math.min(2, searchResults.length) || looksLikeRawEnglishArticle);
-    const finalReply = malformedNewsReply
-      ? buildNewsFallback(searchResults, dateTime)
+      (newsListCount !== searchResults.length || looksLikeRawEnglishArticle);
+    const formattedNewsReply = isCurrentNewsReply && !malformedNewsReply
+      ? formatCurrentNewsSummaryReply(rawReply, searchResults)
+      : "";
+    const finalReply = isCurrentNewsReply
+      ? (formattedNewsReply || "आज की " + searchResults.length + " तारीख़-जाँची खबरें मिलीं, लेकिन AI सेवा उनका भरोसेमंद हिंदी सार तैयार नहीं कर सकी। अधूरा या अंग्रेज़ी शीर्षक दिखाने के बजाय कृपया थोड़ी देर बाद फिर पूछें।")
       : rawReply;
 
     return jsonResponse({
