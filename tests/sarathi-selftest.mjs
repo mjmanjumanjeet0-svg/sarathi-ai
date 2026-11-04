@@ -552,13 +552,15 @@ await test("latest news query uses Exa news category and publication freshness f
     "current-news headlines must bypass generative summarization to prevent unsupported claims");
   assert.ok(newsResponse.data.reply.includes("1."), "news headline list should be numbered");
   assert.match(newsResponse.data.reply, /मूल शीर्षक/);
-  const displayedHeadlines = (newsResponse.data.reply.match(/^\\s*[1-5]\\. /gm) || []).length;
+  const displayedHeadlines = newsResponse.data.reply.split("\n")
+    .filter(line => /^[1-5]\. /.test(line)).length;
   assert.equal(displayedHeadlines, newsResponse.data.sources.length,
     "explicitly dated news requests must display every accepted headline, not a model-selected subset");
   assert.match(newsResponse.data.reply, /प्रकाशक:/);
   assert.match(newsResponse.data.reply, /प्रकाशित:/);
   for (const source of newsResponse.data.sources) {
-    assert.ok(newsResponse.data.reply.includes(new URL(source.url).hostname.replace(/^www\\./, "")),
+    const publisherHost = new URL(source.url).hostname.toLowerCase().replace("www.", "");
+    assert.ok(newsResponse.data.reply.includes(publisherHost),
       "each displayed publisher must match the URL host of its own source");
   }
   assert.equal(newsHosts.includes("timesofindia.indiatimes.com"), false,
