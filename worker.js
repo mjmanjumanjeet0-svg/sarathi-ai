@@ -610,6 +610,24 @@ function isIndiaFocusedNewsItem(item) {
   return indiaSignals.some(pattern => pattern.test(headline));
 }
 
+function filterFreshPreciousMetalResults(results, now = Date.now()) {
+  // A "today" rate must come from a result published on today's India date.
+  // Missing, invalid, future-dated, and older pages are not current price evidence.
+  const todayIndia = new Intl.DateTimeFormat("en-CA", {
+    timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit"
+  }).format(new Date(now));
+  return (Array.isArray(results) ? results : []).filter(item => {
+    const publishedAt = item && typeof item.publishedAt === "string" ? item.publishedAt.trim() : "";
+    if (!publishedAt) return false;
+    const timestamp = Date.parse(publishedAt);
+    if (!Number.isFinite(timestamp) || timestamp > now) return false;
+    const publishedIndia = new Intl.DateTimeFormat("en-CA", {
+      timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit"
+    }).format(new Date(timestamp));
+    return publishedIndia === todayIndia;
+  });
+}
+
 function filterRelevantSearchResults(query, results) {
   const q = String(query || "").toLocaleLowerCase("hi-IN");
   const textOf = (item) => `${item.title || ""} ${item.url || ""} ${item.snippet || ""}`.toLocaleLowerCase("hi-IN");
@@ -1292,6 +1310,9 @@ export default {
             sources: []
           });
         }
+      }
+      if (isGoldRateQuestion || isSilverRateQuestion) {
+        searchResults = filterFreshPreciousMetalResults(searchResults);
       }
       if ((isGoldRateQuestion || isSilverRateQuestion) && searchResults.length) {
         // Keep the strongest result from each publisher; repeated pages from one
