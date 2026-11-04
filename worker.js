@@ -1476,6 +1476,28 @@ export default {
       } else {
         groqResponse = await sendGroqRequest(safeMessages, 6000);
       }
+      // A short current-news request can sometimes hit a token-per-minute
+      // limit. Retry once with fewer source characters and a smaller completion
+      // budget; if the provider is still rate-limited, keep the honest fallback.
+      if (groqResponse.status === 429 && isCurrentNewsReply && searchResults.length) {
+        const compactNewsContext = searchResults.slice(0, 5).map((item, index) =>
+          "स्रोत " + (index + 1) + ": " + cleanText(item.title || "").slice(0, 180) +
+          "\\nप्रकाशक: " + cleanText(item.publisher || "").slice(0, 80) +
+          "\\nप्रकाशित: " + formatNewsPublishedAt(item.publishedAt || "") +
+          "\\nलेख-अंश: " + cleanText(item.snippet || "").slice(0, 320)
+        ).join("\\n\\n");
+        try {
+          groqResponse = await sendGroqRequest(
+            [{ role: "user", content: "इन ताज़ा खोज परिणामों का संक्षिप्त हिंदी सार दो। हर खबर के लिए खबर 1: हिंदी शीर्षक और अगली पंक्ति सार: एक वाक्य लिखो। केवल दिए गए तथ्य लिखो, अनुमान मत लगाओ।\\n\\n" + compactNewsContext }],
+            1000,
+            compactNewsSystemPrompt,
+            "low"
+          );
+        } catch (error) {
+          console.warn("Compact news retry after rate limit failed", error?.name || "unknown");
+        }
+      }
+
       // On provider HTTP 413, retry once with compact context. Keep the preceding
       // user turn as well as the latest follow-up (e.g. "सबका उत्तर दो").
       if (groqResponse.status === 413) {
