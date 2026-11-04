@@ -680,8 +680,9 @@ function renderMessages() {
 function shouldShowSearchSources(data) {
   // Current-news replies already print each headline, publisher and timestamp.
   // Suppress the second, duplicate source panel for those replies.
-  const isInlineNewsList = /^\\s*(?:नीचे आज प्रकाशित खबरों के मूल शीर्षक|आज केवल \\d+ अलग-अलग|आज के लिए केवल एक स्वतंत्र समाचार स्रोत)/i
-    .test(String(data?.reply || ""));
+  const replyText = String(data?.reply || "");
+  const isInlineNewsList = replyText.includes("खबर 1:") &&
+    replyText.includes("प्रकाशक:") && replyText.includes("प्रकाशित:");
   return Boolean(data && data.searchAttempted === true && !isInlineNewsList &&
     Array.isArray(data.sources) && data.sources.length > 0);
 }
