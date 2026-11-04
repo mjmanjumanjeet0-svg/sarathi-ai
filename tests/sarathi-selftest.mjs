@@ -111,7 +111,9 @@ globalThis.fetch = async (input, init = {}) => {
     if (groqMode === "413-once" && groq413Count++ === 0) return Response.json({ error: { message: "payload too large" } }, { status: 413 });
     const body = JSON.parse(init.body || "{}");
     const last = body.messages?.at(-1)?.content || "";
-    groqReply = last.includes("इतिहास") ? "1857 का विद्रोह ब्रिटिश शासन के विरुद्ध एक बड़ा विद्रोह था।" :
+    groqReply = last.includes("स्रोत 1:") && last.includes("शीर्षक:")
+      ? "1. उपलब्ध समाचार-अंश के अनुसार पहली खबर का संक्षिप्त विवरण। (प्रकाशक 1)\n2. उपलब्ध समाचार-अंश के अनुसार दूसरी खबर का संक्षिप्त विवरण। (प्रकाशक 2)"
+      : last.includes("इतिहास") ? "1857 का विद्रोह ब्रिटिश शासन के विरुद्ध एक बड़ा विद्रोह था।" :
       last.includes("सोने") || last.includes("चांदी") ? "परीक्षण के लिए खोज परिणाम मिले। आज का भाव स्रोत और शुद्धता के अनुसार बदलता है।" :
       "यह सारथी का परीक्षण उत्तर है।";
     return Response.json({ choices: [{ message: { content: groqReply } }] });
@@ -545,6 +547,14 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.ok(newsHosts.includes("thehindu.com"));
   assert.ok(newsHosts.includes("ndtv.com"));
   assert.ok(newsHosts.includes("hindustantimes.com"), "a valid current article after the first eight candidates must be retained");
+  assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")),
+    "multiple independent news publishers should be summarized using the existing AI provider");
+  const newsGroqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
+  const newsGroqBody = JSON.parse(newsGroqCall.init.body || "{}");
+  assert.match(newsGroqBody.messages?.[0]?.content || "", /स्रोत 1:/);
+  assert.match(newsGroqBody.messages?.[0]?.content || "", /उपलब्ध लेख-अंश/);
+  assert.ok(newsResponse.data.reply.includes("1."), "news digest should be numbered");
+
   assert.equal(newsHosts.includes("bbc.com"), false, "five-day-old news must be filtered out");
   assert.equal(newsHosts.includes("reuters.com"), false, "news older than 48 hours must be filtered out");
   assert.equal(newsHosts.includes("apnews.com"), false, "even slightly future-dated news must be filtered out");
