@@ -815,6 +815,12 @@ function hasUnsupportedNumericClaim(generatedText, sourceEvidence) {
   return generatedNumbers.some(number => !sourceNumbers.has(number));
 }
 
+function hasMixedScriptToken(text) {
+  return String(text || "").split(/\\s+/).some(token =>
+    /[A-Za-z]/.test(token) && /[\\u0900-\\u097F]/.test(token)
+  );
+}
+
 function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false) {
   const items = dedupeNewsResults(results).filter(item => {
     const title = cleanText(item?.title || "");
@@ -868,6 +874,9 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     if (requireTwoSentences && (sentenceEnds.length < 2 || sentenceEnds.length > 3)) return "";
     const sourceEvidence = cleanText((items[index]?.title || "") + " " + (items[index]?.snippet || ""));
     const generatedText = entry.headline + " " + entry.summary;
+    // Reject accidental half-English/half-Devanagari words (e.g. "pऐse").
+    // Such output must be repaired rather than shown as polished Hindi.
+    if (hasMixedScriptToken(generatedText)) return "";
     // Reject figures or number-words absent from this exact article.
     if (hasUnsupportedNumericClaim(generatedText, sourceEvidence)) return "";
     const claimsCause = /(?:के कारण|की वजह से|के चलते|के फलस्वरूप|का कारण बना|कारण बना|की बदौलत)/i.test(generatedText);
