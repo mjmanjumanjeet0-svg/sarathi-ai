@@ -106,7 +106,7 @@ globalThis.fetch = async (input, init = {}) => {
     }
     return Response.json({      results: [
         { title: "भारत में सोने का भाव", url: "https://example.com/gold-rate", highlights: ["24K gold rate ₹7800 per gram and 22K gold rate ₹7150 per gram in India."] },
-        { title: "भारत में चांदी का भाव", url: "https://silver.example.net/silver-rate", highlights: ["Silver rate ₹95 per gram in India."] }
+        { title: "भारत में चांदी का भाव", url: groqMode === "413-always" ? "https://example.com/silver-rate" : "https://silver.example.net/silver-rate", highlights: ["Silver rate ₹95 per gram in India."] }
       ]
     });
   }
