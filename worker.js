@@ -1677,18 +1677,14 @@ export default {
       : rawContent;
 
     if (typeof reply !== "string" || !reply.trim()) {
-      // News search may already have returned usable, date-checked articles.
-      // Do not discard those results merely because the summarizer returned
-      // an empty completion. Show the publishers' original headlines honestly.
       if (isCurrentNewsReply && searchResults.length) {
-        const fallbackReply = buildCurrentNewsHeadlineReply(searchResults);
         return jsonResponse({
           success: true,
-          reply: "AI सेवा से हिंदी सार नहीं मिल पाया। इसलिए नीचे केवल प्रकाशकों के मूल शीर्षक दिए जा रहे हैं; इन्हें AI द्वारा तैयार या स्वतंत्र रूप से सत्यापित सार न मानें।\\n\\n" + fallbackReply,
+          reply: buildCurrentNewsHeadlineReply(searchResults),
           ...dateTime,
           webSearch: true,
           searchAttempted: true,
-          searchWarning: "समाचार खोज सफल रही, लेकिन AI सेवा ने खाली उत्तर दिया। मूल शीर्षक सुरक्षित रखे गए हैं।",
+          searchWarning: "समाचार खोज सफल रही, लेकिन AI सेवा ने हिंदी सार तैयार नहीं किया।",
           providerBusy: true,
           providerStatus: 502,
           sources: searchResults.map(item => ({
