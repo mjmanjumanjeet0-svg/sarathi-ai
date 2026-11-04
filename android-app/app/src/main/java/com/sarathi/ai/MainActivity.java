@@ -617,9 +617,9 @@ public class MainActivity extends Activity {
                             });
                         }
                         @Override public void onStop(String utteranceId, boolean interrupted) {
-                            mainHandler.post(() -> {
-                                if (voiceConversationActive) notifyVoice("onSpeechComplete", "");
-                            });
+                            // QUEUE_FLUSH can stop an older utterance while a newer
+                            // reply is starting. Do not reopen the microphone here:
+                            // onDone/onError for the active utterance owns resumption.
                         }
                     });
                     int result = textToSpeech.speak(toSpeak, TextToSpeech.QUEUE_FLUSH, null, "sarathi-local-voice");
