@@ -243,8 +243,7 @@ function shouldSearchAutomatically(text) {
     || prices
     || official
     || verification
-    || education
-    || isHistoricalResearchQuery(q);
+    || education;
 }
 
 function cleanText(value) {
