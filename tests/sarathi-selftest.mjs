@@ -4,6 +4,8 @@ import { readFile } from "node:fs/promises";
 // Load the exact Worker source without changing its Cloudflare module format.
 const source = await readFile(new URL("../worker.js", import.meta.url), "utf8");
 const appSource = await readFile(new URL("../app.js", import.meta.url), "utf8");
+assert.match(appSource, /Current-news replies already print each headline, publisher and timestamp/, "current-news replies must not render a duplicate source panel");
+assert.match(source, /Count only distinct, displayable articles with a real HTTPS publisher URL/, "current-news count must exclude invalid or undated results");
 assert.doesNotMatch(appSource, /detectAppLaunchCommand|getInstalledApps|openAppPackage|openPhone|SarathiNative\.openApp/, "web chat must not launch installed apps");
 assert.ok(!appSource.includes("extractVideoFrames") && !appSource.includes("videoFile") && !appSource.includes("वीडियो") && !appSource.includes("video/mp4") && !appSource.includes("mp4|webm|mov"), "video upload and frame-analysis code must be absent");
 assert.ok(appSource.includes('input.accept = ".pdf,.docx,.txt,.csv,.md,.json"'), "document picker must exclude video formats");
