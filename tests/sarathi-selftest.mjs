@@ -123,7 +123,7 @@ globalThis.fetch = async (input, init = {}) => {
       "सार: दिल्ली की वायु गुणवत्ता पर खबर को अभी विकसित होती स्थिति बताया गया है। उपलब्ध लेख-अंश में वायु गुणवत्ता के स्तर या बदलाव का विवरण नहीं दिया गया है।",
       "खबर 4: चक्रवात मुरासु को लेकर मौसम विभाग की चेतावनी",
       "सार: मौसम विभाग ने चक्रवात मुरासु की स्थिति बंगाल की खाड़ी के पश्चिम-मध्य हिस्से में बताई है। इसके दक्षिण आंध्र प्रदेश तट पार करने का पूर्वानुमान 2 नवंबर की देर रात के लिए दिया गया है।"
-    ].join("\\n") } }] });
+    ].join(String.fromCharCode(10)) } }] });
     if (groqMode === "malformed-news") return Response.json({ choices: [{ message: { content: "आज की खबरें जल्द पढ़ें।" } }] });
     if (groqMode === "malformed-news-secondary" && requestBody.model === "qwen/qwen3.8-27b") {
       return Response.json({ choices: [{ message: { content: [
@@ -653,10 +653,10 @@ await test("exact requested five-news prompt accepts four distinct dated Hindi s
     assert.equal(r.data.sources.length, 4, "only four distinct, dated source articles are available in this fixture");
     assert.match(r.data.reply, /आज केवल 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं/);
     assert.doesNotMatch(r.data.reply, /भरोसेमंद हिंदी सार तैयार नहीं हो सका/);
-    const summaries = r.data.reply.split("\\n").filter(line => /^सार: /.test(line));
+    const summaries = r.data.reply.split(String.fromCharCode(10)).filter(line => /^सार: /.test(line));
     assert.equal(summaries.length, 4, "every accepted article must have a Hindi summary");
     for (const summary of summaries) {
-      const sentenceEnds = summary.match(/[।!?]+|(?<![0-9])\\.(?![0-9])/g) || [];
+      const sentenceEnds = summary.match(/[।!?]+/g) || [];
       assert.equal(sentenceEnds.length, 2, "each summary must contain exactly two sentences");
     }
   } finally {
