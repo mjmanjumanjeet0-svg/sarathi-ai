@@ -2,6 +2,8 @@
 const INDIA_TIME_ZONE = "Asia/Kolkata";
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "openai/gpt-oss-20b";
+// Secondary Groq model with its own model-specific rate-limit bucket.
+const GROQ_FALLBACK_MODEL = "qwen/qwen3.8-27b";
 const SESSION_SECONDS = 12 * 60 * 60;
 
 // The web app and Android WebView both load from this GitHub Pages origin.
@@ -1434,7 +1436,7 @@ export default {
       safeMessages[safeMessages.length - 1].content += searchContext.slice(0, 6500);
     }
 
-    const sendGroqRequest = async (requestMessages, maxTokens, systemContent = systemPrompt, reasoningEffort = null) => {
+    const sendGroqRequest = async (requestMessages, maxTokens, systemContent = systemPrompt, reasoningEffort = null, model = GROQ_MODEL) => {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 30000);
       try {
@@ -1445,7 +1447,7 @@ export default {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            model: GROQ_MODEL,
+            model,
             messages: [{ role: "system", content: systemContent }, ...requestMessages],
             temperature: 0.3,
             max_tokens: maxTokens,
@@ -1462,6 +1464,7 @@ export default {
     const isCurrentNewsReply = wantsSearch && isCurrentNewsQuery(userText);
     const compactNewsSystemPrompt = "तुम सारथी AI हो। पूरा उत्तर सहज देवनागरी हिंदी में दो। हर खबर का हिंदी शीर्षक और एक छोटा सार केवल उसी खबर के दिए गए शीर्षक तथा लेख-अंश से लिखो। शीर्षक का अर्थ बदले बिना अनुवाद करो; सार में केवल वही तथ्य दो जो लेख-अंश में साफ मौजूद हों। स्रोत में न दिया कारण, जिम्मेदार व्यक्ति/समूह, स्थान, संख्या, असर, नीति की स्थिति या निर्णय मत जोड़ो। खासकर वायु प्रदूषण, दुर्घटना, बीमारी, कीमतों या सरकारी फैसलों के कारण/जिम्मेदारी का अनुमान बिल्कुल मत लगाओ। किसी घटना को किसी कारण से जोड़ने के लिए स्रोत में वही कारण स्पष्ट रूप से लिखा होना चाहिए। प्रस्ताव, सिफारिश, घोषणा, मंजूरी, लागू फैसला और संभावना अलग-अलग बातें हैं—स्रोत जिस स्तर की पुष्टि करे, वही लिखो; Cabinet approves का अर्थ मंजूरी मिली है, जबकि proposal/recommendation का अर्थ प्रस्ताव/सिफारिश है। किसी एक स्रोत के तथ्य दूसरे स्रोत की खबर में मत मिलाओ। एक ही घटना की दो रिपोर्टों को मिलाकर एक खबर बनाओ, अलग घटनाओं को कभी मत मिलाओ। उपलब्ध अलग-अलग खबरों की संख्या के अनुसार क्रमांक दो; अंग्रेज़ी शीर्षक ज्यों-का-त्यों मत लिखो। केवल शीर्षक हो और विवरण न हो तो उससे आगे की घटना/कारण की जानकारी मत गढ़ो। पूर्वानुमान को घटित घटना मत बताओ और बाजार के शुरुआती आँकड़ों को बंद भाव मत बताओ। प्रकाशक और प्रकाशित समय खुद मत लिखो; वे कोड से जोड़े जाएँगे। हर खबर के लिए ठीक प्रारूप रखो: खबर 1: हिंदी शीर्षक; अगली पंक्ति: सार: एक छोटा, स्रोत-आधारित वाक्य। कोई अलग स्रोत-सूची या अतिरिक्त भूमिका मत बनाओ।";
     let groqResponse;
+    let activeGroqModel = GROQ_MODEL;
     try {
       if (isCurrentNewsReply) {
         const newsMessage = "सवाल: " + userText + "\n\nकेवल इन वास्तविक खोज परिणामों का हिंदी सार लिखो:\n\n" + buildCompactNewsSourceContext(searchResults);
@@ -1486,15 +1489,34 @@ export default {
           "\\nप्रकाशित: " + formatNewsPublishedAt(item.publishedAt || "") +
           "\\nलेख-अंश: " + cleanText(item.snippet || "").slice(0, 320)
         ).join("\\n\\n");
+        const compactRetryMessages = [{ role: "user", content: "इन ताज़ा खोज परिणामों का संक्षिप्त हिंदी सार दो। हर खबर के लिए खबर 1: हिंदी शीर्षक और अगली पंक्ति सार: एक वाक्य लिखो। केवल दिए गए तथ्य लिखो, अनुमान मत लगाओ।\\n\\n" + compactNewsContext }];
         try {
           groqResponse = await sendGroqRequest(
-            [{ role: "user", content: "इन ताज़ा खोज परिणामों का संक्षिप्त हिंदी सार दो। हर खबर के लिए खबर 1: हिंदी शीर्षक और अगली पंक्ति सार: एक वाक्य लिखो। केवल दिए गए तथ्य लिखो, अनुमान मत लगाओ।\\n\\n" + compactNewsContext }],
+            compactRetryMessages,
             1000,
             compactNewsSystemPrompt,
             "low"
           );
         } catch (error) {
           console.warn("Compact news retry after rate limit failed", error?.name || "unknown");
+        }
+        // If the primary model is still rate-limited, automatically try a
+        // second currently listed Groq model. Keep the same source-only context;
+        // omit model-specific reasoning parameters for cross-model compatibility.
+        if (groqResponse?.status === 429) {
+          try {
+            const fallbackResponse = await sendGroqRequest(
+              compactRetryMessages,
+              1200,
+              compactNewsSystemPrompt,
+              null,
+              GROQ_FALLBACK_MODEL
+            );
+            groqResponse = fallbackResponse;
+            if (fallbackResponse.ok) activeGroqModel = GROQ_FALLBACK_MODEL;
+          } catch (error) {
+            console.warn("Secondary news model retry failed", error?.name || "unknown");
+          }
         }
       }
 
@@ -1670,7 +1692,8 @@ export default {
           [{ role: "user", content: repairPrompt }],
           1800,
           compactNewsSystemPrompt,
-          "low"
+          "low",
+          activeGroqModel
         );
         if (repairResponse.ok) {
           const repairPayload = await repairResponse.json();
