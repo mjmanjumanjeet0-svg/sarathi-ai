@@ -1003,10 +1003,11 @@ export default {
       }, 429);
     }
 
-    // Never search the web for a simple greeting, even if the browser toggle is on.
+    // Treat browser-supplied webSearch/internet flags as advisory only.
+    // They may be stale or left enabled from an earlier session. Search only
+    // for an explicit user request or a clearly time-sensitive/verification query.
     const wantsSearch = !isGreetingOnly &&
-      (body.webSearch === true || body.internet === true ||
-       explicitlyRequestsWebSearch(userText) || shouldSearchAutomatically(userText));
+      (explicitlyRequestsWebSearch(userText) || shouldSearchAutomatically(userText));
     let searchResults = [];
     let searchWarning = "";
 
