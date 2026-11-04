@@ -832,7 +832,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
       return title.length > 0 && url.protocol === "https:" && Boolean(url.hostname) && Number.isFinite(publishedAt);
     } catch { return false; }
   }).slice(0, 5);
-  if (!items.length) return "";
+  if (!items.length) { console.warn("News summary rejected: no dated items"); return ""; }
   const entries = new Map();
   let current = null;
   const hindiDigits = { "०":"0", "१":"1", "२":"2", "३":"3", "४":"4", "५":"5", "६":"6", "७":"7", "८":"8", "९":"9" };
@@ -865,15 +865,15 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
       entries.get(current).summary = cleanText(line).slice(0, 420);
     }
   }
-  if (entries.size !== items.length) return "";
+  if (entries.size !== items.length) { console.warn("News summary rejected: entry count", entries.size, items.length); return ""; }
   const lines = [];
   for (let index = 0; index < items.length; index++) {
     const entry = entries.get(index + 1);
-    if (!entry?.headline || !entry?.summary) return "";
+    if (!entry?.headline || !entry?.summary) { console.warn("News summary rejected: missing headline or summary", index + 1); return ""; }
     // Enforce the requested 2-sentence summary. If the model returns only one
     // sentence, the constrained repair runs instead of silently accepting it.
     const sentenceEnds = entry.summary.match(/[।!?]+|(?<![0-9])\.(?![0-9])/g) || [];
-    if (requireTwoSentences && (sentenceEnds.length < 2 || sentenceEnds.length > 3)) return "";
+    if (requireTwoSentences && (sentenceEnds.length < 2 || sentenceEnds.length > 3)) { console.warn("News summary rejected: sentence count", index + 1, sentenceEnds.length); return ""; }
     const sourceEvidence = cleanText((items[index]?.title || "") + " " + (items[index]?.snippet || ""));
     const generatedText = entry.headline + " " + entry.summary;
     // Agniveer policy reports apply the additional two-year engagement to
@@ -884,9 +884,9 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     if (isAgniveerExtension && !/(?:75\s*%|७५\s*(?:प्रतिशत|फीसदी)|शेष\s+७५|पचहत्तर\s*(?:प्रतिशत|फीसदी)?)/i.test(generatedText)) return "";
     // Reject accidental half-English/half-Devanagari words (e.g. "pऐse").
     // Such output must be repaired rather than shown as polished Hindi.
-    if (hasMixedScriptToken(generatedText)) return "";
+    if (hasMixedScriptToken(generatedText)) { console.warn("News summary rejected: mixed script", index + 1, generatedText); return ""; }
     // Reject figures or number-words absent from this exact article.
-    if (hasUnsupportedNumericClaim(generatedText, sourceEvidence)) return "";
+    if (hasUnsupportedNumericClaim(generatedText, sourceEvidence)) { console.warn("News summary rejected: unsupported number", index + 1, generatedText, sourceEvidence); return ""; }
     const claimsCause = /(?:के कारण|की वजह से|के चलते|के फलस्वरूप|का कारण बना|कारण बना|की बदौलत)/i.test(generatedText);
     const sourceExplicitlyStatesCause = /(?:because of|due to|caused by|attributed to|triggered by|owing to|as a result of|के कारण|की वजह से|के चलते|की बदौलत)/i.test(sourceEvidence);
     if (claimsCause && !sourceExplicitlyStatesCause) {
