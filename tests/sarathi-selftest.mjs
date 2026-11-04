@@ -114,6 +114,16 @@ globalThis.fetch = async (input, init = {}) => {
     if (groqMode === "timeout") throw new DOMException("The operation was aborted.", "AbortError");
     if (groqMode === "empty") return Response.json({ choices: [{ message: { content: null }, finish_reason: "stop" }] });
     const requestBody = JSON.parse(init.body || "{}");
+    if (groqMode === "news-two-sentence") return Response.json({ choices: [{ message: { content: [
+      "खबर 1: शुरुआती कारोबार में शेयर बाजार में तेजी",
+      "सार: शुरुआती कारोबार में सेंसेक्स और निफ्टी में बढ़त दर्ज हुई। उपलब्ध लेख-अंश में इस बढ़त के कारणों का विवरण नहीं दिया गया है।",
+      "खबर 2: सुप्रीम कोर्ट ने प्रमाणित हरित पटाखों की अनुमति दी",
+      "सार: सुप्रीम कोर्ट ने दिल्ली-एनसीआर में प्रमाणित हरित पटाखों की अनुमति दी है। यह अनुमति 7 और 8 नवंबर को तय समय के दौरान लागू होगी।",
+      "खबर 3: दिल्ली की वायु गुणवत्ता पर ताजा अपडेट",
+      "सार: दिल्ली की वायु गुणवत्ता पर खबर को अभी विकसित होती स्थिति बताया गया है। उपलब्ध लेख-अंश में वायु गुणवत्ता के स्तर या बदलाव का विवरण नहीं दिया गया है।",
+      "खबर 4: चक्रवात मुरासु को लेकर मौसम विभाग की चेतावनी",
+      "सार: मौसम विभाग ने चक्रवात मुरासु की स्थिति बंगाल की खाड़ी के पश्चिम-मध्य हिस्से में बताई है। इसके दक्षिण आंध्र प्रदेश तट पार करने का पूर्वानुमान 2 नवंबर की देर रात के लिए दिया गया है।"
+    ].join("\\n") } }] });
     if (groqMode === "malformed-news") return Response.json({ choices: [{ message: { content: "आज की खबरें जल्द पढ़ें।" } }] });
     if (groqMode === "malformed-news-secondary" && requestBody.model === "qwen/qwen3.8-27b") {
       return Response.json({ choices: [{ message: { content: [
@@ -630,6 +640,29 @@ await test("latest news query uses Exa news category and publication freshness f
     assert.ok(newsResponse.data.reply.includes("खबर 2:"), "headline digest should contain its second item");
   }
   assert.equal(newsResponse.data.searchUnavailable, undefined);
+});
+
+await test("exact requested five-news prompt accepts four distinct dated Hindi summaries with two sentences each", async () => {
+  groqMode = "news-two-sentence";
+  exaMode = "success";
+  try {
+    const r = await request("/api/chat", "POST", {
+      messages: [{ role: "user", content: "आज की भारत की 5 अलग-अलग ताज़ा खबरें बताओ। हर खबर का हिंदी में 2–3 वाक्यों में सार बताओ।" }]
+    }, token);
+    assert.equal(r.status, 200);
+    assert.equal(r.data.sources.length, 4, "only four distinct, dated source articles are available in this fixture");
+    assert.match(r.data.reply, /आज केवल 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं/);
+    assert.doesNotMatch(r.data.reply, /भरोसेमंद हिंदी सार तैयार नहीं हो सका/);
+    const summaries = r.data.reply.split("\\n").filter(line => /^सार: /.test(line));
+    assert.equal(summaries.length, 4, "every accepted article must have a Hindi summary");
+    for (const summary of summaries) {
+      const sentenceEnds = summary.match(/[।!?]+|(?<![0-9])\\.(?![0-9])/g) || [];
+      assert.equal(sentenceEnds.length, 2, "each summary must contain exactly two sentences");
+    }
+  } finally {
+    groqMode = "success";
+    exaMode = "success";
+  }
 });
 
 await test("a casual sentence containing आज does not automatically trigger Exa", async () => {
