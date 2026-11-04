@@ -4,7 +4,7 @@ import { readFile } from "node:fs/promises";
 // Load the exact Worker source without changing its Cloudflare module format.
 const source = await readFile(new URL("../worker.js", import.meta.url), "utf8");
 const appSource = await readFile(new URL("../app.js", import.meta.url), "utf8");
-assert.match(appSource, /Current-news replies already print each headline, publisher and timestamp/, "current-news replies must not render a duplicate source panel");
+assert.ok(appSource.includes('replyText.includes("खबर 1:")') && appSource.includes('replyText.includes("प्रकाशक:")') && appSource.includes('replyText.includes("प्रकाशित:")'), "inline Hindi news summaries must not render a duplicate source panel");
 assert.match(source, /Count only distinct, displayable articles with a real HTTPS publisher URL/, "current-news count must exclude invalid or undated results");
 assert.doesNotMatch(appSource, /detectAppLaunchCommand|getInstalledApps|openAppPackage|openPhone|SarathiNative\.openApp/, "web chat must not launch installed apps");
 assert.ok(!appSource.includes("extractVideoFrames") && !appSource.includes("videoFile") && !appSource.includes("वीडियो") && !appSource.includes("video/mp4") && !appSource.includes("mp4|webm|mov"), "video upload and frame-analysis code must be absent");
@@ -115,7 +115,7 @@ globalThis.fetch = async (input, init = {}) => {
     const body = JSON.parse(init.body || "{}");
     const last = body.messages?.at(-1)?.content || "";
     groqReply = last.includes("स्रोत 1:") && last.includes("शीर्षक:")
-      ? "1. उपलब्ध समाचार-अंश के अनुसार पहली खबर का संक्षिप्त विवरण। (प्रकाशक 1)\n2. उपलब्ध समाचार-अंश के अनुसार दूसरी खबर का संक्षिप्त विवरण। (प्रकाशक 2)"
+      ? "खबर 1: चक्रवात को लेकर मौसम विभाग की चेतावनी\nसार: मौसम विभाग ने चक्रवात के तट पार करने का पूर्वानुमान दिया है।\nखबर 2: हरित पटाखों पर सुप्रीम कोर्ट का फैसला\nसार: अदालत ने दिल्ली-एनसीआर में तय समय के दौरान प्रमाणित हरित पटाखों की अनुमति दी है।\nखबर 3: दिल्ली की हवा की गुणवत्ता\nसार: दिल्ली की वायु गुणवत्ता पर निगरानी रखी जा रही है।\nखबर 4: शेयर बाजार में शुरुआती तेजी\nसार: शुरुआती कारोबार में सेंसेक्स और निफ्टी ऊपर चले।"
       : last.includes("इतिहास") ? "1857 का विद्रोह ब्रिटिश शासन के विरुद्ध एक बड़ा विद्रोह था।" :
       last.includes("सोने") || last.includes("चांदी") ? "परीक्षण के लिए खोज परिणाम मिले। आज का भाव स्रोत और शुद्धता के अनुसार बदलता है।" :
       "यह सारथी का परीक्षण उत्तर है।";
@@ -552,12 +552,14 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.ok(newsHosts.includes("thehindu.com"));
   assert.ok(newsHosts.includes("ndtv.com"));
   assert.ok(newsHosts.includes("hindustantimes.com"), "a valid current article after the first eight candidates must be retained");
-  assert.equal(calls.slice(before).some(x => x.url.includes("api.groq.com")), false,
-    "current-news headlines must bypass generative summarization to prevent unsupported claims");
-  assert.ok(newsResponse.data.reply.includes("**खबर 1:**"), "news headline list should use stable visible numbering");
-  assert.match(newsResponse.data.reply, /मूल शीर्षक/);
+  assert.equal(calls.slice(before).some(x => x.url.includes("api.groq.com")), true,
+    "current-news requests must generate a Hindi summary from the retrieved source excerpts");
+  assert.ok(newsResponse.data.reply.includes("खबर 1:"), "news summary should use stable Hindi numbering");
+  assert.ok(newsResponse.data.reply.includes("सार:"), "each headline must include a short Hindi summary");
+  assert.doesNotMatch(newsResponse.data.reply, /Critical minerals processing scheme|Rupee gains|Agniveers|Air pollution/i,
+    "English source headlines must be translated into natural Hindi");
   const displayedHeadlines = newsResponse.data.reply.split("\n")
-    .filter(line => /^\*\*खबर [1-5]:\*\* /.test(line)).length;
+    .filter(line => /^खबर [1-5]: /.test(line)).length;
   assert.equal(displayedHeadlines, newsResponse.data.sources.length,
     "explicitly dated news requests must display every accepted headline, not a model-selected subset");
   assert.match(newsResponse.data.reply, /प्रकाशक:/);
