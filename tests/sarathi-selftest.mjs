@@ -551,8 +551,8 @@ await test("latest news query uses Exa news category and publication freshness f
     "multiple independent news publishers should be summarized using the existing AI provider");
   const newsGroqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
   const newsGroqBody = JSON.parse(newsGroqCall.init.body || "{}");
-  assert.match(newsGroqBody.messages?.[0]?.content || "", /स्रोत 1:/);
-  assert.match(newsGroqBody.messages?.[0]?.content || "", /उपलब्ध लेख-अंश/);
+  assert.match(newsGroqBody.messages?.at(-1)?.content || "", /स्रोत 1:/);
+  assert.match(newsGroqBody.messages?.at(-1)?.content || "", /उपलब्ध लेख-अंश/);
   assert.ok(newsResponse.data.reply.includes("1."), "news digest should be numbered");
 
   assert.equal(newsHosts.includes("bbc.com"), false, "five-day-old news must be filtered out");
