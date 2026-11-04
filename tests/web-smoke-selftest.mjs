@@ -110,6 +110,10 @@ assert.ok(scriptPaths.indexOf("voice.js") > scriptPaths.indexOf("app.js"), "Voic
 assert.match(html, /data-voice-action=["']start["']/, "Welcome voice action must be present");
 assert.match(app, /data-voice-action/, "Main app must wire the welcome voice action");
 assert.match(voice, /window\.SarathiVoice\.start = start/, "Voice start API must be exposed");
+assert.ok(voice.includes("let activeBrowserUtterance = null;"), "browser TTS must track the active utterance");
+assert.ok(voice.includes("if (activeBrowserUtterance !== utterance) return;"), "stale browser TTS callbacks must not restart microphone during a newer reply");
+assert.ok(voice.includes("activeBrowserUtterance = null;\\n    if (window.speechSynthesis) window.speechSynthesis.cancel();"), "stopping voice must invalidate pending browser TTS callbacks before cancellation");
+
 for (const selector of [".message-content", ".message-body", ".composer", ".send-btn", ".mic-btn", ".bottom-nav"]) {
   assert.ok(css.includes(selector), "Required layout styling missing: " + selector);
 }
