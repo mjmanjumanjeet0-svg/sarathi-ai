@@ -816,7 +816,12 @@ function formatCurrentNewsSummaryReply(rawReply, results) {
     const generatedText = entry.headline + " " + entry.summary;
     const claimsCause = /(?:के कारण|की वजह से|के चलते|के फलस्वरूप|का कारण बना|कारण बना|की बदौलत)/i.test(generatedText);
     const sourceExplicitlyStatesCause = /(?:because of|due to|caused by|attributed to|triggered by|owing to|as a result of|के कारण|की वजह से|के चलते|की बदौलत)/i.test(sourceEvidence);
-    if (claimsCause && !sourceExplicitlyStatesCause) return "";
+    if (claimsCause && !sourceExplicitlyStatesCause) {
+      // Do not discard the entire digest because one generated sentence adds
+      // an unsupported cause. Replace only that sentence with a transparent
+      // source limitation; keep the other independently valid news summaries.
+      entry.summary = "उपलब्ध स्रोत-अंश इस कारण की पुष्टि नहीं करता; इसलिए कारण के बारे में निष्कर्ष नहीं निकाला जा सकता।";
+    }
     let publisher = "प्रकाशक उपलब्ध नहीं";
     try { publisher = new URL(items[index].url).hostname.toLowerCase().replace(/^www\./i, ""); } catch {}
     lines.push("खबर " + (index + 1) + ": " + entry.headline + "\nसार: " + entry.summary +
