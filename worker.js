@@ -888,13 +888,13 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     // Validate each story independently. One malformed or weak summary must
     // not erase other stories whose Hindi summaries pass every source check.
     if (!entry?.headline || !entry?.summary) continue;
-    const sentenceEnds = entry.summary.match(/[।!?]+|(?<![0-9])\\.(?![0-9])/g) || [];
+    const sentenceEnds = entry.summary.match(/[।!?]+|(?<![0-9])\.(?![0-9])/g) || [];
     if (requireTwoSentences && (sentenceEnds.length < 2 || sentenceEnds.length > 3)) continue;
     const sourceEvidence = cleanText((items[index]?.title || "") + " " + (items[index]?.snippet || ""));
     const generatedText = entry.headline + " " + entry.summary;
     const isAgniveerExtension = /agniveer|अग्निवीर/i.test(sourceEvidence) &&
-      /(?:75\\s*%|७५\\s*प्रतिशत|remaining\\s+75|शेष\\s+७५)/i.test(sourceEvidence);
-    if (isAgniveerExtension && !/(?:75\\s*%|७५\\s*(?:प्रतिशत|फीसदी)|शेष\\s+७५|पचहत्तर\\s*(?:प्रतिशत|फीसदी)?)/i.test(generatedText)) continue;
+      /(?:75\s*%|७५\s*प्रतिशत|remaining\s+75|शेष\s+७५)/i.test(sourceEvidence);
+    if (isAgniveerExtension && !/(?:75\s*%|७५\s*(?:प्रतिशत|फीसदी)|शेष\s+७५|पचहत्तर\s*(?:प्रतिशत|फीसदी)?)/i.test(generatedText)) continue;
     if (hasMixedScriptToken(generatedText)) continue;
     if (hasUnsupportedNumericClaim(generatedText, sourceEvidence)) continue;
     const claimsCause = /(?:के कारण|की वजह से|के चलते|के फलस्वरूप|का कारण बना|कारण बना|की बदौलत)/i.test(generatedText);
@@ -903,9 +903,9 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
       entry.summary = "उपलब्ध स्रोत-अंश इस कारण की पुष्टि नहीं करता; इसलिए कारण के बारे में निष्कर्ष नहीं निकाला जा सकता।";
     }
     let publisher = "प्रकाशक उपलब्ध नहीं";
-    try { publisher = new URL(items[index].url).hostname.toLowerCase().replace(/^www\\./i, ""); } catch {}
-    lines.push("खबर " + (index + 1) + ": " + entry.headline + "\\nसार: " + entry.summary +
-      "\\nप्रकाशक: " + publisher + "\\nप्रकाशित: " + formatNewsPublishedAt(items[index].publishedAt));
+    try { publisher = new URL(items[index].url).hostname.toLowerCase().replace(/^www\./i, ""); } catch {}
+    lines.push("खबर " + (index + 1) + ": " + entry.headline + "\nसार: " + entry.summary +
+      "\nप्रकाशक: " + publisher + "\nप्रकाशित: " + formatNewsPublishedAt(items[index].publishedAt));
   }
   if (!lines.length) return "";
   let prefix;
@@ -917,7 +917,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
   } else {
     prefix = "आज की 5 अलग-अलग, तारीख़-जाँची खबरें:";
   }
-  return prefix + "\\n\\n" + lines.join("\\n\\n") + "\\n\\nध्यान दें: हर सार संबंधित समाचार के उपलब्ध लेख-अंश पर आधारित है.";
+  return prefix + "\n\n" + lines.join("\n\n") + "\n\nध्यान दें: हर सार संबंधित समाचार के उपलब्ध लेख-अंश पर आधारित है.";
 }
 function buildCurrentNewsHeadlineReply(results) {
   // Count only distinct, displayable articles with a real HTTPS publisher URL; never emit headline-only output.
