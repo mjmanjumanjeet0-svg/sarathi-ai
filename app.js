@@ -1037,8 +1037,11 @@ async function sendMessage(text) {
   // Never search merely because the web toggle was left on.
   // Search only when the user explicitly asks for the internet, or a current fact is needed.
   const isBasicLearningQuestion = /(?:विज्ञान की उत्पत्ति|मानव शरीर|कंकाल|के बारे में (?:बताओ|जानकारी)|की जानकारी दो|क्या है|कौन थे|कौन थे\?|जीवन मंत्र|गांधी जी|गौतम बुद्ध|बुध ग्रह|समझाओ|परिभाषा|इतिहास बताओ)/i.test(prompt);
-  const useWebSearch = !isSimpleGreeting(prompt) && !isStableGeneralKnowledge && !isTinyFollowUp &&
-    !isBasicArithmetic && (explicitlyRequestsWebSearch(prompt) || needsCurrentInfo || (state.webEnabled && !isBasicLearningQuestion));
+  // Search only when the user explicitly asks for it.
+  // The Worker separately detects clearly time-sensitive requests (news, weather, live rates, train status).
+  // A saved/left-on web toggle must never turn ordinary chat into an internet search.
+  const useWebSearch = !isSimpleGreeting(prompt) && !isStableGeneralKnowledge &&
+    !isTinyFollowUp && !isBasicArithmetic && explicitlyRequestsWebSearch(prompt);
 
   addMessage("user", prompt);
   setBusy(true);
