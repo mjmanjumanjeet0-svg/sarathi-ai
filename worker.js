@@ -817,7 +817,7 @@ function hasUnsupportedNumericClaim(generatedText, sourceEvidence) {
 
 function hasMixedScriptToken(text) {
   return String(text || "").split(/\s+/).some(token =>
-    /[A-Za-z]/.test(token) && /[\\u0900-\\u097F]/.test(token)
+    /[A-Za-z]/.test(token) && /[\u0900-\u097F]/.test(token)
   );
 }
 
@@ -879,7 +879,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     // all-Agniveers tenure headline when the source specifies that group.
     const isAgniveerExtension = /agniveer|अग्निवीर/i.test(sourceEvidence) &&
       /(?:75\s*%|७५\s*प्रतिशत|remaining\s+75|शेष\s+७५)/i.test(sourceEvidence);
-    if (isAgniveerExtension && !/(?:75\s*%|७५\s*प्रतिशत|शेष\s+७५)/i.test(generatedText)) return "";
+    if (isAgniveerExtension && !/(?:75\s*%|७५\s*(?:प्रतिशत|फीसदी)|शेष\s+७५|पचहत्तर\s*(?:प्रतिशत|फीसदी)?)/i.test(generatedText)) return "";
     // Reject accidental half-English/half-Devanagari words (e.g. "pऐse").
     // Such output must be repaired rather than shown as polished Hindi.
     if (hasMixedScriptToken(generatedText)) return "";
