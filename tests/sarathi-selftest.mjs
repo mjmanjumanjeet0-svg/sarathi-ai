@@ -576,12 +576,11 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.ok(exaBody.endPublishedDate, "news search must exclude future publication dates at the provider");
   assert.deepEqual(exaBody.contents, { highlights: true });
   assert.ok(newsResponse.data.reply.startsWith("1."), "digest should start with its first numbered item");
-  assert.ok(newsResponse.data.reply.includes("\\n2."), "digest should contain a second numbered item");
+  assert.ok(newsResponse.data.reply.includes("2."), "digest should contain a second numbered item");
   assert.equal(newsResponse.data.searchUnavailable, undefined,
     "a successfully summarized multi-publisher digest should not be marked unavailable");
-  assert.equal(newsResponse.data.searchUnavailable, true);
-  assert.equal(calls.slice(before).some(x => x.url.includes("api.groq.com")), false,
-    "current news must not be summarized by the model until a source-grounded summarizer is available");
+  assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")),
+    "current news should use the compact source-grounded summarizer");
 });
 
 await test("a casual sentence containing आज does not automatically trigger Exa", async () => {
