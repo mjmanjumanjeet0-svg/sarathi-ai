@@ -782,9 +782,10 @@ function formatCurrentNewsSummaryReply(rawReply, results) {
   if (!items.length) return "";
   const entries = new Map();
   let current = null;
+  const hindiDigits = { "०":"0", "१":"1", "२":"2", "३":"3", "४":"4", "५":"5", "६":"6", "७":"7", "८":"8", "९":"9" };
   for (const rawLine of String(rawReply || "").split(/\r?\n/)) {
-    const line = rawLine.replace(/\*\*/g, "").replace(/^[-•]\s*/, "").trim();
-    const headline = line.match(/^(?:खबर\s*)?(\d+)\s*[:：.)\-–—]\s*(.+)$/i) || line.match(/^खबर\s*(\d+)\s*[:：]\s*(.+)$/i);
+    const line = rawLine.replace(/\*\*/g, "").replace(/^[-•]\s*/, "").replace(/[०-९]/g, digit => hindiDigits[digit]).trim();
+    const headline = line.match(/^(?:(?:खबर|समाचार)\s*)?(\d+)\s*[:：.)\-–—]\s*(.+)$/i) || line.match(/^(?:खबर|समाचार)\s*(\d+)\s*[:：]\s*(.+)$/i);
     if (headline) {
       current = Number(headline[1]);
       if (current >= 1 && current <= items.length) {
@@ -813,7 +814,7 @@ function formatCurrentNewsSummaryReply(rawReply, results) {
     if (!entry?.headline || !entry?.summary) return "";
     const sourceEvidence = cleanText((items[index]?.title || "") + " " + (items[index]?.snippet || ""));
     const generatedText = entry.headline + " " + entry.summary;
-    const claimsCause = /(?:के कारण|की वजह से|के चलते|का कारण|कारण बना|कारण है|की वजह|की बदौलत|धूम्रपान|पराली|पटाखों? के कारण)/i.test(generatedText);
+    const claimsCause = /(?:के कारण|की वजह से|के चलते|के फलस्वरूप|का कारण बना|कारण बना|की बदौलत)/i.test(generatedText);
     const sourceExplicitlyStatesCause = /(?:because of|due to|caused by|attributed to|triggered by|owing to|as a result of|के कारण|की वजह से|के चलते|की बदौलत)/i.test(sourceEvidence);
     if (claimsCause && !sourceExplicitlyStatesCause) return "";
     let publisher = "प्रकाशक उपलब्ध नहीं";
@@ -1627,9 +1628,39 @@ export default {
       /\b(Updated:|By:|India News Live Updates|Published:|Read more|Breaking News)\b/i.test(rawReply);
     // The summary parser itself validates every source-summary pair. Avoid a
     // separate brittle heading counter that can reject harmless punctuation.
-    const formattedNewsReply = isCurrentNewsReply && !looksLikeRawEnglishArticle
+    let formattedNewsReply = isCurrentNewsReply && !looksLikeRawEnglishArticle
       ? formatCurrentNewsSummaryReply(rawReply, searchResults)
       : "";
+
+    // If the first completion used an unexpected layout, make one constrained
+    // repair attempt rather than silently discarding its Hindi summary. The
+    // retry still receives only the same dated search evidence and is validated
+    // by the exact same source-by-source parser before it can be shown.
+    if (isCurrentNewsReply && !formattedNewsReply && !looksLikeRawEnglishArticle && searchResults.length) {
+      try {
+        const repairPrompt = "नीचे दिए गए " + searchResults.length + " खोज परिणामों के लिए केवल हिंदी सार दो। ठीक " + searchResults.length + " प्रविष्टियाँ लिखो। हर प्रविष्टि में दो पंक्तियाँ अनिवार्य हैं: खबर 1: हिंदी शीर्षक और अगली पंक्ति सार: एक तथ्यात्मक वाक्य। इसी तरह क्रमांक जारी रखो। कोई बुलेट, बोल्ड, भूमिका, स्रोत या अतिरिक्त पंक्ति नहीं। केवल दिए गए स्रोत-अंश की जानकारी लिखो; जानकारी न हो तो अनुमान मत लगाओ।\\n\\n" + buildCompactNewsSourceContext(searchResults);
+        const repairResponse = await sendGroqRequest(
+          [{ role: "user", content: repairPrompt }],
+          1800,
+          compactNewsSystemPrompt,
+          "low"
+        );
+        if (repairResponse.ok) {
+          const repairPayload = await repairResponse.json();
+          const repairContent = repairPayload?.choices?.[0]?.message?.content;
+          const repairText = Array.isArray(repairContent)
+            ? repairContent.map(part => typeof part === "string" ? part : (part?.text || part?.content || "")).join("")
+            : repairContent;
+          if (typeof repairText === "string" && repairText.trim()) {
+            const repaired = formatCurrentNewsSummaryReply(repairText.trim(), searchResults);
+            if (repaired) formattedNewsReply = repaired;
+          }
+        }
+      } catch (error) {
+        console.warn("News summary repair attempt failed", error?.name || "unknown");
+      }
+    }
+
     const finalReply = isCurrentNewsReply
       ? (formattedNewsReply || (
           "AI सेवा ने खबरों का सही हिंदी सार तैयार नहीं किया। इसलिए नीचे केवल खोज में मिले प्रकाशकों के मूल शीर्षक दिए जा रहे हैं; इन्हें हिंदी सार या स्वतंत्र सत्यापन न मानें।\n\n" +
