@@ -48,6 +48,7 @@ const { default: worker } = await import(moduleUrl);
 const calls = [];
 let groqMode = "success";
 let groq413Count = 0;
+let groq429Count = 0;
 let exaMode = "success";
 let groqReply = "यह सारथी का परीक्षण उत्तर है।";
 globalThis.fetch = async (input, init = {}) => {
@@ -116,6 +117,8 @@ globalThis.fetch = async (input, init = {}) => {
     if (groqMode === "news-plain-summary") return Response.json({ choices: [{ message: { content: "**खबर 1 – ऊर्जा भंडारण योजना को मंजूरी**\nसरकार ने बड़े स्तर पर ऊर्जा भंडारण विकसित करने के लिए योजना को मंजूरी दी।\n**खबर 2 – शेयर बाजार में तेजी**\nसेंसेक्स और निफ्टी में कारोबार के दौरान बढ़त दर्ज हुई।\n**खबर 3 – दिल्ली की हवा की गुणवत्ता**\nदिल्ली में वायु गुणवत्ता खराब होने की खबर प्रकाशित हुई।\n**खबर 4 – अग्निवीर सेवा अवधि**\nअग्निवीरों की सेवा अवधि बढ़ाने के फैसले की खबर प्रकाशित हुई।" } }] });
     if (groqMode === "news-unsupported-cause") return Response.json({ choices: [{ message: { content: "खबर 1: ऊर्जा भंडारण योजना को मंजूरी\nसार: सरकार ने ऊर्जा भंडारण योजना को मंजूरी दी।\nखबर 2: शेयर बाजार में तेजी\nसार: सेंसेक्स और निफ्टी में बढ़त दर्ज हुई।\nखबर 3: दिल्ली की हवा की गुणवत्ता\nसार: दिवाली के कारण दिल्ली की हवा खराब हुई।\nखबर 4: अग्निवीर सेवा अवधि\nसार: अग्निवीरों की सेवा अवधि बढ़ाने की खबर प्रकाशित हुई।" } }] });
     if (groqMode === "429") return Response.json({ error: { message: "rate limited" } }, { status: 429 });
+    if (groqMode === "429-once" && groq429Count++ === 0) return Response.json({ error: { message: "token rate limited" } }, { status: 429 });
+    if (groqMode === "429-once") groqMode = "news-plain-summary";
     if (groqMode === "500") return Response.json({ error: { message: "provider down" } }, { status: 500 });
     if (groqMode === "413-always") return Response.json({ error: { message: "payload too large" } }, { status: 413 });
     if (groqMode === "413-once" && groq413Count++ === 0) return Response.json({ error: { message: "payload too large" } }, { status: 413 });
@@ -785,6 +788,29 @@ await test("current news keeps real source headlines when Groq returns an empty 
     assert.ok(r.data.sources.length > 1, "date-checked search results should be preserved");
     assert.match(r.data.searchWarning, /खाली उत्तर दिया/);
     assert.equal(calls.slice(before).filter(x => x.url.includes("api.groq.com")).length, 1);
+  } finally {
+    groqMode = "success";
+    exaMode = "success";
+  }
+});
+
+await test("current news retries one provider rate limit with compact source context", async () => {
+  groqMode = "429-once";
+  groq429Count = 0;
+  exaMode = "success";
+  const before = calls.length;
+  try {
+    const r = await request("/api/chat", "POST", {
+      messages: [{ role: "user", content: "आज की भारत की 5 अलग-अलग ताज़ा खबरें बताओ।" }]
+    }, token);
+    assert.equal(r.status, 200);
+    assert.equal(r.data.sources.length, 4);
+    assert.doesNotMatch(r.data.reply, /AI सेवा व्यस्त थी/);
+    const groqCalls = calls.slice(before).filter(x => x.url.includes("api.groq.com"));
+    assert.equal(groqCalls.length, 2, "one compact retry should follow the initial HTTP 429");
+    const retryBody = JSON.parse(groqCalls[1].init.body);
+    assert.equal(retryBody.max_tokens, 1000);
+    assert.match(retryBody.messages.at(-1).content, /लेख-अंश/);
   } finally {
     groqMode = "success";
     exaMode = "success";
