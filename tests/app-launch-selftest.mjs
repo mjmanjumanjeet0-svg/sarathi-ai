@@ -57,6 +57,11 @@ assert.ok(java.includes('notifyVoice("onError", "ऑनलाइन आवाज
 assert.ok(java.includes('notifyVoice("onError", "आवाज़ पहचान की अनुमति विंडो बंद कर दी गई। बातचीत बंद है।")'), "dismissing online speech consent must close the voice session");
 assert.ok(java.includes("voiceRequestInProgress") && java.includes("setVoiceRequestInProgress"), "voice requests must track reply state while Sarathi is foreground");
 assert.ok(java.includes('if (voiceConversationActive) notifyVoice("onSpeechComplete", "")'), "TTS setup/start failures must resume an active foreground voice conversation");
+const ttsStopStart = java.indexOf("@Override public void onStop(String utteranceId, boolean interrupted)");
+const ttsStopEnd = java.indexOf("@Override public void", ttsStopStart + 20);
+assert.ok(ttsStopStart >= 0 && ttsStopEnd > ttsStopStart, "TTS stop callback must exist");
+assert.equal(java.slice(ttsStopStart, ttsStopEnd).includes("onSpeechComplete"), false, "stopping an older queued TTS utterance must not restart microphone while a replacement reply is playing");
+
 assert.ok(java.includes("recognizerForSession") && java.includes("isCurrentRecognizer()"), "stale speech callbacks must not restart or destroy the current microphone session");
 const offlineErrorStart = java.indexOf("} else if (!useOnlineService");
 const offlineSilenceBranch = java.indexOf("error == SpeechRecognizer.ERROR_NO_MATCH", offlineErrorStart);
