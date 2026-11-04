@@ -1415,7 +1415,7 @@ export default {
       safeMessages[safeMessages.length - 1].content += searchContext.slice(0, 6500);
     }
 
-    const sendGroqRequest = async (requestMessages, maxTokens, systemContent = systemPrompt) => {
+    const sendGroqRequest = async (requestMessages, maxTokens, systemContent = systemPrompt, reasoningEffort = null) => {
       const controller = new AbortController();
       const timeout = setTimeout(() => controller.abort(), 30000);
       try {
@@ -1430,6 +1430,7 @@ export default {
             messages: [{ role: "system", content: systemContent }, ...requestMessages],
             temperature: 0.3,
             max_tokens: maxTokens,
+            ...(reasoningEffort ? { reasoning_effort: reasoningEffort, reasoning_format: "hidden" } : {}),
           }),
           signal: controller.signal,
         });
@@ -1445,7 +1446,14 @@ export default {
     try {
       if (isCurrentNewsReply) {
         const newsMessage = "सवाल: " + userText + "\n\nकेवल इन वास्तविक खोज परिणामों का हिंदी सार लिखो:\n\n" + buildCompactNewsSourceContext(searchResults);
-        groqResponse = await sendGroqRequest([{ role: "user", content: newsMessage }], 1100, compactNewsSystemPrompt);
+        // GPT-OSS defaults to medium reasoning. For a short news digest, use low
+        // reasoning so the completion budget is spent on the Hindi summary itself.
+        groqResponse = await sendGroqRequest(
+          [{ role: "user", content: newsMessage }],
+          2200,
+          compactNewsSystemPrompt,
+          "low"
+        );
       } else {
         groqResponse = await sendGroqRequest(safeMessages, 6000);
       }
@@ -1471,7 +1479,12 @@ export default {
             ? "तुम सारथी AI हो। समाचार के तथ्य केवल खोज परिणामों से लो। पूर्वानुमान को घटित घटना मत बताओ। हिंदी में सहज उत्तर दो और तथ्य मत गढ़ो।"
             : "तुम सारथी AI हो। उपयोगकर्ता की भाषा में स्पष्ट और सही उत्तर दो। तथ्य, तारीख, संख्या या स्रोत मत गढ़ो। समाचार में केवल शीर्षक और स्रोत-अंश से पुष्ट तथ्य लिखो। बाजार के सुबह के आँकड़ों को बंद हुआ या दिन का अंतिम स्तर मत लिखो; समापन स्तर तभी बताओ जब स्रोत स्पष्ट रूप से बताए। जानकारी अपर्याप्त हो तो साफ कहो।";
 
-        groqResponse = await sendGroqRequest(compactMessages, 1800, compactSystemPrompt);
+        groqResponse = await sendGroqRequest(
+          compactMessages,
+          2200,
+          compactSystemPrompt,
+          isCurrentNewsReply ? "low" : null
+        );
       }
       // If the compact retry is still rejected, preserve retrieved sources.
       if (groqResponse.status === 413 && searchResults.length) {
