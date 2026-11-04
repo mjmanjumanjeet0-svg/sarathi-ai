@@ -771,7 +771,19 @@ function isCurrentNewsQuery(text) {
 }
 
 function buildCurrentNewsHeadlineReply(results) {
-  const items = Array.isArray(results) ? results.slice(0, 5) : [];
+  // Count only distinct, displayable articles with a real HTTPS publisher URL
+  // and a parseable publication timestamp. This keeps the 1–5 headline count honest.
+  const items = dedupeNewsResults(results).filter(item => {
+    const title = cleanText(item?.title || "");
+    const publishedAt = Date.parse(item?.publishedAt || "");
+    try {
+      const url = new URL(item?.url || "");
+      return title.length > 0 && url.protocol === "https:" &&
+        Boolean(url.hostname) && Number.isFinite(publishedAt);
+    } catch {
+      return false;
+    }
+  }).slice(0, 5);
   if (!items.length) {
     return "आज की ताज़ा खबरों के लिए तारीख़-जाँचे हुए भरोसेमंद समाचार परिणाम नहीं मिले। कृपया कुछ देर बाद फिर कोशिश करें।";
   }
