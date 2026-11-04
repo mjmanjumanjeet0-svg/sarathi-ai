@@ -113,7 +113,7 @@ globalThis.fetch = async (input, init = {}) => {
     if (groqMode === "timeout") throw new DOMException("The operation was aborted.", "AbortError");
     if (groqMode === "empty") return Response.json({ choices: [{ message: { content: null }, finish_reason: "stop" }] });
     if (groqMode === "malformed-news") return Response.json({ choices: [{ message: { content: "आज की खबरें जल्द पढ़ें।" } }] });
-    if (groqMode === "news-plain-summary") return Response.json({ choices: [{ message: { content: "खबर 1: ऊर्जा भंडारण योजना को मंजूरी\nसरकार ने बड़े स्तर पर ऊर्जा भंडारण विकसित करने के लिए योजना को मंजूरी दी।\nखबर 2: शेयर बाजार में तेजी\nसेंसेक्स और निफ्टी में कारोबार के दौरान बढ़त दर्ज हुई।\nखबर 3: दिल्ली की हवा की गुणवत्ता\nदिल्ली में वायु गुणवत्ता खराब होने की खबर प्रकाशित हुई।\nखबर 4: अग्निवीर सेवा अवधि\nअग्निवीरों की सेवा अवधि बढ़ाने के फैसले की खबर प्रकाशित हुई।" } }] });
+    if (groqMode === "news-plain-summary") return Response.json({ choices: [{ message: { content: "**खबर 1: ऊर्जा भंडारण योजना को मंजूरी**\nसरकार ने बड़े स्तर पर ऊर्जा भंडारण विकसित करने के लिए योजना को मंजूरी दी।\n**खबर 2: शेयर बाजार में तेजी**\nसेंसेक्स और निफ्टी में कारोबार के दौरान बढ़त दर्ज हुई।\n**खबर 3: दिल्ली की हवा की गुणवत्ता**\nदिल्ली में वायु गुणवत्ता खराब होने की खबर प्रकाशित हुई।\n**खबर 4: अग्निवीर सेवा अवधि**\nअग्निवीरों की सेवा अवधि बढ़ाने के फैसले की खबर प्रकाशित हुई।" } }] });
     if (groqMode === "429") return Response.json({ error: { message: "rate limited" } }, { status: 429 });
     if (groqMode === "500") return Response.json({ error: { message: "provider down" } }, { status: 500 });
     if (groqMode === "413-always") return Response.json({ error: { message: "payload too large" } }, { status: 413 });
@@ -821,6 +821,7 @@ await test("current news preserves dated source headlines when Groq returns malf
     assert.ok(r.data.sources.length > 1, "date-checked search results should remain available");
     assert.match(r.data.reply, /प्रकाशकों के मूल शीर्षक/);
     assert.match(r.data.reply, /प्रकाशित:/);
+    assert.doesNotMatch(r.data.reply, /\\\\n\\\\n/, "fallback text must contain real line breaks, not visible escape sequences");
     assert.doesNotMatch(r.data.reply, /कृपया थोड़ी देर बाद फिर पूछें/);
     for (const source of r.data.sources) {
       assert.ok(r.data.reply.includes(new URL(source.url).hostname.toLowerCase().replace("www.", "")),
