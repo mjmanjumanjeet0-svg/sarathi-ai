@@ -1213,9 +1213,11 @@ function openSettings() {
   const settings = getSettings();
   const webButton = $("webToggle");
   if (webButton) {
-    webButton.classList.toggle("active", state.webEnabled);
-    webButton.setAttribute("aria-pressed", String(state.webEnabled));
-    webButton.textContent = state.webEnabled ? "🌐 इंटरनेट खोज: चालू" : "🌐 इंटरनेट खोज: बंद";
+    webButton.classList.remove("active");
+    webButton.setAttribute("aria-pressed", "false");
+    webButton.textContent = "🌐 इंटरनेट खोज: केवल अनुरोध पर";
+    webButton.disabled = true;
+    webButton.title = "सामान्य सवालों पर खोज नहीं होगी। स्पष्ट खोज अनुरोध या ताज़ा जानकारी पर ही खोज होगी।";
   }
 
   if ($("workerUrl")) $("workerUrl").value = settings.workerUrl || "";
@@ -1773,20 +1775,15 @@ function openCamera() {
 ======================================== */
 
 function toggleWebSearch() {
-  state.webEnabled = !state.webEnabled;
-  localStorage.setItem("sarathi_ai_web_search_v1", String(state.webEnabled));
-
   const button = $("webToggle");
-
   if (button) {
-    button.classList.toggle("active", state.webEnabled);
-    button.setAttribute("aria-pressed", String(state.webEnabled));
-    button.textContent = state.webEnabled
-      ? "🌐 इंटरनेट खोज: चालू"
-      : "🌐 इंटरनेट खोज: बंद";
+    button.classList.remove("active");
+    button.setAttribute("aria-pressed", "false");
+    button.textContent = "🌐 इंटरनेट खोज: केवल अनुरोध पर";
+    button.disabled = true;
+    button.title = "सामान्य सवालों पर खोज नहीं होगी। स्पष्ट खोज अनुरोध या ताज़ा जानकारी पर ही खोज होगी।";
   }
-
-  setStatus(state.webEnabled ? "इंटरनेट खोज चालू है।" : "इंटरनेट खोज बंद है।");
+  setStatus("सामान्य सवालों पर इंटरनेट खोज बंद है; खोज केवल स्पष्ट अनुरोध या ताज़ा जानकारी पर होगी।");
 }
 
 function resizeMessageInput() {
