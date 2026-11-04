@@ -1554,6 +1554,7 @@ export default {
 
     const isNewsQueryForPrompt = /(खबर|समाचार|news|breaking|latest|ताज़ा|ताजा)/i.test(userText);
     const isCurrentNewsReply = wantsSearch && isCurrentNewsQuery(userText);
+    const isPreciousMetalReply = wantsSearch && /(सोने|सोना|gold|चांदी|चाँदी|silver|bullion|22\\s*k|24\\s*k)/i.test(userText);
     const requireTwoSentenceNews = /2\s*(?:-|–|to)\s*3|दो\s*(?:से|या)\s*तीन|दो.?तीन\s*(?:वाक्य|sentence)/i.test(userText);
     const compactNewsSystemPrompt = "तुम सारथी AI हो। पूरा उत्तर सहज देवनागरी हिंदी में दो। हर खबर का हिंदी शीर्षक और 2 छोटे वाक्यों का सार केवल उसी खबर के दिए गए शीर्षक तथा लेख-अंश से लिखो; यदि स्रोत में पर्याप्त तथ्य न हों तो कम शब्दों में स्पष्ट सीमा बताओ। शीर्षक का अर्थ बदले बिना अनुवाद करो। व्यक्ति, राज्य, शहर, संस्था और योजना के नाम स्रोत के अनुसार सही लिखो; नाम का अनुमान, गलत लिप्यंतरण या किसी दूसरे व्यक्ति का नाम मत लिखो। सार में केवल वही तथ्य दो जो लेख-अंश में साफ मौजूद हों। स्रोत में न दिया कारण, जिम्मेदार व्यक्ति/समूह, स्थान, संख्या, असर, नीति की स्थिति या निर्णय मत जोड़ो। राजनीतिक आरोप को स्पष्ट रूप से संबंधित व्यक्ति का आरोप बताओ, सिद्ध तथ्य की तरह नहीं। खासकर वायु प्रदूषण, दुर्घटना, बीमारी, कीमतों या सरकारी फैसलों के कारण/जिम्मेदारी का अनुमान बिल्कुल मत लगाओ। किसी घटना को किसी कारण से जोड़ने के लिए स्रोत में वही कारण स्पष्ट रूप से लिखा होना चाहिए। प्रस्ताव, सिफारिश, घोषणा, मंजूरी, लागू फैसला और संभावना अलग-अलग बातें हैं—स्रोत जिस स्तर की पुष्टि करे, वही लिखो; Cabinet approves का अर्थ मंजूरी मिली है, जबकि proposal/recommendation का अर्थ प्रस्ताव/सिफारिश है। सरकारी नीति/सेवा-नियम की खबर में पात्र समूह, प्रतिशत, अवधि और आगे की चयन-शर्तें ठीक-ठीक बताओ; किसी सीमित समूह के फैसले को सभी पर लागू मत बताओ और चयन को स्वतः नियुक्ति मत कहो। किसी एक स्रोत के तथ्य दूसरे स्रोत की खबर में मत मिलाओ। एक ही घटना की दो रिपोर्टों को मिलाकर एक खबर बनाओ, अलग घटनाओं को कभी मत मिलाओ। उपलब्ध अलग-अलग खबरों की संख्या के अनुसार क्रमांक दो; अंग्रेज़ी शीर्षक ज्यों-का-त्यों मत लिखो। केवल शीर्षक हो और विवरण न हो तो उससे आगे की घटना/कारण की जानकारी मत गढ़ो। पूर्वानुमान को घटित घटना मत बताओ और बाजार के शुरुआती आँकड़ों को बंद भाव मत बताओ। प्रकाशक और प्रकाशित समय खुद मत लिखो; वे कोड से जोड़े जाएँगे। हर खबर के लिए ठीक प्रारूप रखो: खबर 1: हिंदी शीर्षक; अगली पंक्ति: सार: 2 छोटे, स्रोत-आधारित वाक्य। कोई अलग स्रोत-सूची या अतिरिक्त भूमिका मत बनाओ।";
     let groqResponse;
@@ -1609,6 +1610,41 @@ export default {
             if (fallbackResponse.ok) activeGroqModel = GROQ_FALLBACK_MODEL;
           } catch (error) {
             console.warn("Secondary news model retry failed", error?.name || "unknown");
+          }
+        }
+      }
+
+      // Gold/silver questions also need a compact, source-only retry when the
+      // normal chat context hits Groq's rate limit. Try the secondary model
+      // before falling back to headlines, so the user can still get a Hindi
+      // rate summary without inventing any price or unit.
+      if (groqResponse?.status === 429 && isPreciousMetalReply && searchResults.length) {
+        const metalContext = searchResults.slice(0, 6).map((item, index) =>
+          "स्रोत " + (index + 1) + ": " + cleanText(item.title || "").slice(0, 180) +
+          "\\nप्रकाशक: " + cleanText(item.publisher || "").slice(0, 80) +
+          "\\nप्रकाशित/अपडेट: " + cleanText(item.publishedAt || "समय उपलब्ध नहीं") +
+          "\\nमूल अंश: " + cleanText(item.snippet || "").slice(0, 700)
+        ).join("\\n\\n");
+        const metalSystemPrompt = "तुम सारथी AI हो। केवल दिए गए स्रोत-अंश से सोना-चाँदी के भाव का उत्तर सहज हिंदी में दो। तारीख और स्रोत बताओ। 22K, 24K और 999 चाँदी अलग रखो। भाव, इकाई, शहर या अपडेट समय स्रोत में स्पष्ट न हो तो उसे मत गढ़ो; स्पष्ट लिखो कि उपलब्ध नहीं। खुदरा भाव, IBJA और MCX को न मिलाओ। अलग स्रोतों के भाव अलग हों तो अलग-अलग बताओ।";
+        const metalRetryMessages = [{ role: "user", content: "सवाल: " + userText + "\\nनीचे दिए स्रोतों के आधार पर भाव और तारीख बताओ। संख्या/इकाई स्पष्ट न हो तो साफ कहो कि उपलब्ध नहीं। कोई अनुमान नहीं।\\n\\n" + metalContext }];
+        try {
+          groqResponse = await sendGroqRequest(metalRetryMessages, 1400, metalSystemPrompt);
+        } catch (error) {
+          console.warn("Compact precious-metal retry failed", error?.name || "unknown");
+        }
+        if (groqResponse?.status === 429) {
+          try {
+            const fallbackResponse = await sendGroqRequest(
+              metalRetryMessages,
+              1400,
+              metalSystemPrompt,
+              null,
+              GROQ_FALLBACK_MODEL
+            );
+            groqResponse = fallbackResponse;
+            if (fallbackResponse.ok) activeGroqModel = GROQ_FALLBACK_MODEL;
+          } catch (error) {
+            console.warn("Secondary precious-metal retry failed", error?.name || "unknown");
           }
         }
       }
