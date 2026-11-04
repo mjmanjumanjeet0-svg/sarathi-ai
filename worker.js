@@ -869,7 +869,8 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     const sourceEvidence = cleanText((items[index]?.title || "") + " " + (items[index]?.snippet || ""));
     const generatedText = entry.headline + " " + entry.summary;
     // Reject figures or number-words absent from this exact article.
-    if (hasUnsupportedNumericClaim(generatedText, sourceEvidence)) return "";\n    const claimsCause = /(?:के कारण|की वजह से|के चलते|के फलस्वरूप|का कारण बना|कारण बना|की बदौलत)/i.test(generatedText);
+    if (hasUnsupportedNumericClaim(generatedText, sourceEvidence)) return "";
+    const claimsCause = /(?:के कारण|की वजह से|के चलते|के फलस्वरूप|का कारण बना|कारण बना|की बदौलत)/i.test(generatedText);
     const sourceExplicitlyStatesCause = /(?:because of|due to|caused by|attributed to|triggered by|owing to|as a result of|के कारण|की वजह से|के चलते|की बदौलत)/i.test(sourceEvidence);
     if (claimsCause && !sourceExplicitlyStatesCause) {
       // Do not discard the entire digest because one generated sentence adds
