@@ -61,6 +61,11 @@ const ttsStopStart = java.indexOf("@Override public void onStop(String utterance
 const ttsStopEnd = java.indexOf("\n                        }", ttsStopStart);
 assert.ok(ttsStopStart >= 0 && ttsStopEnd > ttsStopStart, "TTS stop callback must exist");
 assert.equal(java.slice(ttsStopStart, ttsStopEnd).includes("onSpeechComplete"), false, "stopping an older queued TTS utterance must not restart microphone while a replacement reply is playing");
+assert.ok(java.includes("private long speechUtteranceSequence = 0;") && java.includes("private String activeSpeechUtteranceId = null;"), "TTS utterances must have unique active identities");
+assert.ok(java.includes('final String currentUtteranceId = "sarathi-local-voice-" + (++speechUtteranceSequence);'), "each TTS reply must receive a unique utterance ID");
+assert.ok(java.includes("if (!currentUtteranceId.equals(activeSpeechUtteranceId)) return;"), "stale TTS completion/error callbacks must not resume the microphone for a newer reply");
+assert.ok(java.includes("activeSpeechUtteranceId = null;") && java.includes("activeSpeechUtteranceId = null;\n                if (textToSpeech != null) textToSpeech.stop();"), "stopping speech must invalidate any pending completion callback");
+
 
 assert.ok(java.includes("recognizerForSession") && java.includes("isCurrentRecognizer()"), "stale speech callbacks must not restart or destroy the current microphone session");
 const offlineErrorStart = java.indexOf("} else if (!useOnlineService");
