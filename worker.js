@@ -1085,21 +1085,21 @@ function buildSearchContext(results, query = "") {
       // Match Hindi and English city names, including "New Delhi" when the
       // user simply asks for Delhi. Keep each publisher's original price row intact.
       const bullionCityMatchers = [
-        { key: "delhi", label: "दिल्ली", query: /\\b(?:new\\s+)?delhi\\b|नई दिल्ली|दिल्ली/i, row: /\\b(?:new\\s+)?delhi\\b|नई दिल्ली|दिल्ली/i },
-        { key: "patna", label: "पटना", query: /\\bpatna\\b|पटना/i, row: /\\bpatna\\b|पटना/i },
-        { key: "mumbai", label: "मुंबई", query: /\\bmumbai\\b|मुंबई|मुम्बई/i, row: /\\bmumbai\\b|मुंबई|मुम्बई/i },
-        { key: "kolkata", label: "कोलकाता", query: /\\bkolkata\\b|कोलकाता|कलकत्ता/i, row: /\\bkolkata\\b|कोलकाता|कलकत्ता/i },
-        { key: "chennai", label: "चेन्नई", query: /\\bchennai\\b|चेन्नई|मद्रास/i, row: /\\bchennai\\b|चेन्नई|मद्रास/i },
-        { key: "bengaluru", label: "बेंगलुरु", query: /\\b(?:bengaluru|bangalore)\\b|बेंगलुरु|बंगलौर/i, row: /\\b(?:bengaluru|bangalore)\\b|बेंगलुरु|बंगलौर/i },
-        { key: "hyderabad", label: "हैदराबाद", query: /\\bhyderabad\\b|हैदराबाद/i, row: /\\bhyderabad\\b|हैदराबाद/i },
-        { key: "ahmedabad", label: "अहमदाबाद", query: /\\bahmedabad\\b|अहमदाबाद/i, row: /\\bahmedabad\\b|अहमदाबाद/i },
-        { key: "jaipur", label: "जयपुर", query: /\\bjaipur\\b|जयपुर/i, row: /\\bjaipur\\b|जयपुर/i },
-        { key: "lucknow", label: "लखनऊ", query: /\\blucknow\\b|लखनऊ/i, row: /\\blucknow\\b|लखनऊ/i },
-        { key: "kanpur", label: "कानपुर", query: /\\bkanpur\\b|कानपुर/i, row: /\\bkanpur\\b|कानपुर/i },
-        { key: "varanasi", label: "वाराणसी", query: /\\bvaranasi\\b|वाराणसी|बनारस/i, row: /\\bvaranasi\\b|वाराणसी|बनारस/i },
-        { key: "siwan", label: "सिवान", query: /\\bsiwan\\b|सिवान/i, row: /\\bsiwan\\b|सिवान/i },
-        { key: "gaya", label: "गया", query: /\\bgaya\\b|गया/i, row: /\\bgaya\\b|गया/i },
-        { key: "ranchi", label: "रांची", query: /\\branchi\\b|रांची/i, row: /\\branchi\\b|रांची/i }
+        { key: "delhi", label: "दिल्ली", query: /\b(?:new\s+)?delhi\b|नई दिल्ली|दिल्ली/i, row: /\b(?:new\s+)?delhi\b|नई दिल्ली|दिल्ली/i },
+        { key: "patna", label: "पटना", query: /\bpatna\b|पटना/i, row: /\bpatna\b|पटना/i },
+        { key: "mumbai", label: "मुंबई", query: /\bmumbai\b|मुंबई|मुम्बई/i, row: /\bmumbai\b|मुंबई|मुम्बई/i },
+        { key: "kolkata", label: "कोलकाता", query: /\bkolkata\b|कोलकाता|कलकत्ता/i, row: /\bkolkata\b|कोलकाता|कलकत्ता/i },
+        { key: "chennai", label: "चेन्नई", query: /\bchennai\b|चेन्नई|मद्रास/i, row: /\bchennai\b|चेन्नई|मद्रास/i },
+        { key: "bengaluru", label: "बेंगलुरु", query: /\b(?:bengaluru|bangalore)\b|बेंगलुरु|बंगलौर/i, row: /\b(?:bengaluru|bangalore)\b|बेंगलुरु|बंगलौर/i },
+        { key: "hyderabad", label: "हैदराबाद", query: /\bhyderabad\b|हैदराबाद/i, row: /\bhyderabad\b|हैदराबाद/i },
+        { key: "ahmedabad", label: "अहमदाबाद", query: /\bahmedabad\b|अहमदाबाद/i, row: /\bahmedabad\b|अहमदाबाद/i },
+        { key: "jaipur", label: "जयपुर", query: /\bjaipur\b|जयपुर/i, row: /\bjaipur\b|जयपुर/i },
+        { key: "lucknow", label: "लखनऊ", query: /\blucknow\b|लखनऊ/i, row: /\blucknow\b|लखनऊ/i },
+        { key: "kanpur", label: "कानपुर", query: /\bkanpur\b|कानपुर/i, row: /\bkanpur\b|कानपुर/i },
+        { key: "varanasi", label: "वाराणसी", query: /\bvaranasi\b|वाराणसी|बनारस/i, row: /\bvaranasi\b|वाराणसी|बनारस/i },
+        { key: "siwan", label: "सिवान", query: /\bsiwan\b|सिवान/i, row: /\bsiwan\b|सिवान/i },
+        { key: "gaya", label: "गया", query: /\bgaya\b|गया/i, row: /\bgaya\b|गया/i },
+        { key: "ranchi", label: "रांची", query: /\branchi\b|रांची/i, row: /\branchi\b|रांची/i }
       ];
       const requestedCity = isPreciousMetalQuery
         ? bullionCityMatchers.find(city => city.query.test(query))
