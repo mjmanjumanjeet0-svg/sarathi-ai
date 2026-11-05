@@ -1015,12 +1015,22 @@ function hasUnsupportedCertaintyClaim(generatedText, sourceEvidence) {
   return /(?:निर्णय\s*(?:ले लिया|कर लिया)|फैसला\s*(?:ले लिया|कर लिया)|मंजूरी\s*(?:दे दी|मिल गई)|घोषणा\s*(?:कर दी|की)|तय\s*कर दिया|लागू\s*कर दिया|शुरू\s*कर दिया|कराने का निर्णय|करने का फैसला|(?:सरकार|मंत्रालय|प्रशासन).{0,45}योजना\s*(?:बना|तैयार|घोषित)|योजना\s*(?:बना ली|तैयार कर ली|घोषित कर दी)|कराएगा|कराएगी|करेंगे|करेंगी|होगा|होगी|has decided|decided to|approved|gave approval|announced|will (?:conduct|carry out|implement|launch)|is set to (?:conduct|carry out|implement|launch))/i.test(generated);
 }
 
-function hasUnsupportedNewsHeadlineMix(headline, sourceTitle) {
+function hasUnsupportedNewsHeadlineMix(headline, sourceTitle, sourceSnippet = "") {
   // Each clause in a generated headline must be grounded in the article title.
   const stop = new Set(["आज","अब","यह","इस","की","का","के","से","को","पर","में","और","एक","लिए","बाद","साथ","कहा","कहता","कहती","है","हैं","था","थी","थे","the","and","for","from","with","after","over","says","said","has","have","was","were","are","is","in","on","at","to","of","a","an","as","by"]);
   const tokens = value => new Set(cleanText(value || "").toLocaleLowerCase("hi-IN")
     .replace(/[^\p{L}\p{N}\p{M}]+/gu, " ").split(/\s+/)
     .filter(token => token.length >= 3 && !stop.has(token)));
+  const sourceEvidence = String(sourceTitle || "") + " " + String(sourceSnippet || "");
+  const topicChecks = [
+    { generated: /(?:शेयर बाजार|सेंसेक्स|निफ्टी|stock market|sensex|nifty)/i, source: /(?:शेयर बाजार|सेंसेक्स|निफ्टी|stock market|sensex|nifty)/i },
+    { generated: /(?:वायु गुणवत्ता|प्रदूषण|air quality|AQI)/i, source: /(?:वायु गुणवत्ता|प्रदूषण|air quality|AQI)/i },
+    { generated: /(?:हरित पटाखे|green crackers)/i, source: /(?:हरित पटाखे|green crackers)/i },
+    { generated: /(?:चक्रवात|cyclone|मुरासु|murasu)/i, source: /(?:चक्रवात|cyclone|मुरासु|murasu)/i },
+    { generated: /(?:ऊर्जा भंडारण|energy storage|VGF)/i, source: /(?:ऊर्जा भंडारण|energy storage|VGF)/i },
+    { generated: /(?:अग्निवीर|agniveer)/i, source: /(?:अग्निवीर|agniveer)/i }
+  ];
+  if (topicChecks.some(check => check.generated.test(headline) && !check.source.test(sourceEvidence))) return true;
   const sourceTokens = tokens(sourceTitle);
   if (!sourceTokens.size) return true;
   const clauses = String(headline || "").split(/[;；|।]|\s+और\s+/i).map(part => part.trim()).filter(Boolean);
@@ -1091,7 +1101,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     // Validate each story independently. One malformed or weak summary must
     // not erase other stories whose Hindi summaries pass every source check.
     if (!entry?.headline || !entry?.summary) continue;
-    if (hasUnsupportedNewsHeadlineMix(entry.headline, items[index]?.title || "")) continue;
+    if (hasUnsupportedNewsHeadlineMix(entry.headline, items[index]?.title || "", items[index]?.snippet || "")) continue;
     if (hasIncorrectOverallAqiCategory(entry.headline + " " + entry.summary)) continue;
     const sentenceEnds = entry.summary.match(/[।!?]+|(?<![0-9])\.(?![0-9])/g) || [];
     if (requireTwoSentences && (sentenceEnds.length < 2 || sentenceEnds.length > 3)) continue;
