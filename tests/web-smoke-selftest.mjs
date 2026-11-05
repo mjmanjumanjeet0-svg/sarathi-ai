@@ -19,9 +19,9 @@ const metalResults = [
 assert.deepEqual(filterRelevantSearchResults("gold 22K and silver price", metalResults).map(item => item.title), ["24K gold rate today", "Silver price today"], "combined gold and silver searches must retain both metal result types and exclude unrelated results");
 
 const numericGuardStart = worker.indexOf("function hasUnsupportedNumericClaim(generatedText, sourceEvidence) {");
-const numericGuardEnd = worker.indexOf("\\n}\\n", numericGuardStart);
+const numericGuardEnd = worker.indexOf("\n}\n", numericGuardStart);
 assert.ok(numericGuardStart >= 0 && numericGuardEnd > numericGuardStart, "news numeric-claim guard must exist");
-const hasUnsupportedNumericClaim = new Function(worker.slice(numericGuardStart, numericGuardEnd + 3) + "\\nreturn hasUnsupportedNumericClaim;")();
+const hasUnsupportedNumericClaim = new Function(worker.slice(numericGuardStart, numericGuardEnd + 3) + "\nreturn hasUnsupportedNumericClaim;")();
 assert.equal(hasUnsupportedNumericClaim("यह एक महत्वपूर्ण फैसला है।", "Supreme Court decision on green crackers"), false, "the common Hindi article 'एक' must not be mistaken for an unsupported numeric claim");
 assert.equal(hasUnsupportedNumericClaim("This is one important decision.", "Supreme Court decision on green crackers"), false, "the common English article 'one' must not be mistaken for an unsupported numeric claim");
 assert.equal(hasUnsupportedNumericClaim("अदालत ने दो व्यक्तियों को दोषी ठहराया।", "The court convicted people in the case"), true, "explicit Hindi number words must still be checked when they add an unsupported count");
