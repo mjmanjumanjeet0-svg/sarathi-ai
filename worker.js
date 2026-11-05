@@ -1096,7 +1096,7 @@ function hasUnsupportedNumericClaim(generatedText, sourceEvidence) {
   const normalize = value => String(value || "")
     .replace(/[०-९]/g, digit => String("०१२३४५६७८९".indexOf(digit)))
     .replace(/\b(seventy-five|zero|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|lakh|crore)\b/gi, word => englishNumbers[word.toLowerCase()] || word)
-    .replace(/शून्य|दो|तीन|चार|पाँच|पांच|छह|छः|सात|आठ|नौ|दस|ग्यारह|बारह|पंद्रह|बीस|पच्चीस|तीस|चालीस|पचास|साठ|सत्तर|पचहत्तर|अस्सी|नब्बे|सौ|हजार|लाख|करोड़/g, word => hindiNumbers[word] || word);
+    .replace(/(?<![\\p{L}\\p{M}])(?:शून्य|दो|तीन|चार|पाँच|पांच|छह|छः|सात|आठ|नौ|दस|ग्यारह|बारह|पंद्रह|बीस|पच्चीस|तीस|चालीस|पचास|साठ|सत्तर|पचहत्तर|अस्सी|नब्बे|सौ|हजार|लाख|करोड़)(?![\\p{L}\\p{M}])/gu, word => hindiNumbers[word] || word);
   // Treat thousands separators consistently: 14,500 and 14500 are the same value.
   const numericTokens = value => normalize(value)
     .replace(/(?<=\d),(?=\d{3}(?:\D|$))/g, "")
@@ -1227,7 +1227,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     if (requireTwoSentences && (sentenceEnds.length < 2 || sentenceEnds.length > 3)) { rejectCounts.sentenceCount++; continue; }
     const relatedEvidence = (Array.isArray(items[index]?.corroboratingSources) ? items[index].corroboratingSources : [])
       .map(source => cleanText((source?.title || "") + " " + (source?.snippet || ""))).join(" ");
-    const sourceEvidence = cleanText((items[index]?.title || "") + " " + (items[index]?.snippet || "") + " " + (items[index]?.articleEvidence || "") + " " + relatedEvidence);
+    const sourceEvidence = cleanText((items[index]?.title || "") + " " + (items[index]?.snippet || "") + " " + (items[index]?.articleEvidence || "") + " " + (items[index]?.publishedAt || "") + " " + relatedEvidence);
     const generatedText = entry.headline + " " + entry.summary;
     const isAgniveerExtension = /agniveer|अग्निवीर/i.test(sourceEvidence) &&
       /(?:75\s*%|७५\s*प्रतिशत|remaining\s+75|शेष\s+७५)/i.test(sourceEvidence);
