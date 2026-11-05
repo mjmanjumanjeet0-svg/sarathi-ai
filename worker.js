@@ -692,11 +692,11 @@ function isIndiaFocusedNewsItem(item) {
   // Require an India-specific headline signal whenever possible. A foreign
   // story must not pass just because its body mentions Indian fans or readers.
   const titleIndiaSignals = [
-    /\\bindia\\b|\\bindian\\b|भारत|भारतीय/,
     /\bindia\b|\bindian\b|भारत|भारतीय/,
     /दिल्ली|नई दिल्ली|दिल्ली[- ]?ncr|delhi(?:[- ]?ncr)?|मथुरा|mathura|गोरखपुर|gorakhpur|अयोध्या|ayodhya|वाराणसी|varanasi|प्रयागराज|prayagraj|कानपुर|kanpur|आगरा|agra|नोएडा|noida|गुरुग्राम|gurugram|मुंबई|mumbai|बेंगलुरु|बंगलौर|bengaluru|bangalore|चेन्नई|chennai|कोलकाता|kolkata|हैदराबाद|hyderabad|अहमदाबाद|ahmedabad|पुणे|pune|लखनऊ|lucknow|पटना|patna|जयपुर|jaipur|भोपाल|bhopal|चंडीगढ़|chandigarh|गुवाहाटी|guwahati|श्रीनगर|srinagar|सिवान|siwan|बिहार|झारखंड|उत्तर प्रदेश|मध्य प्रदेश|राजस्थान|महाराष्ट्र|पश्चिम बंगाल|ओडिशा|असम|केरल|तमिलनाडु|कर्नाटक/,
-    /लोकसभा|राज्यसभा|संसद|सुप्रीम कोर्ट ऑफ इंडिया|सर्वोच्च न्यायालय|चुनाव आयोग|निर्वाचन आयोग|केंद्र सरकार|भारत सरकार|कैबिनेट|अग्निवीर|imd|isro|इसरो|चंद्रयान|navic/,
+    /sensex|nifty|बीएसई|एनएसई|रुपया|reserve bank of india|rbi|भारतीय रिजर्व बैंक/,
     /लोकसभा|राज्यसभा|संसद|सुप्रीम कोर्ट ऑफ इंडिया|सर्वोच्च न्यायालय|चुनाव आयोग|निर्वाचन आयोग|केंद्र सरकार|भारत सरकार|कैबिनेट|अग्निवीर|imd|isro|इसरो|चंद्रयान|navic|मुख्यमंत्री|राज्यपाल|विधानसभा|राज्य सरकार|भारतीय जनता पार्टी|भाजपा|bjp|aam aadmi party|आम आदमी पार्टी|dmk|द्रमुक|trinamool congress|तृणमूल कांग्रेस|shiv sena|शिवसेना|samajwadi party|समाजवादी पार्टी|rjd|राजद|jdu|जदयू|indian national congress/,
+    /indian army|indian navy|indian air force|भारतीय सेना|भारतीय नौसेना|भारतीय वायुसेना/
   ];
   if (titleIndiaSignals.some(pattern => pattern.test(headline))) return true;
 
@@ -704,13 +704,12 @@ function isIndiaFocusedNewsItem(item) {
   // place or Indian public institution in the article excerpt. Generic "India"
   // mentions in unrelated international coverage are not sufficient.
   const snippetIndiaSignals = [
-    /दिल्ली|नई दिल्ली|delhi|जंतर.?मंतर|jant(?:ar)?\\s*mant(?:ar)?/,
-    /मुंबई|mumbai|बेंगलुरु|bengaluru|bangalore|चेन्नई|chennai|कोलकाता|kolkata|हैदराबाद|hyderabad|अहमदाबाद|ahmedabad|पुणे|pune|लखनऊ|lucknow|पटना|patna|जयपुर|jaipur|भोपाल|bhopal|चंडीगढ़|chandigarh|गुवाहाटी|guwahati|श्रीनगर|srinagar|बिहार|bihar/,
-    /supreme court of india|सुप्रीम कोर्ट ऑफ इंडिया|सर्वोच्च न्यायालय|लोकसभा|राज्यसभा|भारतीय संसद|election commission of india|चुनाव आयोग|भारत सरकार|केंद्र सरकार|agniveer|अग्निवीर|sensex|nifty|rbi|isro|इसरो|imd/
+    /दिल्ली|नई दिल्ली|delhi|जंतर.?मंतर|jant(?:ar)?\s*mant(?:ar)?/,
     /मथुरा|mathura|गोरखपुर|gorakhpur|अयोध्या|ayodhya|वाराणसी|varanasi|प्रयागराज|prayagraj|कानपुर|kanpur|आगरा|agra|नोएडा|noida|गुरुग्राम|gurugram|मुंबई|mumbai|बेंगलुरु|bengaluru|bangalore|चेन्नई|chennai|कोलकाता|kolkata|हैदराबाद|hyderabad|अहमदाबाद|ahmedabad|पुणे|pune|लखनऊ|lucknow|पटना|patna|जयपुर|jaipur|भोपाल|bhopal|चंडीगढ़|chandigarh|गुवाहाटी|guwahati|श्रीनगर|srinagar|बिहार|bihar|झारखंड|jharkhand|उत्तर प्रदेश|uttar pradesh|मध्य प्रदेश|madhya pradesh|राजस्थान|rajasthan|महाराष्ट्र|maharashtra|पश्चिम बंगाल|west bengal|ओडिशा|odisha|असम|assam|केरल|kerala|तमिलनाडु|tamil nadu|कर्नाटक|karnataka/,
     /supreme court of india|सुप्रीम कोर्ट ऑफ इंडिया|सर्वोच्च न्यायालय|लोकसभा|राज्यसभा|भारतीय संसद|election commission of india|चुनाव आयोग|भारत सरकार|केंद्र सरकार|agniveer|अग्निवीर|sensex|nifty|rbi|isro|इसरो|imd|मुख्यमंत्री|राज्यपाल|विधानसभा|राज्य सरकार|भारतीय जनता पार्टी|भाजपा|bjp|aam aadmi party|आम आदमी पार्टी|dmk|द्रमुक|trinamool congress|तृणमूल कांग्रेस|shiv sena|शिवसेना|samajwadi party|समाजवादी पार्टी|rjd|राजद|jdu|जदयू|indian national congress/
+  ];
+  return snippetIndiaSignals.some(pattern => pattern.test(evidence));
 }
-
 function filterFreshPreciousMetalResults(results, now = Date.now()) {
   // A "today" rate must come from a result published on today's India date.
   // Missing, invalid, future-dated, and older pages are not current price evidence.
