@@ -898,7 +898,7 @@ await test("Groq repeated HTTP 413 preserves real search results without inventi
   groqMode = "success";
 });
 
-await test("current news keeps real source headlines when Groq returns an empty completion", async () => {
+await test("current news never shows a partial digest when Groq returns an empty completion", async () => {
   groqMode = "empty";
   exaMode = "success";
   const before = calls.length;
@@ -908,13 +908,10 @@ await test("current news keeps real source headlines when Groq returns an empty 
     }, token);
     assert.equal(r.status, 200);
     assert.equal(r.data.success, true);
-    assert.equal(r.data.providerBusy, true);
-    assert.equal(r.data.providerStatus, 502);
-    assert.match(r.data.reply, /भरोसेमंद हिंदी सार तैयार नहीं हो सका/);
+    assert.match(r.data.reply, /आज केवल 4 अलग-अलग, तारीख़-जाँचे समाचार स्रोत मिले|आज 5 तारीख़-जाँचे समाचार परिणाम मिले/);
     assert.doesNotMatch(r.data.reply, /प्रकाशकों के मूल शीर्षक/);
-    assert.doesNotMatch(r.data.reply, /खबर 1:/);
+    assert.doesNotMatch(r.data.reply, /खबर [1-5]:/);
     assert.ok(r.data.sources.length > 1, "date-checked search results should be preserved");
-    assert.match(r.data.searchWarning, /हिंदी सार तैयार नहीं किया/);
     assert.equal(calls.slice(before).filter(x => x.url.includes("api.groq.com")).length, 1);
   } finally {
     groqMode = "success";
