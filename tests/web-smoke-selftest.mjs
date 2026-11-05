@@ -166,10 +166,20 @@ for (const src of scriptFiles) {
 const sourceHelperStart = app.indexOf("function shouldShowSearchSources(data) {");
 const sourceHelperEnd = app.indexOf("\n}\n", sourceHelperStart);
 assert.ok(sourceHelperStart >= 0 && sourceHelperEnd > sourceHelperStart, "automatic-search source visibility helper must exist");
-const shouldShowSearchSources = new Function(app.slice(sourceHelperStart, sourceHelperEnd + 3) + "\nreturn shouldShowSearchSources;")();
+const shouldShowSearchSources = new Function(
+  "safeSourceUrl",
+  app.slice(sourceHelperStart, sourceHelperEnd + 3) + "\nreturn shouldShowSearchSources;"
+)(value => {
+  try {
+    const url = new URL(String(value || ""));
+    return url.protocol === "https:" && url.hostname && !url.username && !url.password ? url.href : "";
+  } catch { return ""; }
+});
 assert.equal(shouldShowSearchSources({ searchAttempted: true, sources: [{ title: "Official notice", url: "https://example.gov.in/notice" }] }), true, "sources from automatic Worker search must be shown even when the web toggle is off");
 assert.equal(shouldShowSearchSources({ searchAttempted: false, sources: [{ title: "Unrequested", url: "https://example.com" }] }), false, "sources must not be shown when the Worker did not search");
 assert.equal(shouldShowSearchSources({ searchAttempted: true, sources: [] }), false, "empty search results must not create an empty source list");
+assert.equal(shouldShowSearchSources({ searchAttempted: true, reply: "खबर 1: भारत की खबर\\nप्रकाशक: example.com\\nमूल लिंक:", sources: [{ title: "India news", url: "https://example.com/india" }] }), true, "show source cards if inline news links are missing");
+assert.equal(shouldShowSearchSources({ searchAttempted: true, reply: "खबर 1: भारत की खबर\\nप्रकाशक: example.com\\nप्रकाशित: आज\\nमूल लिंक: https://example.com/india", sources: [{ title: "India news", url: "https://example.com/india" }] }), false, "avoid duplicate source cards when inline news links are present");
 const warningHelperStart = app.indexOf("function shouldShowSearchWarning(data) {");
 const warningHelperEnd = app.indexOf("\n}\n", warningHelperStart);
 assert.ok(warningHelperStart >= 0 && warningHelperEnd > warningHelperStart, "search warning visibility helper must exist");
