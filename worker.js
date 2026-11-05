@@ -1067,7 +1067,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     try { publisher = new URL(items[index].url).hostname.toLowerCase().replace(/^www\./i, ""); } catch {}
     lines.push("खबर " + (lines.length + 1) + ": " + entry.headline + "\nसार: " + entry.summary +
       "\nप्रकाशक: " + publisher +
-      "\nमूल लिंक: " + items[index].url +
+      "\nमूल लिंक: [मूल खबर पढ़ें](" + items[index].url + ")" +
       "\nप्रकाशित: " + formatNewsPublishedAt(items[index].publishedAt) +
       "\nपुष्टि का आधार: इसी मूल लेख के शीर्षक और उपलब्ध अंश में दर्ज जानकारी; इसे स्वतंत्र बहु-स्रोत पुष्टि तभी मानें जब अलग प्रकाशक से भी वही तथ्य मिलाया गया हो।");
   }
@@ -1539,7 +1539,7 @@ export default {
           }).format(new Date());
           return jsonResponse({
             success: true,
-            reply: todayLabel + " के लिए तारीख़-जाँचा हुआ केवल एक स्वतंत्र समाचार स्रोत मिला। उससे खबर की स्वतंत्र पुष्टि नहीं हो सकती, इसलिए मैं उसे पक्की खबर या विस्तृत सार के रूप में पेश नहीं करूँगा। कम-से-कम दो स्वतंत्र प्रकाशकों से पुष्टि मिलने पर ही सार दूँगा।",
+            reply: todayLabel + " के लिए केवल एक स्वतंत्र समाचार स्रोत मिला; पाँच अलग खबरों और बहु-स्रोत पुष्टि की माँग पूरी नहीं हुई। इसलिए इसे पक्की खबर की सूची में शामिल नहीं कर रहा हूँ।\n\nउपलब्ध स्रोत: " + (searchResults[0].publisher || "प्रकाशक उपलब्ध नहीं") + "\nमूल लिंक: [मूल खबर पढ़ें](" + searchResults[0].url + ")\nप्रकाशित: " + formatNewsPublishedAt(searchResults[0].publishedAt) + "\n\nदो या अधिक स्वतंत्र प्रकाशकों से पुष्टि मिलने पर ही खबर का सार दूँगा।",
             ...dateTime,
             webSearch: true,
             searchAttempted: true,
