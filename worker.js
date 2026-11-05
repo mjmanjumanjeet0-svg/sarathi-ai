@@ -420,7 +420,7 @@ async function searchInternet(query, env) {
   }
 }
 async function enrichGoldRateResults(results) {
-  const candidates = (Array.isArray(results) ? results : []).slice(0, 6);
+  const candidates = (Array.isArray(results) ? results : []).slice(0, 8);
   return await Promise.all(candidates.map(async item => {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 7000);
@@ -436,9 +436,31 @@ async function enrichGoldRateResults(results) {
       });
       if (!response.ok) return item;
       const html = (await response.text()).slice(0, 1200000);
+      // Exa may omit publishedDate even when the source page exposes its own
+      // publication/update date. Read dates from the page, then apply the
+      // same India-day freshness gate; never accept an undated page as current.
+      const metaTags = [...html.matchAll(/<meta\\b[^>]*>/gi)].map(match => match[0]);
+      const dateValues = [];
+      for (const tag of metaTags) {
+        const attr = name => {
+          const match = tag.match(new RegExp("(?:^|\\\\s)" + name + "\\\\s*=\\\\s*([\"'])(.*?)\\\\1", "i"));
+          return match ? match[2].trim() : "";
+        };
+        const key = (attr("property") || attr("name") || attr("itemprop")).toLowerCase();
+        const value = attr("content");
+        if (value && /^(article:modified_time|og:updated_time|datepublished|datepublished|datepublished|article:published_time|date|publishdate|pubdate|parsely-pub-date|dc.date.issued)$/i.test(key)) {
+          dateValues.push(value);
+        }
+      }
+      const jsonDates = [...html.matchAll(/["'](?:datePublished|dateModified|dateCreated)["']\\s*:\\s*["']([^"']+)["']/gi)].map(match => match[1]);
+      const timeDates = [...html.matchAll(/<time\\b[^>]*datetime=["']([^"']+)["']/gi)].map(match => match[1]);
+      const pageDate = [...dateValues, ...jsonDates, ...timeDates]
+        .map(value => ({ value, time: Date.parse(value) }))
+        .find(entry => Number.isFinite(entry.time) && entry.time <= Date.now());
+      const pagePublishedAt = pageDate ? new Date(pageDate.time).toISOString() : "";
       const visible = cleanText(html
-        .replace(/<script[\s\S]*?<\/script>/gi, " ")
-        .replace(/<style[\s\S]*?<\/style>/gi, " ")
+        .replace(/<script[\\s\\S]*?<\\/script>/gi, " ")
+        .replace(/<style[\\s\\S]*?<\\/style>/gi, " ")
         .replace(/<[^>]+>/g, " ")
         .replace(/&nbsp;|&#160;/gi, " ")
         .replace(/&#8377;|&#x20b9;/gi, "₹"));
@@ -463,6 +485,8 @@ async function enrichGoldRateResults(results) {
       const silverRate = silverMatch ? Number(silverMatch[1].replace(/,/g, "")) : null;
       return {
         ...item,
+        publishedAt: pagePublishedAt || item.publishedAt || "",
+        pagePublishedAt: pagePublishedAt || "",
         goldRates: (goldRates.per10g22K || goldRates.per10g24K) ? goldRates : null,
         silverRate: silverRate || null,
         rateContexts: [...new Set(contexts)].slice(0, 10),
@@ -619,7 +643,7 @@ function filterFreshPreciousMetalResults(results, now = Date.now()) {
     timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit"
   }).format(new Date(now));
   return (Array.isArray(results) ? results : []).filter(item => {
-    const publishedAt = item && typeof item.publishedAt === "string" ? item.publishedAt.trim() : "";
+    const publishedAt = item && typeof (item.pagePublishedAt || item.publishedAt) === "string" ? String(item.pagePublishedAt || item.publishedAt).trim() : "";
     if (!publishedAt) return false;
     const timestamp = Date.parse(publishedAt);
     if (!Number.isFinite(timestamp) || timestamp > now) return false;
@@ -1320,21 +1344,21 @@ export default {
           });
         }
       }
-      if (isGoldRateQuestion || isSilverRateQuestion) {
-        searchResults = filterFreshPreciousMetalResults(searchResults);
-      }
       if ((isGoldRateQuestion || isSilverRateQuestion) && searchResults.length) {
-        // Keep the strongest result from each publisher; repeated pages from one
-        // website must not be presented as independent confirmation.
+        // Enrich before the freshness gate: a source page may expose its date
+        // even when Exa's publishedDate metadata is absent.
+        searchResults = await enrichGoldRateResults(searchResults.slice(0, 8));
+        searchResults = filterFreshPreciousMetalResults(searchResults);
+        // Keep the strongest fresh result from each publisher; repeated pages
+        // from one website are not independent confirmation.
         const seenPublishers = new Set();
         searchResults = searchResults.filter(item => {
           let publisher = String(item.publisher || "").toLowerCase();
-          try { publisher = new URL(item.url).hostname.toLowerCase().replace(/^www\./, ""); } catch {}
+          try { publisher = new URL(item.url).hostname.toLowerCase().replace(/^www\\./, ""); } catch {}
           if (!publisher || seenPublishers.has(publisher)) return false;
           seenPublishers.add(publisher);
           return true;
         }).slice(0, 6);
-        searchResults = await enrichGoldRateResults(searchResults);
       }
       if (searchResults.length) {
         searchWarning = search.warning || "इंटरनेट खोज से परिणाम मिले।";
