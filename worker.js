@@ -381,6 +381,8 @@ async function searchInternet(query, env) {
       const since = new Date(now.getTime() - 48 * 60 * 60 * 1000);
       requestBody.startPublishedDate = since.toISOString();
       requestBody.endPublishedDate = now.toISOString();
+      // Localize this single news search to India; publication-date filters remain authoritative.
+      requestBody.userLocation = "IN";
     }
     const response = await fetch("https://api.exa.ai/search", {
       method: "POST",
@@ -1508,7 +1510,7 @@ export default {
       const indiaToday = new Intl.DateTimeFormat("en-CA", { timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
       const isOfficialEducationQuestion = /(सिलेबस|पाठ्यक्रम|परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|(?:परीक्षा|बोर्ड|विश्वविद्यालय|चुनाव)\s*(?:का|के)?\s*परिणाम|परिणाम\s*(?:घोषित|जारी|देखें|चेक)|आवेदन|फॉर्म|फीस|पात्रता|नियम|छात्रवृत्ति|स्कॉलरशिप|scholarship|fellowship|stipend|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(userText);
       const searchQuery = isCurrentNewsQuestion
-        ? "India latest national news politics government economy business science technology sports India when:2d " + indiaToday
+        ? "Latest national news from India: major reported developments in government, politics, economy, business, courts, science, technology, weather and sports. Prioritize distinct, substantive Indian news events from established publishers; exclude opinion pieces, live blogs, daily roundups and international stories with only incidental India mentions."
         : isGoldRateQuestion || isSilverRateQuestion
           ? "India city-wise retail rate today 22K 24K gold 999 silver per gram per 10 gram per kilogram source updated time " + indiaToday
           : isDiamondPriceQuestion
