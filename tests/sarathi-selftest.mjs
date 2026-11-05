@@ -302,7 +302,7 @@ assert.equal(solveBasicArithmetic("इतिहास 1857"), null, "a standalon
 const dateQuestionStart = source.indexOf("function isDateQuestion(text) {");
 const dateQuestionEnd = source.indexOf("function explicitlyRequestsWebSearch", dateQuestionStart);
 assert.ok(dateQuestionStart >= 0 && dateQuestionEnd > dateQuestionStart, "date intent detector must exist");
-const isDateQuestion = new Function(source.slice(dateQuestionStart, dateQuestionEnd) + "\nreturn isDateQuestion;")();")();
+const isDateQuestion = new Function(source.slice(dateQuestionStart, dateQuestionEnd) + "\nreturn isDateQuestion;")();
 assert.equal(isDateQuestion("आज की तारीख बताओ"), true, "a direct date request must still be recognized");
 assert.equal(isDateQuestion("आज कौन-सा दिन है?"), true, "a direct weekday request must still be recognized");
 assert.equal(isDateQuestion("आज का दिन अच्छा बनाने के लिए मुझे तीन अच्छी आदतें बताओ"), false, "a positive daily-routine question must not be mistaken for a date request");
