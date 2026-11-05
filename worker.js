@@ -915,7 +915,8 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
       return title.length > 0 && url.protocol === "https:" && Boolean(url.hostname) && Number.isFinite(publishedAt);
     } catch { return false; }
   }).slice(0, 5);
-  if (!items.length) return "";
+  // A five-story request must never be silently downgraded to a partial digest.
+  if (items.length !== 5) return "";
   const entries = new Map();
   let current = null;
   const hindiDigits = { "०":"0", "१":"1", "२":"2", "३":"3", "४":"4", "५":"5", "६":"6", "७":"7", "८":"8", "९":"9" };
@@ -970,19 +971,13 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     }
     let publisher = "प्रकाशक उपलब्ध नहीं";
     try { publisher = new URL(items[index].url).hostname.toLowerCase().replace(/^www\./i, ""); } catch {}
-    lines.push("खबर " + (index + 1) + ": " + entry.headline + "\nसार: " + entry.summary +
+    lines.push("खबर " + (lines.length + 1) + ": " + entry.headline + "\nसार: " + entry.summary +
       "\nप्रकाशक: " + publisher + "\nप्रकाशित: " + formatNewsPublishedAt(items[index].publishedAt));
   }
-  if (!lines.length) return "";
-  let prefix;
-  if (lines.length < items.length) {
-    prefix = "खोज में " + items.length + " तारीख़-जाँचे परिणाम मिले, लेकिन स्रोत-जाँच के बाद " +
-      lines.length + " खबरों के हिंदी सार ही शामिल किए गए। बाकी परिणामों को पर्याप्त रूप से पुष्ट न होने के कारण छोड़ दिया गया।";
-  } else if (items.length < 5) {
-    prefix = "आज केवल " + items.length + " अलग-अलग, तारीख़-जाँची खबरों के सार तैयार हो सके। पाँचवीं खबर के लिए पर्याप्त भरोसेमंद परिणाम नहीं मिला, इसलिए कोई खबर बनाकर नहीं जोड़ी गई।";
-  } else {
-    prefix = "आज की 5 अलग-अलग, तारीख़-जाँची खबरें:";
-  }
+  // Return a digest only when all five independent stories pass validation.
+  // Never show 1, 2, 3, 5 or claim that a four-story list is a five-story answer.
+  if (lines.length !== 5) return "";
+  const prefix = "आज की 5 अलग-अलग, तारीख़-जाँची खबरें:";
   return prefix + "\n\n" + lines.join("\n\n") + "\n\nध्यान दें: हर सार संबंधित समाचार के उपलब्ध लेख-अंश पर आधारित है.";
 }
 function buildCurrentNewsHeadlineReply(results) {
@@ -1004,7 +999,10 @@ function buildCurrentNewsHeadlineReply(results) {
   if (!items.length) {
     return "आज की ताज़ा खबरों के लिए तारीख़-जाँचे हुए भरोसेमंद समाचार परिणाम नहीं मिले। कृपया कुछ देर बाद फिर कोशिश करें।";
   }
-  return "खोज में " + items.length + " तारीख़-जाँचे समाचार परिणाम मिले, लेकिन AI सेवा से उनका भरोसेमंद हिंदी सार तैयार नहीं हो सका। आपकी माँग के अनुसार 2–3 वाक्यों का सार देना आवश्यक है; इसलिए अंग्रेज़ी शीर्षकों की सूची को सार बताकर नहीं दिखाया जा रहा। कृपया थोड़ी देर बाद फिर कोशिश करें।";
+  if (items.length < 5) {
+    return "आज केवल " + items.length + " अलग-अलग, तारीख़-जाँचे समाचार स्रोत मिले। पाँच अलग खबरों की सूची पूरी करने के लिए पर्याप्त स्रोत नहीं मिले, इसलिए अपुष्ट खबर जोड़ने के बजाय मैं अधूरी सूची नहीं दिखा रहा हूँ। कृपया कुछ देर बाद फिर कोशिश करें।";
+  }
+  return "आज 5 तारीख़-जाँचे समाचार परिणाम मिले, लेकिन सभी 5 खबरों के हिंदी सार स्रोत-जाँच में सफल नहीं हुए। आपकी माँग के अनुसार 5 अलग खबरें और हर खबर का 2–3 वाक्यों का सार देना आवश्यक है; इसलिए अधूरी सूची या अपुष्ट सार नहीं दिखाया जा रहा। कृपया कुछ देर बाद फिर कोशिश करें।";
 }
 
 function buildCompactNewsSourceContext(results) {
