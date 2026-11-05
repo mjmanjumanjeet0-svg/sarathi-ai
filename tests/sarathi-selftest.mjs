@@ -782,10 +782,10 @@ await test("current price query invokes web search and AI", async () => {
   assert.match(enrichedUserPrompt, /24K gold rate ₹7800 per gram/);
   assert.match(enrichedUserPrompt, /22K gold rate ₹7150 per gram/);
   assert.match(enrichedUserPrompt, /999 silver rate ₹95 per gram/);
-  assert.match(enrichedUserPrompt, /24 karat gold rate in New Delhi.*₹1,39,850 per 10 gm/);
-  assert.match(enrichedUserPrompt, /22 karat gold rate in New Delhi.*₹1,27,683 per 10 gm/);
-  assert.match(enrichedUserPrompt, /Silver 999 Fine rate in New Delhi.*₹1,77,940 per 1 kg/);
-  assert.match(enrichedUserPrompt, /अलग-अलग शहरों की मूल तालिका पंक्तियाँ/);
+  assert.doesNotMatch(enrichedUserPrompt, /24 karat gold rate in New Delhi.*₹1,39,850 per 10 gm/);
+  assert.doesNotMatch(enrichedUserPrompt, /22 karat gold rate in New Delhi.*₹1,27,683 per 10 gm/);
+  assert.doesNotMatch(enrichedUserPrompt, /Silver 999 Fine rate in New Delhi.*₹1,77,940 per 1 kg/);
+  assert.match(enrichedUserPrompt, /शहरवार तालिका की किसी भी पंक्ति से भाव बिल्कुल मत निकालो/);
   assert.match(enrichedUserPrompt, /13,888 × 10 = 1,38,880/);
   assert.match(enrichedUserPrompt, /179 × 1000 = 1,79,000/);
   assert.match(enrichedUserPrompt, /विसंगति बताओ/);
