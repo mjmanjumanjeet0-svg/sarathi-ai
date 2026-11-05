@@ -36,6 +36,20 @@ assert.equal(hasUnsupportedCertaintyClaim("दिल्ली सरकार �
 assert.equal(hasUnsupportedCertaintyClaim("दिल्ली सरकार ने कृत्रिम वर्षा की योजना बनाई है।", "Sources say the government plans artificial rain if pollution worsens; no official announcement is expected."), true, "conditional reporting must not be upgraded into a confirmed government plan");
 assert.equal(hasUnsupportedCertaintyClaim("प्रदूषण बढ़ने पर कृत्रिम वर्षा कराने पर विचार किया जा रहा है।", "Sources say the government plans artificial rain if pollution worsens; no official announcement is expected."), false, "conditional plans must remain conditional");
 
+const headlineMixStart = worker.indexOf("function hasUnsupportedNewsHeadlineMix(");
+const headlineMixEnd = worker.indexOf("\\n}\\n", headlineMixStart);
+assert.ok(headlineMixStart >= 0 && headlineMixEnd > headlineMixStart, "headline-mix guard must exist");
+const hasUnsupportedNewsHeadlineMix = new Function("cleanText", worker.slice(headlineMixStart, headlineMixEnd + 3) + "\\nreturn hasUnsupportedNewsHeadlineMix;")(value => String(value || "").replace(/\\s+/g, " ").trim());
+assert.equal(hasUnsupportedNewsHeadlineMix("रोनाल्डो संन्यास लेते हैं; चांदनी चौक में इमारत गिरी", "चांदनी चौक में निर्माणाधीन इमारत गिरी"), true, "a foreign sports headline must not be joined to an India story");
+assert.equal(hasUnsupportedNewsHeadlineMix("चांदनी चौक में इमारत गिरी", "चांदनी चौक में निर्माणाधीन इमारत गिरी"), false, "a single source-grounded India headline must pass");
+const aqiGuardStart = worker.indexOf("function hasIncorrectOverallAqiCategory(");
+const aqiGuardEnd = worker.indexOf("\\n}\\n", aqiGuardStart);
+assert.ok(aqiGuardStart >= 0 && aqiGuardEnd > aqiGuardStart, "AQI category guard must exist");
+const hasIncorrectOverallAqiCategory = new Function(worker.slice(aqiGuardStart, aqiGuardEnd + 3) + "\\nreturn hasIncorrectOverallAqiCategory;")();
+assert.equal(hasIncorrectOverallAqiCategory("दिल्ली का AQI 370 गंभीर श्रेणी में है।"), true, "AQI 370 must not be labelled severe");
+assert.equal(hasIncorrectOverallAqiCategory("दिल्ली का AQI 370 है; 10 स्टेशन गंभीर श्रेणी में हैं।"), false, "severe readings at individual stations must not be confused with the city-wide AQI");
+
+
 
 const indiaFilterStart = worker.indexOf("function isIndiaFocusedNewsItem(item) {");
 const indiaFilterEnd = worker.indexOf("\n}\n", indiaFilterStart);
@@ -50,7 +64,7 @@ assert.ok(newsFormatterStart >= 0 && newsFormatterEnd > newsFormatterStart, "dai
 const formatCurrentNewsSummaryReply = new Function(
   "dedupeNewsResults", "cleanText", "formatNewsPublishedAt",
   "hasMixedScriptToken", "hasUnsupportedNumericClaim", "hasUnsupportedCertaintyClaim",
-  "isIndiaFocusedNewsItem",
+  "hasUnsupportedNewsHeadlineMix", "hasIncorrectOverallAqiCategory", "isIndiaFocusedNewsItem",
   worker.slice(newsFormatterStart, newsFormatterEnd + 3) + "\nreturn formatCurrentNewsSummaryReply;"
 )(
   results => results,
@@ -59,6 +73,8 @@ const formatCurrentNewsSummaryReply = new Function(
   () => false,
   () => false,
   hasUnsupportedCertaintyClaim,
+  new Function("cleanText", worker.slice(worker.indexOf("function hasUnsupportedNewsHeadlineMix("), worker.indexOf("\n}\n", worker.indexOf("function hasUnsupportedNewsHeadlineMix(")) + 3) + "\nreturn hasUnsupportedNewsHeadlineMix;")(value => String(value || "").replace(/\\s+/g, " ").trim()),
+  new Function(worker.slice(worker.indexOf("function hasIncorrectOverallAqiCategory("), worker.indexOf("\n}\n", worker.indexOf("function hasIncorrectOverallAqiCategory(")) + 3) + "\nreturn hasIncorrectOverallAqiCategory;")(),
   isIndiaFocusedNewsItem
 );
 const fiveNewsSources = Array.from({ length: 5 }, (_, index) => ({
