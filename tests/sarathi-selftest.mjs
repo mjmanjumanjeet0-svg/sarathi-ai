@@ -727,12 +727,14 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.ok(exaBody.startPublishedDate, "news search must constrain the 48-hour publication window");
   assert.ok(exaBody.endPublishedDate, "news search must exclude future publication dates at the provider");
   assert.deepEqual(exaBody.contents, { highlights: true });
-  assert.doesNotMatch(newsResponse.data.reply, /खबर [1-5]:/,
-    "the shortfall response must not contain a partial numbered digest");
+  const shortfallHeadlines = newsResponse.data.reply.split("\n").filter(line => /^खबर [1-5]: /.test(line));
+  assert.ok(shortfallHeadlines.length > 0 && shortfallHeadlines.length < 5,
+    "the shortfall response should include only individually verified summaries");
+  assert.match(newsResponse.data.reply, /अपुष्ट खबरें नहीं जोड़ी गईं/);
   assert.equal(newsResponse.data.searchUnavailable, undefined);
 });
 
-await test("five-news prompt with four valid source summaries still withholds an incomplete digest", async () => {
+await test("five-news prompt displays four individually validated summaries with a shortfall notice", async () => {
   groqMode = "news-two-sentence";
   exaMode = "success";
   try {
@@ -741,11 +743,11 @@ await test("five-news prompt with four valid source summaries still withholds an
     }, token);
     assert.equal(r.status, 200);
     assert.equal(r.data.sources.length, 4, "only four distinct, dated source articles are available in this fixture");
-    assert.match(r.data.reply, /आज केवल 4 अलग-अलग, तारीख़-जाँचे समाचार स्रोत मिले/);
+    assert.match(r.data.reply, /आज 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं \(आपने 5 माँगी थीं\)/);
     assert.doesNotMatch(r.data.reply, /भरोसेमंद हिंदी सार तैयार नहीं हो सका/);
     const summaries = r.data.reply.split(String.fromCharCode(10)).filter(line => /^सार: /.test(line));
-    assert.equal(summaries.length, 0, "a five-story request must not show four summaries as a complete digest");
-    assert.doesNotMatch(r.data.reply, /खबर [1-5]:/);
+    assert.ok(summaries.length > 0 && summaries.length <= 4, "show only individually validated summaries, never claim five");
+    assert.match(r.data.reply, /अपुष्ट खबरें नहीं जोड़ी गईं/);
   } finally {
     groqMode = "success";
     exaMode = "success";
