@@ -750,7 +750,10 @@ await test("latest news query uses Exa news category and publication freshness f
     "bbc.com", "reuters.com", "apnews.com", "news18.com", "aajtak.in",
     "abplive.com", "amarujala.com", "jagran.com", "zeenews.india.com",
     "indiatoday.in", "theprint.in", "livemint.com", "indiatimes.com",
-    "pti.in", "aninews.in"
+    "pti.in", "aninews.in", "business-standard.com", "economictimes.indiatimes.com",
+    "financialexpress.com", "moneycontrol.com", "cnbctv18.com", "deccanherald.com",
+    "tribuneindia.com", "telegraphindia.com", "pib.gov.in", "ddnews.gov.in",
+    "newsonair.gov.in", "scroll.in", "theweek.in", "thequint.com"
   ], "news search should be scoped to supported trusted publishers");
   assert.ok(exaBody.startPublishedDate, "news search must constrain the 48-hour publication window");
   assert.ok(exaBody.endPublishedDate, "news search must exclude future publication dates at the provider");
