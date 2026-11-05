@@ -314,6 +314,9 @@ assert.ok(discountStart >= 0 && discountEnd > discountStart, "local discount sol
 const solveDiscountQuestion = new Function(source.slice(discountStart, discountEnd) + "\nreturn solveDiscountQuestion;")();
 assert.match(solveDiscountQuestion("800 रुपये पर 15% छूट कितनी होगी और अंतिम कीमत क्या होगी?"), /छूट: 15% = ₹120/);
 assert.match(solveDiscountQuestion("₹1,250 पर 10% की छूट"), /अंतिम कीमत: ₹1125/);
+assert.match(solveDiscountQuestion("एक वस्तु की कीमत ₹1,200 है। उस पर 25% छूट मिलती है।"), /अंतिम कीमत: ₹900/);
+assert.match(solveDiscountQuestion("₹2,000 की वस्तु पर 10% छूट है। छूट के बाद कीमत कितनी होगी?"), /अंतिम कीमत: ₹1800/);
+assert.match(solveDiscountQuestion("एक वस्तु की कीमत 2000 रुपये है और उस पर 10% की छूट है"), /अंतिम कीमत: ₹1800/);
 assert.equal(solveDiscountQuestion("100 रुपये पर 150% छूट"), null, "discount above 100 percent must be rejected");
 assert.equal(solveDiscountQuestion("800 रुपये की कीमत"), null, "unrelated price questions must not be treated as discount calculations");
 await test("discount calculation is answered locally without Exa or Groq", async () => {
@@ -327,6 +330,20 @@ await test("discount calculation is answered locally without Exa or Groq", async
   assert.equal(r.data.webSearch, false);
   assert.deepEqual(r.data.sources, []);
   assert.equal(calls.length, before, "discount calculation must not call search or AI providers");
+});
+
+await test("natural-language discount calculation is answered locally without search", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    messages: [{ role: "user", content: "₹2,000 की वस्तु पर 10% छूट है। छूट के बाद कीमत कितनी होगी? केवल इसी सवाल का उत्तर देना।" }]
+  }, token);
+  assert.equal(r.status, 200);
+  assert.match(r.data.reply, /मूल कीमत: ₹2000/);
+  assert.match(r.data.reply, /छूट: 10% = ₹200/);
+  assert.match(r.data.reply, /अंतिम कीमत: ₹1800/);
+  assert.equal(r.data.webSearch, false);
+  assert.deepEqual(r.data.sources, []);
+  assert.equal(calls.length, before, "discount calculations must not call Exa or Groq");
 });
 
 
