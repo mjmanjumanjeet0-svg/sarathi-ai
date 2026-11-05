@@ -1,5 +1,10 @@
 name: Sarathi AI self-test
 on:
+  pull_request:
+    paths:
+      - "worker.js"
+      - "tests/sarathi-selftest.mjs"
+      - ".github/workflows/sarathi-selftest.yml"
   push:
     branches: [main]
     paths:
