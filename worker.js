@@ -1506,7 +1506,7 @@ export default {
       const indiaToday = new Intl.DateTimeFormat("en-CA", { timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
       const isOfficialEducationQuestion = /(सिलेबस|पाठ्यक्रम|परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|(?:परीक्षा|बोर्ड|विश्वविद्यालय|चुनाव)\s*(?:का|के)?\s*परिणाम|परिणाम\s*(?:घोषित|जारी|देखें|चेक)|आवेदन|फॉर्म|फीस|पात्रता|नियम|छात्रवृत्ति|स्कॉलरशिप|scholarship|fellowship|stipend|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(userText);
       const searchQuery = isCurrentNewsQuestion
-        ? "India latest news when:2d " + indiaToday
+        ? "India latest national news politics government economy business science technology sports India when:2d " + indiaToday
         : isGoldRateQuestion || isSilverRateQuestion
           ? "India city-wise retail rate today 22K 24K gold 999 silver per gram per 10 gram per kilogram source updated time " + indiaToday
           : isDiamondPriceQuestion
