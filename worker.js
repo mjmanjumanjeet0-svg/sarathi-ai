@@ -962,8 +962,8 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
       return title.length > 0 && url.protocol === "https:" && Boolean(url.hostname) && Number.isFinite(publishedAt);
     } catch { return false; }
   }).slice(0, 5);
-  // A five-story request must never be silently downgraded to a partial digest.
-  if (items.length !== 5) return "";
+  // Validate each available independent article; a short list is allowed when disclosed.
+  if (!items.length) return "";
   const entries = new Map();
   let current = null;
   const hindiDigits = { "०":"0", "१":"1", "२":"2", "३":"3", "४":"4", "५":"5", "६":"6", "७":"7", "८":"8", "९":"9" };
@@ -1026,11 +1026,17 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     lines.push("खबर " + (lines.length + 1) + ": " + entry.headline + "\nसार: " + entry.summary +
       "\nप्रकाशक: " + publisher + "\nप्रकाशित: " + formatNewsPublishedAt(items[index].publishedAt));
   }
-  // Return a digest only when all five independent stories pass validation.
-  // Never show 1, 2, 3, 5 or claim that a four-story list is a five-story answer.
-  if (lines.length !== 5) return "";
-  const prefix = "आज की 5 अलग-अलग, तारीख़-जाँची खबरें:";
-  return prefix + "\n\n" + lines.join("\n\n") + "\n\nध्यान दें: हर सार संबंधित समाचार के उपलब्ध लेख-अंश पर आधारित है.";
+  // Show only individually validated stories; never pad with unsupported items.
+  if (!lines.length) return "";
+  const count = lines.length;
+  const prefix = count === 5
+    ? "आज की 5 अलग-अलग, तारीख़-जाँची खबरें:"
+    : "आज " + count + " अलग-अलग, तारीख़-जाँची खबरें मिलीं (आपने 5 माँगी थीं):";
+  const shortfall = count < 5
+    ? "\\n\\nध्यान दें: पर्याप्त स्वतंत्र और पुष्ट खबरें नहीं मिलीं, इसलिए अपुष्ट खबरें नहीं जोड़ी गईं।"
+    : "";
+  return prefix + "\\n\\n" + lines.join("\\n\\n") +
+    "\\n\\nध्यान दें: हर सार संबंधित समाचार के उपलब्ध लेख-अंश पर आधारित है." + shortfall;
 }
 function buildCurrentNewsHeadlineReply(results) {
   // Count only distinct, displayable articles with a real HTTPS publisher URL; never emit headline-only output.
