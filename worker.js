@@ -1037,7 +1037,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     let publisher = "प्रकाशक उपलब्ध नहीं";
     try { publisher = new URL(items[index].url).hostname.toLowerCase().replace(/^www\./i, ""); } catch {}
     lines.push("खबर " + (lines.length + 1) + ": " + entry.headline + "\nसार: " + entry.summary +
-      "\nमूल समाचार स्रोत: " + publisher +
+      "\nप्रकाशक: " + publisher +
       "\nमूल लिंक: " + items[index].url +
       "\nप्रकाशित: " + formatNewsPublishedAt(items[index].publishedAt) +
       "\nपुष्टि का आधार: इसी मूल लेख के शीर्षक और उपलब्ध अंश में दर्ज जानकारी; इसे स्वतंत्र बहु-स्रोत पुष्टि तभी मानें जब अलग प्रकाशक से भी वही तथ्य मिलाया गया हो।");
