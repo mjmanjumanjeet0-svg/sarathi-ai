@@ -800,6 +800,21 @@ function isSameIndianMarketEvent(a, b) {
   return isAgniveerTenureUpdate(titleA) && isAgniveerTenureUpdate(titleB);
 }
 
+function isSameIndianNewsEvent(a, b) {
+  const textA = cleanText([a?.title, a?.snippet].filter(Boolean).join(" ")).toLowerCase();
+  const textB = cleanText([b?.title, b?.snippet].filter(Boolean).join(" ")).toLowerCase();
+  const isDelhiCloudSeeding = value =>
+    /delhi|दिल्ली/.test(value) &&
+    /cloud.?seeding|artificial rain|क्लाउड सीडिंग|कृत्रिम बारिश|कृत्रिम वर्षा/.test(value);
+  if (isDelhiCloudSeeding(textA) && isDelhiCloudSeeding(textB)) return true;
+  const isKarnatakaDroughtRelief = value =>
+    /karnataka|कर्नाटक/.test(value) &&
+    /drought|सूखा|सूखे/.test(value) &&
+    /farmer|farmers|किसान/.test(value) &&
+    /compensation|relief|राहत|मुआवजा/.test(value);
+  return isKarnatakaDroughtRelief(textA) && isKarnatakaDroughtRelief(textB);
+}
+
 function dedupeNewsResults(results) {
   // Group repeated coverage of the same event. When the same publisher has
   // multiple versions of one story, combine only that publisher's excerpts so
@@ -835,7 +850,7 @@ function dedupeNewsResults(results) {
     const titleTokens = tokensFor(item.title);
     if (!titleTokens.size) continue;
     const duplicateIndex = accepted.findIndex(previous => {
-      if (isSameIndianMarketEvent(item, previous)) return true;
+      if (isSameIndianMarketEvent(item, previous) || isSameIndianNewsEvent(item, previous)) return true;
       const previousTokens = previous._dedupeTokens;
       let shared = 0;
       for (const token of titleTokens) if (previousTokens.has(token)) shared++;
@@ -885,7 +900,7 @@ function groupNewsByEvent(results) {
     const titleTokens = tokensFor(item.title);
     if (!titleTokens.size) continue;
     const duplicateIndex = groups.findIndex(group => {
-      if (isSameIndianMarketEvent(item, group)) return true;
+      if (isSameIndianMarketEvent(item, group) || isSameIndianNewsEvent(item, group)) return true;
       const previousTokens = tokensFor(group.title);
       let shared = 0;
       for (const token of titleTokens) if (previousTokens.has(token)) shared++;
