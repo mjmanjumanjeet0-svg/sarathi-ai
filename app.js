@@ -224,9 +224,17 @@ function formatInline(text) {
   safe = safe.replace(/`([^`]+)`/g, "<code>$1</code>");
   safe = safe.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
   safe = safe.replace(/\*(.+?)\*/g, "<em>$1</em>");
+  // Render plain HTTPS article URLs as safe clickable links.
+  safe = safe.replace(/https:\/\/[^\s<]+/gi, match => {
+    const trailing = (match.match(/[),.;!?।]+$/) || [""])[0];
+    const candidate = trailing ? match.slice(0, -trailing.length) : match;
+    const safeUrl = safeSourceUrl(candidate.replace(/&amp;/g, "&"));
+    if (!safeUrl) return match;
+    return '<a href="' + escapeHTML(safeUrl) + '" target="_blank" rel="noopener noreferrer">' +
+      escapeHTML(safeUrl) + '</a>' + trailing;
+  });
   return safe;
 }
-
 function formatText(raw) {
   const lines = String(raw || "").replace(/\r/g, "").split("\n");
   const output = [];
