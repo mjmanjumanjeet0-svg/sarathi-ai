@@ -459,8 +459,8 @@ async function enrichGoldRateResults(results) {
         .find(entry => Number.isFinite(entry.time) && entry.time <= Date.now());
       const pagePublishedAt = pageDate ? new Date(pageDate.time).toISOString() : "";
       const visible = cleanText(html
-        .replace(/<script[\\s\\S]*?<\\/script>/gi, " ")
-        .replace(/<style[\\s\\S]*?<\\/style>/gi, " ")
+        .replace(/<script[\s\S]*?<\/script>/gi, " ")
+        .replace(/<style[\s\S]*?<\/style>/gi, " ")
         .replace(/<[^>]+>/g, " ")
         .replace(/&nbsp;|&#160;/gi, " ")
         .replace(/&#8377;|&#x20b9;/gi, "₹"));
