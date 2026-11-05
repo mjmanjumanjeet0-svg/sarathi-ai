@@ -749,6 +749,8 @@ function filterRelevantSearchResults(query, results) {
         // as independent reported articles. They often repeat headlines without
         // providing a distinct, date-stamped story.
         if (/(राशिफल|राशि फल|पंचांग|मुहूर्त|राहु.?काल|horoscope|zodiac|astrology|panchang)/i.test(headline)) return false;
+        // Exclude exam-preparation explainers and daily-current-affairs study notes from a general news digest.
+        if (/(?:^|[^a-z])upsc\s*key|upsc[- ]current[- ]affairs|current affairs news|daily current affairs|exam preparation|exam prep|for upsc aspirants/i.test(title)) return false;
         // Exclude live blogs, rolling feeds and publisher roundups: they are not
         // one independently reported story and often bundle unrelated events.
         if (/(मुख्य और ताजा समाचार|मुख्य और ताज़ा समाचार|लाइव ब्रेकिंग न्यूज|लाइव ब्रेकिंग न्यूज़|latest and breaking news today|latest news live|live news updates|india news live updates|news live updates|live updates|live blog|liveblogs|sports wrap|news roundup|evening brief|morning brief|daily brief|top stories|दिनभर की खबर|दिनभर के समाचार)/i.test(title)) return false;
