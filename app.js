@@ -685,16 +685,17 @@ function renderMessages() {
 }
 
 function shouldShowSearchSources(data) {
-  // Current-news replies already print each headline, publisher and timestamp.
-  // Suppress the second, duplicate source panel for those replies.
+  // Hide the extra panel only when the inline digest really contains article URLs.
+  // If an inline link is blank or missing, keep the verified source cards visible.
   const replyText = String(data?.reply || "");
-  const isInlineNewsList = (
-    replyText.includes("खबर 1:") &&
-    replyText.includes("प्रकाशक:") &&
-    replyText.includes("प्रकाशित:")
-  ) || replyText.includes("खोज में मिले मूल शीर्षक:");
-  return Boolean(data && data.searchAttempted === true && !isInlineNewsList &&
-    Array.isArray(data.sources) && data.sources.length > 0);
+  const isInlineNewsList = replyText.includes("खबर 1:") &&
+    replyText.includes("प्रकाशक:") && replyText.includes("प्रकाशित:");
+  const hasInlineArticleUrl = /मूल लिंक:\\s*https:\\/\\//i.test(replyText);
+  const hasVerifiedSources = Array.isArray(data?.sources) &&
+    data.sources.some(source => safeSourceUrl(source?.url) && String(source?.title || "").trim());
+  const hasLegacySourceList = replyText.includes("खोज में मिले मूल शीर्षक:");
+  return Boolean(data && data.searchAttempted === true && hasVerifiedSources &&
+    (!isInlineNewsList || !hasInlineArticleUrl || hasLegacySourceList));
 }
 
 function safeSourceUrl(value) {
