@@ -224,6 +224,12 @@ globalThis.fetch = async (input, init = {}) => {
       "यह सारथी का परीक्षण उत्तर है।";
     return Response.json({ choices: [{ message: { content: groqReply } }] });
   }
+  if (url.startsWith("https://") && !url.includes("api.groq.com") && !url.includes("api.exa.ai")) {
+    return new Response("<html><article><p>Deterministic test article body. No additional numeric facts are supplied by this fixture.</p></article></html>", {
+      status: 200,
+      headers: { "Content-Type": "text/html; charset=UTF-8" }
+    });
+  }
   throw new Error("Unexpected outbound request: " + url);
 };
 
