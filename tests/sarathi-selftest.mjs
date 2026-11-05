@@ -744,6 +744,9 @@ await test("latest news query uses Exa news category and publication freshness f
   const exaBody = JSON.parse(exaCall.init.body || "{}");
   assert.equal(exaBody.type, "auto");
   assert.equal(exaBody.category, "news");
+  assert.equal(exaBody.userLocation, "IN", "news search should localize ranking to India");
+  assert.match(exaBody.query, /Latest national news from India/i, "news search should use a clear India-focused editorial query");
+  assert.equal(exaBody.query.includes("when:2d"), false, "the hard publication-date filters, not a search-operator suffix, should enforce freshness");
   assert.equal(exaBody.numResults, 40, "news search should request a wider candidate pool for strict publisher/date filters");
   assert.deepEqual(exaBody.includeDomains, [
     "indianexpress.com", "thehindu.com", "ndtv.com", "hindustantimes.com",
