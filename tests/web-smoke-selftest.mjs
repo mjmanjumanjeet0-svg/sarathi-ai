@@ -65,14 +65,18 @@ const fiveNewsDraft = fiveNewsSources.map((_, index) =>
 const completeFiveNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, fiveNewsSources, true);
 assert.match(completeFiveNewsReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "five-story request must return the five-story heading only when all five summaries pass");
 assert.deepEqual([...completeFiveNewsReply.matchAll(/खबर (\d+):/g)].map(match => Number(match[1])), [1, 2, 3, 4, 5], "daily-news numbering must always be continuous from 1 through 5");
-assert.equal(formatCurrentNewsSummaryReply(fiveNewsDraft, fiveNewsSources.slice(0, 4), true), "", "four stories must never be presented as a complete five-story digest");
+const partialFourNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, fiveNewsSources.slice(0, 4), true);
+assert.match(partialFourNewsReply, /आज 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं \(आपने 5 माँगी थीं\)/, "four verified stories should be shown with an explicit shortfall notice");
+assert.equal([...partialFourNewsReply.matchAll(/खबर (\d+):/g)].length, 4, "only four available validated stories should be displayed");
 const incompleteFiveNewsDraft = fiveNewsDraft.replace("सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।", "सार: ");
-assert.equal(formatCurrentNewsSummaryReply(incompleteFiveNewsDraft, fiveNewsSources, true), "", "a five-source digest must be rejected if even one story lacks a valid summary");
+const incompleteFiveNewsReply = formatCurrentNewsSummaryReply(incompleteFiveNewsDraft, fiveNewsSources, true);
+assert.equal([...incompleteFiveNewsReply.matchAll(/खबर (\d+):/g)].length, 4, "a story without a valid summary must be omitted while other verified stories remain");
 const oneSentenceNewsDraft = fiveNewsDraft.replace(
   "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
   "सार: यह केवल एक वाक्य का सार है।"
 );
-assert.equal(formatCurrentNewsSummaryReply(oneSentenceNewsDraft, fiveNewsSources, true), "", "a requested two-to-three-sentence digest must reject a one-sentence summary");
+const oneSentenceNewsReply = formatCurrentNewsSummaryReply(oneSentenceNewsDraft, fiveNewsSources, true);
+assert.equal([...oneSentenceNewsReply.matchAll(/खबर (\d+):/g)].length, 4, "a one-sentence item must be omitted without discarding other valid summaries");
 
 const boilerplateNewsDraft = fiveNewsDraft.replace(
   "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
