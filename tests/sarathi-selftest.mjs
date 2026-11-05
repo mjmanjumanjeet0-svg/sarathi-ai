@@ -46,6 +46,9 @@ assert.match(source, /प्रकाशक का मुख्य दर-सा
 assert.match(source, /शहरवार तालिका की हर पंक्ति को एक अविभाज्य इकाई/, "bullion answers must not mix city rows");
 assert.match(source, /शहरवार तालिका की किसी भी पंक्ति से भाव बिल्कुल मत निकालो/, "India-wide bullion questions must not use city-only rates");
 assert.match(source, /राष्ट्रीय भाव स्पष्ट रूप से उपलब्ध नहीं/, "missing national bullion rates must be reported as unavailable");
+assert.match(source, /requestedCity\.re\.test\(row\)/, "city-specific bullion context must select only rows for the requested city");
+assert.match(source, /माँगे गए शहर .*की मूल पेज\/तालिका पंक्तियाँ/, "requested city table rows must be passed into the model context");
+assert.match(source, /matchingCityRows\.join\(" \\|\\| "\)/, "the selected city rows must actually be included in rate evidence");
 assert.match(source, /city\.key !== requestedCity\.key && city\.re\.test\(rawReply\)/, "city-specific bullion guard must scan the complete answer, including source notes, for foreign-city attribution");
 assert.ok(source.includes("आम में विटामिन E प्रचुर होने") && source.includes("स्थापित पोषण-तथ्य"), "health answers must avoid unsupported nutrient and skin/hair claims");
 
