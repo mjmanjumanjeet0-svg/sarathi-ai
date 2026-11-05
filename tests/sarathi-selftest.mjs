@@ -49,6 +49,10 @@ assert.match(source, /राष्ट्रीय भाव स्पष्ट �
 assert.match(source, /requestedCity\.re\.test\(row\)/, "city-specific bullion context must select only rows for the requested city");
 assert.match(source, /माँगे गए शहर .*की मूल पेज\/तालिका पंक्तियाँ/, "requested city table rows must be passed into the model context");
 assert.match(source, /matchingCityRows\.join\(" \\|\\| "\)/, "the selected city rows must actually be included in rate evidence");
+assert.match(source, /function buildProviderBusySearchFallback/);
+assert.match(source, /मूल HTML तालिका पंक्ति/);
+assert.match(source, /AI सेवा ने सार नहीं बन सका|AI सेवा इस समय व्यस्त है/);
+assert.match(source, /माँगे गए शहर/);
 assert.match(source, /city\.key !== requestedCity\.key && city\.re\.test\(rawReply\)/, "city-specific bullion guard must scan the complete answer, including source notes, for foreign-city attribution");
 assert.ok(source.includes("आम में विटामिन E प्रचुर होने") && source.includes("स्थापित पोषण-तथ्य"), "health answers must avoid unsupported nutrient and skin/hair claims");
 
@@ -117,6 +121,10 @@ globalThis.fetch = async (input, init = {}) => {
     if (exaMode === "gold-undated-page-date") return Response.json({ results: [
       { title: "India silver rate today", url: "https://silver.example.net/silver-page-date", highlights: ["999 silver rate in India."] }
     ] });
+    if (exaMode === "bullion-city-busy") return Response.json({ results: [
+      { title: "Delhi gold rates today", url: "https://example.com/delhi-gold", publishedDate: new Date().toISOString(), highlights: ["City-wise gold rates in Delhi."] },
+      { title: "Delhi silver rates today", url: "https://silver.example.net/delhi-silver", publishedDate: new Date().toISOString(), highlights: ["999 silver rate in Delhi."] }
+    ] });
     if (exaMode === "gold-stale") return Response.json({ results: [
       { title: "Gold rate today", url: "https://example.com/gold-old", publishedDate: "2025-08-26T18:30:00.000Z", highlights: ["Old gold rate ₹7000 per gram."] },
       { title: "Silver rate today", url: "https://example.com/silver-fresh", publishedDate: new Date().toISOString(), highlights: ["999 silver rate ₹95 per gram in India."] }
@@ -127,6 +135,8 @@ globalThis.fetch = async (input, init = {}) => {
       ]
     });
   }
+  if (url === "https://example.com/delhi-gold") return new Response('<html><head><meta property="article:published_time" content="' + new Date().toISOString() + '"></head><body><table><tr><td>24 karat gold rate in New Delhi</td><td>₹1,39,850 per 10 gm</td></tr><tr><td>22 karat gold rate in New Delhi</td><td>₹1,27,683 per 10 gm</td></tr></table></body></html>', { status: 200, headers: { "Content-Type": "text/html" } });
+  if (url === "https://silver.example.net/delhi-silver") return new Response('<html><head><meta property="article:published_time" content="' + new Date().toISOString() + '"></head><body><table><tr><td>Silver 999 Fine rate in New Delhi</td><td>₹1,77,940 per 1 kg</td></tr></table></body></html>', { status: 200, headers: { "Content-Type": "text/html" } });
   if (url === "https://example.com/gold-rate") return new Response("<html><body>24K gold rate ₹7800 per gram and 22K gold rate ₹7150 per gram in India. <table><tr><td>24 karat gold rate in New Delhi</td><td>₹1,39,850 per 10 gm</td></tr><tr><td>22 karat gold rate in New Delhi</td><td>₹1,27,683 per 10 gm</td></tr></table></body></html>", { status: 200, headers: { "Content-Type": "text/html" } });
   if (url === "https://silver.example.net/silver-page-date") return new Response('<html><head><meta property="article:published_time" content="' + new Date().toISOString() + '"></head><body>999 silver rate in India. Silver 999 Fine rate in New Delhi ₹1,77,940 per 1 kg.</body></html>', { status: 200, headers: { "Content-Type": "text/html" } });
   if (url === "https://silver.example.net/silver-rate") return new Response("<html><body>999 silver rate ₹95 per gram in India. <table><tr><td>Silver 999 Fine rate in New Delhi</td><td>₹1,77,940 per 1 kg</td></tr></table></body></html>", { status: 200, headers: { "Content-Type": "text/html" } });
@@ -1105,6 +1115,27 @@ await test("current news refuses headline-only output when Groq returns malforme
     assert.doesNotMatch(r.data.reply, /प्रकाशकों के मूल शीर्षक|प्रकाशित:|खबर [1-5]:/);
     assert.doesNotMatch(r.data.reply, /\\\\n\\\\n/, "fallback text must contain real line breaks, not visible escape sequences");
     assert.doesNotMatch(r.data.reply, /कृपया थोड़ी देर बाद फिर पूछें/);
+  } finally {
+    groqMode = "success";
+    exaMode = "success";
+  }
+});
+
+await test("bullion rates are extracted from same-city table rows when Groq is busy", async () => {
+  groqMode = "429";
+  exaMode = "bullion-city-busy";
+  try {
+    const r = await request("/api/chat", "POST", {
+      messages: [{ role: "user", content: "दिल्ली में आज 24 कैरेट और 22 कैरेट सोने तथा चाँदी का भाव बताओ" }]
+    }, token);
+    assert.equal(r.status, 200);
+    assert.equal(r.data.providerBusy, true);
+    assert.match(r.data.reply, /दिल्ली/);
+    assert.match(r.data.reply, /24 कैरेट सोना: ₹1,39,850 प्रति 10 ग्राम/);
+    assert.match(r.data.reply, /22 कैरेट सोना: ₹1,27,683 प्रति 10 ग्राम/);
+    assert.match(r.data.reply, /999 चाँदी: ₹1,77,940 प्रति किलोग्राम/);
+    assert.match(r.data.reply, /example\.com/);
+    assert.match(r.data.reply, /silver\.example\.net/);
   } finally {
     groqMode = "success";
     exaMode = "success";
