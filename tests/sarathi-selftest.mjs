@@ -675,7 +675,7 @@ await test("news digest shows only summaries that pass source validation", async
     assert.match(r.data.reply, /अपुष्ट खबरें नहीं जोड़ी गईं/);
     assert.ok(r.data.reply.includes("मूल लिंक: https://"), "news digest must include a plain article URL");
     assert.match(r.data.reply, /पुष्टि का आधार:/);
-    assert.match(r.data.reply, /अतिरिक्त स्वतंत्र रिपोर्ट:.*timesofindia\\.indiatimes\\.com/s, "matching Sensex coverage from another publisher must be linked as corroboration");
+    assert.match(r.data.reply, /अतिरिक्त स्वतंत्र रिपोर्ट:.*timesofindia\.indiatimes\.com/s, "matching Sensex coverage from another publisher must be linked as corroboration");
     assert.equal(r.data.sources.length, 4, "the original source list remains available for transparency");
     assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")));
   } finally {
