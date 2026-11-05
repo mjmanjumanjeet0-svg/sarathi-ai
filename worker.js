@@ -1147,14 +1147,14 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
         } catch { return false; }
       }).slice(0, 2);
     const corroborationText = corroborators.length
-      ? "\nअतिरिक्त स्वतंत्र रिपोर्ट: " + corroborators.map(source =>
+      ? "\nअतिरिक्त प्रकाशक रिपोर्ट: " + corroborators.map(source =>
           (source.publisher || new URL(source.url).hostname) + " — " + source.title +
           " (" + formatNewsPublishedAt(source.publishedAt) + ")\nलिंक: " + source.url
         ).join("\n")
       : "";
     const basisText = corroborators.length
-      ? "पुष्टि का आधार: मूल लेख के साथ अलग प्रकाशक की रिपोर्ट में भी इसी घटना का उल्लेख मिला। यह स्वतंत्र कवरेज का मिलान है; सभी आँकड़ों और विवरणों की समानता स्वतः प्रमाणित नहीं होती।"
-      : "पुष्टि का आधार: केवल एक मूल समाचार स्रोत मिला; स्वतंत्र प्रकाशक से पुष्टि उपलब्ध नहीं है।";
+      ? "पुष्टि का आधार: दूसरे प्रकाशक की रिपोर्ट में भी इसी घटना का उल्लेख मिला। इसे स्वतंत्र पुष्टि तभी मानें जब रिपोर्ट किसी अलग समाचार एजेंसी या प्रत्यक्ष स्रोत पर आधारित हो; केवल अलग वेबसाइट होना पर्याप्त नहीं है।"
+      : "पुष्टि का आधार: केवल एक प्रकाशक की रिपोर्ट मिली; दूसरी रिपोर्ट से मिलान उपलब्ध नहीं है।";
     lines.push("खबर " + (lines.length + 1) + ": " + entry.headline + "\nसार: " + entry.summary +
       "\nप्रकाशक: " + publisher +
       "\nमूल लिंक: " + items[index].url +
