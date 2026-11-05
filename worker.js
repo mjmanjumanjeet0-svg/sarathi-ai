@@ -1046,15 +1046,27 @@ function buildSearchContext(results, query = "") {
       const published = (isNewsQuery || isPreciousMetalQuery)
         ? formatNewsPublishedAt(item.publishedAt)
         : (item.publishedAt || "तारीख उपलब्ध नहीं");
+      // For an India-wide question, never expose city-table values to the model.
+      // Strip the appended table snippet too, or city prices can leak back into the prompt.
+      const explicitCityMatch = isPreciousMetalQuery
+        ? query.match(/\\b(?:patna|mumbai|delhi|kolkata|chennai|bengaluru|bangalore|hyderabad|ahmedabad|jaipur|lucknow|kanpur|varanasi|agra|prayagraj|allahabad|siwan|gaya|muzaffarpur|ranchi|bhopal|indore|nagpur|pune|surat|vadodara|noida|gurugram|gurgaon)\\b|पटना|मुंबई|दिल्ली|कोलकाता|चेन्नई|बेंगलुरु|हैदराबाद|अहमदाबाद|जयपुर|लखनऊ|कानपुर|वाराणसी|आगरा|प्रयागराज|इलाहाबाद|सिवान|गया|मुजफ्फरपुर|रांची|भोपाल|इंदौर|नागपुर|पुणे|सूरत|वडोदरा|नोएडा|गुरुग्राम/i)
+        : null;
+      const explicitCity = explicitCityMatch ? explicitCityMatch[0] : "";
+      const cleanSnippet = isPreciousMetalQuery
+        ? (item.snippet || "").split(" | पेज से मिला मूल्य-संदर्भ: ")[0]
+        : (item.snippet || "जानकारी उपलब्ध नहीं है।");
+      const matchingCityRows = explicitCity && Array.isArray(item.rateContexts)
+        ? item.rateContexts.filter(row => row.toLowerCase().includes(explicitCity.toLowerCase()))
+        : [];
       const rateEvidence = isPreciousMetalQuery
         ? (item.primaryRateSummary
             ? "\\nप्रकाशक का मुख्य दर-सारांश (मुख्य संदर्भ): " + item.primaryRateSummary
             : "") +
-          (Array.isArray(item.rateContexts) && item.rateContexts.length
-            ? "\\nअलग-अलग शहरों की मूल तालिका पंक्तियाँ (हर पंक्ति का शहर उसी पंक्ति के भाव से जुड़ा है; पंक्तियों को आपस में न मिलाएँ): " + item.rateContexts.join(" || ").slice(0, 5200)
+          (matchingCityRows.length
+            ? "\\nकेवल उपयोगकर्ता द्वारा पूछे गए शहर की मूल तालिका पंक्तियाँ: " + matchingCityRows.join(" || ").slice(0, 1800)
             : "")
         : "";
-      return `${i + 1}. ${item.title}\nप्रकाशक: ${item.publisher || "उपलब्ध नहीं"}\nप्रकाशित: ${published}${isHistoricalQuery ? `\nवास्तविक स्रोत URL: ${item.url}` : ""}\nजानकारी: ${item.snippet || "जानकारी उपलब्ध नहीं है।"}${rateEvidence}`;
+      return `${i + 1}. ${item.title}\nप्रकाशक: ${item.publisher || "उपलब्ध नहीं"}\nप्रकाशित: ${published}${isHistoricalQuery ? `\nवास्तविक स्रोत URL: ${item.url}` : ""}\nजानकारी: ${cleanSnippet}${rateEvidence}`;
     }
   ).join("\n\n") +
   "\n\nपरिणाम पर्याप्त न हों तो स्पष्ट बताओ। तथ्य या लिंक मत गढ़ो।" + newsInstruction + preciousMetalInstruction + historyInstruction;
