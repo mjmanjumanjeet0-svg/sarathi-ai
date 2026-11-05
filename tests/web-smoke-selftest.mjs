@@ -82,13 +82,13 @@ const boilerplateNewsDraft = fiveNewsDraft.replace(
   "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
   "सार: उपलब्ध स्रोत-अंश इस कारण की पुष्टि नहीं करता; इसलिए कारण के बारे में निष्कर्ष नहीं निकाला जा सकता।"
 );
-assert.equal(formatCurrentNewsSummaryReply(boilerplateNewsDraft, fiveNewsSources, false), "", "generic evidence disclaimers must not be passed off as a news summary");
+assert.equal([...formatCurrentNewsSummaryReply(boilerplateNewsDraft, fiveNewsSources, false).matchAll(/खबर \d+:/g)].length, 4, "a generic disclaimer must be omitted while other validated stories remain");
 
 const unsupportedCauseDraft = fiveNewsDraft.replace(
   "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
   "सार: प्रदूषण निर्माण कार्यों के कारण बढ़ा। यह दूसरी पुष्ट जानकारी है।"
 );
-assert.equal(formatCurrentNewsSummaryReply(unsupportedCauseDraft, fiveNewsSources, true), "", "an unsupported causal explanation must reject the story instead of being rewritten as generic filler");
+assert.equal([...formatCurrentNewsSummaryReply(unsupportedCauseDraft, fiveNewsSources, true).matchAll(/खबर \d+:/g)].length, 4, "an unsupported causal explanation must reject only that story");
 
 const tentativeSources = fiveNewsSources.map(item => ({ ...item }));
 tentativeSources[0] = {
@@ -100,7 +100,7 @@ const tentativeDraft = fiveNewsDraft.replace(
   "खबर 1: अलग समाचार घटना 1",
   "खबर 1: दिल्ली सरकार ने कृत्रिम बारिश कराने का निर्णय लिया"
 );
-assert.equal(formatCurrentNewsSummaryReply(tentativeDraft, tentativeSources, true), "", "a tentative source must not be turned into a confirmed decision in the headline");
+assert.equal([...formatCurrentNewsSummaryReply(tentativeDraft, tentativeSources, true).matchAll(/खबर \d+:/g)].length, 4, "a tentative source must be omitted without discarding other valid stories");
 const preservedTentativeDraft = fiveNewsDraft.replace(
   "खबर 1: अलग समाचार घटना 1",
   "खबर 1: दिल्ली सरकार कृत्रिम बारिश कराने पर विचार कर रही है"
@@ -111,7 +111,7 @@ const unsupportedGeopoliticsDraft = fiveNewsDraft.replace(
   "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
   "सार: पश्चिम एशिया में संघर्ष के समाधान की उम्मीद से बाजार में तेजी आई। यह दूसरी पुष्ट जानकारी है।"
 );
-assert.equal(formatCurrentNewsSummaryReply(unsupportedGeopoliticsDraft, fiveNewsSources, true), "", "a summary must not add an unsupported geopolitical explanation");
+assert.equal([...formatCurrentNewsSummaryReply(unsupportedGeopoliticsDraft, fiveNewsSources, true).matchAll(/खबर \d+:/g)].length, 4, "an unsupported geopolitical claim must reject only its own story");
 
 const midtermDraft = fiveNewsDraft.replace(
   "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
