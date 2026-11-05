@@ -515,7 +515,7 @@ async function enrichGoldRateResults(results) {
         const heading = cityHeadings[i];
         const sectionEnd = i + 1 < cityHeadings.length ? cityHeadings[i + 1].index : visible.length;
         const section = visible.slice(heading.index, sectionEnd).replace(/\s+/g, " ").trim();
-        const ratePattern = /(?:24\s*(?:K|karat|carat)|22\s*(?:K|karat|carat)|24 कैरेट|22 कैरेट|silver\s*999(?:\s*fine)?|999(?:\s*(?:fine\s*)?silver)?|चाँदी|चांदी)[^₹]{0,180}(?:₹|Rs\.?|INR)\s*[0-9][0-9,]*(?:\.[0-9]+)?\s*(?:per\s*1?\s*kg|per\s*10\s*g(?:m|rams?)?|1\s*kg|10\s*g(?:m|rams?)?|\/\s*(?:1\s*)?kg|\/\s*10\s*g)?/gi;
+        const ratePattern = /(?:24\s*(?:K|karat|carat)|22\s*(?:K|karat|carat)|24 कैरेट|22 कैरेट|silver\s*999(?:\s*fine)?|999(?:\s*(?:fine\s*)?silver)?|चाँदी|चांदी)[^₹]{0,180}(?:₹|Rs\.?|INR)\s*[0-9][0-9,]*(?:\.[0-9]+)?\s*(?:per\s*1?\s*kg|per\s*10\s*g(?:m|rams?)?|1\s*kg|10\s*g(?:m|rams?)?|\/\s*(?:1\s*)?kg|\/\s*10\s*g(?:m|rams?)?)?/gi;
         for (const rateMatch of section.matchAll(ratePattern)) {
           contexts.push("मूल HTML शहर-खंड: " + heading[1].trim() + " | " + rateMatch[0]);
         }
