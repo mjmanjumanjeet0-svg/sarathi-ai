@@ -938,7 +938,7 @@ await test("current news retries one provider rate limit with compact source con
     assert.match(retryBody.messages.at(-1).content, /लेख-अंश/);
     assert.match(retryBody.messages.at(-1).content, /\nप्रकाशक:/, "compact retry context must use real line breaks");
     assert.doesNotMatch(retryBody.messages.at(-1).content, /\\nप्रकाशक:/, "compact retry must not send literal backslash-n text");
-    assert.equal((r.data.reply.match(/सार:/g) || []).length, 4, "the retry or its format-repair attempt should produce all four Hindi summaries");
+    assert.equal((r.data.reply.match(/सार:/g) || []).length, 0, "a four-source retry must not be shown as a complete five-story digest");
   } finally {
     groqMode = "success";
     exaMode = "success";
@@ -955,7 +955,7 @@ await test("current news automatically switches to a secondary Groq model when t
     }, token);
     assert.equal(r.status, 200);
     assert.equal(r.data.sources.length, 4);
-    assert.equal((r.data.reply.match(/सार:/g) || []).length, 4);
+    assert.equal((r.data.reply.match(/सार:/g) || []).length, 0, "secondary-model output must not bypass the five-source completeness rule");
     const groqCalls = calls.slice(before).filter(x => x.url.includes("api.groq.com"));
     assert.ok(groqCalls.some(x => JSON.parse(x.init.body).model === "openai/gpt-oss-20b"));
     assert.ok(groqCalls.some(x => JSON.parse(x.init.body).model === "qwen/qwen3.8-27b"), "secondary model must be attempted after primary HTTP 429");
@@ -976,9 +976,8 @@ await test("current news accepts concise Hindi summaries without the literal स
     }, token);
     assert.equal(r.status, 200);
     assert.equal(r.data.sources.length, 4);
-    assert.equal((r.data.reply.match(/(^|\n)खबर [1-4]: /g) || []).length, 4);
-    assert.equal((r.data.reply.match(/सार:/g) || []).length, 4);
-    assert.doesNotMatch(r.data.reply, /AI सेवा ने खबरों का सही हिंदी सार तैयार नहीं किया/);
+    assert.doesNotMatch(r.data.reply, /खबर [1-5]:|सार:/, "plain summaries must still be withheld when only four source articles exist");
+    assert.match(r.data.reply, /आज केवल 4 अलग-अलग, तारीख़-जाँचे समाचार स्रोत मिले/);
   } finally {
     groqMode = "success";
     exaMode = "success";
@@ -994,9 +993,8 @@ await test("current news keeps valid summaries when one generated item adds an u
     }, token);
     assert.equal(r.status, 200);
     assert.equal(r.data.sources.length, 4);
-    assert.doesNotMatch(r.data.reply, /AI सेवा ने खबरों का सही हिंदी सार तैयार नहीं किया/);
-    assert.match(r.data.reply, /उपलब्ध स्रोत-अंश इस कारण की पुष्टि नहीं करता/);
-    assert.equal((r.data.reply.match(/सार:/g) || []).length, 4);
+    assert.match(r.data.reply, /आज केवल 4 अलग-अलग, तारीख़-जाँचे समाचार स्रोत मिले/);
+    assert.doesNotMatch(r.data.reply, /खबर [1-5]:|सार:/, "a four-source cause-check result must not become a partial digest");
   } finally {
     groqMode = "success";
     exaMode = "success";
@@ -1035,8 +1033,8 @@ await test("current news refuses headline-only output when Groq returns malforme
     assert.equal(r.status, 200);
     assert.equal(r.data.success, true);
     assert.ok(r.data.sources.length > 1, "date-checked search results should remain available");
-    assert.match(r.data.reply, /भरोसेमंद हिंदी सार तैयार नहीं हो सका/);
-    assert.doesNotMatch(r.data.reply, /प्रकाशकों के मूल शीर्षक|प्रकाशित:|खबर 1:/);
+    assert.match(r.data.reply, /आज केवल 4 अलग-अलग, तारीख़-जाँचे समाचार स्रोत मिले|आज 5 तारीख़-जाँचे समाचार परिणाम मिले/);
+    assert.doesNotMatch(r.data.reply, /प्रकाशकों के मूल शीर्षक|प्रकाशित:|खबर [1-5]:/);
     assert.doesNotMatch(r.data.reply, /\\\\n\\\\n/, "fallback text must contain real line breaks, not visible escape sequences");
     assert.doesNotMatch(r.data.reply, /कृपया थोड़ी देर बाद फिर पूछें/);
   } finally {
