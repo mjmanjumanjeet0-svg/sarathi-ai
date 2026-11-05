@@ -998,6 +998,40 @@ function buildNewsFallback(results, dateTime) {
   return "आज की खबरों की खोज में " + items.length + " स्रोत मिले, लेकिन उनका भरोसेमंद हिंदी सार तैयार नहीं हो पाया। इसलिए अंग्रेज़ी लेखों को ज्यों-का-त्यों दिखाने या अधूरी जानकारी को खबर बताने के बजाय मैं इस बार अपुष्ट सार नहीं दे रहा हूँ। कृपया थोड़ी देर बाद फिर पूछें।";
 }
 
+function isFiveCategoryNewsQuery(text) {
+  const value = String(text || "");
+  const hasFive = /(?:पाँच|पांच|5)\s*(?:अलग-अलग\s*)?(?:महत्वपूर्ण\s*)?(?:खबर|समाचार|news)/i.test(value);
+  const hasCategories = /(?:सरकार|government|अर्थव्यवस्था|economy|अदालत|न्यायालय|court|विज्ञान|science|खेल|sports)/i.test(value);
+  return isCurrentNewsQuery(value) && hasFive && hasCategories;
+}
+
+function classifyRequestedNewsCategory(item) {
+  const text = cleanText((item?.title || "") + " " + (item?.snippet || "")).toLocaleLowerCase("hi-IN");
+  const rules = [
+    ["खेल", /\b(?:sports?|cricket|football|hockey|tennis|badminton|olympics?|paralympics?|athlete|tournament|ipl|icc|bcci)\b|खेल|क्रिकेट|फुटबॉल|हॉकी|टेनिस|बैडमिंटन|ओलंपिक|खिलाड़ी|टूर्नामेंट|विश्व कप/i],
+    ["अदालत", /\b(?:supreme court|high court|court|tribunal|judgment|judgement|verdict|legal|bench|petition|bail|sentence)\b|सुप्रीम कोर्ट|उच्च न्यायालय|हाई कोर्ट|अदालत|न्यायालय|न्यायाधीश|फैसला|निर्णय|याचिका|जमानत|पीठ/i],
+    ["विज्ञान", /\b(?:science|scientific|research|researchers|isro| nasa|space mission|satellite|launch vehicle|discovery|scientists?|clinical trial|genome)\b|विज्ञान|वैज्ञानिक|अनुसंधान|शोध|इसरो|अंतरिक्ष|उपग्रह|प्रक्षेपण|खोज|वैज्ञानिकों|जीनोम/i],
+    ["अर्थव्यवस्था", /\b(?:economy|economic|gdp|inflation|rbi|reserve bank|stock market|sensex|nifty|rupee|fiscal|trade deficit|exports?|imports?|budget|interest rate|banking|manufacturing|unemployment)\b|अर्थव्यवस्था|आर्थिक|जीडीपी|महंगाई|मुद्रास्फीति|आरबीआई|रिजर्व बैंक|शेयर बाजार|सेंसेक्स|निफ्टी|रुपया|निर्यात|आयात|बजट|ब्याज दर|बैंकिंग|बेरोजगारी/i],
+    ["सरकार", /\b(?:government|cabinet|minister|ministry|parliament|lok sabha|rajya sabha|prime minister|policy|bill|ordinance|scheme|election commission|governor)\b|सरकार|मंत्रिमंडल|कैबिनेट|मंत्री|मंत्रालय|संसद|लोकसभा|राज्यसभा|प्रधानमंत्री|नीति|विधेयक|अध्यादेश|योजना|निर्वाचन आयोग|राज्यपाल/i]
+  ];
+  return rules.find(([, re]) => re.test(text))?.[0] || "";
+}
+
+function selectNewsForRequestedCategories(results, query) {
+  if (!isFiveCategoryNewsQuery(query)) return results;
+  const required = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
+  const selected = new Map();
+  for (const item of (Array.isArray(results) ? results : [])) {
+    const category = classifyRequestedNewsCategory(item);
+    if (category && required.includes(category) && !selected.has(category)) {
+      selected.set(category, { ...item, requestedCategory: category });
+    }
+  }
+  // Return only one distinct event for each requested category, in the user's
+  // requested order. Missing categories remain missing; never pad with repeats.
+  return required.filter(category => selected.has(category)).map(category => selected.get(category));
+}
+
 function isCurrentNewsQuery(text) {
   return /(?:पिछले|गत|last)\s*48\s*(?:घंटों?|घंटे|hours?).{0,110}(?:खबर|समाचार|न्यूज़|न्यूज|news)|(?:ताज़ा|ताजा|मुख्य|प्रमुख).{0,35}खबर|आज.{0,60}(?:खबर|समाचार)|(?:latest|breaking|current)\s+news|today.?s\s+news|समाचार/i.test(String(text || ""));
 }
@@ -1155,7 +1189,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     const basisText = corroborators.length
       ? "पुष्टि का आधार: दूसरे प्रकाशक की रिपोर्ट में भी इसी घटना का उल्लेख मिला। इसे स्वतंत्र पुष्टि तभी मानें जब रिपोर्ट किसी अलग समाचार एजेंसी या प्रत्यक्ष स्रोत पर आधारित हो; केवल अलग वेबसाइट होना पर्याप्त नहीं है।"
       : "पुष्टि का आधार: केवल एक प्रकाशक की रिपोर्ट मिली; दूसरी रिपोर्ट से मिलान उपलब्ध नहीं है।";
-    lines.push("खबर " + (lines.length + 1) + ": " + entry.headline + "\nसार: " + entry.summary +
+    lines.push("खबर " + (lines.length + 1) + (items[index]?.requestedCategory ? " (" + items[index].requestedCategory + ")" : "") + ": " + entry.headline + "\nसार: " + entry.summary +
       "\nप्रकाशक: " + publisher +
       "\nमूल लिंक: " + items[index].url +
       "\nप्रकाशित: " + formatNewsPublishedAt(items[index].publishedAt) +
@@ -1212,7 +1246,7 @@ function buildCompactNewsSourceContext(results) {
         "\nमूल लिंक: " + (typeof source.url === "string" && /^https:\/\//i.test(source.url) ? source.url : "") +
         "\nप्रकाशित: " + formatNewsPublishedAt(source.publishedAt || "") +
         "\nउपलब्ध अंश: " + cleanText(source.snippet || "").slice(0, 500)).join("");
-    return "स्रोत " + (index + 1) + ":\nशीर्षक: " + title +
+    return "स्रोत " + (index + 1) + ":\nश्रेणी: " + (item.requestedCategory || "सामान्य") + "\nशीर्षक: " + title +
       "\nप्रकाशक: " + publisher + "\nमूल लिंक: " + url + "\nप्रकाशित: " + publishedAt +
       "\nउपलब्ध लेख-अंश: " + (snippet || "लेख का पर्याप्त अंश उपलब्ध नहीं है।") + corroboration;
   }).join("\n\n");
@@ -1636,7 +1670,15 @@ export default {
       if (isCurrentNewsQuestion) {
         // Keep the newest same-day report for a repeated event, then deduplicate
         // event headlines and publishers. Exa relevance order is not chronological.
-        searchResults = dedupeNewsPublishers(groupNewsByEvent(sortNewsByPublicationTime(filterFreshNewsResults(searchResults))));
+        searchResults = groupNewsByEvent(sortNewsByPublicationTime(filterFreshNewsResults(searchResults)));
+        // For an explicit five-category digest, retain one distinct event per
+        // requested category. Do not let publisher deduplication discard the
+        // only court/science/sports item; corroborating links remain grouped.
+        if (isFiveCategoryNewsQuery(userText)) {
+          searchResults = selectNewsForRequestedCategories(searchResults, userText);
+        } else {
+          searchResults = dedupeNewsPublishers(searchResults);
+        }
         // A single fresh article is not enough to present a news digest as verified.
         // Stop before the language model can turn one weakly matching page into a confident event summary.
         if (searchResults.length > 0 && searchResults.length < 2) {
@@ -1920,7 +1962,7 @@ export default {
     const isCurrentNewsReply = wantsSearch && isCurrentNewsQuery(userText);
     const isPreciousMetalReply = wantsSearch && /(सोने|सोना|gold|चांदी|चाँदी|silver|bullion|22\s*k|24\s*k)/i.test(userText);
     const requireTwoSentenceNews = /2\s*(?:-|–|to)\s*3|दो\s*(?:से|या)\s*तीन|दो.?तीन\s*(?:वाक्य|sentence)/i.test(userText);
-    const compactNewsSystemPrompt = "तुम सारथी AI हो। पूरा उत्तर सहज देवनागरी हिंदी में दो। हर खबर का हिंदी शीर्षक और 2 छोटे वाक्यों का सार केवल उसी खबर के दिए गए शीर्षक तथा लेख-अंश से लिखो; यदि स्रोत में पर्याप्त तथ्य न हों तो कम शब्दों में स्पष्ट सीमा बताओ। शीर्षक का अर्थ बदले बिना अनुवाद करो। व्यक्ति, राज्य, शहर, संस्था और योजना के नाम स्रोत के अनुसार सही लिखो; नाम का अनुमान, गलत लिप्यंतरण या किसी दूसरे व्यक्ति का नाम मत लिखो। सार में केवल वही तथ्य दो जो लेख-अंश में साफ मौजूद हों। स्रोत में न दिया कारण, जिम्मेदार व्यक्ति/समूह, स्थान, संख्या, असर, नीति की स्थिति या निर्णय मत जोड़ो। राजनीतिक आरोप को स्पष्ट रूप से संबंधित व्यक्ति का आरोप बताओ, सिद्ध तथ्य की तरह नहीं। खासकर वायु प्रदूषण, दुर्घटना, बीमारी, कीमतों या सरकारी फैसलों के कारण/जिम्मेदारी का अनुमान बिल्कुल मत लगाओ। किसी घटना को किसी कारण से जोड़ने के लिए स्रोत में वही कारण स्पष्ट रूप से लिखा होना चाहिए। प्रस्ताव, सिफारिश, घोषणा, मंजूरी, लागू फैसला और संभावना अलग-अलग बातें हैं—स्रोत जिस स्तर की पुष्टि करे, वही लिखो; विचाराधीन/संभावित योजना को पक्का फैसला, मंजूरी या घोषित कार्यक्रम मत बताओ; स्रोत में 'considering', 'weighing', 'likely', 'may' या 'no official announcement' हो तो हिंदी में भी विचार/संभावना/अभी पुष्टि नहीं जैसी भाषा बनाए रखो; Cabinet approves का अर्थ मंजूरी मिली है, जबकि proposal/recommendation का अर्थ प्रस्ताव/सिफारिश है। सरकारी नीति/सेवा-नियम की खबर में पात्र समूह, प्रतिशत, अवधि और आगे की चयन-शर्तें ठीक-ठीक बताओ; किसी सीमित समूह के फैसले को सभी पर लागू मत बताओ और चयन को स्वतः नियुक्ति मत कहो। किसी एक स्रोत के तथ्य दूसरे स्रोत की खबर में मत मिलाओ। एक ही घटना की दो रिपोर्टों को मिलाकर एक खबर बनाओ, अलग घटनाओं को कभी मत मिलाओ। यदि पर्याप्त विश्वसनीय स्रोत उपलब्ध हों तो पाँच खबरें अलग-अलग विषयों/क्षेत्रों से चुनो; केवल संख्या पूरी करने के लिए कमजोर खबर मत जोड़ो। उपलब्ध अलग-अलग खबरों की संख्या के अनुसार क्रमांक दो; अंग्रेज़ी शीर्षक ज्यों-का-त्यों मत लिखो। केवल शीर्षक हो और विवरण न हो तो उससे आगे की घटना/कारण की जानकारी मत गढ़ो। पूर्वानुमान को घटित घटना मत बताओ और बाजार के शुरुआती आँकड़ों को बंद भाव मत बताओ। प्रकाशक, मूल लिंक, प्रकाशित समय और पुष्टि का आधार कोड से जोड़े जाएँगे; उन्हें खुद मत गढ़ो। हर खबर के लिए ठीक प्रारूप रखो: खबर 1: हिंदी शीर्षक; अगली पंक्ति: सार: 2 छोटे, स्रोत-आधारित वाक्य। कोई अलग स्रोत-सूची या अतिरिक्त भूमिका मत बनाओ।";
+    const compactNewsSystemPrompt = "तुम सारथी AI हो। पूरा उत्तर सहज देवनागरी हिंदी में दो। हर खबर का हिंदी शीर्षक और 2 छोटे वाक्यों का सार केवल उसी खबर के दिए गए शीर्षक तथा लेख-अंश से लिखो; यदि स्रोत में पर्याप्त तथ्य न हों तो कम शब्दों में स्पष्ट सीमा बताओ। शीर्षक का अर्थ बदले बिना अनुवाद करो। व्यक्ति, राज्य, शहर, संस्था और योजना के नाम स्रोत के अनुसार सही लिखो; नाम का अनुमान, गलत लिप्यंतरण या किसी दूसरे व्यक्ति का नाम मत लिखो। सार में केवल वही तथ्य दो जो लेख-अंश में साफ मौजूद हों। स्रोत में न दिया कारण, जिम्मेदार व्यक्ति/समूह, स्थान, संख्या, असर, नीति की स्थिति या निर्णय मत जोड़ो। राजनीतिक आरोप को स्पष्ट रूप से संबंधित व्यक्ति का आरोप बताओ, सिद्ध तथ्य की तरह नहीं। खासकर वायु प्रदूषण, दुर्घटना, बीमारी, कीमतों या सरकारी फैसलों के कारण/जिम्मेदारी का अनुमान बिल्कुल मत लगाओ। किसी घटना को किसी कारण से जोड़ने के लिए स्रोत में वही कारण स्पष्ट रूप से लिखा होना चाहिए। प्रस्ताव, सिफारिश, घोषणा, मंजूरी, लागू फैसला और संभावना अलग-अलग बातें हैं—स्रोत जिस स्तर की पुष्टि करे, वही लिखो; विचाराधीन/संभावित योजना को पक्का फैसला, मंजूरी या घोषित कार्यक्रम मत बताओ; स्रोत में 'considering', 'weighing', 'likely', 'may' या 'no official announcement' हो तो हिंदी में भी विचार/संभावना/अभी पुष्टि नहीं जैसी भाषा बनाए रखो; Cabinet approves का अर्थ मंजूरी मिली है, जबकि proposal/recommendation का अर्थ प्रस्ताव/सिफारिश है। सरकारी नीति/सेवा-नियम की खबर में पात्र समूह, प्रतिशत, अवधि और आगे की चयन-शर्तें ठीक-ठीक बताओ; किसी सीमित समूह के फैसले को सभी पर लागू मत बताओ और चयन को स्वतः नियुक्ति मत कहो। किसी एक स्रोत के तथ्य दूसरे स्रोत की खबर में मत मिलाओ। एक ही घटना की दो रिपोर्टों को मिलाकर एक खबर बनाओ, अलग घटनाओं को कभी मत मिलाओ। यदि सवाल में सरकार, अर्थव्यवस्था, अदालत, विज्ञान और खेल जैसी पाँच स्पष्ट श्रेणियाँ दी गई हों, तो दिए गए खोज परिणामों में से हर श्रेणी की अधिकतम एक अलग घटना चुनो; एक ही कैबिनेट बैठक/घटना के अलग फैसलों को अलग-अलग श्रेणी की खबर बताकर मत गिनो। स्रोत-अंश जिस श्रेणी को स्पष्ट समर्थन न दे, उसे उस श्रेणी में मत रखो। किसी श्रेणी का परिणाम न मिले तो उसकी कमी स्वीकार करो; दूसरी श्रेणी की खबर से संख्या पूरी मत करो। सामान्य समाचार सवाल में भी पाँच खबरें अलग-अलग घटनाओं से चुनो। केवल संख्या पूरी करने के लिए कमजोर खबर मत जोड़ो। उपलब्ध अलग-अलग खबरों की संख्या के अनुसार क्रमांक दो; अंग्रेज़ी शीर्षक ज्यों-का-त्यों मत लिखो। केवल शीर्षक हो और विवरण न हो तो उससे आगे की घटना/कारण की जानकारी मत गढ़ो। पूर्वानुमान को घटित घटना मत बताओ और बाजार के शुरुआती आँकड़ों को बंद भाव मत बताओ। प्रकाशक, मूल लिंक, प्रकाशित समय और पुष्टि का आधार कोड से जोड़े जाएँगे; उन्हें खुद मत गढ़ो। हर खबर के लिए ठीक प्रारूप रखो: खबर 1: हिंदी शीर्षक; अगली पंक्ति: सार: 2 छोटे, स्रोत-आधारित वाक्य। कोई अलग स्रोत-सूची या अतिरिक्त भूमिका मत बनाओ।";
     let groqResponse;
     let activeGroqModel = GROQ_MODEL;
     try {
