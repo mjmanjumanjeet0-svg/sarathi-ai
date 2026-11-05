@@ -1060,8 +1060,12 @@ function hasUnsupportedNumericClaim(generatedText, sourceEvidence) {
     .replace(/[०-९]/g, digit => String("०१२३४५६७८९".indexOf(digit)))
     .replace(/\b(seventy-five|zero|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|lakh|crore)\b/gi, word => englishNumbers[word.toLowerCase()] || word)
     .replace(/शून्य|दो|तीन|चार|पाँच|पांच|छह|छः|सात|आठ|नौ|दस|ग्यारह|बारह|पंद्रह|बीस|पच्चीस|तीस|चालीस|पचास|साठ|सत्तर|पचहत्तर|अस्सी|नब्बे|सौ|हजार|लाख|करोड़/g, word => hindiNumbers[word] || word);
-  const sourceNumbers = new Set(normalize(sourceEvidence).match(/\d+(?:[.,]\d+)?%?/g) || []);
-  const generatedNumbers = normalize(generatedText).match(/\d+(?:[.,]\d+)?%?/g) || [];
+  // Treat thousands separators consistently: 14,500 and 14500 are the same value.
+  const numericTokens = value => normalize(value)
+    .replace(/(?<=\d),(?=\d{3}(?:\D|$))/g, "")
+    .match(/\d+(?:\.\d+)?%?/g) || [];
+  const sourceNumbers = new Set(numericTokens(sourceEvidence));
+  const generatedNumbers = numericTokens(generatedText);
   return generatedNumbers.some(number => !sourceNumbers.has(number));
 }
 
@@ -1139,7 +1143,10 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
   const hindiDigits = { "०":"0", "१":"1", "२":"2", "३":"3", "४":"4", "५":"5", "६":"6", "७":"7", "८":"8", "९":"9" };
   for (const rawLine of String(rawReply || "").split(/\r?\n/)) {
     const line = rawLine.replace(/\*\*/g, "").replace(/^[-•]\s*/, "").replace(/[०-९]/g, digit => hindiDigits[digit]).trim();
-    const headline = line.match(/^(?:(?:खबर|समाचार)\s*)?(\d+)\s*[:：.)\-–—]\s*(.+)$/i) || line.match(/^(?:खबर|समाचार)\s*(\d+)\s*[:：]\s*(.+)$/i);
+    // Accept the common category-tagged variants returned by chat models,
+    // e.g. "खबर 1 (सरकार): ..." as well as the strict "खबर 1: ..." format.
+    const headline = line.match(/^(?:(?:खबर|समाचार)\s*)?(\d+)\s*(?:\([^)]{1,40}\)\s*)?[:：.)\-–—]\s*(.+)$/i) ||
+      line.match(/^(?:खबर|समाचार)\s*(\d+)\s*[:：]\s*(.+)$/i);
     if (headline) {
       current = Number(headline[1]);
       if (current >= 1 && current <= items.length) {
