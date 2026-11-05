@@ -25,20 +25,30 @@ const hasUnsupportedNumericClaim = new Function(worker.slice(numericGuardStart, 
 assert.equal(hasUnsupportedNumericClaim("यह एक महत्वपूर्ण फैसला है।", "Supreme Court decision on green crackers"), false, "the common Hindi article 'एक' must not be mistaken for an unsupported numeric claim");
 assert.equal(hasUnsupportedNumericClaim("This is one important decision.", "Supreme Court decision on green crackers"), false, "the common English article 'one' must not be mistaken for an unsupported numeric claim");
 assert.equal(hasUnsupportedNumericClaim("अदालत ने दो व्यक्तियों को दोषी ठहराया।", "The court convicted people in the case"), true, "explicit Hindi number words must still be checked when they add an unsupported count");
+const certaintyGuardStart = worker.indexOf("function hasUnsupportedCertaintyClaim(generatedText, sourceEvidence) {");
+const certaintyGuardEnd = worker.indexOf("\\n}\\n", certaintyGuardStart);
+assert.ok(certaintyGuardStart >= 0 && certaintyGuardEnd > certaintyGuardStart, "news certainty guard must exist");
+const hasUnsupportedCertaintyClaim = new Function(worker.slice(certaintyGuardStart, certaintyGuardEnd + 3) + "\\nreturn hasUnsupportedCertaintyClaim;")();
+const tentativeDelhiSource = "Delhi government is considering artificial rain after Diwali; no official announcement is expected before Diwali.";
+assert.equal(hasUnsupportedCertaintyClaim("दिल्ली सरकार ने कृत्रिम बारिश कराने का निर्णय लिया।", tentativeDelhiSource), true, "a tentative proposal must not be upgraded into a confirmed decision");
+assert.equal(hasUnsupportedCertaintyClaim("दिल्ली सरकार कृत्रिम बारिश कराने पर विचार कर रही है।", tentativeDelhiSource), false, "a summary that preserves the source's tentative status must pass");
+assert.equal(hasUnsupportedCertaintyClaim("दिल्ली सरकार ने कृत्रिम बारिश कराने का निर्णय लिया।", "Delhi government approved the artificial rain plan."), false, "a confirmed decision must not be rejected when the source confirms approval");
+
 
 const newsFormatterStart = worker.indexOf("function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false) {");
 const newsFormatterEnd = worker.indexOf("\n}\n", newsFormatterStart);
 assert.ok(newsFormatterStart >= 0 && newsFormatterEnd > newsFormatterStart, "daily-news formatter must exist");
 const formatCurrentNewsSummaryReply = new Function(
   "dedupeNewsResults", "cleanText", "formatNewsPublishedAt",
-  "hasMixedScriptToken", "hasUnsupportedNumericClaim",
+  "hasMixedScriptToken", "hasUnsupportedNumericClaim", "hasUnsupportedCertaintyClaim",
   worker.slice(newsFormatterStart, newsFormatterEnd + 3) + "\nreturn formatCurrentNewsSummaryReply;"
 )(
   results => results,
   value => String(value || "").replace(/\s+/g, " ").trim(),
   () => "05 नवंबर 2026 (भारतीय समय)",
   () => false,
-  () => false
+  () => false,
+  hasUnsupportedCertaintyClaim
 );
 const fiveNewsSources = Array.from({ length: 5 }, (_, index) => ({
   title: "अलग समाचार घटना " + (index + 1),
