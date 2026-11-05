@@ -1174,32 +1174,37 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     }
   }
   const lines = [];
+  const rejectCounts = {
+    missingEntry: 0, headlineGrounding: 0, aqi: 0, sentenceCount: 0,
+    agniveerDetail: 0, mixedScript: 0, unsupportedNumber: 0,
+    unsupportedCertainty: 0, westAsia: 0, missingEvidence: 0, unsupportedCause: 0
+  };
   for (let index = 0; index < items.length; index++) {
     const entry = entries.get(index + 1);
     // Validate each story independently. One malformed or weak summary must
     // not erase other stories whose Hindi summaries pass every source check.
-    if (!entry?.headline || !entry?.summary) continue;
-    if (hasUnsupportedNewsHeadlineMix(entry.headline, items[index]?.title || "", items[index]?.snippet || "")) continue;
-    if (hasIncorrectOverallAqiCategory(entry.headline + " " + entry.summary)) continue;
+    if (!entry?.headline || !entry?.summary) { rejectCounts.missingEntry++; continue; }
+    if (hasUnsupportedNewsHeadlineMix(entry.headline, items[index]?.title || "", items[index]?.snippet || "")) { rejectCounts.headlineGrounding++; continue; }
+    if (hasIncorrectOverallAqiCategory(entry.headline + " " + entry.summary)) { rejectCounts.aqi++; continue; }
     const sentenceEnds = entry.summary.match(/[।!?]+|(?<![0-9])\.(?![0-9])/g) || [];
-    if (requireTwoSentences && (sentenceEnds.length < 2 || sentenceEnds.length > 3)) continue;
+    if (requireTwoSentences && (sentenceEnds.length < 2 || sentenceEnds.length > 3)) { rejectCounts.sentenceCount++; continue; }
     const sourceEvidence = cleanText((items[index]?.title || "") + " " + (items[index]?.snippet || ""));
     const generatedText = entry.headline + " " + entry.summary;
     const isAgniveerExtension = /agniveer|अग्निवीर/i.test(sourceEvidence) &&
       /(?:75\s*%|७५\s*प्रतिशत|remaining\s+75|शेष\s+७५)/i.test(sourceEvidence);
     if (isAgniveerExtension && !/(?:75\s*%|७५\s*(?:प्रतिशत|फीसदी)|शेष\s+७५|पचहत्तर\s*(?:प्रतिशत|फीसदी)?)/i.test(generatedText)) continue;
-    if (hasMixedScriptToken(generatedText)) continue;
-    if (hasUnsupportedNumericClaim(generatedText, sourceEvidence)) continue;
-    if (hasUnsupportedCertaintyClaim(generatedText, sourceEvidence)) continue;
+    if (hasMixedScriptToken(generatedText)) { rejectCounts.mixedScript++; continue; }
+    if (hasUnsupportedNumericClaim(generatedText, sourceEvidence)) { rejectCounts.unsupportedNumber++; continue; }
+    if (hasUnsupportedCertaintyClaim(generatedText, sourceEvidence)) { rejectCounts.unsupportedCertainty++; continue; }
     const claimsWestAsiaConflict = /(?:पश्चिम एशिया|मध्य पूर्व|मिडिल ईस्ट|west asia|middle east|iran|iranian|israel|israeli).{0,70}(?:संघर्ष|युद्ध|तनाव|शांति|समाधान|conflict|war|tension|peace|ceasefire)|(?:संघर्ष|युद्ध|तनाव|शांति|समाधान|conflict|war|tension|peace|ceasefire).{0,70}(?:पश्चिम एशिया|मध्य पूर्व|मिडिल ईस्ट|west asia|middle east|iran|iranian|israel|israeli)/i.test(generatedText);
     const sourceMentionsWestAsiaConflict = /(?:पश्चिम एशिया|मध्य पूर्व|मिडिल ईस्ट|west asia|middle east|iran|iranian|israel|israeli).{0,100}(?:संघर्ष|युद्ध|तनाव|शांति|समाधान|conflict|war|tension|peace|ceasefire)|(?:संघर्ष|युद्ध|तनाव|शांति|समाधान|conflict|war|tension|peace|ceasefire).{0,100}(?:पश्चिम एशिया|मध्य पूर्व|मिडिल ईस्ट|west asia|middle east|iran|iranian|israel|israeli)/i.test(sourceEvidence);
-    if (claimsWestAsiaConflict && !sourceMentionsWestAsiaConflict) continue;
+    if (claimsWestAsiaConflict && !sourceMentionsWestAsiaConflict) { rejectCounts.westAsia++; continue; }
     // A disclaimer about missing evidence is not a news summary. Reject the
     // story instead of replacing its summary with generic filler.
-    if (/(?:उपलब्ध स्रोत|लेख-अंश|स्रोत-अंश).{0,90}(?:पुष्टि नहीं करता|पुष्टि नहीं होती|पर्याप्त जानकारी नहीं|विवरण उपलब्ध नहीं|निष्कर्ष नहीं निकाला जा सकता)/i.test(entry.summary)) continue;
+    if (/(?:उपलब्ध स्रोत|लेख-अंश|स्रोत-अंश).{0,90}(?:पुष्टि नहीं करता|पुष्टि नहीं होती|पर्याप्त जानकारी नहीं|विवरण उपलब्ध नहीं|निष्कर्ष नहीं निकाला जा सकता)/i.test(entry.summary)) { rejectCounts.missingEvidence++; continue; }
     const claimsCause = /(?:के कारण|की वजह से|के चलते|के फलस्वरूप|का कारण बना|कारण बना|की बदौलत)/i.test(generatedText);
     const sourceExplicitlyStatesCause = /(?:because of|due to|caused by|attributed to|triggered by|owing to|as a result of|के कारण|की वजह से|के चलते|की बदौलत)/i.test(sourceEvidence);
-    if (claimsCause && !sourceExplicitlyStatesCause) continue;
+    if (claimsCause && !sourceExplicitlyStatesCause) { rejectCounts.unsupportedCause++; continue; }
     let publisher = "प्रकाशक उपलब्ध नहीं";
     try { publisher = new URL(items[index].url).hostname.toLowerCase().replace(/^www\./i, ""); } catch {}
     const corroborators = (Array.isArray(items[index].corroboratingSources) ? items[index].corroboratingSources : [])
@@ -1224,6 +1229,14 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
       "\nप्रकाशित: " + formatNewsPublishedAt(items[index].publishedAt) +
       corroborationText + "\n" + basisText);
   }
+  console.warn("News digest validation diagnostics", JSON.stringify({
+    selectedItems: items.length,
+    parsedEntries: entries.size,
+    acceptedEntries: lines.length,
+    rejected: rejectCounts,
+    requireTwoSentences,
+    requireFiveCategories
+  }));
   // For an explicit five-category request, a partial model answer is invalid.
   // Returning empty triggers the constrained repair attempt instead of silently
   // presenting three stories when five category sources were selected.
