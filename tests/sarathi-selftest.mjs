@@ -40,6 +40,9 @@ assert.equal(validHttpUrl("https://[::1]/secret"), false, "IPv6 literal sources 
 assert.equal(validHttpUrl("https://metadata.google.internal/"), false, "internal metadata hostnames must be rejected");
 
 assert.match(source.slice(source.indexOf("async function enrichGoldRateResults"), source.indexOf("function isHistoricalResearchQuery")), /redirect:\s*"manual"/, "third-party enrichment must not follow redirects");
+assert.match(source, /const primaryRateSummaryMatch = visible\.match/, "bullion lead rate summary must be captured separately from city rows");
+assert.match(source, /प्रकाशक का मुख्य दर-सारांश/, "bullion evidence must keep the publisher lead summary distinct");
+assert.match(source, /शहरवार तालिका की हर पंक्ति को एक अविभाज्य इकाई/, "bullion answers must not mix city rows");
 assert.ok(source.includes("आम में विटामिन E प्रचुर होने") && source.includes("स्थापित पोषण-तथ्य"), "health answers must avoid unsupported nutrient and skin/hair claims");
 
 const moduleUrl = "data:text/javascript;base64," + Buffer.from(source).toString("base64");
