@@ -35,7 +35,7 @@ const formatCurrentNewsSummaryReply = new Function(
   worker.slice(newsFormatterStart, newsFormatterEnd + 3) + "\nreturn formatCurrentNewsSummaryReply;"
 )(
   results => results,
-  value => String(value || "").replace(/\\s+/g, " ").trim(),
+  value => String(value || "").replace(/\s+/g, " ").trim(),
   () => "05 नवंबर 2026 (भारतीय समय)",
   () => false,
   () => false
@@ -52,7 +52,7 @@ const fiveNewsDraft = fiveNewsSources.map((_, index) =>
 ).join("\n");
 const completeFiveNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, fiveNewsSources, true);
 assert.match(completeFiveNewsReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "five-story request must return the five-story heading only when all five summaries pass");
-assert.deepEqual([...completeFiveNewsReply.matchAll(/खबर (\\d+):/g)].map(match => Number(match[1])), [1, 2, 3, 4, 5], "daily-news numbering must always be continuous from 1 through 5");
+assert.deepEqual([...completeFiveNewsReply.matchAll(/खबर (\d+):/g)].map(match => Number(match[1])), [1, 2, 3, 4, 5], "daily-news numbering must always be continuous from 1 through 5");
 assert.equal(formatCurrentNewsSummaryReply(fiveNewsDraft, fiveNewsSources.slice(0, 4), true), "", "four stories must never be presented as a complete five-story digest");
 const incompleteFiveNewsDraft = fiveNewsDraft.replace("सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।", "सार: ");
 assert.equal(formatCurrentNewsSummaryReply(incompleteFiveNewsDraft, fiveNewsSources, true), "", "a five-source digest must be rejected if even one story lacks a valid summary");
