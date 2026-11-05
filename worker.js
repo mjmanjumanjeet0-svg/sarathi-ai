@@ -890,21 +890,15 @@ function dedupeNewsPublishers(results) {
 }
 
 function filterFreshNewsResults(results, now = Date.now()) {
-  // "Today's news" means the current calendar day in India, not merely any
-  // article from the previous 48 hours. This prevents yesterday's digest from
-  // being presented as today's headlines after midnight IST.
-  const todayIndia = new Intl.DateTimeFormat("en-CA", {
-    timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit"
-  }).format(new Date(now));
+  // "Today's latest news" may include a report published late yesterday.
+  // Keep a strict rolling 48-hour window, reject future/undated articles, and
+  // always display each article's actual publication date to avoid relabeling it.
+  const earliestAllowed = now - 48 * 60 * 60 * 1000;
   return (Array.isArray(results) ? results : []).filter(item => {
     const publishedAt = item && typeof item.publishedAt === "string" ? item.publishedAt.trim() : "";
     if (!publishedAt) return false;
     const timestamp = Date.parse(publishedAt);
-    if (!Number.isFinite(timestamp) || timestamp > now) return false;
-    const publishedIndia = new Intl.DateTimeFormat("en-CA", {
-      timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit"
-    }).format(new Date(timestamp));
-    return publishedIndia === todayIndia;
+    return Number.isFinite(timestamp) && timestamp <= now && timestamp >= earliestAllowed;
   });
 }
 
@@ -1539,7 +1533,7 @@ export default {
           }).format(new Date());
           return jsonResponse({
             success: true,
-            reply: todayLabel + " के लिए केवल एक स्वतंत्र समाचार स्रोत मिला; पाँच अलग खबरों और बहु-स्रोत पुष्टि की माँग पूरी नहीं हुई। इसलिए इसे पक्की खबर की सूची में शामिल नहीं कर रहा हूँ।\n\nउपलब्ध स्रोत: " + (searchResults[0].publisher || "प्रकाशक उपलब्ध नहीं") + "\nमूल लिंक: [मूल खबर पढ़ें](" + searchResults[0].url + ")\nप्रकाशित: " + formatNewsPublishedAt(searchResults[0].publishedAt) + "\n\nदो या अधिक स्वतंत्र प्रकाशकों से पुष्टि मिलने पर ही खबर का सार दूँगा।",
+            reply: todayLabel + " के लिए केवल एक स्वतंत्र समाचार स्रोत मिला; पाँच अलग खबरों और बहु-स्रोत पुष्टि की माँग पूरी नहीं हुई। इसलिए इसे पक्की खबर की सूची में शामिल नहीं कर रहा हूँ।\n\nउपलब्ध स्रोत: " + (searchResults[0].publisher || "प्रकाशक उपलब्ध नहीं") + "\nमूल लिंक: " + searchResults[0].url + "\nप्रकाशित: " + formatNewsPublishedAt(searchResults[0].publishedAt) + "\n\nदो या अधिक स्वतंत्र प्रकाशकों से पुष्टि मिलने पर ही खबर का सार दूँगा।",
             ...dateTime,
             webSearch: true,
             searchAttempted: true,
