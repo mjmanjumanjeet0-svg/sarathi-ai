@@ -780,7 +780,7 @@ await test("current price query invokes web search and AI", async () => {
   assert.match(enrichedUserPrompt, /24 karat gold rate in New Delhi.*₹1,39,850 per 10 gm/);
   assert.match(enrichedUserPrompt, /22 karat gold rate in New Delhi.*₹1,27,683 per 10 gm/);
   assert.match(enrichedUserPrompt, /Silver 999 Fine rate in New Delhi.*₹1,77,940 per 1 kg/);
-  assert.match(enrichedUserPrompt, /पेज से निकाले गए मूल मूल्य-संदर्भ/);
+  assert.match(enrichedUserPrompt, /अलग-अलग शहरों की मूल तालिका पंक्तियाँ/);
   assert.match(enrichedUserPrompt, /13,888 × 10 = 1,38,880/);
   assert.match(enrichedUserPrompt, /179 × 1000 = 1,79,000/);
   assert.match(enrichedUserPrompt, /विसंगति बताओ/);
