@@ -970,9 +970,12 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
   const items = dedupeNewsResults(results).filter(item => {
     const title = cleanText(item?.title || "");
     const publishedAt = Date.parse(item?.publishedAt || "");
+    // Re-check India relevance at the final display boundary so an incidental
+    // India mention cannot turn an international story into an India headline.
+    if (!title || !isIndiaFocusedNewsItem(item)) return false;
     try {
       const url = new URL(item?.url || "");
-      return title.length > 0 && url.protocol === "https:" && Boolean(url.hostname) && Number.isFinite(publishedAt);
+      return url.protocol === "https:" && Boolean(url.hostname) && Number.isFinite(publishedAt);
     } catch { return false; }
   }).slice(0, 5);
   // Validate each available independent article; a short list is allowed when disclosed.
@@ -1062,6 +1065,7 @@ function buildCurrentNewsHeadlineReply(results) {
   const items = dedupeNewsResults(results).filter(item => {
     const title = cleanText(item?.title || "");
     const publishedAt = Date.parse(item?.publishedAt || "");
+    if (!title || !isIndiaFocusedNewsItem(item)) return false;
     try {
       const url = new URL(item?.url || "");
       return title.length > 0 && url.protocol === "https:" &&
