@@ -476,14 +476,14 @@ async function enrichGoldRateResults(results) {
       // Preserve complete HTML table rows: flattening the page into one text
       // string can detach a city label from its price and cause a neighbouring
       // city's number to be attributed to the Mumbai benchmark.
-      const tableRows = [...html.matchAll(/<tr\\b[^>]*>([\\s\\S]*?)<\\/tr>/gi)]
+      const tableRows = [...html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)]
         .map(row => cleanText(row[1]
-          .replace(/<script[\\s\\S]*?<\\/script>/gi, " ")
-          .replace(/<style[\\s\\S]*?<\\/style>/gi, " ")
+          .replace(/<script[\s\S]*?<\/script>/gi, " ")
+          .replace(/<style[\s\S]*?<\/style>/gi, " ")
           .replace(/<[^>]+>/g, " ")
           .replace(/&nbsp;|&#160;/gi, " ")
-          .replace(/&#8377;|&#x20b9;/gi, "₹")).replace(/\\s+/g, " ").trim())
-        .filter(row => row && /(?:₹|rs\\.?|inr)/i.test(row) && /[0-9][0-9,]*(?:\\.[0-9]+)?/.test(row))
+          .replace(/&#8377;|&#x20b9;/gi, "₹")).replace(/\s+/g, " ").trim())
+        .filter(row => row && /(?:₹|rs\.?|inr)/i.test(row) && /[0-9][0-9,]*(?:\.[0-9]+)?/.test(row))
         .slice(0, 40)
         .map(row => "मूल HTML तालिका पंक्ति (शहर और भाव साथ): " + row);
       contexts.push(...tableRows);
