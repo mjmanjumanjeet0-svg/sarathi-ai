@@ -1872,26 +1872,26 @@ export default {
     // City-specific bullion guard: reject a priced row attributed to a different city.
     // A Mumbai/Zaveri Bazar quote must never be presented as Patna (or another city).
     const bullionCityAliases = [
-      { key: "patna", re: /पटना|\\bpatna\\b/i, label: "पटना" },
-      { key: "mumbai", re: /मुंबई|मुम्बई|\\bmumbai\\b/i, label: "मुंबई" },
-      { key: "delhi", re: /दिल्ली|\\bdelhi\\b/i, label: "दिल्ली" },
-      { key: "kolkata", re: /कोलकाता|कलकत्ता|\\bkolkata\\b/i, label: "कोलकाता" },
-      { key: "chennai", re: /चेन्नई|मद्रास|\\bchennai\\b/i, label: "चेन्नई" },
-      { key: "bengaluru", re: /बेंगलुरु|बंगलौर|\\bbengaluru\\b|\\bbangalore\\b/i, label: "बेंगलुरु" },
-      { key: "hyderabad", re: /हैदराबाद|\\bhyderabad\\b/i, label: "हैदराबाद" },
-      { key: "ahmedabad", re: /अहमदाबाद|\\bahmedabad\\b/i, label: "अहमदाबाद" },
-      { key: "jaipur", re: /जयपुर|\\bjaipur\\b/i, label: "जयपुर" },
-      { key: "lucknow", re: /लखनऊ|\\blucknow\\b/i, label: "लखनऊ" },
-      { key: "kanpur", re: /कानपुर|\\bkanpur\\b/i, label: "कानपुर" },
-      { key: "varanasi", re: /वाराणसी|बनारस|\\bvaranasi\\b/i, label: "वाराणसी" },
-      { key: "siwan", re: /सिवान|\\bsiwan\\b/i, label: "सिवान" },
-      { key: "gaya", re: /गया|\\bgaya\\b/i, label: "गया" },
-      { key: "ranchi", re: /रांची|\\branchi\\b/i, label: "रांची" }
+      { key: "patna", re: /पटना|\bpatna\b/i, label: "पटना" },
+      { key: "mumbai", re: /मुंबई|मुम्बई|\bmumbai\b/i, label: "मुंबई" },
+      { key: "delhi", re: /दिल्ली|\bdelhi\b/i, label: "दिल्ली" },
+      { key: "kolkata", re: /कोलकाता|कलकत्ता|\bkolkata\b/i, label: "कोलकाता" },
+      { key: "chennai", re: /चेन्नई|मद्रास|\bchennai\b/i, label: "चेन्नई" },
+      { key: "bengaluru", re: /बेंगलुरु|बंगलौर|\bbengaluru\b|\bbangalore\b/i, label: "बेंगलुरु" },
+      { key: "hyderabad", re: /हैदराबाद|\bhyderabad\b/i, label: "हैदराबाद" },
+      { key: "ahmedabad", re: /अहमदाबाद|\bahmedabad\b/i, label: "अहमदाबाद" },
+      { key: "jaipur", re: /जयपुर|\bjaipur\b/i, label: "जयपुर" },
+      { key: "lucknow", re: /लखनऊ|\blucknow\b/i, label: "लखनऊ" },
+      { key: "kanpur", re: /कानपुर|\bkanpur\b/i, label: "कानपुर" },
+      { key: "varanasi", re: /वाराणसी|बनारस|\bvaranasi\b/i, label: "वाराणसी" },
+      { key: "siwan", re: /सिवान|\bsiwan\b/i, label: "सिवान" },
+      { key: "gaya", re: /गया|\bgaya\b/i, label: "गया" },
+      { key: "ranchi", re: /रांची|\branchi\b/i, label: "रांची" }
     ];
     if (isPreciousMetalReply) {
       const requestedCity = bullionCityAliases.find(city => city.re.test(userText));
       if (requestedCity) {
-        const pricedLines = rawReply.split(/\\r?\\n/).filter(line => /₹|\\bINR\\b|रु\\.?/i.test(line));
+        const pricedLines = rawReply.split(/\r?\n/).filter(line => /₹|\bINR\b|रु\.?/i.test(line));
         const foreignPricedLine = pricedLines.find(line =>
           bullionCityAliases.some(city => city.key !== requestedCity.key && city.re.test(line))
         );
@@ -1901,7 +1901,7 @@ export default {
           );
           rawReply = requestedCity.label + " के स्थानीय सोना-चाँदी भाव उपलब्ध खोज परिणामों से विश्वसनीय रूप से सत्यापित नहीं हो सके। खोज में " +
             (foreignCity?.label || "दूसरे शहर") + " के संदर्भ वाली दर मिली है; उसे " + requestedCity.label +
-            " का भाव बताना सही नहीं होगा। इसलिए 24 कैरेट, 22 कैरेट और 999 चाँदी की कोई अपुष्ट कीमत नहीं दी जा रही है।\\n\\n" +
+            " का भाव बताना सही नहीं होगा। इसलिए 24 कैरेट, 22 कैरेट और 999 चाँदी की कोई अपुष्ट कीमत नहीं दी जा रही है।\n\n" +
             "स्रोत-जाँच: उपलब्ध खोज परिणामों में स्थानीय शहर की स्पष्ट, पूरी दर-पंक्ति की पुष्टि नहीं हुई।";
         }
       }
