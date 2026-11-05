@@ -987,7 +987,7 @@ function hasUnsupportedNewsHeadlineMix(headline, sourceTitle) {
 function hasIncorrectOverallAqiCategory(text) {
   // CPCB's 301–400 band is Very Poor, not Severe. A separate station may be severe.
   const value = String(text || "").replace(/[०-९]/g, d => String("०१२३४५६७८९".indexOf(d)));
-  return /(?:AQI|वायु गुणवत्ता सूचकांक).{0,22}(?:301|30[1-9]|3[1-9]\d|400)\s*(?:पर\s*)?(?:है\s*)?(?:गंभीर|severe)\b/i.test(value);
+  return /(?:AQI|वायु गुणवत्ता सूचकांक).{0,22}(?:301|30[1-9]|3[1-9]\d|400)\s*(?:पर\s*)?(?:है\s*)?(?:गंभीर|severe)(?:\s|$|[।,;])/i.test(value);
 }
 
 function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false) {
