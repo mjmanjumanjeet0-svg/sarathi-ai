@@ -1033,10 +1033,10 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     ? "आज की 5 अलग-अलग, तारीख़-जाँची खबरें:"
     : "आज " + count + " अलग-अलग, तारीख़-जाँची खबरें मिलीं (आपने 5 माँगी थीं):";
   const shortfall = count < 5
-    ? "\\n\\nध्यान दें: पर्याप्त स्वतंत्र और पुष्ट खबरें नहीं मिलीं, इसलिए अपुष्ट खबरें नहीं जोड़ी गईं।"
+    ? "\n\nध्यान दें: पर्याप्त स्वतंत्र और पुष्ट खबरें नहीं मिलीं, इसलिए अपुष्ट खबरें नहीं जोड़ी गईं।"
     : "";
-  return prefix + "\\n\\n" + lines.join("\\n\\n") +
-    "\\n\\nध्यान दें: हर सार संबंधित समाचार के उपलब्ध लेख-अंश पर आधारित है." + shortfall;
+  return prefix + "\n\n" + lines.join("\n\n") +
+    "\n\nध्यान दें: हर सार संबंधित समाचार के उपलब्ध लेख-अंश पर आधारित है." + shortfall;
 }
 function buildCurrentNewsHeadlineReply(results) {
   // Count only distinct, displayable articles with a real HTTPS publisher URL; never emit headline-only output.
