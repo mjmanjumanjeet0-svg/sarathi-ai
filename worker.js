@@ -514,7 +514,9 @@ async function enrichGoldRateResults(results) {
           .replace(/&nbsp;|&#160;/gi, " ")
           .replace(/&#8377;|&#x20b9;/gi, "₹")).replace(/\s+/g, " ").trim())
         .filter(row => row && /(?:₹|rs\.?|inr)/i.test(row) && /[0-9][0-9,]*(?:\.[0-9]+)?/.test(row))
-        .slice(0, 40)
+        .filter(row => /(?:दिल्ली|new\\s+delhi|\\bdelhi\\b|पटना|\\bpatna\\b|मुंबई|\\bmumbai\\b|कोलकाता|\\bkolkata\\b|चेन्नई|\\bchennai\\b|बेंगलुरु|\\bbengaluru\\b|\\bbangalore\\b|हैदराबाद|\\bhyderabad\\b|अहमदाबाद|\\bahmedabad\\b|जयपुर|\\bjaipur\\b|लखनऊ|\\blucknow\\b|सिवान|\\bsiwan\\b)/i.test(row) &&
+          /(?:22\\s*(?:k|karat|carat)|24\\s*(?:k|karat|carat)|22 कैरेट|24 कैरेट|999|silver|चाँदी|चांदी)/i.test(row))
+        .slice(0, 100)
         .map(row => "मूल HTML तालिका पंक्ति (शहर और भाव साथ): " + row);
       contexts.push(...tableRows);
       if (!contexts.length) return item;
@@ -534,7 +536,7 @@ async function enrichGoldRateResults(results) {
         primaryRateSummary,
         goldRates: (goldRates.per10g22K || goldRates.per10g24K) ? goldRates : null,
         silverRate: silverRate || null,
-        rateContexts: [...new Set(contexts)].slice(0, 40),
+        rateContexts: [...new Set(contexts)].slice(0, 120),
         snippet: (item.snippet ? item.snippet + " | " : "") +
           "पेज से मिला मूल्य-संदर्भ: " + [...new Set(contexts)].join(" || ").slice(0, 2400)
       };
@@ -1059,17 +1061,17 @@ function buildProviderBusySearchFallback(results, query, reason = "AI सेव�
   const isBullion = /(सोने|सोना|gold|चांदी|चाँदी|silver|bullion|22\\s*k|24\\s*k)/i.test(String(query || ""));
   if (isBullion) {
     const cities = [
-      { label: "दिल्ली", re: /दिल्ली|\\bdelhi\\b|new delhi/i },
-      { label: "पटना", re: /पटना|\\bpatna\\b/i },
-      { label: "मुंबई", re: /मुंबई|मुम्बई|\\bmumbai\\b/i },
-      { label: "कोलकाता", re: /कोलकाता|कलकत्ता|\\bkolkata\\b/i },
-      { label: "चेन्नई", re: /चेन्नई|मद्रास|\\bchennai\\b/i },
-      { label: "बेंगलुरु", re: /बेंगलुरु|बंगलौर|\\bbengaluru\\b|\\bbangalore\\b/i },
-      { label: "हैदराबाद", re: /हैदराबाद|\\bhyderabad\\b/i },
-      { label: "अहमदाबाद", re: /अहमदाबाद|\\bahmedabad\\b/i },
-      { label: "जयपुर", re: /जयपुर|\\bjaipur\\b/i },
-      { label: "लखनऊ", re: /लखनऊ|\\blucknow\\b/i },
-      { label: "सिवान", re: /सिवान|\\bsiwan\\b/i }
+      { label: "दिल्ली", re: /दिल्ली|\bdelhi\b|new delhi/i },
+      { label: "पटना", re: /पटना|\bpatna\b/i },
+      { label: "मुंबई", re: /मुंबई|मुम्बई|\bmumbai\b/i },
+      { label: "कोलकाता", re: /कोलकाता|कलकत्ता|\bkolkata\b/i },
+      { label: "चेन्नई", re: /चेन्नई|मद्रास|\bchennai\b/i },
+      { label: "बेंगलुरु", re: /बेंगलुरु|बंगलौर|\bbengaluru\b|\bbangalore\b/i },
+      { label: "हैदराबाद", re: /हैदराबाद|\bhyderabad\b/i },
+      { label: "अहमदाबाद", re: /अहमदाबाद|\bahmedabad\b/i },
+      { label: "जयपुर", re: /जयपुर|\bjaipur\b/i },
+      { label: "लखनऊ", re: /लखनऊ|\blucknow\b/i },
+      { label: "सिवान", re: /सिवान|\bsiwan\b/i }
     ];
     const city = cities.find(entry => entry.re.test(String(query || "")));
     if (city) {
