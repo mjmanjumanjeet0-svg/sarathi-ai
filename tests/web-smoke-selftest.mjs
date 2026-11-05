@@ -27,12 +27,12 @@ assert.equal(hasUnsupportedNumericClaim("This is one important decision.", "Supr
 assert.equal(hasUnsupportedNumericClaim("अदालत ने दो व्यक्तियों को दोषी ठहराया।", "The court convicted people in the case"), true, "explicit Hindi number words must still be checked when they add an unsupported count");
 
 const newsFormatterStart = worker.indexOf("function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false) {");
-const newsFormatterEnd = worker.indexOf("\\n}\\n", newsFormatterStart);
+const newsFormatterEnd = worker.indexOf("\n}\n", newsFormatterStart);
 assert.ok(newsFormatterStart >= 0 && newsFormatterEnd > newsFormatterStart, "daily-news formatter must exist");
 const formatCurrentNewsSummaryReply = new Function(
   "dedupeNewsResults", "cleanText", "formatNewsPublishedAt",
   "hasMixedScriptToken", "hasUnsupportedNumericClaim",
-  worker.slice(newsFormatterStart, newsFormatterEnd + 3) + "\\nreturn formatCurrentNewsSummaryReply;"
+  worker.slice(newsFormatterStart, newsFormatterEnd + 3) + "\nreturn formatCurrentNewsSummaryReply;"
 )(
   results => results,
   value => String(value || "").replace(/\\s+/g, " ").trim(),
@@ -48,8 +48,8 @@ const fiveNewsSources = Array.from({ length: 5 }, (_, index) => ({
 }));
 const fiveNewsDraft = fiveNewsSources.map((_, index) =>
   "खबर " + (index + 1) + ": अलग समाचार घटना " + (index + 1) +
-  "\\nसार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।"
-).join("\\n");
+  "\nसार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।"
+).join("\n");
 const completeFiveNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, fiveNewsSources, true);
 assert.match(completeFiveNewsReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "five-story request must return the five-story heading only when all five summaries pass");
 assert.deepEqual([...completeFiveNewsReply.matchAll(/खबर (\\d+):/g)].map(match => Number(match[1])), [1, 2, 3, 4, 5], "daily-news numbering must always be continuous from 1 through 5");
