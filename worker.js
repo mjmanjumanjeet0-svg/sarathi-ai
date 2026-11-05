@@ -473,6 +473,20 @@ async function enrichGoldRateResults(results) {
         const context = visible.slice(Math.max(0, match.index - 240), Math.min(visible.length, match.index + 420)).replace(/\s+/g, " ").trim();
         if (/(₹|rs\.?|inr|रुपये|रु\.?)/i.test(context) && /[0-9][0-9,]*(?:\.[0-9]+)?/.test(context)) contexts.push(context);
       }
+      // Preserve complete HTML table rows: flattening the page into one text
+      // string can detach a city label from its price and cause a neighbouring
+      // city's number to be attributed to the Mumbai benchmark.
+      const tableRows = [...html.matchAll(/<tr\\b[^>]*>([\\s\\S]*?)<\\/tr>/gi)]
+        .map(row => cleanText(row[1]
+          .replace(/<script[\\s\\S]*?<\\/script>/gi, " ")
+          .replace(/<style[\\s\\S]*?<\\/style>/gi, " ")
+          .replace(/<[^>]+>/g, " ")
+          .replace(/&nbsp;|&#160;/gi, " ")
+          .replace(/&#8377;|&#x20b9;/gi, "₹")).replace(/\\s+/g, " ").trim())
+        .filter(row => row && /(?:₹|rs\\.?|inr)/i.test(row) && /[0-9][0-9,]*(?:\\.[0-9]+)?/.test(row))
+        .slice(0, 40)
+        .map(row => "मूल HTML तालिका पंक्ति (शहर और भाव साथ): " + row);
+      contexts.push(...tableRows);
       if (!contexts.length) return item;
       const combined = [item.title || "", item.snippet || "", ...contexts].join(" | ");
       const rateFor = (karat) => {
@@ -489,7 +503,7 @@ async function enrichGoldRateResults(results) {
         pagePublishedAt: pagePublishedAt || "",
         goldRates: (goldRates.per10g22K || goldRates.per10g24K) ? goldRates : null,
         silverRate: silverRate || null,
-        rateContexts: [...new Set(contexts)].slice(0, 10),
+        rateContexts: [...new Set(contexts)].slice(0, 40),
         snippet: (item.snippet ? item.snippet + " | " : "") +
           "पेज से मिला मूल्य-संदर्भ: " + [...new Set(contexts)].join(" || ").slice(0, 2400)
       };
