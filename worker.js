@@ -506,6 +506,19 @@ async function enrichGoldRateResults(results) {
       // Preserve complete HTML table rows: flattening the page into one text
       // string can detach a city label from its price and cause a neighbouring
       // city's number to be attributed to the Mumbai benchmark.
+      // Some publisher articles render city-wise rates as heading + paragraph
+      // sections rather than HTML table rows. Preserve each bounded city section
+      // as evidence; never join it to the next city's section.
+      const citySectionPattern = /(?:Gold|Silver)\s+(?:Prices|Rates)\s+in\s+((?:New\s+)?[A-Za-z][A-Za-z ]{1,30}?)\s*[—–-]/gi;
+      const cityHeadings = [...visible.matchAll(citySectionPattern)];
+      for (let i = 0; i < cityHeadings.length; i++) {
+        const heading = cityHeadings[i];
+        const sectionEnd = i + 1 < cityHeadings.length ? cityHeadings[i + 1].index : visible.length;
+        const section = visible.slice(heading.index, sectionEnd).replace(/\s+/g, " ").trim();
+        if (section && /(?:₹|rs\.?|inr)/i.test(section) && /[0-9][0-9,]*(?:\.[0-9]+)?/.test(section)) {
+          contexts.push("मूल HTML शहर-खंड (अगले शहर से पहले): " + section);
+        }
+      }
       const tableRows = [...html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)]
         .map(row => cleanText(row[1]
           .replace(/<script[\s\S]*?<\/script>/gi, " ")
