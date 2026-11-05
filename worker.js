@@ -682,7 +682,7 @@ function isIndiaFocusedNewsItem(item) {
 
   // Exclude multi-topic publisher digests: they can mix one Indian item with
   // unrelated international stories under a single article title.
-  if (/(?:^|\\b)(?:ht|toi|ndtv)?\\s*(?:morning|evening|daily)\\s+brief\\b|news roundup|daily roundup|top headlines/i.test(title)) {
+  if (/(?:evening news brief|morning news brief|daily news brief|news roundup|daily roundup|top headlines)/i.test(title)) {
     return false;
   }
 
@@ -1115,8 +1115,9 @@ function buildCompactNewsSourceContext(results) {
     const snippet = cleanText(item?.snippet || "").slice(0, 900);
     const publisher = cleanText(item?.publisher || "").slice(0, 100);
     const publishedAt = formatNewsPublishedAt(item?.publishedAt || "");
+    const url = typeof item?.url === "string" && /^https:\/\//i.test(item.url) ? item.url : "";
     return "स्रोत " + (index + 1) + ":\nशीर्षक: " + title +
-      "\nप्रकाशक: " + publisher + "\nप्रकाशित: " + publishedAt +
+      "\nप्रकाशक: " + publisher + "\nमूल लिंक: " + url + "\nप्रकाशित: " + publishedAt +
       "\nउपलब्ध लेख-अंश: " + (snippet || "लेख का पर्याप्त अंश उपलब्ध नहीं है।");
   }).join("\n\n");
 }
@@ -1837,6 +1838,7 @@ export default {
         const compactNewsContext = searchResults.slice(0, 5).map((item, index) =>
           "स्रोत " + (index + 1) + ": " + cleanText(item.title || "").slice(0, 180) +
           "\nप्रकाशक: " + cleanText(item.publisher || "").slice(0, 80) +
+          "\nमूल लिंक: " + (typeof item.url === "string" && /^https:\/\//i.test(item.url) ? item.url : "") +
           "\nप्रकाशित: " + formatNewsPublishedAt(item.publishedAt || "") +
           "\nलेख-अंश: " + cleanText(item.snippet || "").slice(0, 320)
         ).join("\n\n");
