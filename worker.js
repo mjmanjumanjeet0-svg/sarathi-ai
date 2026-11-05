@@ -514,8 +514,8 @@ async function enrichGoldRateResults(results) {
           .replace(/&nbsp;|&#160;/gi, " ")
           .replace(/&#8377;|&#x20b9;/gi, "₹")).replace(/\s+/g, " ").trim())
         .filter(row => row && /(?:₹|rs\.?|inr)/i.test(row) && /[0-9][0-9,]*(?:\.[0-9]+)?/.test(row))
-        .filter(row => /(?:दिल्ली|new\\s+delhi|\\bdelhi\\b|पटना|\\bpatna\\b|मुंबई|\\bmumbai\\b|कोलकाता|\\bkolkata\\b|चेन्नई|\\bchennai\\b|बेंगलुरु|\\bbengaluru\\b|\\bbangalore\\b|हैदराबाद|\\bhyderabad\\b|अहमदाबाद|\\bahmedabad\\b|जयपुर|\\bjaipur\\b|लखनऊ|\\blucknow\\b|सिवान|\\bsiwan\\b)/i.test(row) &&
-          /(?:22\\s*(?:k|karat|carat)|24\\s*(?:k|karat|carat)|22 कैरेट|24 कैरेट|999|silver|चाँदी|चांदी)/i.test(row))
+        .filter(row => /(?:दिल्ली|new\s+delhi|delhi|पटना|patna|मुंबई|mumbai|कोलकाता|kolkata|चेन्नई|chennai|बेंगलुरु|bengaluru|bangalore|हैदराबाद|hyderabad|अहमदाबाद|ahmedabad|जयपुर|jaipur|लखनऊ|lucknow|सिवान|siwan)/i.test(row) &&
+          /(?:22\s*(?:k|karat|carat)|24\s*(?:k|karat|carat)|22 कैरेट|24 कैरेट|999|silver|चाँदी|चांदी)/i.test(row))
         .slice(0, 100)
         .map(row => "मूल HTML तालिका पंक्ति (शहर और भाव साथ): " + row);
       contexts.push(...tableRows);
