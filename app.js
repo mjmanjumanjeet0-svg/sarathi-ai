@@ -690,7 +690,7 @@ function shouldShowSearchSources(data) {
   const replyText = String(data?.reply || "");
   const isInlineNewsList = replyText.includes("खबर 1:") &&
     replyText.includes("प्रकाशक:") && replyText.includes("प्रकाशित:");
-  const hasInlineArticleUrl = /मूल लिंक:\\s*https:\\/\\//i.test(replyText);
+  const hasInlineArticleUrl = /मूल लिंक:\s*https:\/\/[^\s]+/i.test(replyText);
   const hasVerifiedSources = Array.isArray(data?.sources) &&
     data.sources.some(source => safeSourceUrl(source?.url) && String(source?.title || "").trim());
   const hasLegacySourceList = replyText.includes("खोज में मिले मूल शीर्षक:");
