@@ -1001,8 +1001,14 @@ function buildNewsFallback(results, dateTime) {
 function isFiveCategoryNewsQuery(text) {
   const value = String(text || "");
   const hasFive = /(?:पाँच|पांच|5)\s*(?:अलग-अलग\s*)?(?:महत्वपूर्ण\s*)?(?:खबर|समाचार|news)/i.test(value);
-  const hasCategories = /(?:सरकार|government|अर्थव्यवस्था|economy|अदालत|न्यायालय|court|विज्ञान|science|खेल|sports)/i.test(value);
-  return isCurrentNewsQuery(value) && hasFive && hasCategories;
+  const categoryTerms = [
+    /सरकार|government/i,
+    /अर्थव्यवस्था|economy/i,
+    /अदालत|न्यायालय|court/i,
+    /विज्ञान|science/i,
+    /खेल|sports/i
+  ];
+  return isCurrentNewsQuery(value) && hasFive && categoryTerms.every(re => re.test(value));
 }
 
 function classifyRequestedNewsCategory(item) {
@@ -1023,9 +1029,20 @@ function selectNewsForRequestedCategories(results, query) {
   const selected = new Map();
   for (const item of (Array.isArray(results) ? results : [])) {
     const category = classifyRequestedNewsCategory(item);
-    if (category && required.includes(category) && !selected.has(category)) {
-      selected.set(category, { ...item, requestedCategory: category });
-    }
+    if (!category || !required.includes(category) || selected.has(category)) continue;
+    const sameCabinetDay = [...selected.values()].some(previous => {
+      const previousText = cleanText((previous.title || "") + " " + (previous.snippet || ""));
+      const currentText = cleanText((item.title || "") + " " + (item.snippet || ""));
+      const bothCabinet = /कैबिनेट|मंत्रिमंडल|\\bcabinet\\b/i.test(previousText) &&
+        /कैबिनेट|मंत्रिमंडल|\\bcabinet\\b/i.test(currentText);
+      const previousDay = String(previous.publishedAt || "").slice(0, 10);
+      const currentDay = String(item.publishedAt || "").slice(0, 10);
+      return bothCabinet && previousDay && previousDay === currentDay;
+    });
+    // Separate headlines about decisions from the same cabinet meeting are
+    // not separate category events.
+    if (sameCabinetDay) continue;
+    selected.set(category, { ...item, requestedCategory: category });
   }
   // Return only one distinct event for each requested category, in the user's
   // requested order. Missing categories remain missing; never pad with repeats.
