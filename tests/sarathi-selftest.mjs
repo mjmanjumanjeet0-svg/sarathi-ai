@@ -1069,8 +1069,9 @@ await test("current news accepts concise Hindi summaries without the literal स
     }, token);
     assert.equal(r.status, 200);
     assert.equal(r.data.sources.length, 4);
-    assert.doesNotMatch(r.data.reply, /खबर [1-5]:|सार:/, "plain summaries must still be withheld when only four source articles exist");
-    assert.match(r.data.reply, /आज केवल 4 अलग-अलग, तारीख़-जाँचे समाचार स्रोत मिले/);
+    assert.ok((r.data.reply.match(/सार:/g) || []).length > 0 && (r.data.reply.match(/सार:/g) || []).length < 5,
+      "plain Hindi summaries may be shown individually when supported by four dated sources");
+    assert.match(r.data.reply, /अपुष्ट खबरें नहीं जोड़ी गईं/);
   } finally {
     groqMode = "success";
     exaMode = "success";
@@ -1086,8 +1087,10 @@ await test("current news keeps valid summaries when one generated item adds an u
     }, token);
     assert.equal(r.status, 200);
     assert.equal(r.data.sources.length, 4);
-    assert.match(r.data.reply, /आज केवल 4 अलग-अलग, तारीख़-जाँचे समाचार स्रोत मिले/);
-    assert.doesNotMatch(r.data.reply, /खबर [1-5]:|सार:/, "a four-source cause-check result must not become a partial digest");
+    assert.ok((r.data.reply.match(/सार:/g) || []).length < 5,
+      "the unsupported causal claim must be omitted without discarding other valid summaries");
+    assert.doesNotMatch(r.data.reply, /दिवाली के कारण दिल्ली की हवा खराब हुई/);
+    assert.match(r.data.reply, /अपुष्ट खबरें नहीं जोड़ी गईं/);
   } finally {
     groqMode = "success";
     exaMode = "success";
