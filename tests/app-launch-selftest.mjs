@@ -80,7 +80,7 @@ assert.ok(app.includes("function requestLoginPassword()"), "web login must use a
 assert.ok(app.includes('input.type = "password"') && app.includes('input.autocomplete = "current-password"'), "web login field must mask and correctly autocomplete passwords");
 assert.ok(app.includes("await requestLoginPassword()"), "login must await the masked password dialog");
 assert.ok(app.includes("let sessionAuthToken = null;") && app.includes("let messageLoginGranted = false;"), "login credentials and message authorization must exist only in the current app session");
-assert.doesNotMatch(app, /localStorage\\.(?:getItem|setItem|removeItem)\\(AUTH_TOKEN_KEY/, "authentication tokens must never persist in localStorage across app launches");
+assert.doesNotMatch(app, /AUTH_TOKEN_KEY/, "authentication tokens must never persist in localStorage across app launches");
 assert.ok(app.includes("async function getAuthToken(requireMessageLogin = false)") && app.includes("if (requireMessageLogin && !messageLoginGranted)"), "the first message in each app session must require a second password check");
 assert.ok(app.includes("let token = await getAuthToken(true);"), "sending a message must pass through the separate message-login gate");
 assert.ok(app.includes("if (sessionAuthToken) return sessionAuthToken;"), "the verified in-memory token may be reused only after the session login");
