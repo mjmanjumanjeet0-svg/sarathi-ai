@@ -1058,12 +1058,11 @@ function buildSearchContext(results, query = "") {
       const matchingCityRows = explicitCity && Array.isArray(item.rateContexts)
         ? item.rateContexts.filter(row => row.toLowerCase().includes(explicitCity.toLowerCase()))
         : [];
+      // Conservative bullion evidence: do not send city-table rows to the model.
+      // This prevents a city value being mistaken for an India-wide benchmark.
       const rateEvidence = isPreciousMetalQuery
         ? (item.primaryRateSummary
             ? "\\nप्रकाशक का मुख्य दर-सारांश (मुख्य संदर्भ): " + item.primaryRateSummary
-            : "") +
-          (matchingCityRows.length
-            ? "\\nकेवल उपयोगकर्ता द्वारा पूछे गए शहर की मूल तालिका पंक्तियाँ: " + matchingCityRows.join(" || ").slice(0, 1800)
             : "")
         : "";
       return `${i + 1}. ${item.title}\nप्रकाशक: ${item.publisher || "उपलब्ध नहीं"}\nप्रकाशित: ${published}${isHistoricalQuery ? `\nवास्तविक स्रोत URL: ${item.url}` : ""}\nजानकारी: ${cleanSnippet}${rateEvidence}`;
