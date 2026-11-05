@@ -1054,8 +1054,56 @@ function buildCompactNewsSourceContext(results) {
 }
 
 function buildProviderBusySearchFallback(results, query, reason = "AI सेवा इस समय व्यस्त है, इसलिए खोज परिणामों का हिंदी सार तैयार नहीं हो सका।") {
-  const items = (Array.isArray(results) ? results : []).slice(0, 5);
+  const items = (Array.isArray(results) ? results : []).slice(0, 8);
   if (!items.length) return "";
+  const isBullion = /(सोने|सोना|gold|चांदी|चाँदी|silver|bullion|22\\s*k|24\\s*k)/i.test(String(query || ""));
+  if (isBullion) {
+    const cities = [
+      { label: "दिल्ली", re: /दिल्ली|\\bdelhi\\b|new delhi/i },
+      { label: "पटना", re: /पटना|\\bpatna\\b/i },
+      { label: "मुंबई", re: /मुंबई|मुम्बई|\\bmumbai\\b/i },
+      { label: "कोलकाता", re: /कोलकाता|कलकत्ता|\\bkolkata\\b/i },
+      { label: "चेन्नई", re: /चेन्नई|मद्रास|\\bchennai\\b/i },
+      { label: "बेंगलुरु", re: /बेंगलुरु|बंगलौर|\\bbengaluru\\b|\\bbangalore\\b/i },
+      { label: "हैदराबाद", re: /हैदराबाद|\\bhyderabad\\b/i },
+      { label: "अहमदाबाद", re: /अहमदाबाद|\\bahmedabad\\b/i },
+      { label: "जयपुर", re: /जयपुर|\\bjaipur\\b/i },
+      { label: "लखनऊ", re: /लखनऊ|\\blucknow\\b/i },
+      { label: "सिवान", re: /सिवान|\\bsiwan\\b/i }
+    ];
+    const city = cities.find(entry => entry.re.test(String(query || "")));
+    if (city) {
+      const extracted = [];
+      for (const item of items) {
+        const rows = (Array.isArray(item.rateContexts) ? item.rateContexts : [])
+          .filter(row => /^मूल HTML तालिका पंक्ति/.test(row) && city.re.test(row));
+        const rates = [];
+        for (const row of rows) {
+          const find = (label, unit) => {
+            const re = new RegExp("(?:"
+              + label
+              + ")[^₹]{0,180}(?:₹|Rs\\.?|INR)\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*(" + unit + ")", "i");
+            const match = row.match(re);
+            return match ? { value: match[1], unit: match[2] } : null;
+          };
+          const gold24 = find("(?:24\\s*(?:K|karat|carat)|24\\s*कैरेट)", "(?:per\\s*10\\s*g(?:m|rams?)?|10\\s*g(?:m|rams?)|\\/\\s*10\\s*g)");
+          const gold22 = find("(?:22\\s*(?:K|karat|carat)|22\\s*कैरेट)", "(?:per\\s*10\\s*g(?:m|rams?)?|10\\s*g(?:m|rams?)|\\/\\s*10\\s*g)");
+          const silver = find("(?:999\\s*(?:fine\\s*)?silver|silver\\s*999(?:\\s*fine)?|999\\s*शुद्धता\\s*(?:की\\s*)?चाँदी)", "(?:per\\s*kg|1\\s*kg|\\/\\s*kg)");
+          if (gold24) rates.push("24 कैरेट सोना: ₹" + gold24.value + " प्रति 10 ग्राम");
+          if (gold22) rates.push("22 कैरेट सोना: ₹" + gold22.value + " प्रति 10 ग्राम");
+          if (silver) rates.push("999 चाँदी: ₹" + silver.value + " प्रति किलोग्राम");
+        }
+        if (rates.length) {
+          const date = item.publishedAt ? formatNewsPublishedAt(item.publishedAt) : "प्रकाशन तारीख उपलब्ध नहीं";
+          extracted.push(city.label + " — " + rates.join("; ") + "\\nस्रोत: " + (item.publisher || "प्रकाशक उपलब्ध नहीं") + " | तारीख: " + date);
+        }
+      }
+      if (extracted.length) {
+        return reason + " खोजे गए स्रोतों की मूल HTML तालिका की केवल " + city.label + " वाली पंक्तियों से ये दरें स्पष्ट रूप से निकली हैं। AI सार उपलब्ध नहीं है, इसलिए नीचे केवल सीधे पढ़े जा सकने वाले आँकड़े दिए हैं:\\n\\n" + extracted.join("\\n\\n") + "\\n\\nध्यान दें: केवल उन्हीं श्रेणियों की दरें दिखाई गई हैं जिनकी संख्या और इकाई उसी शहर की एक ही तालिका-पंक्ति में स्पष्ट थीं।";
+      }
+      return reason + " दिल्ली/माँगे गए शहर के खोज परिणाम मिले, लेकिन मूल HTML तालिका में शहर, शुद्धता, भाव और इकाई एक ही पंक्ति में स्पष्ट रूप से नहीं मिले। इसलिए कोई भाव अनुमान से नहीं दिया गया। नीचे स्रोतों की जानकारी उपलब्ध है।";
+    }
+  }
   return reason + " नीचे खोज में मिले वास्तविक परिणाम अलग से दिए गए हैं। उनके शीर्षक और प्रकाशन-तारीख देखकर मूल खबर पढ़ें; यह AI द्वारा सत्यापित समाचार-सार नहीं है।";
 }
 
