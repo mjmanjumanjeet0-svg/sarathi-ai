@@ -1099,6 +1099,11 @@ function hasUnsupportedNewsHeadlineMix(headline, sourceTitle, sourceSnippet = ""
   if (topicChecks.some(check => check.generated.test(headline) && !check.source.test(sourceEvidence))) return true;
   const sourceTokens = tokens(sourceTitle);
   if (!sourceTokens.size) return true;
+  // Literal token overlap cannot validate an English source title against a Hindi translation.
+  // Skip this language-specific check when the scripts differ; other source-grounding checks remain active.
+  const sourceHasDevanagari = /[\u0900-\u097F]/.test(String(sourceTitle || ""));
+  const headlineHasDevanagari = /[\u0900-\u097F]/.test(String(headline || ""));
+  if (sourceHasDevanagari !== headlineHasDevanagari) return false;
   const clauses = String(headline || "").split(/[;；|।]|\s+और\s+/i).map(part => part.trim()).filter(Boolean);
   if (clauses.length < 2) return false;
   return clauses.some(clause => {
