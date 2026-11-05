@@ -387,7 +387,7 @@ async function searchInternet(query, env) {
     const items = Array.isArray(payload?.results) ? payload.results : [];
     const results = items
       .filter(item => item && typeof item.title === "string" && typeof item.url === "string" && validHttpUrl(item.url))
-      .slice(0, isHistoricalResearchQuery(searchQuery) ? 15 : (isNewsQuery ? 40 : 5))
+      .slice(0, isHistoricalResearchQuery(searchQuery) ? 15 : (isNewsQuery ? 40 : (isPreciousMetalQuery ? 8 : 5)))
       .map(item => {
         let publisher = "वेबसाइट";
         try { publisher = new URL(item.url).hostname.replace(/^www\./i, ""); } catch {}
