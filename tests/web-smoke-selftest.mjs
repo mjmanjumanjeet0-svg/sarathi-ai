@@ -58,7 +58,7 @@ const isIndiaFocusedNewsItem = new Function(
   "cleanText",
   worker.slice(indiaFilterStart, indiaFilterEnd + 3) + "\nreturn isIndiaFocusedNewsItem;"
 )(value => String(value || "").replace(/\s+/g, " ").trim());
-const newsFormatterStart = worker.indexOf("function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false) {");
+const newsFormatterStart = worker.indexOf("function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false) {");
 const newsFormatterEnd = worker.indexOf("\n}\n", newsFormatterStart);
 assert.ok(newsFormatterStart >= 0 && newsFormatterEnd > newsFormatterStart, "daily-news formatter must exist");
 const formatCurrentNewsSummaryReply = new Function(
@@ -87,8 +87,10 @@ const fiveNewsDraft = fiveNewsSources.map((_, index) =>
   "खबर " + (index + 1) + ": अलग समाचार घटना " + (index + 1) +
   "\nसार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।"
 ).join("\n");
-const completeFiveNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, fiveNewsSources, true);
-assert.match(completeFiveNewsReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "five-story request must return the five-story heading only when all five summaries pass");
+const completeFiveNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, fiveNewsSources, true, true);
+assert.match(completeFiveNewsReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "five-category request must return all five stories only when all five summaries pass");
+const incompleteFiveCategoryReply = formatCurrentNewsSummaryReply(fiveNewsDraft.replace("खबर 5:", "खबर 4:"), fiveNewsSources, true, true);
+assert.equal(incompleteFiveCategoryReply, "", "five-category request must reject an incomplete or duplicated five-story response and trigger repair");
 assert.deepEqual([...completeFiveNewsReply.matchAll(/खबर (\d+):/g)].map(match => Number(match[1])), [1, 2, 3, 4, 5], "daily-news numbering must always be continuous from 1 through 5");
 const partialFourNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, fiveNewsSources.slice(0, 4), true);
 assert.match(partialFourNewsReply, /आज 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं \(आपने 5 माँगी थीं\)/, "four verified stories should be shown with an explicit shortfall notice");
