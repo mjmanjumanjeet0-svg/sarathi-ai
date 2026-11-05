@@ -567,6 +567,43 @@ async function enrichGoldRateResults(results) {
   }));
 }
 
+async function enrichNewsArticleEvidence(results) {
+  const candidates = (Array.isArray(results) ? results : []).slice(0, 5);
+  return await Promise.all(candidates.map(async item => {
+    if (!item || typeof item.url !== "string" || !/^https:\/\//i.test(item.url)) return item;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 5500);
+    try {
+      const response = await fetch(item.url, {
+        headers: { "Accept": "text/html,application/xhtml+xml", "User-Agent": "Mozilla/5.0 (compatible; SarathiAI/1.0)" },
+        signal: controller.signal,
+        redirect: "manual"
+      });
+      if (!response.ok || !/^(text\/html|application\/xhtml\+xml)/i.test(response.headers.get("content-type") || "")) return item;
+      const html = (await response.text()).slice(0, 900000);
+      const articleMatch = html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i);
+      let body = articleMatch ? articleMatch[1] : "";
+      body = body
+        .replace(/<(script|style|noscript|svg|nav|footer|header|form|aside)\b[^>]*>[\s\S]*?<\/\1>/gi, " ")
+        .replace(/<br\s*\/?>|<\/p>|<\/h[1-6]>|<\/li>/gi, ". ")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;|&#160;/gi, " ")
+        .replace(/&amp;/gi, "&").replace(/&quot;/gi, '"')
+        .replace(/&#39;|&apos;/gi, "'").replace(/&lt;/gi, "<").replace(/&gt;/gi, ">")
+        .replace(/\s+/g, " ").trim();
+      const meta = html.match(/<meta\b[^>]*(?:name|property)=["'](?:description|og:description)["'][^>]*content=["']([^"']{30,})["'][^>]*>/i) ||
+        html.match(/<meta\b[^>]*content=["']([^"']{30,})["'][^>]*(?:name|property)=["'](?:description|og:description)["'][^>]*>/i);
+      const description = meta ? cleanText(meta[1]).slice(0, 900) : "";
+      const evidence = cleanText((body || description).slice(0, 5200));
+      return evidence.length >= 180 ? { ...item, articleEvidence: evidence } : (description ? { ...item, articleEvidence: description } : item);
+    } catch {
+      return item;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }));
+}
+
 function isHistoricalResearchQuery(query) {
   return /(खूनी रविवार|bloody sunday|रूसी क्रांति|रूस की क्रांति|1905 की क्रांति|रूसी इतिहास|ऐतिहासिक घटना|ऐतिहासिक महत्व|russian revolution|1905 revolution)/i.test(String(query || ""));
 }
@@ -1190,7 +1227,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     if (requireTwoSentences && (sentenceEnds.length < 2 || sentenceEnds.length > 3)) { rejectCounts.sentenceCount++; continue; }
     const relatedEvidence = (Array.isArray(items[index]?.corroboratingSources) ? items[index].corroboratingSources : [])
       .map(source => cleanText((source?.title || "") + " " + (source?.snippet || ""))).join(" ");
-    const sourceEvidence = cleanText((items[index]?.title || "") + " " + (items[index]?.snippet || "") + " " + relatedEvidence);
+    const sourceEvidence = cleanText((items[index]?.title || "") + " " + (items[index]?.snippet || "") + " " + (items[index]?.articleEvidence || "") + " " + relatedEvidence);
     const generatedText = entry.headline + " " + entry.summary;
     const isAgniveerExtension = /agniveer|अग्निवीर/i.test(sourceEvidence) &&
       /(?:75\s*%|७५\s*प्रतिशत|remaining\s+75|शेष\s+७५)/i.test(sourceEvidence);
@@ -1296,7 +1333,7 @@ function buildCompactNewsSourceContext(results) {
         "\nउपलब्ध अंश: " + cleanText(source.snippet || "").slice(0, 500)).join("");
     return "स्रोत " + (index + 1) + ":\nश्रेणी: " + (item.requestedCategory || "सामान्य") + "\nशीर्षक: " + title +
       "\nप्रकाशक: " + publisher + "\nमूल लिंक: " + url + "\nप्रकाशित: " + publishedAt +
-      "\nउपलब्ध लेख-अंश: " + (snippet || "लेख का पर्याप्त अंश उपलब्ध नहीं है।") + corroboration;
+      "\nउपलब्ध लेख-अंश: " + (snippet || "लेख का पर्याप्त अंश उपलब्ध नहीं है।") + "\nपेज से निकाला गया लेख-पाठ: " + cleanText(item?.articleEvidence || "").slice(0, 4200) + corroboration;
   }).join("\n\n");
 }
 
@@ -1731,7 +1768,7 @@ export default {
         } else {
           searchResults = dedupeNewsPublishers(searchResults);
         }
-        // A single fresh article is not enough to present a news digest as verified.
+        if (isFiveCategoryNewsQuery(userText) && searchResults.length) {\n          searchResults = await enrichNewsArticleEvidence(searchResults);\n        }\n        // A single fresh article is not enough to present a news digest as verified.
         // Stop before the language model can turn one weakly matching page into a confident event summary.
         if (searchResults.length > 0 && searchResults.length < 2) {
           const todayLabel = new Intl.DateTimeFormat("hi-IN", {
