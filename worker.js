@@ -1026,7 +1026,7 @@ function hasUnsupportedNewsHeadlineMix(headline, sourceTitle, sourceSnippet = ""
     { generated: /(?:शेयर बाजार|सेंसेक्स|निफ्टी|stock market|sensex|nifty)/i, source: /(?:शेयर बाजार|सेंसेक्स|निफ्टी|stock market|sensex|nifty)/i },
     { generated: /(?:वायु गुणवत्ता|प्रदूषण|air quality|AQI)/i, source: /(?:वायु गुणवत्ता|प्रदूषण|air quality|AQI)/i },
     { generated: /(?:हरित पटाखे|green crackers)/i, source: /(?:हरित पटाखे|green crackers)/i },
-    { generated: /(?:चक्रवात|cyclone|मुरासु|murasu)/i, source: /(?:चक्रवात|cyclone|मुरासु|murasu)/i },
+    { generated: /(?:चक्रवात|cyclone|मुरासु|murasu)/i, source: /(?:चक्रवात|cyclone|cyclonic|मुरासु|murasu)/i },
     { generated: /(?:ऊर्जा भंडारण|energy storage|VGF)/i, source: /(?:ऊर्जा भंडारण|energy storage|VGF)/i },
     { generated: /(?:अग्निवीर|agniveer)/i, source: /(?:अग्निवीर|agniveer)/i }
   ];
