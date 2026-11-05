@@ -1187,6 +1187,24 @@ async function sendMessage(text) {
       }
     }
 
+    // Rebuild missing original-news links from the Worker’s verified source records.
+    // The model's prose is not trusted to reproduce URLs; only HTTPS URLs returned
+    // in data.sources are displayed. This also covers a blank "मूल लिंक:" field.
+    const isCurrentNewsPrompt = /(?:आज|ताज़ा|ताजा|नवीनतम|latest|today).{0,50}(?:खबर|समाचार|न्यूज़|न्यूज|news)|(?:खबर|समाचार|news).{0,50}(?:आज|ताज़ा|ताजा|latest|today)/i.test(prompt);
+    const hasUsableInlineNewsUrl = /मूल लिंक\\s*[:：]\\s*https:\\/\\/[^\\s]+/i.test(cleanAnswer);
+    if (isCurrentNewsPrompt && !hasUsableInlineNewsUrl && Array.isArray(data.sources)) {
+      const verifiedNewsSources = sanitizeSourceRecords(data.sources, 5);
+      if (verifiedNewsSources.length) {
+        const sourceLinks = verifiedNewsSources.map((source, index) => {
+          const published = source.publishedAt && Number.isFinite(Date.parse(source.publishedAt))
+            ? new Date(source.publishedAt).toLocaleDateString("hi-IN", { dateStyle: "medium" })
+            : "तारीख उपलब्ध नहीं";
+          return (index + 1) + ". [" + source.title.replace(/[\\[\\]]/g, "") + "](" + source.url + ")\\n   प्रकाशक: " + (source.publisher || new URL(source.url).hostname) + "\\n   प्रकाशित: " + published;
+        });
+        cleanAnswer = cleanAnswer.trim() + "\\n\\nमूल समाचार लिंक (खोज से मिले सत्यापित HTTPS स्रोत):\\n" + sourceLinks.join("\\n\\n");
+      }
+    }
+
     // Keep search failures visible in the chat, not only in the temporary status line.
     if (!(data.providerBusy === true && Array.isArray(data.sources) && data.sources.length > 0) &&
         shouldShowSearchWarning(data) && !cleanAnswer.includes(data.searchWarning)) {
