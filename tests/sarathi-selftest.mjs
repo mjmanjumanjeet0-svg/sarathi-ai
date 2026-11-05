@@ -678,7 +678,7 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.equal(newsResponse.data.searchUnavailable, undefined);
 });
 
-await test("exact requested five-news prompt accepts four distinct dated Hindi summaries with two sentences each", async () => {
+await test("five-news prompt with four valid source summaries still withholds an incomplete digest", async () => {
   groqMode = "news-two-sentence";
   exaMode = "success";
   try {
@@ -687,14 +687,11 @@ await test("exact requested five-news prompt accepts four distinct dated Hindi s
     }, token);
     assert.equal(r.status, 200);
     assert.equal(r.data.sources.length, 4, "only four distinct, dated source articles are available in this fixture");
-    assert.match(r.data.reply, /आज केवल 4 अलग-अलग, तारीख़-जाँची खबरों के सार तैयार हो सके/);
+    assert.match(r.data.reply, /आज केवल 4 अलग-अलग, तारीख़-जाँचे समाचार स्रोत मिले/);
     assert.doesNotMatch(r.data.reply, /भरोसेमंद हिंदी सार तैयार नहीं हो सका/);
     const summaries = r.data.reply.split(String.fromCharCode(10)).filter(line => /^सार: /.test(line));
-    assert.equal(summaries.length, 4, "every accepted article must have a Hindi summary");
-    for (const summary of summaries) {
-      const sentenceEnds = summary.match(/[।!?]+/g) || [];
-      assert.equal(sentenceEnds.length, 2, "each summary must contain exactly two sentences");
-    }
+    assert.equal(summaries.length, 0, "a five-story request must not show four summaries as a complete digest");
+    assert.doesNotMatch(r.data.reply, /खबर [1-5]:/);
   } finally {
     groqMode = "success";
     exaMode = "success";
