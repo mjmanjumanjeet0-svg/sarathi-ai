@@ -104,6 +104,9 @@ globalThis.fetch = async (input, init = {}) => {
         ]
       });
     }
+    if (exaMode === "gold-undated-page-date") return Response.json({ results: [
+      { title: "India silver rate today", url: "https://silver.example.net/silver-page-date", highlights: ["999 silver rate in India."] }
+    ] });
     if (exaMode === "gold-stale") return Response.json({ results: [
       { title: "Gold rate today", url: "https://example.com/gold-old", publishedDate: "2025-08-26T18:30:00.000Z", highlights: ["Old gold rate ₹7000 per gram."] },
       { title: "Silver rate today", url: "https://example.com/silver-fresh", publishedDate: new Date().toISOString(), highlights: ["999 silver rate ₹95 per gram in India."] }
@@ -115,6 +118,7 @@ globalThis.fetch = async (input, init = {}) => {
     });
   }
   if (url === "https://example.com/gold-rate") return new Response("<html><body>24K gold rate ₹7800 per gram and 22K gold rate ₹7150 per gram in India. <table><tr><td>24 karat gold rate in New Delhi</td><td>₹1,39,850 per 10 gm</td></tr><tr><td>22 karat gold rate in New Delhi</td><td>₹1,27,683 per 10 gm</td></tr></table></body></html>", { status: 200, headers: { "Content-Type": "text/html" } });
+  if (url === "https://silver.example.net/silver-page-date") return new Response('<html><head><meta property="article:published_time" content="' + new Date().toISOString() + '"></head><body>999 silver rate in India. Silver 999 Fine rate in New Delhi ₹1,77,940 per 1 kg.</body></html>', { status: 200, headers: { "Content-Type": "text/html" } });
   if (url === "https://silver.example.net/silver-rate") return new Response("<html><body>999 silver rate ₹95 per gram in India. <table><tr><td>Silver 999 Fine rate in New Delhi</td><td>₹1,77,940 per 1 kg</td></tr></table></body></html>", { status: 200, headers: { "Content-Type": "text/html" } });
   if (url.includes("api.groq.com")) {
     if (groqMode === "timeout") throw new DOMException("The operation was aborted.", "AbortError");
@@ -739,6 +743,21 @@ await test("today's gold and silver search excludes stale price pages", async ()
   assert.equal(calls.slice(before).filter(x => x.url.includes("api.groq.com")).length, 1);
   exaMode = "success";
 });
+await test("silver pages with a source publication date are retained when Exa omits publishedDate", async () => {
+  exaMode = "gold-undated-page-date";
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    messages: [{ role: "user", content: "आज चांदी का भाव बताओ" }]
+  }, token);
+  assert.equal(r.status, 200);
+  assert.equal(r.data.sources.length, 1, "source-page publication date should satisfy the freshness check");
+  assert.match(r.data.sources[0].url, /silver-page-date/);
+  const groqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
+  assert.ok(groqCall, "dated silver evidence should be sent to the answer model");
+  assert.match(JSON.parse(groqCall.init.body).messages.at(-1).content, /Silver 999 Fine rate in New Delhi/);
+  exaMode = "success";
+});
+
 await test("current price query invokes web search and AI", async () => {
   const before = calls.length;
   const r = await request("/api/chat", "POST", { messages: [{ role: "user", content: "आज सोने और चांदी का भाव बताओ" }] }, token);
