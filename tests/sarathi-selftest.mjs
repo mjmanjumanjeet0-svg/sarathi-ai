@@ -779,8 +779,8 @@ await test("current price query invokes web search and AI", async () => {
   assert.match(enrichedUserPrompt, /सोना-चाँदी भाव उत्तर का अनिवार्य प्रारूप/);
   assert.match(enrichedUserPrompt, /24 कैरेट और 22 कैरेट/);
   assert.match(enrichedUserPrompt, /999 शुद्धता/);
-  assert.match(enrichedUserPrompt, /24K gold rate ₹7800 per gram/);
-  assert.match(enrichedUserPrompt, /22K gold rate ₹7150 per gram/);
+  assert.doesNotMatch(enrichedUserPrompt, /24K gold rate ₹7800 per gram/, "unverified search snippets must not supply India-wide bullion prices");
+  assert.doesNotMatch(enrichedUserPrompt, /22K gold rate ₹7150 per gram/, "unverified search snippets must not supply India-wide bullion prices");
   assert.doesNotMatch(enrichedUserPrompt, /999 silver rate ₹95 per gram/, "do not infer 999 purity from a generic silver snippet");
   assert.doesNotMatch(enrichedUserPrompt, /24 karat gold rate in New Delhi.*₹1,39,850 per 10 gm/);
   assert.doesNotMatch(enrichedUserPrompt, /22 karat gold rate in New Delhi.*₹1,27,683 per 10 gm/);
