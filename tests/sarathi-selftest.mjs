@@ -9,6 +9,7 @@ assert.match(source, /const claimsCause = .*test\(generatedText\)/, "news summar
 assert.match(source, /sourceExplicitlyStatesCause.*test\(sourceEvidence\)/, "causal claims must be backed by the same source");
 assert.match(source, /स्रोत में न दिया कारण.*जिम्मेदार व्यक्ति/, "news prompt must forbid invented causes and responsibility");
 assert.match(source, /Count only distinct, displayable articles with a real HTTPS publisher URL/, "current-news count must exclude invalid or undated results");
+assert.match(source, /upsc\\s\*key|upsc-\[ \\]current-\[ \\]affairs|current affairs news/, "general news filtering must exclude UPSC exam-preparation explainers");
 assert.doesNotMatch(appSource, /detectAppLaunchCommand|getInstalledApps|openAppPackage|openPhone|SarathiNative\.openApp/, "web chat must not launch installed apps");
 assert.ok(!appSource.includes("extractVideoFrames") && !appSource.includes("videoFile") && !appSource.includes("वीडियो") && !appSource.includes("video/mp4") && !appSource.includes("mp4|webm|mov"), "video upload and frame-analysis code must be absent");
 assert.ok(appSource.includes('input.accept = ".pdf,.docx,.txt,.csv,.md,.json"'), "document picker must exclude video formats");
