@@ -196,6 +196,24 @@ assert.equal(shouldShowSearchSources({ searchAttempted: false, sources: [{ title
 assert.equal(shouldShowSearchSources({ searchAttempted: true, sources: [] }), false, "empty search results must not create an empty source list");
 assert.equal(shouldShowSearchSources({ searchAttempted: true, reply: "खबर 1: भारत की खबर\\nप्रकाशक: example.com\\nमूल लिंक:", sources: [{ title: "India news", url: "https://example.com/india" }] }), true, "show source cards if inline news links are missing");
 assert.equal(shouldShowSearchSources({ searchAttempted: true, reply: "खबर 1: भारत की खबर\\nप्रकाशक: example.com\\nप्रकाशित: आज\\nमूल लिंक: https://example.com/india", sources: [{ title: "India news", url: "https://example.com/india" }] }), false, "avoid duplicate source cards when inline news links are present");
+const escapeStart = app.indexOf("function escapeHTML(value) {");
+const escapeEnd = app.indexOf("\n}\n", escapeStart);
+const safeUrlStart = app.indexOf("function safeSourceUrl(value) {");
+const safeUrlEnd = app.indexOf("\n}\n", safeUrlStart);
+const inlineStart = app.indexOf("function formatInline(text) {");
+const inlineEnd = app.indexOf("\n}\n", inlineStart);
+assert.ok(escapeStart >= 0 && safeUrlStart > escapeStart && inlineStart > safeUrlStart, "safe link formatting helpers must exist");
+const formatInline = new Function(
+  app.slice(escapeStart, escapeEnd + 3) +
+  app.slice(safeUrlStart, safeUrlEnd + 3) +
+  app.slice(inlineStart, inlineEnd + 3) +
+  "\nreturn formatInline;"
+)();
+const renderedArticleLink = formatInline("मूल लिंक: https://example.com/article?x=1।");
+assert.match(renderedArticleLink, /<a href="https:\/\/example\.com\/article\?x=1"/, "plain HTTPS news URLs must become clickable links");
+assert.match(renderedArticleLink, /noopener noreferrer/, "external article links must use safe target attributes");
+assert.match(renderedArticleLink, /<\/a>।$/, "Hindi sentence punctuation must remain outside the clickable URL");
+assert.doesNotMatch(formatInline("लिंक: javascript:alert(1)"), /<a\s/i, "unsafe non-HTTPS URLs must never become links");
 const warningHelperStart = app.indexOf("function shouldShowSearchWarning(data) {");
 const warningHelperEnd = app.indexOf("\n}\n", warningHelperStart);
 assert.ok(warningHelperStart >= 0 && warningHelperEnd > warningHelperStart, "search warning visibility helper must exist");
