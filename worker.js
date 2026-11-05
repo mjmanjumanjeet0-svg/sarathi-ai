@@ -515,8 +515,9 @@ async function enrichGoldRateResults(results) {
         const heading = cityHeadings[i];
         const sectionEnd = i + 1 < cityHeadings.length ? cityHeadings[i + 1].index : visible.length;
         const section = visible.slice(heading.index, sectionEnd).replace(/\s+/g, " ").trim();
-        if (section && /(?:₹|rs\.?|inr)/i.test(section) && /[0-9][0-9,]*(?:\.[0-9]+)?/.test(section)) {
-          contexts.push("मूल HTML शहर-खंड (अगले शहर से पहले): " + section);
+        const ratePattern = /(?:24\s*(?:K|karat|carat)|22\s*(?:K|karat|carat)|24 कैरेट|22 कैरेट|999(?:\s*(?:fine\s*)?silver)?|silver\s*999|चाँदी|चांदी)[^₹]{0,180}(?:₹|Rs\.?|INR)\s*[0-9][0-9,]*(?:\.[0-9]+)?\s*(?:per\s*1?\s*kg|per\s*10\s*g(?:m|rams?)?|1\s*kg|10\s*g(?:m|rams?)?|\/\s*(?:1\s*)?kg|\/\s*10\s*g)?/gi;
+        for (const rateMatch of section.matchAll(ratePattern)) {
+          contexts.push("मूल HTML शहर-खंड: " + section.slice(0, Math.min(section.length, 90)) + " | " + rateMatch[0]);
         }
       }
       const tableRows = [...html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)]
@@ -1091,7 +1092,7 @@ function buildProviderBusySearchFallback(results, query, reason = "AI सेव�
       const extracted = [];
       for (const item of items) {
         const rows = (Array.isArray(item.rateContexts) ? item.rateContexts : [])
-          .filter(row => /^मूल HTML तालिका पंक्ति/.test(row) && city.re.test(row));
+          .filter(row => /^मूल HTML (?:तालिका पंक्ति|शहर-खंड)/.test(row) && city.re.test(row));
         const rates = [];
         for (const row of rows) {
           const find = (label, unit) => {
