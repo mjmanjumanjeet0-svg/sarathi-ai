@@ -144,20 +144,39 @@ function getIndiaDateTime() {
 
 
 function solveDiscountQuestion(text) {
-  const input = String(text || "").replace(/,/g, "");
-  const match = input.match(/(?:₹|रु\.?|rs\.?)?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:रुपये|रूपये|रु\.?|₹|rs\.?|rupees?)?\s*पर\s*([0-9]+(?:\.[0-9]+)?)\s*%\s*(?:की\s*)?छूट/i);
-  if (!match) return null;
-  const price = Number(match[1]);
-  const percent = Number(match[2]);
+  const input = String(text || "").replace(/,/g, "").trim();
+  const percentMatch = input.match(/([0-9]+(?:\.[0-9]+)?)\s*%\s*(?:की\s*)?छूट/i);
+  if (!percentMatch) return null;
+
+  // Accept natural Hindi/English price descriptions and currency symbols.
+  const amountPatterns = [
+    /(?:₹|रु\.?|rs\.?)\s*([0-9]+(?:\.[0-9]+)?)/i,
+    /([0-9]+(?:\.[0-9]+)?)\s*(?:रुपये|रूपये|रु\.?|rupees?)\s*(?:की\s*)?(?:वस्तु\s*)?(?:पर|कीमत)?/i,
+    /(?:मूल\s*)?(?:कीमत|मूल्य|दाम|price)\s*(?:है|था|थी|:|=)?\s*(?:₹|रु\.?|rs\.?)?\s*([0-9]+(?:\.[0-9]+)?)/i,
+    /([0-9]+(?:\.[0-9]+)?)\s*(?:की\s*)?(?:वस्तु|सामान|item)\s*(?:की\s*)?(?:कीमत)?/i
+  ];
+  let priceMatch = null;
+  for (const pattern of amountPatterns) {
+    priceMatch = input.match(pattern);
+    if (priceMatch) break;
+  }
+  if (!priceMatch) {
+    const numbers = [...input.matchAll(/[0-9]+(?:\.[0-9]+)?/g)];
+    const candidate = numbers.find(m => m[0] !== percentMatch[1]);
+    if (candidate) priceMatch = [candidate[0], candidate[0]];
+  }
+  if (!priceMatch) return null;
+
+  const price = Number(priceMatch[1]);
+  const percent = Number(percentMatch[1]);
   if (!Number.isFinite(price) || !Number.isFinite(percent) || price < 0 || percent < 0 || percent > 100 || price > 1e12) return null;
   const discount = Math.round((price * percent / 100 + Number.EPSILON) * 100) / 100;
   const finalPrice = Math.round((price - discount + Number.EPSILON) * 100) / 100;
-  const format = value => Number.isInteger(value) ? String(value) : String(value);
+  const format = value => String(value);
   return "छूट की गणना\nमूल कीमत: ₹" + format(price) +
     "\nछूट: " + format(percent) + "% = ₹" + format(discount) +
     "\nअंतिम कीमत: ₹" + format(finalPrice);
 }
-
 function solveBasicArithmetic(text) {
   const input = String(text || "").replace(/,/g, "");
   const match = input.match(/(?:^|[^0-9])([0-9]+(?:[.][0-9]+)?(?:[ ]*[-+−×*÷/][ ]*[0-9]+(?:[.][0-9]+)?)+)(?=$|[^0-9])/);
@@ -237,8 +256,9 @@ function shouldSearchAutomatically(text) {
   const weather = /(मौसम|तापमान|बारिश|वर्षा|weather|temperature|rain|forecast)/i.test(q);
   const travel = /(ट्रेन|रेलवे|गाड़ी|बस|फ्लाइट|प्लेटफॉर्म|train|railway|flight)/i.test(q)
     && /(कब|कितने बजे|समय|स्थिति|स्टेटस|प्लेटफॉर्म|चलेगी|आएगी|पहुंचेगी|रद्द|देरी|delay|status|schedule|when|time)/i.test(q);
-  const prices = /(सोना|सोने|चांदी|चाँदी|हीरा|हीरे|भाव|कीमत|दाम|रेट|price|rate)/i.test(q)
-    && (recent || /(भाव|कीमत|दाम|रेट|price|rate)/i.test(q));
+  // Generic "कीमत" in a school discount problem is not a live market-price request.
+  const prices = /(सोना|सोने|चांदी|चाँदी|हीरा|हीरे|gold|silver|diamond|bullion)/i.test(q)
+    && (recent || /(भाव|दाम|रेट|price|rate)/i.test(q));
   const official = /(परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|(?:परीक्षा|बोर्ड|विश्वविद्यालय|चुनाव)\s*(?:का|के)?\s*परिणाम|परिणाम\s*(?:घोषित|जारी|देखें|चेक)|आवेदन|फॉर्म|फीस|पात्रता|सरकारी योजना|आधिकारिक|सिलेबस|पाठ्यक्रम|मान्यता|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(q);
   const verification = /(किसने कहा|क्या सही है|सच है या नहीं|जांच करो|जाँच करो|सत्यापित करो|verify|fact.?check)/i.test(q);
   // Education and career pathways can change by academic session and regulator.
