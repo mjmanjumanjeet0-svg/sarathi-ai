@@ -1199,9 +1199,9 @@ async function sendMessage(text) {
           const published = source.publishedAt && Number.isFinite(Date.parse(source.publishedAt))
             ? new Date(source.publishedAt).toLocaleDateString("hi-IN", { dateStyle: "medium" })
             : "तारीख उपलब्ध नहीं";
-          return (index + 1) + ". [" + source.title.replace(/[\[\]]/g, "") + "](" + source.url + ")\\n   प्रकाशक: " + (source.publisher || new URL(source.url).hostname) + "\n   प्रकाशित: " + published;
+          return (index + 1) + ". [" + source.title.replace(/[\[\]]/g, "") + "](" + source.url + ")\n   प्रकाशक: " + (source.publisher || new URL(source.url).hostname) + "\n   प्रकाशित: " + published;
         });
-        cleanAnswer = cleanAnswer.trim() + "\n\\nमूल समाचार लिंक (खोज से मिले सत्यापित HTTPS स्रोत):\n" + sourceLinks.join("\n\n");
+        cleanAnswer = cleanAnswer.trim() + "\n\nमूल समाचार लिंक (खोज से मिले सत्यापित HTTPS स्रोत):\n" + sourceLinks.join("\n\n");
       }
     }
 
