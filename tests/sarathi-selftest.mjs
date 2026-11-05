@@ -660,7 +660,7 @@ await test("generic daily live-news index pages are not treated as reported news
   }
 });
 
-await test("news digest shows individually verified stories when fewer than five sources survive", async () => {
+await test("news digest shows only summaries that pass source validation", async () => {
   const before = calls.length;
   groqMode = "news-partial-two-sentence";
   try {
@@ -675,7 +675,7 @@ await test("news digest shows individually verified stories when fewer than five
     assert.match(r.data.reply, /अपुष्ट खबरें नहीं जोड़ी गईं/);
     assert.ok(r.data.reply.includes("मूल लिंक: https://"), "news digest must include a plain article URL");
     assert.match(r.data.reply, /पुष्टि का आधार:/);
-    assert.match(r.data.reply, /अतिरिक्त स्वतंत्र रिपोर्ट:.*hindustantimes\\.com/s, "matching Sensex coverage from another publisher must be linked as corroboration");
+    assert.match(r.data.reply, /अतिरिक्त स्वतंत्र रिपोर्ट:.*timesofindia\\.indiatimes\\.com/s, "matching Sensex coverage from another publisher must be linked as corroboration");
     assert.equal(r.data.sources.length, 4, "the original source list remains available for transparency");
     assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")));
   } finally {
@@ -773,7 +773,7 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.equal(newsResponse.data.searchUnavailable, undefined);
 });
 
-await test("five-news prompt displays four individually validated summaries with a shortfall notice", async () => {
+await test("five-news prompt displays only individually validated summaries with a shortfall notice", async () => {
   groqMode = "news-two-sentence";
   exaMode = "success";
   try {
