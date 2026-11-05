@@ -103,6 +103,12 @@ const preservedTentativeDraft = fiveNewsDraft.replace(
 );
 assert.match(formatCurrentNewsSummaryReply(preservedTentativeDraft, tentativeSources, true), /खबर 1: दिल्ली सरकार कृत्रिम बारिश कराने पर विचार कर रही है/, "a summary that preserves tentative status should pass");
 
+const unsupportedGeopoliticsDraft = fiveNewsDraft.replace(
+  "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
+  "सार: पश्चिम एशिया में संघर्ष के समाधान की उम्मीद से बाजार में तेजी आई। यह दूसरी पुष्ट जानकारी है।"
+);
+assert.equal(formatCurrentNewsSummaryReply(unsupportedGeopoliticsDraft, fiveNewsSources, true), "", "a summary must not add an unsupported geopolitical explanation");
+
 const midtermDraft = fiveNewsDraft.replace(
   "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
   "सार: अमेरिकी मध्यमार्गीय चुनावों के बाद बाजार में तेजी आई। यह दूसरी पुष्ट जानकारी है।"
