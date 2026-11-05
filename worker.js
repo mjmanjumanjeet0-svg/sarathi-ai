@@ -439,16 +439,16 @@ async function enrichGoldRateResults(results) {
       // Exa may omit publishedDate even when the source page exposes its own
       // publication/update date. Read dates from the page, then apply the
       // same India-day freshness gate; never accept an undated page as current.
-      const metaTags = [...html.matchAll(/<meta\\b[^>]*>/gi)].map(match => match[0]);
+      const metaTags = [...html.matchAll(/<meta\b[^>]*>/gi)].map(match => match[0]);
       const dateValues = [];
       for (const tag of metaTags) {
         const attr = name => {
-          const match = tag.match(new RegExp("(?:^|\\\\s)" + name + "\\\\s*=\\\\s*([\"'])(.*?)\\\\1", "i"));
+          const match = tag.match(new RegExp("(?:^|\\s)" + name + "\\s*=\\s*([\"'])(.*?)\\1", "i"));
           return match ? match[2].trim() : "";
         };
         const key = (attr("property") || attr("name") || attr("itemprop")).toLowerCase();
         const value = attr("content");
-        if (value && /^(article:modified_time|og:updated_time|datepublished|datepublished|datepublished|article:published_time|date|publishdate|pubdate|parsely-pub-date|dc.date.issued)$/i.test(key)) {
+        if (value && /^(article:modified_time|og:updated_time|datepublished|article:published_time|date|publishdate|pubdate|parsely-pub-date|dc.date.issued)$/i.test(key)) {
           dateValues.push(value);
         }
       }
