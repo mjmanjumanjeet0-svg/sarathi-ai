@@ -1082,25 +1082,58 @@ function buildSearchContext(results, query = "") {
         : (item.publishedAt || "तारीख उपलब्ध नहीं");
       // For an India-wide question, never expose city-table values to the model.
       // Strip the appended table snippet too, or city prices can leak back into the prompt.
-      const explicitCityMatch = isPreciousMetalQuery
-        ? query.match(/\\b(?:patna|mumbai|delhi|kolkata|chennai|bengaluru|bangalore|hyderabad|ahmedabad|jaipur|lucknow|kanpur|varanasi|agra|prayagraj|allahabad|siwan|gaya|muzaffarpur|ranchi|bhopal|indore|nagpur|pune|surat|vadodara|noida|gurugram|gurgaon)\\b|पटना|मुंबई|दिल्ली|कोलकाता|चेन्नई|बेंगलुरु|हैदराबाद|अहमदाबाद|जयपुर|लखनऊ|कानपुर|वाराणसी|आगरा|प्रयागराज|इलाहाबाद|सिवान|गया|मुजफ्फरपुर|रांची|भोपाल|इंदौर|नागपुर|पुणे|सूरत|वडोदरा|नोएडा|गुरुग्राम/i)
+      // Map Hindi and English spellings to the same requested city.
+      // City rows are included only for an explicitly requested city; national
+      // questions continue to receive only the publisher's national lead summary.
+      const bullionCities = [
+        { key: "patna", label: "पटना", re: /पटना|\bpatna\b/i },
+        { key: "mumbai", label: "मुंबई", re: /मुंबई|मुम्बई|\bmumbai\b/i },
+        { key: "delhi", label: "दिल्ली", re: /दिल्ली|\bdelhi\b/i },
+        { key: "kolkata", label: "कोलकाता", re: /कोलकाता|कलकत्ता|\bkolkata\b/i },
+        { key: "chennai", label: "चेन्नई", re: /चेन्नई|मद्रास|\bchennai\b/i },
+        { key: "bengaluru", label: "बेंगलुरु", re: /बेंगलुरु|बंगलौर|\bbengaluru\b|\bbangalore\b/i },
+        { key: "hyderabad", label: "हैदराबाद", re: /हैदराबाद|\bhyderabad\b/i },
+        { key: "ahmedabad", label: "अहमदाबाद", re: /अहमदाबाद|\bahmedabad\b/i },
+        { key: "jaipur", label: "जयपुर", re: /जयपुर|\bjaipur\b/i },
+        { key: "lucknow", label: "लखनऊ", re: /लखनऊ|\blucknow\b/i },
+        { key: "kanpur", label: "कानपुर", re: /कानपुर|\bkanpur\b/i },
+        { key: "varanasi", label: "वाराणसी", re: /वाराणसी|बनारस|\bvaranasi\b/i },
+        { key: "agra", label: "आगरा", re: /आगरा|\bagra\b/i },
+        { key: "prayagraj", label: "प्रयागराज", re: /प्रयागराज|इलाहाबाद|\bprayagraj\b|\ballahabad\b/i },
+        { key: "siwan", label: "सिवान", re: /सिवान|\bsiwan\b/i },
+        { key: "gaya", label: "गया", re: /गया|\bgaya\b/i },
+        { key: "muzaffarpur", label: "मुजफ्फरपुर", re: /मुजफ्फरपुर|\bmuzaffarpur\b/i },
+        { key: "ranchi", label: "रांची", re: /रांची|\branchi\b/i },
+        { key: "bhopal", label: "भोपाल", re: /भोपाल|\bbhopal\b/i },
+        { key: "indore", label: "इंदौर", re: /इंदौर|\bindore\b/i },
+        { key: "nagpur", label: "नागपुर", re: /नागपुर|\bnagpur\b/i },
+        { key: "pune", label: "पुणे", re: /पुणे|\bpune\b/i },
+        { key: "surat", label: "सूरत", re: /सूरत|\bsurat\b/i },
+        { key: "vadodara", label: "वडोदरा", re: /वडोदरा|\bvadodara\b/i },
+        { key: "noida", label: "नोएडा", re: /नोएडा|\bnoida\b/i },
+        { key: "gurugram", label: "गुरुग्राम", re: /गुरुग्राम|गुड़गांव|\bgurugram\b|\bgurgaon\b/i }
+      ];
+      const requestedCity = isPreciousMetalQuery
+        ? bullionCities.find(city => city.re.test(query))
         : null;
-      const explicitCity = explicitCityMatch ? explicitCityMatch[0] : "";
-      // Bullion search snippets can contain city-table prices without their city labels.
-      // Never pass those snippets into an India-wide answer; use only the separately
-      // extracted publisher lead summary, and report national rates unavailable if it has no prices.
+      const explicitCity = requestedCity ? requestedCity.label : "";
       const cleanSnippet = isPreciousMetalQuery
         ? ""
         : (item.snippet || "जानकारी उपलब्ध नहीं है।");
-      const matchingCityRows = explicitCity && Array.isArray(item.rateContexts)
-        ? item.rateContexts.filter(row => row.toLowerCase().includes(explicitCity.toLowerCase()))
+      const matchingCityRows = requestedCity && Array.isArray(item.rateContexts)
+        ? item.rateContexts.filter(row => requestedCity.re.test(row))
         : [];
-      // Conservative bullion evidence: do not send city-table rows to the model.
-      // This prevents a city value being mistaken for an India-wide benchmark.
+      // This was the missing link: matchingCityRows was calculated but never
+      // passed to the model. Include only rows naming the requested city.
       const rateEvidence = isPreciousMetalQuery
-        ? (item.primaryRateSummary
-            ? "\\nप्रकाशक का मुख्य दर-सारांश (मुख्य संदर्भ): " + item.primaryRateSummary
-            : "")
+        ? [
+            item.primaryRateSummary
+              ? "\nप्रकाशक का मुख्य दर-सारांश (राष्ट्रीय/मुख्य संदर्भ): " + item.primaryRateSummary
+              : "",
+            matchingCityRows.length
+              ? "\nमाँगे गए शहर " + explicitCity + " की मूल पेज/तालिका पंक्तियाँ (केवल इसी शहर की): " + matchingCityRows.join(" || ")
+              : (explicitCity ? "\nइस स्रोत में " + explicitCity + " की स्पष्ट शहर-पंक्ति नहीं मिली।" : "")
+          ].filter(Boolean).join("")
         : "";
       return `${i + 1}. ${item.title}\nप्रकाशक: ${item.publisher || "उपलब्ध नहीं"}\nप्रकाशित: ${published}${isHistoricalQuery ? `\nवास्तविक स्रोत URL: ${item.url}` : ""}\nजानकारी: ${cleanSnippet}${rateEvidence}`;
     }
