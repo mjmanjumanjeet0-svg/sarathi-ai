@@ -966,6 +966,31 @@ function hasUnsupportedCertaintyClaim(generatedText, sourceEvidence) {
   return /(?:निर्णय\s*(?:ले लिया|कर लिया)|फैसला\s*(?:ले लिया|कर लिया)|मंजूरी\s*(?:दे दी|मिल गई)|घोषणा\s*(?:कर दी|की)|तय\s*कर दिया|लागू\s*कर दिया|शुरू\s*कर दिया|कराने का निर्णय|करने का फैसला|(?:सरकार|मंत्रालय|प्रशासन).{0,45}योजना\s*(?:बना|तैयार|घोषित)|योजना\s*(?:बना ली|तैयार कर ली|घोषित कर दी)|कराएगा|कराएगी|करेंगे|करेंगी|होगा|होगी|has decided|decided to|approved|gave approval|announced|will (?:conduct|carry out|implement|launch)|is set to (?:conduct|carry out|implement|launch))/i.test(generated);
 }
 
+function hasUnsupportedNewsHeadlineMix(headline, sourceTitle) {
+  // Each clause in a generated headline must be grounded in the article title.
+  const stop = new Set(["आज","अब","यह","इस","की","का","के","से","को","पर","में","और","एक","लिए","बाद","साथ","कहा","कहता","कहती","है","हैं","था","थी","थे","the","and","for","from","with","after","over","says","said","has","have","was","were","are","is","in","on","at","to","of","a","an","as","by"]);
+  const tokens = value => new Set(cleanText(value || "").toLocaleLowerCase("hi-IN")
+    .replace(/[^\p{L}\p{N}]+/gu, " ").split(/\s+/)
+    .filter(token => token.length >= 3 && !stop.has(token)));
+  const sourceTokens = tokens(sourceTitle);
+  if (!sourceTokens.size) return true;
+  const clauses = String(headline || "").split(/[;；|।]|\s+और\s+/i).map(part => part.trim()).filter(Boolean);
+  if (clauses.length < 2) return false;
+  return clauses.some(clause => {
+    const clauseTokens = tokens(clause);
+    let overlap = 0;
+    for (const token of clauseTokens) if (sourceTokens.has(token)) overlap++;
+    return clauseTokens.size >= 2 && overlap === 0;
+  });
+}
+
+function hasIncorrectOverallAqiCategory(text) {
+  // CPCB's 301–400 band is Very Poor, not Severe. A separate station may be severe.
+  const value = String(text || "").replace(/[०-९]/g, d => String("०१२३४५६७८९".indexOf(d)));
+  return /(?:AQI|वायु गुणवत्ता सूचकांक).{0,22}(?:301|30[1-9]|3[1-9]\d|400)\s*(?:पर\s*)?(?:है\s*)?(?:गंभीर|severe)\b/i.test(value)
+    || /(?:AQI|वायु गुणवत्ता सूचकांक).{0,28}(?:301|30[1-9]|3[1-9]\d|400).{0,18}(?:की\s*)?(?:गंभीर\s*श्रेणी|severe\s*category)/i.test(value);
+}
+
 function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false) {
   const items = dedupeNewsResults(results).filter(item => {
     const title = cleanText(item?.title || "");
@@ -1018,6 +1043,8 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     // Validate each story independently. One malformed or weak summary must
     // not erase other stories whose Hindi summaries pass every source check.
     if (!entry?.headline || !entry?.summary) continue;
+    if (hasUnsupportedNewsHeadlineMix(entry.headline, items[index]?.title || "")) continue;
+    if (hasIncorrectOverallAqiCategory(entry.headline + " " + entry.summary)) continue;
     const sentenceEnds = entry.summary.match(/[।!?]+|(?<![0-9])\.(?![0-9])/g) || [];
     if (requireTwoSentences && (sentenceEnds.length < 2 || sentenceEnds.length > 3)) continue;
     const sourceEvidence = cleanText((items[index]?.title || "") + " " + (items[index]?.snippet || ""));
@@ -1041,7 +1068,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     try { publisher = new URL(items[index].url).hostname.toLowerCase().replace(/^www\./i, ""); } catch {}
     lines.push("खबर " + (lines.length + 1) + ": " + entry.headline + "\nसार: " + entry.summary +
       "\nप्रकाशक: " + publisher +
-      "\nमूल लिंक: " + items[index].url +
+      "\nमूल लिंक: [" + items[index].url + "](" + items[index].url + ")" +
       "\nप्रकाशित: " + formatNewsPublishedAt(items[index].publishedAt) +
       "\nपुष्टि का आधार: इसी मूल लेख के शीर्षक और उपलब्ध अंश में दर्ज जानकारी; इसे स्वतंत्र बहु-स्रोत पुष्टि तभी मानें जब अलग प्रकाशक से भी वही तथ्य मिलाया गया हो।");
   }
