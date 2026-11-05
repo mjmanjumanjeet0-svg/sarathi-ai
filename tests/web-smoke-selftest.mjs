@@ -37,12 +37,20 @@ assert.equal(hasUnsupportedCertaintyClaim("दिल्ली सरकार �
 assert.equal(hasUnsupportedCertaintyClaim("प्रदूषण बढ़ने पर कृत्रिम वर्षा कराने पर विचार किया जा रहा है।", "Sources say the government plans artificial rain if pollution worsens; no official announcement is expected."), false, "conditional plans must remain conditional");
 
 
+const indiaFilterStart = worker.indexOf("function isIndiaFocusedNewsItem(item) {");
+const indiaFilterEnd = worker.indexOf("\n}\n", indiaFilterStart);
+assert.ok(indiaFilterStart >= 0 && indiaFilterEnd > indiaFilterStart, "India-focused news filter must exist");
+const isIndiaFocusedNewsItem = new Function(
+  "cleanText",
+  worker.slice(indiaFilterStart, indiaFilterEnd + 3) + "\nreturn isIndiaFocusedNewsItem;"
+)(value => String(value || "").replace(/\s+/g, " ").trim());
 const newsFormatterStart = worker.indexOf("function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false) {");
 const newsFormatterEnd = worker.indexOf("\n}\n", newsFormatterStart);
 assert.ok(newsFormatterStart >= 0 && newsFormatterEnd > newsFormatterStart, "daily-news formatter must exist");
 const formatCurrentNewsSummaryReply = new Function(
   "dedupeNewsResults", "cleanText", "formatNewsPublishedAt",
   "hasMixedScriptToken", "hasUnsupportedNumericClaim", "hasUnsupportedCertaintyClaim",
+  "isIndiaFocusedNewsItem",
   worker.slice(newsFormatterStart, newsFormatterEnd + 3) + "\nreturn formatCurrentNewsSummaryReply;"
 )(
   results => results,
@@ -50,10 +58,11 @@ const formatCurrentNewsSummaryReply = new Function(
   () => "05 नवंबर 2026 (भारतीय समय)",
   () => false,
   () => false,
-  hasUnsupportedCertaintyClaim
+  hasUnsupportedCertaintyClaim,
+  isIndiaFocusedNewsItem
 );
 const fiveNewsSources = Array.from({ length: 5 }, (_, index) => ({
-  title: "अलग समाचार घटना " + (index + 1),
+  title: "भारत की अलग समाचार घटना " + (index + 1),
   url: "https://publisher" + (index + 1) + ".example/news-" + (index + 1),
   publishedAt: "2026-11-05T08:00:00+05:30",
   snippet: "आज की अलग घटना का विवरण उपलब्ध है।"
