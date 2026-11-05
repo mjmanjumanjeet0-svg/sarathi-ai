@@ -300,9 +300,9 @@ assert.deepEqual(solveBasicArithmetic("100 / 4"), { expression: "100/4", result:
 assert.equal(solveBasicArithmetic("10 / 0"), null, "division by zero must not return a numeric answer");
 assert.equal(solveBasicArithmetic("इतिहास 1857"), null, "a standalone year must not be treated as arithmetic");
 const dateQuestionStart = source.indexOf("function isDateQuestion(text) {");
-const dateQuestionEnd = source.indexOf("\\nfunction explicitlyRequestsWebSearch", dateQuestionStart);
+const dateQuestionEnd = source.indexOf("function explicitlyRequestsWebSearch", dateQuestionStart);
 assert.ok(dateQuestionStart >= 0 && dateQuestionEnd > dateQuestionStart, "date intent detector must exist");
-const isDateQuestion = new Function(source.slice(dateQuestionStart, dateQuestionEnd) + "\\nreturn isDateQuestion;")();
+const isDateQuestion = new Function(source.slice(dateQuestionStart, dateQuestionEnd) + "\nreturn isDateQuestion;")();")();
 assert.equal(isDateQuestion("आज की तारीख बताओ"), true, "a direct date request must still be recognized");
 assert.equal(isDateQuestion("आज कौन-सा दिन है?"), true, "a direct weekday request must still be recognized");
 assert.equal(isDateQuestion("आज का दिन अच्छा बनाने के लिए मुझे तीन अच्छी आदतें बताओ"), false, "a positive daily-routine question must not be mistaken for a date request");
