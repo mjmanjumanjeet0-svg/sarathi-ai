@@ -1014,7 +1014,7 @@ function isFiveCategoryNewsQuery(text) {
 function classifyRequestedNewsCategory(item) {
   const text = cleanText((item?.title || "") + " " + (item?.snippet || "")).toLocaleLowerCase("hi-IN");
   const rules = [
-    ["खेल", /\b(?:sports?|cricket|football|hockey|tennis|badminton|olympics?|paralympics?|athlete|tournament|ipl|icc|bcci)\b|खेल|क्रिकेट|फुटबॉल|हॉकी|टेनिस|बैडमिंटन|ओलंपिक|खिलाड़ी|टूर्नामेंट|विश्व कप/i],
+    ["खेल", /\b(?:sports?|cricket|football|hockey|tennis|badminton|olympics?|paralympics?|athlete|athletics|athletic|tournament|ipl|icc|bcci|doping|anti-doping|wrestling|kabaddi|parvez khan|cas)\b|खेल|क्रिकेट|फुटबॉल|हॉकी|टेनिस|बैडमिंटन|ओलंपिक|खिलाड़ी|टूर्नामेंट|विश्व कप|डोपिंग|एथलेटिक्स|पहलवान|कबड्डी/i],
     ["अदालत", /\b(?:supreme court|high court|court|tribunal|judgment|judgement|verdict|legal|bench|petition|bail|sentence)\b|सुप्रीम कोर्ट|उच्च न्यायालय|हाई कोर्ट|अदालत|न्यायालय|न्यायाधीश|फैसला|निर्णय|याचिका|जमानत|पीठ/i],
     ["विज्ञान", /\b(?:science|scientific|research|researchers|isro| nasa|space mission|satellite|launch vehicle|discovery|scientists?|clinical trial|genome)\b|विज्ञान|वैज्ञानिक|अनुसंधान|शोध|इसरो|अंतरिक्ष|उपग्रह|प्रक्षेपण|खोज|वैज्ञानिकों|जीनोम/i],
     ["अर्थव्यवस्था", /\b(?:economy|economic|gdp|inflation|rbi|reserve bank|stock market|sensex|nifty|rupee|fiscal|trade deficit|exports?|imports?|budget|interest rate|banking|manufacturing|unemployment)\b|अर्थव्यवस्था|आर्थिक|जीडीपी|महंगाई|मुद्रास्फीति|आरबीआई|रिजर्व बैंक|शेयर बाजार|सेंसेक्स|निफ्टी|रुपया|निर्यात|आयात|बजट|ब्याज दर|बैंकिंग|बेरोजगारी/i],
