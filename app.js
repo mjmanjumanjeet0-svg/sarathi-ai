@@ -1113,7 +1113,10 @@ async function sendMessage(text) {
     // Never display stray or unrelated links in ordinary conversation.
     // Sources are shown only when the user explicitly asks for an internet search.
     let cleanAnswer = answer.trim();
-    if (!explicitlyRequestsWebSearch(prompt)) {
+    // Preserve original article URLs in current-news digests even when the
+    // prompt does not match the narrow explicit web-search detector.
+    const hasInlineNewsSourceLinks = /(?:मूल लिंक|मूल समाचार लिंक)\\s*[:：]\\s*https?:\\/\\//i.test(cleanAnswer);
+    if (!explicitlyRequestsWebSearch(prompt) && !hasInlineNewsSourceLinks) {
       cleanAnswer = cleanAnswer
         // Remove common source/reference sections, including English headings.
         .replace(/\n{0,2}\s*(?:🌐\s*)?(?:इंटरनेट से मिले स्रोत|स्रोत(?: सूची)?|references?|sources?|वेबसाइट(?:ें)?|लिंक(?:\s*सूची)?)\s*[:：]?\s*(?=\n|$)[\s\S]*$/i, "")
@@ -1125,7 +1128,7 @@ async function sendMessage(text) {
         .replace(/https?:\/\/\S+|www\.\S+/gi, "")
         .replace(/\n{3,}/g, "\n\n")
         .trim();
-    } else if (data.sources?.length) {
+    } else if (data.sources?.length && !hasInlineNewsSourceLinks) {
       cleanAnswer = cleanAnswer
         // Validated clickable sources are rendered separately below the answer.
         .replace(/\n{0,2}\s*(?:🌐\s*)?(?:स्रोत(?: सूची)?|references?|sources?|वेबसाइट(?:ें)?|लिंक(?:\s*सूची)?)\s*[:：]?\s*(?=\n|$)[\s\S]*$/i, "")
