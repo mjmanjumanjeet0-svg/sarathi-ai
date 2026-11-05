@@ -909,9 +909,9 @@ function hasMixedScriptToken(text) {
 function hasUnsupportedCertaintyClaim(generatedText, sourceEvidence) {
   const generated = String(generatedText || "");
   const source = String(sourceEvidence || "");
-  const sourceIsTentative = /(?:consider(?:ing|ed)|weigh(?:ing|ed)|under consideration|proposal|proposed|may\b|might\b|could\b|likely to|more trials are likely|no official (?:announcement|confirmation)|not yet (?:decided|approved|announced)|विचार कर(?: रहा| रही| रहे)?|विचाराधीन|संभावित|संभावना|प्रस्ताव|अभी.*(?:निर्णय|मंजूरी|घोषणा).*(?:नहीं|नही)|अंतिम योजना.*(?:नहीं|नही))/i.test(source);
+  const sourceIsTentative = /(?:consider(?:ing|ed)|weigh(?:ing|ed)|under consideration|proposal|proposed|plan(?:s|ned)? to.{0,100}\bif\b|\bif\b.{0,100}(?:plan|artificial rain|cloud seeding)|conditional|may\b|might\b|could\b|likely to|more trials are likely|no official (?:announcement|confirmation)|not yet (?:decided|approved|announced)|विचार कर(?: रहा| रही| रहे)?|विचाराधीन|संभावित|संभावना|प्रस्ताव|यदि|अगर|की स्थिति में|बढ़ने पर|बढ़ने पर|अभी.*(?:निर्णय|मंजूरी|घोषणा).*(?:नहीं|नही)|अंतिम योजना.*(?:नहीं|नही))/i.test(source);
   if (!sourceIsTentative) return false;
-  return /(?:निर्णय\s*(?:ले लिया|कर लिया)|फैसला\s*(?:ले लिया|कर लिया)|मंजूरी\s*(?:दे दी|मिल गई)|घोषणा\s*(?:कर दी|की)|तय\s*कर दिया|लागू\s*कर दिया|शुरू\s*कर दिया|कराने का निर्णय|करने का फैसला|कराएगा|कराएगी|करेंगे|करेंगी|होगा|होगी|has decided|decided to|approved|gave approval|announced|will (?:conduct|carry out|implement|launch)|is set to (?:conduct|carry out|implement|launch))/i.test(generated);
+  return /(?:निर्णय\s*(?:ले लिया|कर लिया)|फैसला\s*(?:ले लिया|कर लिया)|मंजूरी\s*(?:दे दी|मिल गई)|घोषणा\s*(?:कर दी|की)|तय\s*कर दिया|लागू\s*कर दिया|शुरू\s*कर दिया|कराने का निर्णय|करने का फैसला|(?:सरकार|मंत्रालय|प्रशासन).{0,45}योजना\s*(?:बना|तैयार|घोषित)|योजना\s*(?:बना ली|तैयार कर ली|घोषित कर दी)|कराएगा|कराएगी|करेंगे|करेंगी|होगा|होगी|has decided|decided to|approved|gave approval|announced|will (?:conduct|carry out|implement|launch)|is set to (?:conduct|carry out|implement|launch))/i.test(generated);
 }
 
 function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false) {
@@ -934,7 +934,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     if (headline) {
       current = Number(headline[1]);
       if (current >= 1 && current <= items.length) {
-        entries.set(current, { headline: cleanText(headline[2]).slice(0, 220), summary: "" });
+        entries.set(current, { headline: cleanText(headline[2]).replace(/मध्यमार्गीय चुनावों?/gi, "मध्यावधि चुनाव").slice(0, 220), summary: "" });
       } else {
         current = null;
       }
@@ -943,7 +943,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     if (current === null || !entries.has(current) || !line) continue;
     const summary = line.match(/^(?:सार|सारांश|संक्षेप|विवरण)\s*[:：-]\s*(.+)$/i);
     if (summary) {
-      entries.get(current).summary = cleanText(summary[1]).slice(0, 420);
+      entries.get(current).summary = cleanText(summary[1]).replace(/मध्यमार्गीय चुनावों?/gi, "मध्यावधि चुनाव").slice(0, 420);
       continue;
     }
     // Allow a second summary sentence on the following line, but never absorb
