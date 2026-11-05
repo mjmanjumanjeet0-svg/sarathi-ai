@@ -251,7 +251,7 @@ function shouldSearchAutomatically(text) {
 
   // A time word alone (for example, "आज मैं क्या करूँ?") is not a search request.
   // Require a matching changing-information topic as well.
-  const recent = /(आज|अभी|वर्तमान|लेटेस्ट|ताज़ा|ताजा|नवीनतम|इस साल|इस महीने|कल|today|latest|current|202[6-9])/i.test(q);
+  const recent = /(आज|अभी|वर्तमान|लेटेस्ट|ताज़ा|ताजा|नवीनतम|इस साल|इस महीने|कल|पिछले\s*48\s*(?:घंटों?|घंटे|hours?)|गत\s*48\s*(?:घंटों?|घंटे|hours?)|last\s*48\s*hours|today|latest|current|202[6-9])/i.test(q);
   const news = /(खबर|समाचार|न्यूज़|न्यूज|news|breaking)/i.test(q);
   const weather = /(मौसम|तापमान|बारिश|वर्षा|weather|temperature|rain|forecast)/i.test(q);
   const travel = /(ट्रेन|रेलवे|गाड़ी|बस|फ्लाइट|प्लेटफॉर्म|train|railway|flight)/i.test(q)
@@ -737,7 +737,7 @@ function filterRelevantSearchResults(query, results) {
 
   // Match natural Hindi wording such as "भारत की 5 ताज़ा और महत्वपूर्ण खबरें".
   // Otherwise the India-specific relevance filter is skipped.
-  if (/(?:ताज़ा|ताजा|प्रमुख|मुख्य|latest|breaking|current|today).{0,90}(?:खबर|समाचार|न्यूज़|न्यूज|news)|(?:खबर|समाचार|न्यूज़|न्यूज|news).{0,60}(?:आज|ताज़ा|ताजा|latest|भारत की)|(?:आज की खबर|आज की न्यूज़|आज की न्यूज|today.?s news|current news|breaking news)/i.test(q)) {
+  if (/(?:पिछले|गत|last)\s*48\s*(?:घंटों?|घंटे|hours?).{0,110}(?:खबर|समाचार|न्यूज़|न्यूज|news)|(?:ताज़ा|ताजा|प्रमुख|मुख्य|latest|breaking|current|today).{0,90}(?:खबर|समाचार|न्यूज़|न्यूज|news)|(?:खबर|समाचार|न्यूज़|न्यूज|news).{0,60}(?:आज|ताज़ा|ताजा|latest|भारत की)|(?:आज की खबर|आज की न्यूज़|आज की न्यूज|today.?s news|current news|breaking news)/i.test(q)) {
     const trustedNewsHost = /(^|\.)(indianexpress\.com|thehindu\.com|ndtv\.com|hindustantimes\.com|bbc\.com|reuters\.com|apnews\.com|news18\.com|aajtak\.in|abplive\.com|amarujala\.com|jagran\.com|zeenews\.india\.com|indiatoday\.in|theprint\.in|livemint\.com|timesofindia\.indiatimes\.com|pti\.in|aninews\.in|business-standard\.com|economictimes\.indiatimes\.com|financialexpress\.com|moneycontrol\.com|cnbctv18\.com|deccanherald\.com|tribuneindia\.com|telegraphindia\.com|pib\.gov\.in|ddnews\.gov\.in|newsonair\.gov\.in|scroll\.in|theweek\.in|thequint\.com)$/;
     return list.filter(item => {
       try {
@@ -999,7 +999,7 @@ function buildNewsFallback(results, dateTime) {
 }
 
 function isCurrentNewsQuery(text) {
-  return /(?:ताज़ा|ताजा|मुख्य|प्रमुख).{0,35}खबर|आज.{0,60}(?:खबर|समाचार)|(?:latest|breaking|current)\s+news|today.?s\s+news|समाचार/i.test(String(text || ""));
+  return /(?:पिछले|गत|last)\s*48\s*(?:घंटों?|घंटे|hours?).{0,110}(?:खबर|समाचार|न्यूज़|न्यूज|news)|(?:ताज़ा|ताजा|मुख्य|प्रमुख).{0,35}खबर|आज.{0,60}(?:खबर|समाचार)|(?:latest|breaking|current)\s+news|today.?s\s+news|समाचार/i.test(String(text || ""));
 }
 
 function hasUnsupportedNumericClaim(generatedText, sourceEvidence) {
