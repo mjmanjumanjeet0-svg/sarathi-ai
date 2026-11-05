@@ -677,24 +677,35 @@ function buildBloodySundayVerifiedReply(results) {
 function isIndiaFocusedNewsItem(item) {
   const title = cleanText(item?.title || "");
   const snippet = cleanText(item?.snippet || "");
-  const headline = (title + " " + snippet).toLocaleLowerCase("hi-IN");
+  const headline = title.toLocaleLowerCase("hi-IN");
+  const evidence = snippet.toLocaleLowerCase("hi-IN");
 
   // Exclude multi-topic publisher digests: they can mix one Indian item with
   // unrelated international stories under a single article title.
-  if (/(?:^|\b)(?:ht|toi|ndtv)?\s*(?:morning|evening|daily)\s+brief\b|news roundup|daily roundup|top headlines/i.test(title)) {
+  if (/(?:^|\\b)(?:ht|toi|ndtv)?\\s*(?:morning|evening|daily)\\s+brief\\b|news roundup|daily roundup|top headlines/i.test(title)) {
     return false;
   }
 
-  // A general international headline is not an Indian news item merely because
-  // it appears on a publisher that also covers India.
-  const indiaSignals = [
-    /\bindia\b|\bindian\b|भारत|भारतीय/,
+  // Require an India-specific headline signal whenever possible. A foreign
+  // story must not pass just because its body mentions Indian fans or readers.
+  const titleIndiaSignals = [
+    /\\bindia\\b|\\bindian\\b|भारत|भारतीय/,
     /दिल्ली|नई दिल्ली|दिल्ली[- ]?ncr|delhi(?:[- ]?ncr)?|मथुरा|mathura|मुंबई|बेंगलुरु|बंगलौर|चेन्नई|कोलकाता|हैदराबाद|अहमदाबाद|पुणे|लखनऊ|पटना|जयपुर|भोपाल|चंडीगढ़|गुवाहाटी|श्रीनगर|सिवान|बिहार/,
     /sensex|nifty|बीएसई|एनएसई|रुपया|reserve bank of india|rbi|भारतीय रिजर्व बैंक/,
     /लोकसभा|राज्यसभा|संसद|सुप्रीम कोर्ट ऑफ इंडिया|सर्वोच्च न्यायालय|चुनाव आयोग|निर्वाचन आयोग|केंद्र सरकार|भारत सरकार|कैबिनेट|अग्निवीर|imd|isro|इसरो|चंद्रयान|navic/,
     /indian army|indian navy|indian air force|भारतीय सेना|भारतीय नौसेना|भारतीय वायुसेना/
   ];
-  return indiaSignals.some(pattern => pattern.test(headline));
+  if (titleIndiaSignals.some(pattern => pattern.test(headline))) return true;
+
+  // When the headline names a generic institution, require a specific Indian
+  // place or Indian public institution in the article excerpt. Generic "India"
+  // mentions in unrelated international coverage are not sufficient.
+  const snippetIndiaSignals = [
+    /दिल्ली|नई दिल्ली|delhi|जंतर.?मंतर|jant(?:ar)?\\s*mant(?:ar)?/,
+    /मुंबई|mumbai|बेंगलुरु|bengaluru|bangalore|चेन्नई|chennai|कोलकाता|kolkata|हैदराबाद|hyderabad|अहमदाबाद|ahmedabad|पुणे|pune|लखनऊ|lucknow|पटना|patna|जयपुर|jaipur|भोपाल|bhopal|चंडीगढ़|chandigarh|गुवाहाटी|guwahati|श्रीनगर|srinagar|बिहार|bihar/,
+    /supreme court of india|सुप्रीम कोर्ट ऑफ इंडिया|सर्वोच्च न्यायालय|लोकसभा|राज्यसभा|भारतीय संसद|election commission of india|चुनाव आयोग|भारत सरकार|केंद्र सरकार|agniveer|अग्निवीर|sensex|nifty|rbi|isro|इसरो|imd/
+  ];
+  return snippetIndiaSignals.some(pattern => pattern.test(evidence));
 }
 
 function filterFreshPreciousMetalResults(results, now = Date.now()) {
@@ -720,7 +731,9 @@ function filterRelevantSearchResults(query, results) {
   const textOf = (item) => `${item.title || ""} ${item.url || ""} ${item.snippet || ""}`.toLocaleLowerCase("hi-IN");
   const list = Array.isArray(results) ? results : [];
 
-  if (/(ताज़ा खबर|ताजा खबर|आज की खबर|आज की न्यूज़|आज की न्यूज|आज कि ताजा खबर|आज की ताज़ा खबर|आज की ताजा खबर|latest news|today.?s news|current news|breaking news|समाचार)/i.test(q)) {
+  // Match natural Hindi wording such as "भारत की 5 ताज़ा और महत्वपूर्ण खबरें".
+  // Otherwise the India-specific relevance filter is skipped.
+  if (/(?:ताज़ा|ताजा|प्रमुख|मुख्य|latest|breaking|current|today).{0,90}(?:खबर|समाचार|न्यूज़|न्यूज|news)|(?:खबर|समाचार|न्यूज़|न्यूज|news).{0,60}(?:आज|ताज़ा|ताजा|latest|भारत की)|(?:आज की खबर|आज की न्यूज़|आज की न्यूज|today.?s news|current news|breaking news)/i.test(q)) {
     const trustedNewsHost = /(^|\.)(indianexpress\.com|thehindu\.com|ndtv\.com|hindustantimes\.com|bbc\.com|reuters\.com|apnews\.com|news18\.com|aajtak\.in|abplive\.com|amarujala\.com|jagran\.com|zeenews\.india\.com|indiatoday\.in|theprint\.in|livemint\.com|timesofindia\.indiatimes\.com|pti\.in|aninews\.in)$/;
     return list.filter(item => {
       try {
@@ -1024,7 +1037,10 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     let publisher = "प्रकाशक उपलब्ध नहीं";
     try { publisher = new URL(items[index].url).hostname.toLowerCase().replace(/^www\./i, ""); } catch {}
     lines.push("खबर " + (lines.length + 1) + ": " + entry.headline + "\nसार: " + entry.summary +
-      "\nप्रकाशक: " + publisher + "\nप्रकाशित: " + formatNewsPublishedAt(items[index].publishedAt));
+      "\nमूल समाचार स्रोत: " + publisher +
+      "\nमूल लिंक: " + items[index].url +
+      "\nप्रकाशित: " + formatNewsPublishedAt(items[index].publishedAt) +
+      "\nपुष्टि का आधार: इसी मूल लेख के शीर्षक और उपलब्ध अंश में दर्ज जानकारी; इसे स्वतंत्र बहु-स्रोत पुष्टि तभी मानें जब अलग प्रकाशक से भी वही तथ्य मिलाया गया हो।");
   }
   // Show only individually validated stories; never pad with unsupported items.
   if (!lines.length) return "";
@@ -1767,7 +1783,7 @@ export default {
     const isCurrentNewsReply = wantsSearch && isCurrentNewsQuery(userText);
     const isPreciousMetalReply = wantsSearch && /(सोने|सोना|gold|चांदी|चाँदी|silver|bullion|22\s*k|24\s*k)/i.test(userText);
     const requireTwoSentenceNews = /2\s*(?:-|–|to)\s*3|दो\s*(?:से|या)\s*तीन|दो.?तीन\s*(?:वाक्य|sentence)/i.test(userText);
-    const compactNewsSystemPrompt = "तुम सारथी AI हो। पूरा उत्तर सहज देवनागरी हिंदी में दो। हर खबर का हिंदी शीर्षक और 2 छोटे वाक्यों का सार केवल उसी खबर के दिए गए शीर्षक तथा लेख-अंश से लिखो; यदि स्रोत में पर्याप्त तथ्य न हों तो कम शब्दों में स्पष्ट सीमा बताओ। शीर्षक का अर्थ बदले बिना अनुवाद करो। व्यक्ति, राज्य, शहर, संस्था और योजना के नाम स्रोत के अनुसार सही लिखो; नाम का अनुमान, गलत लिप्यंतरण या किसी दूसरे व्यक्ति का नाम मत लिखो। सार में केवल वही तथ्य दो जो लेख-अंश में साफ मौजूद हों। स्रोत में न दिया कारण, जिम्मेदार व्यक्ति/समूह, स्थान, संख्या, असर, नीति की स्थिति या निर्णय मत जोड़ो। राजनीतिक आरोप को स्पष्ट रूप से संबंधित व्यक्ति का आरोप बताओ, सिद्ध तथ्य की तरह नहीं। खासकर वायु प्रदूषण, दुर्घटना, बीमारी, कीमतों या सरकारी फैसलों के कारण/जिम्मेदारी का अनुमान बिल्कुल मत लगाओ। किसी घटना को किसी कारण से जोड़ने के लिए स्रोत में वही कारण स्पष्ट रूप से लिखा होना चाहिए। प्रस्ताव, सिफारिश, घोषणा, मंजूरी, लागू फैसला और संभावना अलग-अलग बातें हैं—स्रोत जिस स्तर की पुष्टि करे, वही लिखो; विचाराधीन/संभावित योजना को पक्का फैसला, मंजूरी या घोषित कार्यक्रम मत बताओ; स्रोत में 'considering', 'weighing', 'likely', 'may' या 'no official announcement' हो तो हिंदी में भी विचार/संभावना/अभी पुष्टि नहीं जैसी भाषा बनाए रखो; Cabinet approves का अर्थ मंजूरी मिली है, जबकि proposal/recommendation का अर्थ प्रस्ताव/सिफारिश है। सरकारी नीति/सेवा-नियम की खबर में पात्र समूह, प्रतिशत, अवधि और आगे की चयन-शर्तें ठीक-ठीक बताओ; किसी सीमित समूह के फैसले को सभी पर लागू मत बताओ और चयन को स्वतः नियुक्ति मत कहो। किसी एक स्रोत के तथ्य दूसरे स्रोत की खबर में मत मिलाओ। एक ही घटना की दो रिपोर्टों को मिलाकर एक खबर बनाओ, अलग घटनाओं को कभी मत मिलाओ। यदि पर्याप्त विश्वसनीय स्रोत उपलब्ध हों तो पाँच खबरें अलग-अलग विषयों/क्षेत्रों से चुनो; केवल संख्या पूरी करने के लिए कमजोर खबर मत जोड़ो। उपलब्ध अलग-अलग खबरों की संख्या के अनुसार क्रमांक दो; अंग्रेज़ी शीर्षक ज्यों-का-त्यों मत लिखो। केवल शीर्षक हो और विवरण न हो तो उससे आगे की घटना/कारण की जानकारी मत गढ़ो। पूर्वानुमान को घटित घटना मत बताओ और बाजार के शुरुआती आँकड़ों को बंद भाव मत बताओ। प्रकाशक और प्रकाशित समय खुद मत लिखो; वे कोड से जोड़े जाएँगे। हर खबर के लिए ठीक प्रारूप रखो: खबर 1: हिंदी शीर्षक; अगली पंक्ति: सार: 2 छोटे, स्रोत-आधारित वाक्य। कोई अलग स्रोत-सूची या अतिरिक्त भूमिका मत बनाओ।";
+    const compactNewsSystemPrompt = "तुम सारथी AI हो। पूरा उत्तर सहज देवनागरी हिंदी में दो। हर खबर का हिंदी शीर्षक और 2 छोटे वाक्यों का सार केवल उसी खबर के दिए गए शीर्षक तथा लेख-अंश से लिखो; यदि स्रोत में पर्याप्त तथ्य न हों तो कम शब्दों में स्पष्ट सीमा बताओ। शीर्षक का अर्थ बदले बिना अनुवाद करो। व्यक्ति, राज्य, शहर, संस्था और योजना के नाम स्रोत के अनुसार सही लिखो; नाम का अनुमान, गलत लिप्यंतरण या किसी दूसरे व्यक्ति का नाम मत लिखो। सार में केवल वही तथ्य दो जो लेख-अंश में साफ मौजूद हों। स्रोत में न दिया कारण, जिम्मेदार व्यक्ति/समूह, स्थान, संख्या, असर, नीति की स्थिति या निर्णय मत जोड़ो। राजनीतिक आरोप को स्पष्ट रूप से संबंधित व्यक्ति का आरोप बताओ, सिद्ध तथ्य की तरह नहीं। खासकर वायु प्रदूषण, दुर्घटना, बीमारी, कीमतों या सरकारी फैसलों के कारण/जिम्मेदारी का अनुमान बिल्कुल मत लगाओ। किसी घटना को किसी कारण से जोड़ने के लिए स्रोत में वही कारण स्पष्ट रूप से लिखा होना चाहिए। प्रस्ताव, सिफारिश, घोषणा, मंजूरी, लागू फैसला और संभावना अलग-अलग बातें हैं—स्रोत जिस स्तर की पुष्टि करे, वही लिखो; विचाराधीन/संभावित योजना को पक्का फैसला, मंजूरी या घोषित कार्यक्रम मत बताओ; स्रोत में 'considering', 'weighing', 'likely', 'may' या 'no official announcement' हो तो हिंदी में भी विचार/संभावना/अभी पुष्टि नहीं जैसी भाषा बनाए रखो; Cabinet approves का अर्थ मंजूरी मिली है, जबकि proposal/recommendation का अर्थ प्रस्ताव/सिफारिश है। सरकारी नीति/सेवा-नियम की खबर में पात्र समूह, प्रतिशत, अवधि और आगे की चयन-शर्तें ठीक-ठीक बताओ; किसी सीमित समूह के फैसले को सभी पर लागू मत बताओ और चयन को स्वतः नियुक्ति मत कहो। किसी एक स्रोत के तथ्य दूसरे स्रोत की खबर में मत मिलाओ। एक ही घटना की दो रिपोर्टों को मिलाकर एक खबर बनाओ, अलग घटनाओं को कभी मत मिलाओ। यदि पर्याप्त विश्वसनीय स्रोत उपलब्ध हों तो पाँच खबरें अलग-अलग विषयों/क्षेत्रों से चुनो; केवल संख्या पूरी करने के लिए कमजोर खबर मत जोड़ो। उपलब्ध अलग-अलग खबरों की संख्या के अनुसार क्रमांक दो; अंग्रेज़ी शीर्षक ज्यों-का-त्यों मत लिखो। केवल शीर्षक हो और विवरण न हो तो उससे आगे की घटना/कारण की जानकारी मत गढ़ो। पूर्वानुमान को घटित घटना मत बताओ और बाजार के शुरुआती आँकड़ों को बंद भाव मत बताओ। प्रकाशक, मूल लिंक, प्रकाशित समय और पुष्टि का आधार कोड से जोड़े जाएँगे; उन्हें खुद मत गढ़ो। हर खबर के लिए ठीक प्रारूप रखो: खबर 1: हिंदी शीर्षक; अगली पंक्ति: सार: 2 छोटे, स्रोत-आधारित वाक्य। कोई अलग स्रोत-सूची या अतिरिक्त भूमिका मत बनाओ।";
     let groqResponse;
     let activeGroqModel = GROQ_MODEL;
     try {
