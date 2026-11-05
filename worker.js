@@ -372,7 +372,10 @@ async function searchInternet(query, env) {
         "bbc.com", "reuters.com", "apnews.com", "news18.com", "aajtak.in",
         "abplive.com", "amarujala.com", "jagran.com", "zeenews.india.com",
         "indiatoday.in", "theprint.in", "livemint.com", "indiatimes.com",
-        "pti.in", "aninews.in"
+        "pti.in", "aninews.in", "business-standard.com", "economictimes.indiatimes.com",
+        "financialexpress.com", "moneycontrol.com", "cnbctv18.com", "deccanherald.com",
+        "tribuneindia.com", "telegraphindia.com", "pib.gov.in", "ddnews.gov.in",
+        "newsonair.gov.in", "scroll.in", "theweek.in", "thequint.com"
       ];
       const now = new Date();
       const since = new Date(now.getTime() - 48 * 60 * 60 * 1000);
@@ -734,7 +737,7 @@ function filterRelevantSearchResults(query, results) {
   // Match natural Hindi wording such as "भारत की 5 ताज़ा और महत्वपूर्ण खबरें".
   // Otherwise the India-specific relevance filter is skipped.
   if (/(?:ताज़ा|ताजा|प्रमुख|मुख्य|latest|breaking|current|today).{0,90}(?:खबर|समाचार|न्यूज़|न्यूज|news)|(?:खबर|समाचार|न्यूज़|न्यूज|news).{0,60}(?:आज|ताज़ा|ताजा|latest|भारत की)|(?:आज की खबर|आज की न्यूज़|आज की न्यूज|today.?s news|current news|breaking news)/i.test(q)) {
-    const trustedNewsHost = /(^|\.)(indianexpress\.com|thehindu\.com|ndtv\.com|hindustantimes\.com|bbc\.com|reuters\.com|apnews\.com|news18\.com|aajtak\.in|abplive\.com|amarujala\.com|jagran\.com|zeenews\.india\.com|indiatoday\.in|theprint\.in|livemint\.com|timesofindia\.indiatimes\.com|pti\.in|aninews\.in)$/;
+    const trustedNewsHost = /(^|\.)(indianexpress\.com|thehindu\.com|ndtv\.com|hindustantimes\.com|bbc\.com|reuters\.com|apnews\.com|news18\.com|aajtak\.in|abplive\.com|amarujala\.com|jagran\.com|zeenews\.india\.com|indiatoday\.in|theprint\.in|livemint\.com|timesofindia\.indiatimes\.com|pti\.in|aninews\.in|business-standard\.com|economictimes\.indiatimes\.com|financialexpress\.com|moneycontrol\.com|cnbctv18\.com|deccanherald\.com|tribuneindia\.com|telegraphindia\.com|pib\.gov\.in|ddnews\.gov\.in|newsonair\.gov\.in|scroll\.in|theweek\.in|thequint\.com)$/;
     return list.filter(item => {
       try {
         const host = new URL(item.url).hostname.toLowerCase().replace(/^www\./, "");
