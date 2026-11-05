@@ -122,8 +122,7 @@ globalThis.fetch = async (input, init = {}) => {
       { title: "India silver rate today", url: "https://silver.example.net/silver-page-date", highlights: ["999 silver rate in India."] }
     ] });
     if (exaMode === "bullion-city-article-sections") return Response.json({ results: [
-      { title: "Delhi gold rates today", url: "https://mint.example.net/nov5-gold", publishedDate: new Date().toISOString(), highlights: ["Retail rates in New Delhi."] },
-      { title: "Delhi silver rates today", url: "https://mint.example.net/nov5-silver", publishedDate: new Date().toISOString(), highlights: ["Silver 999 Fine rate in New Delhi."] }
+      { title: "Delhi gold and silver rates today", url: "https://mint.example.net/nov5-gold", publishedDate: new Date().toISOString(), highlights: ["Retail gold and silver rates in New Delhi."] }
     ] });
     if (exaMode === "bullion-city-busy") return Response.json({ results: [
       { title: "Delhi gold rates today", url: "https://example.com/delhi-gold", publishedDate: new Date().toISOString(), highlights: ["City-wise gold rates in Delhi."] },
@@ -139,7 +138,7 @@ globalThis.fetch = async (input, init = {}) => {
       ]
     });
   }
-  if (url === "https://mint.example.net/nov5-gold") return new Response("<html><head><meta property='article:published_time' content='" + new Date().toISOString() + "'></head><body><h2>Gold Prices in New Delhi — 5 November</h2><p>24 karat gold rate in New Delhi — ₹145,510/10 gm</p><p>22 karat gold rate in New Delhi — ₹133,384/10 gm</p><h2>Gold Prices in Mumbai — 5 November</h2><p>24 karat gold rate in Mumbai — ₹145,600/10 gm</p><p>22 karat gold rate in Mumbai — ₹133,467/10 gm</p></body></html>", { status: 200, headers: { "Content-Type": "text/html" } });
+  if (url === "https://mint.example.net/nov5-gold") return new Response("<html><head><meta property='article:published_time' content='" + new Date().toISOString() + "'></head><body><h2>Gold Prices in New Delhi — 5 November</h2><p>24 karat gold rate in New Delhi — ₹145,510/10 gm</p><p>22 karat gold rate in New Delhi — ₹133,384/10 gm</p><p>Silver 999 Fine rate in New Delhi — ₹190,570/1 kg</p><h2>Gold Prices in Mumbai — 5 November</h2><p>24 karat gold rate in Mumbai — ₹145,600/10 gm</p><p>22 karat gold rate in Mumbai — ₹133,467/10 gm</p></body></html>", { status: 200, headers: { "Content-Type": "text/html" } });
   if (url === "https://mint.example.net/nov5-silver") return new Response("<html><head><meta property='article:published_time' content='" + new Date().toISOString() + "'></head><body><h2>Gold Prices in New Delhi — 5 November</h2><p>Silver 999 Fine rate in New Delhi — ₹190,570/1 kg</p><h2>Gold Prices in Mumbai — 5 November</h2><p>Silver 999 Fine rate in Mumbai — ₹190,730/1 kg</p></body></html>", { status: 200, headers: { "Content-Type": "text/html" } });
   if (url === "https://example.com/delhi-gold") return new Response('<html><head><meta property="article:published_time" content="' + new Date().toISOString() + '"></head><body><table>' + Array.from({ length: 45 }, (_, i) => '<tr><td>Other city ' + i + '</td><td>₹99,999 per 10 gm</td></tr>').join('') + '<tr><td>24 karat gold rate in Delhi</td><td>₹1,39,850 per 10 gm</td></tr><tr><td>22 karat gold rate in Delhi</td><td>₹1,27,683 per 10 gm</td></tr></table></body></html>', { status: 200, headers: { "Content-Type": "text/html" } });
   if (url === "https://silver.example.net/delhi-silver") return new Response('<html><head><meta property="article:published_time" content="' + new Date().toISOString() + '"></head><body><table><tr><td>Silver 999 Fine rate in Delhi</td><td>₹1,77,940 per 1 kg</td></tr></table></body></html>', { status: 200, headers: { "Content-Type": "text/html" } });
