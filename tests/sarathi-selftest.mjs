@@ -650,7 +650,7 @@ await test("generic daily live-news index pages are not treated as reported news
   }
 });
 
-await test("five-story news digest is withheld when fewer than five verified sources survive", async () => {
+await test("news digest shows individually verified stories when fewer than five sources survive", async () => {
   const before = calls.length;
   groqMode = "news-partial-two-sentence";
   try {
@@ -658,10 +658,11 @@ await test("five-story news digest is withheld when fewer than five verified sou
       messages: [{ role: "user", content: "आज की भारत की 5 अलग-अलग ताज़ा खबरें बताओ। हर खबर का हिंदी में 2–3 वाक्यों में सार बताओ।" }]
     }, token);
     assert.equal(r.status, 200);
-    assert.match(r.data.reply, /आज केवल 4 अलग-अलग, तारीख़-जाँचे समाचार स्रोत मिले/);
+    assert.match(r.data.reply, /अलग-अलग, तारीख़-जाँची खबरें मिलीं \(आपने 5 माँगी थीं\)/);
     const headlines = r.data.reply.split("\n").filter(line => /^खबर [1-5]: /.test(line));
-    assert.equal(headlines.length, 0, "a five-story request must not display a partial three-story digest");
+    assert.ok(headlines.length > 0 && headlines.length < 5, "show only the individually validated summaries and disclose the shortfall");
     assert.doesNotMatch(r.data.reply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/);
+    assert.match(r.data.reply, /अपुष्ट खबरें नहीं जोड़ी गईं/);
     assert.equal(r.data.sources.length, 4, "the original source list remains available for transparency");
     assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")));
   } finally {
