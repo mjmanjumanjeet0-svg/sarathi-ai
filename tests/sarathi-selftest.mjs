@@ -760,7 +760,9 @@ await test("silver pages with a source publication date are retained when Exa om
   assert.match(r.data.sources[0].url, /silver-page-date/);
   const groqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
   assert.ok(groqCall, "dated silver evidence should be sent to the answer model");
-  assert.match(JSON.parse(groqCall.init.body).messages.at(-1).content, /Silver 999 Fine rate in New Delhi/);
+  const prompt = JSON.parse(groqCall.init.body).messages.at(-1).content;
+  assert.match(prompt, /राष्ट्रीय भाव स्पष्ट रूप से उपलब्ध नहीं/);
+  assert.doesNotMatch(prompt, /Silver 999 Fine rate in New Delhi/, "India-wide query must not include a city-only price row");
   exaMode = "success";
 });
 
