@@ -26,9 +26,9 @@ assert.equal(hasUnsupportedNumericClaim("यह एक महत्वपूर�
 assert.equal(hasUnsupportedNumericClaim("This is one important decision.", "Supreme Court decision on green crackers"), false, "the common English article 'one' must not be mistaken for an unsupported numeric claim");
 assert.equal(hasUnsupportedNumericClaim("अदालत ने दो व्यक्तियों को दोषी ठहराया।", "The court convicted people in the case"), true, "explicit Hindi number words must still be checked when they add an unsupported count");
 const certaintyGuardStart = worker.indexOf("function hasUnsupportedCertaintyClaim(generatedText, sourceEvidence) {");
-const certaintyGuardEnd = worker.indexOf("\\n}\\n", certaintyGuardStart);
+const certaintyGuardEnd = worker.indexOf("\n}\n", certaintyGuardStart);
 assert.ok(certaintyGuardStart >= 0 && certaintyGuardEnd > certaintyGuardStart, "news certainty guard must exist");
-const hasUnsupportedCertaintyClaim = new Function(worker.slice(certaintyGuardStart, certaintyGuardEnd + 3) + "\\nreturn hasUnsupportedCertaintyClaim;")();
+const hasUnsupportedCertaintyClaim = new Function(worker.slice(certaintyGuardStart, certaintyGuardEnd + 3) + "\nreturn hasUnsupportedCertaintyClaim;")();
 const tentativeDelhiSource = "Delhi government is considering artificial rain after Diwali; no official announcement is expected before Diwali.";
 assert.equal(hasUnsupportedCertaintyClaim("दिल्ली सरकार ने कृत्रिम बारिश कराने का निर्णय लिया।", tentativeDelhiSource), true, "a tentative proposal must not be upgraded into a confirmed decision");
 assert.equal(hasUnsupportedCertaintyClaim("दिल्ली सरकार कृत्रिम बारिश कराने पर विचार कर रही है।", tentativeDelhiSource), false, "a summary that preserves the source's tentative status must pass");
@@ -150,8 +150,8 @@ const providerBusyStart = app.indexOf('if (data.providerBusy === true');
 const providerBusyEnd = app.indexOf('    // Recover a known truncated news-fallback prefix', providerBusyStart);
 assert.ok(providerBusyStart >= 0 && providerBusyEnd > providerBusyStart, "provider-busy news fallback must exist");
 const providerBusyFallback = app.slice(providerBusyStart, providerBusyEnd);
-assert.match(providerBusyFallback, /"\\n   प्रकाशक:/, "provider-busy fallback must use a JavaScript newline escape before publisher metadata");
-assert.doesNotMatch(providerBusyFallback, /"\\\\n/, "provider-busy fallback must not print literal backslash-n text");
+assert.match(providerBusyFallback, /"\n   प्रकाशक:/, "provider-busy fallback must use a JavaScript newline escape before publisher metadata");
+assert.doesNotMatch(providerBusyFallback, /"\\\n/, "provider-busy fallback must not print literal backslash-n text");
 
 
 const scriptPaths = scriptFiles.map(src => src.split("?")[0]);
