@@ -44,6 +44,8 @@ assert.ok(source.includes(String.raw`visible.match(/On\s+`), "bullion lead summa
 assert.ok(source.includes(String.raw`.replace(/\s+/g, " ").trim()`), "bullion lead summary whitespace must be normalized");
 assert.match(source, /प्रकाशक का मुख्य दर-सारांश/, "bullion evidence must keep the publisher lead summary distinct");
 assert.match(source, /शहरवार तालिका की हर पंक्ति को एक अविभाज्य इकाई/, "bullion answers must not mix city rows");
+assert.match(source, /शहरवार तालिका की किसी भी पंक्ति से भाव बिल्कुल मत निकालो/, "India-wide bullion questions must not use city-only rates");
+assert.match(source, /राष्ट्रीय भाव स्पष्ट रूप से उपलब्ध नहीं/, "missing national bullion rates must be reported as unavailable");
 assert.ok(source.includes("आम में विटामिन E प्रचुर होने") && source.includes("स्थापित पोषण-तथ्य"), "health answers must avoid unsupported nutrient and skin/hair claims");
 
 const moduleUrl = "data:text/javascript;base64," + Buffer.from(source).toString("base64");
