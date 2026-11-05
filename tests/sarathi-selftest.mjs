@@ -676,7 +676,7 @@ await test("news digest shows only summaries that pass source validation", async
     assert.ok(r.data.reply.includes("मूल लिंक: https://"), "news digest must include a plain article URL");
     assert.match(r.data.reply, /पुष्टि का आधार:/);
     assert.match(r.data.reply, /अतिरिक्त स्वतंत्र रिपोर्ट:.*timesofindia\.indiatimes\.com/s, "matching Sensex coverage from another publisher must be linked as corroboration");
-    assert.equal(r.data.sources.length, 3, "four source articles collapse to three distinct events after corroboration grouping");
+    assert.equal(r.data.sources.length, 4, "the API retains the four original source records for transparency");
     assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")));
   } finally {
     groqMode = "success";
@@ -781,7 +781,7 @@ await test("five-news prompt displays only individually validated summaries with
       messages: [{ role: "user", content: "आज की भारत की 5 अलग-अलग ताज़ा खबरें बताओ। हर खबर का हिंदी में 2–3 वाक्यों में सार बताओ।" }]
     }, token);
     assert.equal(r.status, 200);
-    assert.equal(r.data.sources.length, 3, "four source articles contain only three distinct events because two cover the same cyclone update");
+    assert.equal(r.data.sources.length, 4, "the API retains all four source records, while the digest groups duplicate events");
     assert.match(r.data.reply, /आज 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं \(आपने 5 माँगी थीं\)/);
     assert.doesNotMatch(r.data.reply, /भरोसेमंद हिंदी सार तैयार नहीं हो सका/);
     const summaries = r.data.reply.split(String.fromCharCode(10)).filter(line => /^सार: /.test(line));
@@ -1058,7 +1058,7 @@ await test("current news retries one provider rate limit with compact source con
       messages: [{ role: "user", content: "आज की भारत की 5 अलग-अलग ताज़ा खबरें बताओ।" }]
     }, token);
     assert.equal(r.status, 200);
-    assert.equal(r.data.sources.length, 3);
+    assert.equal(r.data.sources.length, 4);
     assert.doesNotMatch(r.data.reply, /AI सेवा व्यस्त थी/);
     const groqCalls = calls.slice(before).filter(x => x.url.includes("api.groq.com"));
     assert.ok(groqCalls.length >= 2, "a compact retry should follow the initial HTTP 429");
@@ -1085,7 +1085,7 @@ await test("current news automatically switches to a secondary Groq model when t
       messages: [{ role: "user", content: "आज की भारत की 5 अलग-अलग ताज़ा खबरें बताओ।" }]
     }, token);
     assert.equal(r.status, 200);
-    assert.equal(r.data.sources.length, 3);
+    assert.equal(r.data.sources.length, 4);
     assert.ok((r.data.reply.match(/सार:/g) || []).length < 5,
       "secondary-model output must never claim five stories unless all five pass validation");
     const groqCalls = calls.slice(before).filter(x => x.url.includes("api.groq.com"));
@@ -1107,7 +1107,7 @@ await test("current news accepts concise Hindi summaries without the literal स
       messages: [{ role: "user", content: "आज की भारत की 5 अलग-अलग ताज़ा खबरें बताओ।" }]
     }, token);
     assert.equal(r.status, 200);
-    assert.equal(r.data.sources.length, 3);
+    assert.equal(r.data.sources.length, 4);
     assert.ok((r.data.reply.match(/सार:/g) || []).length > 0 && (r.data.reply.match(/सार:/g) || []).length < 5,
       "plain Hindi summaries may be shown individually when supported by three distinct dated sources");
     assert.match(r.data.reply, /अपुष्ट खबरें नहीं जोड़ी गईं/);
@@ -1125,7 +1125,7 @@ await test("current news keeps valid summaries when one generated item adds an u
       messages: [{ role: "user", content: "आज की भारत की 5 अलग-अलग ताज़ा खबरें बताओ।" }]
     }, token);
     assert.equal(r.status, 200);
-    assert.equal(r.data.sources.length, 3);
+    assert.equal(r.data.sources.length, 4);
     assert.ok((r.data.reply.match(/सार:/g) || []).length < 5,
       "the unsupported causal claim must be omitted without discarding other valid summaries");
     assert.doesNotMatch(r.data.reply, /दिवाली के कारण दिल्ली की हवा खराब हुई/);
