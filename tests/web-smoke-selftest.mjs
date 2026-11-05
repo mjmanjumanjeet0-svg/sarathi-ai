@@ -33,6 +33,8 @@ const tentativeDelhiSource = "Delhi government is considering artificial rain af
 assert.equal(hasUnsupportedCertaintyClaim("दिल्ली सरकार ने कृत्रिम बारिश कराने का निर्णय लिया।", tentativeDelhiSource), true, "a tentative proposal must not be upgraded into a confirmed decision");
 assert.equal(hasUnsupportedCertaintyClaim("दिल्ली सरकार कृत्रिम बारिश कराने पर विचार कर रही है।", tentativeDelhiSource), false, "a summary that preserves the source's tentative status must pass");
 assert.equal(hasUnsupportedCertaintyClaim("दिल्ली सरकार ने कृत्रिम बारिश कराने का निर्णय लिया।", "Delhi government approved the artificial rain plan."), false, "a confirmed decision must not be rejected when the source confirms approval");
+assert.equal(hasUnsupportedCertaintyClaim("दिल्ली सरकार ने कृत्रिम वर्षा की योजना बनाई है।", "Sources say the government plans artificial rain if pollution worsens; no official announcement is expected."), true, "conditional reporting must not be upgraded into a confirmed government plan");
+assert.equal(hasUnsupportedCertaintyClaim("प्रदूषण बढ़ने पर कृत्रिम वर्षा कराने पर विचार किया जा रहा है।", "Sources say the government plans artificial rain if pollution worsens; no official announcement is expected."), false, "conditional plans must remain conditional");
 
 
 const newsFormatterStart = worker.indexOf("function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false) {");
