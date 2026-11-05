@@ -1145,8 +1145,8 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     const line = rawLine.replace(/\*\*/g, "").replace(/^[-•]\s*/, "").replace(/[०-९]/g, digit => hindiDigits[digit]).trim();
     // Accept the common category-tagged variants returned by chat models,
     // e.g. "खबर 1 (सरकार): ..." as well as the strict "खबर 1: ..." format.
-    const headline = line.match(/^(?:(?:खबर|समाचार)\s*)?(\d+)\s*(?:\([^)]{1,40}\)\s*)?[:：.)\-–—]\s*(.+)$/i) ||
-      line.match(/^(?:खबर|समाचार)\s*(\d+)\s*[:：]\s*(.+)$/i);
+    const headline = line.match(/^(?:(?:खबर|समाचार)\s*(?:संख्या\s*)?)?(\d+)\s*(?:\([^)]{1,40}\)\s*)?[:：.)\-–—]\s*(.+)$/i) ||
+      line.match(/^(?:खबर|समाचार)\s*(?:संख्या\s*)?(\d+)\s*[:：.)\-–—]\s*(.+)$/i);
     if (headline) {
       current = Number(headline[1]);
       if (current >= 1 && current <= items.length) {
@@ -1188,11 +1188,13 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     if (hasIncorrectOverallAqiCategory(entry.headline + " " + entry.summary)) { rejectCounts.aqi++; continue; }
     const sentenceEnds = entry.summary.match(/[।!?]+|(?<![0-9])\.(?![0-9])/g) || [];
     if (requireTwoSentences && (sentenceEnds.length < 2 || sentenceEnds.length > 3)) { rejectCounts.sentenceCount++; continue; }
-    const sourceEvidence = cleanText((items[index]?.title || "") + " " + (items[index]?.snippet || ""));
+    const relatedEvidence = (Array.isArray(items[index]?.corroboratingSources) ? items[index].corroboratingSources : [])
+      .map(source => cleanText((source?.title || "") + " " + (source?.snippet || ""))).join(" ");
+    const sourceEvidence = cleanText((items[index]?.title || "") + " " + (items[index]?.snippet || "") + " " + relatedEvidence);
     const generatedText = entry.headline + " " + entry.summary;
     const isAgniveerExtension = /agniveer|अग्निवीर/i.test(sourceEvidence) &&
       /(?:75\s*%|७५\s*प्रतिशत|remaining\s+75|शेष\s+७५)/i.test(sourceEvidence);
-    if (isAgniveerExtension && !/(?:75\s*%|७५\s*(?:प्रतिशत|फीसदी)|शेष\s+७५|पचहत्तर\s*(?:प्रतिशत|फीसदी)?)/i.test(generatedText)) continue;
+    if (isAgniveerExtension && !/(?:75\s*%|७५\s*(?:प्रतिशत|फीसदी)|शेष\s+७५|पचहत्तर\s*(?:प्रतिशत|फीसदी)?)/i.test(generatedText)) { rejectCounts.agniveerDetail++; continue; }
     if (hasMixedScriptToken(generatedText)) { rejectCounts.mixedScript++; continue; }
     if (hasUnsupportedNumericClaim(generatedText, sourceEvidence)) { rejectCounts.unsupportedNumber++; continue; }
     if (hasUnsupportedCertaintyClaim(generatedText, sourceEvidence)) { rejectCounts.unsupportedCertainty++; continue; }
