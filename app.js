@@ -1115,7 +1115,7 @@ async function sendMessage(text) {
     let cleanAnswer = answer.trim();
     // Preserve original article URLs in current-news digests even when the
     // prompt does not match the narrow explicit web-search detector.
-    const hasInlineNewsSourceLinks = /(?:मूल लिंक|मूल समाचार लिंक)\s*[:：]\s*(?:https?:\/\/|\[[^\]]+\]\(https?:\/\/)/i.test(cleanAnswer);
+    const hasInlineNewsSourceLinks = /(?:मूल लिंक|मूल समाचार लिंक)\s*[:：]\s*(?:https?:\/\/|\[[^\]]+\]\(https?:\/\/)/i.test(cleanAnswer) || (/(?:खबर|समाचार)\s*1\s*[:：]/i.test(cleanAnswer) && /प्रकाशक\s*[:：]/i.test(cleanAnswer) && /प्रकाशित\s*[:：]/i.test(cleanAnswer) && /(खबर|समाचार|news)/i.test(prompt));
     if (!explicitlyRequestsWebSearch(prompt) && !hasInlineNewsSourceLinks) {
       cleanAnswer = cleanAnswer
         // Remove common source/reference sections, including English headings.
