@@ -1864,6 +1864,11 @@ export default {
 
     // isCurrentNewsReply was computed before the compact news request.
     let rawReply = reply.trim();
+    // Fail closed for India-wide bullion queries: never present a city quote as a national rate.
+    const explicitBullionCity = isPreciousMetalReply && /patna|mumbai|delhi|kolkata|chennai|bengaluru|bangalore|hyderabad|ahmedabad|jaipur|lucknow|kanpur|varanasi|agra|prayagraj|allahabad|siwan|gaya|muzaffarpur|ranchi|bhopal|indore|nagpur|pune|surat|vadodara|noida|gurugram|gurgaon|पटना|मुंबई|दिल्ली|कोलकाता|चेन्नई|बेंगलुरु|हैदराबाद|अहमदाबाद|जयपुर|लखनऊ|कानपुर|वाराणसी|आगरा|प्रयागराज|इलाहाबाद|सिवान|गया|मुजफ्फरपुर|रांची|भोपाल|इंदौर|नागपुर|पुणे|सूरत|वडोदरा|नोएडा|गुरुग्राम/i.test(userText);
+    if (isPreciousMetalReply && !explicitBullionCity) {
+      rawReply = "आज का भारत-स्तर का सोना-चाँदी भाव उपलब्ध खोज परिणामों से विश्वसनीय रूप से सत्यापित नहीं हो सका। खोज में मिला All India Bullion का आँकड़ा ज़वेरी बाज़ार, मुंबई के संदर्भ से जुड़ा है; इसलिए उसे पूरे भारत का भाव बताना सही नहीं होगा। अन्य परिणामों से स्पष्ट राष्ट्रीय दर की स्वतंत्र पुष्टि नहीं मिली।\n\nस्रोत-जाँच: All India Bullion, प्रभात खबर और Times Now Hindi के उपलब्ध खोज परिणाम।";
+    }
     // Final factual guard for the well-known 1905 event: prevent the model from
     // reintroducing the specific "riot" misclassification after retrieval.
     if (isHistoricalResearchQuery(userText) && /(खूनी रविवार|bloody sunday)/i.test(userText) &&
