@@ -669,7 +669,7 @@ await test("news digest shows individually verified stories when fewer than five
     assert.ok(headlines.length > 0 && headlines.length < 5, "show only the individually validated summaries and disclose the shortfall");
     assert.doesNotMatch(r.data.reply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/);
     assert.match(r.data.reply, /अपुष्ट खबरें नहीं जोड़ी गईं/);
-    assert.match(r.data.reply, /मूल लिंक: https:\/\//);
+    assert.match(r.data.reply, /मूल लिंक: \[https:\/\/.+\]\(https:\/\/.+\)/);
     assert.match(r.data.reply, /पुष्टि का आधार:/);
     assert.equal(r.data.sources.length, 4, "the original source list remains available for transparency");
     assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")));
