@@ -168,6 +168,12 @@ globalThis.fetch = async (input, init = {}) => {
     if (groqMode === "news-plain-summary") return Response.json({ choices: [{ message: { content: "**खबर 1 – ऊर्जा भंडारण योजना को मंजूरी**\nसरकार ने बड़े स्तर पर ऊर्जा भंडारण विकसित करने के लिए योजना को मंजूरी दी।\n**खबर 2 – शेयर बाजार में तेजी**\nसेंसेक्स और निफ्टी में कारोबार के दौरान बढ़त दर्ज हुई।\n**खबर 3 – दिल्ली की हवा की गुणवत्ता**\nदिल्ली में वायु गुणवत्ता खराब होने की खबर प्रकाशित हुई।\n**खबर 4 – अग्निवीर सेवा अवधि**\nअग्निवीरों की सेवा अवधि बढ़ाने के फैसले की खबर प्रकाशित हुई।" } }] });
     if (groqMode === "news-unsupported-cause") return Response.json({ choices: [{ message: { content: "खबर 1: ऊर्जा भंडारण योजना को मंजूरी\nसार: सरकार ने ऊर्जा भंडारण योजना को मंजूरी दी।\nखबर 2: शेयर बाजार में तेजी\nसार: सेंसेक्स और निफ्टी में बढ़त दर्ज हुई।\nखबर 3: दिल्ली की हवा की गुणवत्ता\nसार: दिवाली के कारण दिल्ली की हवा खराब हुई।\nखबर 4: अग्निवीर सेवा अवधि\nसार: अग्निवीरों की सेवा अवधि बढ़ाने की खबर प्रकाशित हुई।" } }] });
 
+    if (groqMode === "general-429-fallback-success" && requestBody.model === "openai/gpt-oss-20b") {
+      return Response.json({ error: { message: "rate limited" } }, { status: 429 });
+    }
+    if (groqMode === "general-429-fallback-success" && requestBody.model === "qwen/qwen3.8-27b") {
+      return Response.json({ choices: [{ message: { content: "जड़त्व का अर्थ है किसी वस्तु का अपनी वर्तमान अवस्था बनाए रखना। उदाहरण के लिए, मेज पर रखी किताब अपने-आप नहीं चलती।" } }] });
+    }
     if (groqMode === "primary-429-fallback-success" && requestBody.model === "openai/gpt-oss-20b") {
       return Response.json({ error: { message: "rate limited" } }, { status: 429 });
     }
@@ -293,6 +299,14 @@ assert.deepEqual(solveBasicArithmetic("18 + 7 × 2"), { expression: "18+7*2", re
 assert.deepEqual(solveBasicArithmetic("100 / 4"), { expression: "100/4", result: "25" });
 assert.equal(solveBasicArithmetic("10 / 0"), null, "division by zero must not return a numeric answer");
 assert.equal(solveBasicArithmetic("इतिहास 1857"), null, "a standalone year must not be treated as arithmetic");
+const dateQuestionStart = source.indexOf("function isDateQuestion(text) {");
+const dateQuestionEnd = source.indexOf("\\nfunction explicitlyRequestsWebSearch", dateQuestionStart);
+assert.ok(dateQuestionStart >= 0 && dateQuestionEnd > dateQuestionStart, "date intent detector must exist");
+const isDateQuestion = new Function(source.slice(dateQuestionStart, dateQuestionEnd) + "\\nreturn isDateQuestion;")();
+assert.equal(isDateQuestion("आज की तारीख बताओ"), true, "a direct date request must still be recognized");
+assert.equal(isDateQuestion("आज कौन-सा दिन है?"), true, "a direct weekday request must still be recognized");
+assert.equal(isDateQuestion("आज का दिन अच्छा बनाने के लिए मुझे तीन अच्छी आदतें बताओ"), false, "a positive daily-routine question must not be mistaken for a date request");
+
 
 const discountStart = source.indexOf("function solveDiscountQuestion(text) {");
 const discountEnd = source.indexOf("\nfunction solveBasicArithmetic", discountStart);
@@ -917,6 +931,40 @@ await test("current news never shows a partial digest when Groq returns an empty
     groqMode = "success";
     exaMode = "success";
   }
+});
+
+await test("general learning chat retries a provider 429 with the secondary Groq model", async () => {
+  groqMode = "general-429-fallback-success";
+  const before = calls.length;
+  try {
+    const r = await request("/api/chat", "POST", {
+      messages: [{ role: "user", content: "न्यूटन का पहला नियम आसान हिंदी में समझाओ।" }]
+    }, token);
+    assert.equal(r.status, 200);
+    assert.equal(r.data.success, true);
+    assert.match(r.data.reply, /जड़त्व/);
+    const groqCalls = calls.slice(before).filter(x => x.url.includes("api.groq.com"));
+    assert.equal(groqCalls.length, 2, "one primary request and one secondary-model retry are expected");
+    assert.equal(JSON.parse(groqCalls[0].init.body).model, "openai/gpt-oss-20b");
+    const fallbackBody = JSON.parse(groqCalls[1].init.body);
+    assert.equal(fallbackBody.model, "qwen/qwen3.8-27b");
+    assert.equal(fallbackBody.max_tokens, 2200);
+    assert.match(fallbackBody.messages.at(-1).content, /न्यूटन का पहला नियम/);
+    assert.match(fallbackBody.messages[0].content, /तारीख या समय सीधे न पूछा हो/);
+  } finally {
+    groqMode = "success";
+  }
+});
+
+await test("daily encouragement prompt is not intercepted by the date shortcut", async () => {
+  groqMode = "success";
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    messages: [{ role: "user", content: "आज का दिन अच्छा बनाने के लिए मुझे तीन अच्छी आदतें बताओ।" }]
+  }, token);
+  assert.equal(r.status, 200);
+  assert.equal(r.data.success, true);
+  assert.equal(calls.slice(before).filter(x => x.url.includes("api.groq.com")).length, 1, "the question should reach the chat model instead of the date shortcut");
 });
 
 await test("current news retries one provider rate limit with compact source context", async () => {
