@@ -678,8 +678,8 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.equal(newsResponse.status, 200);
   const newsHosts = newsResponse.data.sources.map(x => new URL(x.url).hostname.toLowerCase().replace(/^www\./, ""));
   assert.equal(newsHosts.length, 4, "late current news candidates must survive pre-filter truncation");
-  assert.match(newsResponse.data.reply, /आज केवल 4 अलग-अलग, तारीख़-जाँचे समाचार स्रोत मिले/,
-    "when fewer than five distinct same-day articles survive, the reply must disclose the shortfall honestly");
+  assert.match(newsResponse.data.reply, /आज 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं/,
+    "when four distinct same-day articles survive, the reply should show individually verified summaries and disclose the shortfall");
   assert.equal(new Set(newsHosts).size, newsHosts.length, "duplicate publisher hostnames must be removed");
   const publishedTimes = newsResponse.data.sources.map(x => Date.parse(x.publishedAt));
   assert.ok(publishedTimes.every(Number.isFinite), "every displayed news source must have a valid publication timestamp");
@@ -693,10 +693,14 @@ await test("latest news query uses Exa news category and publication freshness f
     "current-news requests may still attempt a Hindi summary from the retrieved source excerpts");
   const displayedHeadlines = newsResponse.data.reply.split("\n")
     .filter(line => /^खबर [1-5]: /.test(line)).length;
-  assert.equal(displayedHeadlines, 0,
-    "a four-source result must not be displayed as a complete five-story digest");
-  assert.doesNotMatch(newsResponse.data.reply, /सार:|प्रकाशक:|प्रकाशित:/,
-    "the shortfall fallback must not display partial summaries or misleading article metadata");
+  assert.ok(displayedHeadlines > 0 && displayedHeadlines <= 4,
+    "only individually validated stories should be shown for a four-source result");
+  assert.equal((newsResponse.data.reply.match(/प्रकाशक:/g) || []).length, displayedHeadlines,
+    "each displayed summary must have matching publisher metadata");
+  assert.equal((newsResponse.data.reply.match(/प्रकाशित:/g) || []).length, displayedHeadlines,
+    "each displayed summary must have matching publication time");
+  assert.match(newsResponse.data.reply, /अपुष्ट खबरें नहीं जोड़ी गईं/,
+    "a partial digest must clearly disclose why fewer than five stories are shown");
   assert.equal(newsHosts.includes("timesofindia.indiatimes.com"), false,
     "near-identical Sensex/Nifty opening stories must be collapsed to one event");
   assert.equal(newsResponse.data.sources.filter(x => /sensex/i.test(x.title) && /nifty/i.test(x.title)).length, 1,
