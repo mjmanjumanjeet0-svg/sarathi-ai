@@ -1102,7 +1102,7 @@ function buildProviderBusySearchFallback(results, query, reason = "AI सेव�
             const match = row.match(re);
             return match ? { value: match[1], unit: match[2] } : null;
           };
-          const gold24 = find("(?:24\\s*(?:K|karat|carat)|24\\s*कैरेट)", "(?:per\\s*10\\s*g(?:m|rams?)?|10\\s*g(?:m|rams?)|\\/\\s*10\\s*g)");
+          const gold24 = find("(?:24\\s*(?:K|karat|carat)|24\\s*कैरेट)", "(?:per\\s*10\\s*g(?:m|rams?)?|10\\s*g(?:m|rams?)|\\/\\s*10\\s*g(?:m|rams?)?)");
           const gold22 = find("(?:22\\s*(?:K|karat|carat)|22\\s*कैरेट)", "(?:per\\s*10\\s*g(?:m|rams?)?|10\\s*g(?:m|rams?)|\\/\\s*10\\s*g)");
           const silver = find("(?:999\\s*(?:fine\\s*)?silver|silver\\s*999(?:\\s*fine)?|999\\s*शुद्धता\\s*(?:की\\s*)?चाँदी)", "(?:per\\s*1\\s*kg|per\\s*kg|1\\s*kg|\\/\\s*1\\s*kg|\\/\\s*kg)");
           if (gold24) rates.push("24 कैरेट सोना: ₹" + gold24.value + " प्रति 10 ग्राम");
