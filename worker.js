@@ -887,12 +887,12 @@ function isCurrentNewsQuery(text) {
 }
 
 function hasUnsupportedNumericClaim(generatedText, sourceEvidence) {
-  const hindiNumbers = {"शून्य":"0","एक":"1","दो":"2","तीन":"3","चार":"4","पाँच":"5","पांच":"5","छह":"6","छः":"6","सात":"7","आठ":"8","नौ":"9","दस":"10","ग्यारह":"11","बारह":"12","पंद्रह":"15","बीस":"20","पच्चीस":"25","तीस":"30","चालीस":"40","पचास":"50","साठ":"60","सत्तर":"70","पचहत्तर":"75","अस्सी":"80","नब्बे":"90","सौ":"100","हजार":"1000","लाख":"100000","करोड़":"10000000"};
-  const englishNumbers = {"zero":"0","one":"1","two":"2","three":"3","four":"4","five":"5","six":"6","seven":"7","eight":"8","nine":"9","ten":"10","eleven":"11","twelve":"12","fifteen":"15","twenty":"20","thirty":"30","forty":"40","fifty":"50","sixty":"60","seventy":"70","seventy-five":"75","eighty":"80","ninety":"90","hundred":"100","thousand":"1000","lakh":"100000","crore":"10000000"};
+  const hindiNumbers = {"शून्य":"0","दो":"2","तीन":"3","चार":"4","पाँच":"5","पांच":"5","छह":"6","छः":"6","सात":"7","आठ":"8","नौ":"9","दस":"10","ग्यारह":"11","बारह":"12","पंद्रह":"15","बीस":"20","पच्चीस":"25","तीस":"30","चालीस":"40","पचास":"50","साठ":"60","सत्तर":"70","पचहत्तर":"75","अस्सी":"80","नब्बे":"90","सौ":"100","हजार":"1000","लाख":"100000","करोड़":"10000000"};
+  const englishNumbers = {"zero":"0","two":"2","three":"3","four":"4","five":"5","six":"6","seven":"7","eight":"8","nine":"9","ten":"10","eleven":"11","twelve":"12","fifteen":"15","twenty":"20","thirty":"30","forty":"40","fifty":"50","sixty":"60","seventy":"70","seventy-five":"75","eighty":"80","ninety":"90","hundred":"100","thousand":"1000","lakh":"100000","crore":"10000000"};
   const normalize = value => String(value || "")
     .replace(/[०-९]/g, digit => String("०१२३४५६७८९".indexOf(digit)))
-    .replace(/\b(seventy-five|zero|one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|lakh|crore)\b/gi, word => englishNumbers[word.toLowerCase()] || word)
-    .replace(/शून्य|एक|दो|तीन|चार|पाँच|पांच|छह|छः|सात|आठ|नौ|दस|ग्यारह|बारह|पंद्रह|बीस|पच्चीस|तीस|चालीस|पचास|साठ|सत्तर|पचहत्तर|अस्सी|नब्बे|सौ|हजार|लाख|करोड़/g, word => hindiNumbers[word] || word);
+    .replace(/\b(seventy-five|zero|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|lakh|crore)\b/gi, word => englishNumbers[word.toLowerCase()] || word)
+    .replace(/शून्य|दो|तीन|चार|पाँच|पांच|छह|छः|सात|आठ|नौ|दस|ग्यारह|बारह|पंद्रह|बीस|पच्चीस|तीस|चालीस|पचास|साठ|सत्तर|पचहत्तर|अस्सी|नब्बे|सौ|हजार|लाख|करोड़/g, word => hindiNumbers[word] || word);
   const sourceNumbers = new Set(normalize(sourceEvidence).match(/\d+(?:[.,]\d+)?%?/g) || []);
   const generatedNumbers = normalize(generatedText).match(/\d+(?:[.,]\d+)?%?/g) || [];
   return generatedNumbers.some(number => !sourceNumbers.has(number));
