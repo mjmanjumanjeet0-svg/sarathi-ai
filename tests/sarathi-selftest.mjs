@@ -46,7 +46,7 @@ assert.match(source, /प्रकाशक का मुख्य दर-सा
 assert.match(source, /शहरवार तालिका की हर पंक्ति को एक अविभाज्य इकाई/, "bullion answers must not mix city rows");
 assert.match(source, /शहरवार तालिका की किसी भी पंक्ति से भाव बिल्कुल मत निकालो/, "India-wide bullion questions must not use city-only rates");
 assert.match(source, /राष्ट्रीय भाव स्पष्ट रूप से उपलब्ध नहीं/, "missing national bullion rates must be reported as unavailable");
-assert.match(source, /city\.key !== requestedCity\.key && city\.re\.test\(rawReply\)/, "city-specific bullion guard must scan the complete answer, including source notes, for foreign-city attribution");
+assert.match(source, /pricedLines\.some\(line => city\.re\.test\(line\)\)/, "city-specific bullion guard must reject foreign cities only on priced lines");
 assert.ok(source.includes("आम में विटामिन E प्रचुर होने") && source.includes("स्थापित पोषण-तथ्य"), "health answers must avoid unsupported nutrient and skin/hair claims");
 
 const moduleUrl = "data:text/javascript;base64," + Buffer.from(source).toString("base64");
@@ -809,6 +809,21 @@ await test("current price query invokes web search and AI", async () => {
   assert.match(enrichedUserPrompt, /हर प्रकाशक के आँकड़े उसी प्रकाशक के अलग खंड में रखो/);
   assert.match(enrichedUserPrompt, /अधूरा या कटा हुआ अंक/);
   assert.match(enrichedUserPrompt, /उसी स्रोत के निकाले गए मूल मूल्य-संदर्भ/);
+});
+await test("Delhi bullion questions include only New Delhi price rows from source pages", async () => {
+  const before = calls.length;
+  const r = await request("/api/chat", "POST", {
+    messages: [{ role: "user", content: "दिल्ली में आज 24 कैरेट और 22 कैरेट सोने तथा चाँदी का भाव बताओ। स्रोत और तारीख भी देना।" }]
+  }, token);
+  assert.equal(r.status, 200);
+  const groqCall = calls.slice(before).find(x => x.url.includes("api.groq.com"));
+  assert.ok(groqCall, "city-specific bullion evidence should reach Groq");
+  const prompt = JSON.parse(groqCall.init.body).messages.at(-1).content;
+  assert.match(prompt, /दिल्ली के मूल मूल्य-संदर्भ/);
+  assert.match(prompt, /24 karat gold rate in New Delhi.*₹1,39,850 per 10 gm/);
+  assert.match(prompt, /22 karat gold rate in New Delhi.*₹1,27,683 per 10 gm/);
+  assert.match(prompt, /Silver 999 Fine rate in New Delhi.*₹1,77,940 per 1 kg/);
+  assert.doesNotMatch(prompt, /मुख्य दर-सारांश \(केवल राष्ट्रीय/);
 });
 await test("long numbered prompts reach Groq without losing their beginning or ending", async () => {
   const longPrompt = Array.from({ length: 50 }, (_, i) => `${i + 1}. सवाल ${i + 1}: सामान्य ज्ञान का छोटा परीक्षण`).join("\n");
