@@ -1,4 +1,5 @@
 // Deploy refresh: publish the latest factual-answer safeguards from main.
+// Bullion safeguard: keep the publisher's lead snapshot separate from city rows.
 const INDIA_TIME_ZONE = "Asia/Kolkata";
 const GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions";
 const GROQ_MODEL = "openai/gpt-oss-20b";
