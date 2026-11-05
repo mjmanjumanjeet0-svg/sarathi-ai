@@ -781,7 +781,7 @@ await test("current price query invokes web search and AI", async () => {
   assert.match(enrichedUserPrompt, /999 शुद्धता/);
   assert.match(enrichedUserPrompt, /24K gold rate ₹7800 per gram/);
   assert.match(enrichedUserPrompt, /22K gold rate ₹7150 per gram/);
-  assert.match(enrichedUserPrompt, /999 silver rate ₹95 per gram/);
+  assert.doesNotMatch(enrichedUserPrompt, /999 silver rate ₹95 per gram/, "do not infer 999 purity from a generic silver snippet");
   assert.doesNotMatch(enrichedUserPrompt, /24 karat gold rate in New Delhi.*₹1,39,850 per 10 gm/);
   assert.doesNotMatch(enrichedUserPrompt, /22 karat gold rate in New Delhi.*₹1,27,683 per 10 gm/);
   assert.doesNotMatch(enrichedUserPrompt, /Silver 999 Fine rate in New Delhi.*₹1,77,940 per 1 kg/);
