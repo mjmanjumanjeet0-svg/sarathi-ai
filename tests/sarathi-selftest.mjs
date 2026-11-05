@@ -641,22 +641,13 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.ok(newsHosts.includes("ndtv.com"));
   assert.ok(newsHosts.includes("hindustantimes.com"), "a valid current article after the first eight candidates must be retained");
   assert.equal(calls.slice(before).some(x => x.url.includes("api.groq.com")), true,
-    "current-news requests must generate a Hindi summary from the retrieved source excerpts");
-  assert.ok(newsResponse.data.reply.includes("खबर 1:"), "news summary should use stable Hindi numbering");
-  assert.ok(newsResponse.data.reply.includes("सार:"), "each headline must include a short Hindi summary");
-  assert.doesNotMatch(newsResponse.data.reply, /Critical minerals processing scheme|Rupee gains|Agniveers|Air pollution/i,
-    "English source headlines must be translated into natural Hindi");
+    "current-news requests may still attempt a Hindi summary from the retrieved source excerpts");
   const displayedHeadlines = newsResponse.data.reply.split("\n")
     .filter(line => /^खबर [1-5]: /.test(line)).length;
-  assert.equal(displayedHeadlines, newsResponse.data.sources.length,
-    "explicitly dated news requests must display every accepted headline, not a model-selected subset");
-  assert.match(newsResponse.data.reply, /प्रकाशक:/);
-  assert.match(newsResponse.data.reply, /प्रकाशित:/);
-  for (const source of newsResponse.data.sources) {
-    const publisherHost = new URL(source.url).hostname.toLowerCase().replace("www.", "");
-    assert.ok(newsResponse.data.reply.includes(publisherHost),
-      "each displayed publisher must match the URL host of its own source");
-  }
+  assert.equal(displayedHeadlines, 0,
+    "a four-source result must not be displayed as a complete five-story digest");
+  assert.doesNotMatch(newsResponse.data.reply, /सार:|प्रकाशक:|प्रकाशित:/,
+    "the shortfall fallback must not display partial summaries or misleading article metadata");
   assert.equal(newsHosts.includes("timesofindia.indiatimes.com"), false,
     "near-identical Sensex/Nifty opening stories must be collapsed to one event");
   assert.equal(newsResponse.data.sources.filter(x => /sensex/i.test(x.title) && /nifty/i.test(x.title)).length, 1,
@@ -682,10 +673,8 @@ await test("latest news query uses Exa news category and publication freshness f
   assert.ok(exaBody.startPublishedDate, "news search must constrain the 48-hour publication window");
   assert.ok(exaBody.endPublishedDate, "news search must exclude future publication dates at the provider");
   assert.deepEqual(exaBody.contents, { highlights: true });
-  assert.ok(newsResponse.data.reply.includes("खबर 1:"), "headline digest should contain its first item");
-  if (newsResponse.data.sources.length > 1) {
-    assert.ok(newsResponse.data.reply.includes("खबर 2:"), "headline digest should contain its second item");
-  }
+  assert.doesNotMatch(newsResponse.data.reply, /खबर [1-5]:/,
+    "the shortfall response must not contain a partial numbered digest");
   assert.equal(newsResponse.data.searchUnavailable, undefined);
 });
 
