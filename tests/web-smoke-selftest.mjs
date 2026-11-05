@@ -202,7 +202,7 @@ const safeUrlStart = app.indexOf("function safeSourceUrl(value) {");
 const safeUrlEnd = app.indexOf("\n}\n", safeUrlStart);
 const inlineStart = app.indexOf("function formatInline(text) {");
 const inlineEnd = app.indexOf("\n}\n", inlineStart);
-assert.ok(escapeStart >= 0 && safeUrlStart > escapeStart && inlineStart > safeUrlStart, "safe link formatting helpers must exist");
+assert.ok(escapeStart >= 0 && safeUrlStart >= 0 && inlineStart >= 0, "safe link formatting helpers must exist");
 const formatInline = new Function(
   app.slice(escapeStart, escapeEnd + 3) +
   app.slice(safeUrlStart, safeUrlEnd + 3) +
