@@ -970,7 +970,7 @@ function hasUnsupportedNewsHeadlineMix(headline, sourceTitle) {
   // Each clause in a generated headline must be grounded in the article title.
   const stop = new Set(["आज","अब","यह","इस","की","का","के","से","को","पर","में","और","एक","लिए","बाद","साथ","कहा","कहता","कहती","है","हैं","था","थी","थे","the","and","for","from","with","after","over","says","said","has","have","was","were","are","is","in","on","at","to","of","a","an","as","by"]);
   const tokens = value => new Set(cleanText(value || "").toLocaleLowerCase("hi-IN")
-    .replace(/[^\p{L}\p{N}]+/gu, " ").split(/\s+/)
+    .replace(/[^\p{L}\p{N}\p{M}]+/gu, " ").split(/\s+/)
     .filter(token => token.length >= 3 && !stop.has(token)));
   const sourceTokens = tokens(sourceTitle);
   if (!sourceTokens.size) return true;
