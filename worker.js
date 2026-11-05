@@ -1115,7 +1115,7 @@ function hasIncorrectOverallAqiCategory(text) {
   return /(?:AQI|वायु गुणवत्ता सूचकांक).{0,22}(?:301|30[1-9]|3[1-9]\d|400)\s*(?:पर\s*)?(?:है\s*)?(?:गंभीर|severe)(?:\s|$|[।,;])/i.test(value);
 }
 
-function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false) {
+function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false) {
   const items = dedupeNewsResults(results).filter(item => {
     const title = cleanText(item?.title || "");
     const publishedAt = Date.parse(item?.publishedAt || "");
@@ -1212,6 +1212,10 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
       "\nप्रकाशित: " + formatNewsPublishedAt(items[index].publishedAt) +
       corroborationText + "\n" + basisText);
   }
+  // For an explicit five-category request, a partial model answer is invalid.
+  // Returning empty triggers the constrained repair attempt instead of silently
+  // presenting three stories when five category sources were selected.
+  if (requireFiveCategories && items.length >= 5 && lines.length !== 5) return "";
   // Show only individually validated stories; never pad with unsupported items.
   if (!lines.length) return "";
   const count = lines.length;
@@ -2302,7 +2306,7 @@ export default {
     // The summary parser itself validates every source-summary pair. Avoid a
     // separate brittle heading counter that can reject harmless punctuation.
     let formattedNewsReply = isCurrentNewsReply && !looksLikeRawEnglishArticle
-      ? formatCurrentNewsSummaryReply(rawReply, searchResults, requireTwoSentenceNews)
+      ? formatCurrentNewsSummaryReply(rawReply, searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText))
       : "";
 
     // If the first completion used an unexpected layout, make one constrained
@@ -2312,7 +2316,8 @@ export default {
     if (isCurrentNewsReply && !formattedNewsReply && !looksLikeRawEnglishArticle && searchResults.length) {
       try {
         const repairSummaryRule = requireTwoSentenceNews ? "ठीक 2 छोटे, तथ्यात्मक वाक्य" : "1 छोटा, तथ्यात्मक वाक्य";
-        const repairPrompt = "नीचे दिए गए " + searchResults.length + " खोज परिणामों के लिए केवल हिंदी सार दो। ठीक " + searchResults.length + " अलग-अलग खबरें लिखो। एक ही घटना की दो रिपोर्टों को दो खबर मत बनाओ। हर प्रविष्टि में दो पंक्तियाँ अनिवार्य हैं: खबर 1: हिंदी शीर्षक और अगली पंक्ति सार: " + repairSummaryRule + "। इसी तरह क्रमांक जारी रखो। कोई बुलेट, बोल्ड, भूमिका, स्रोत या अतिरिक्त पंक्ति नहीं। केवल दिए गए स्रोत-अंश की जानकारी लिखो; जानकारी न हो तो अनुमान मत लगाओ।\n\n" + buildCompactNewsSourceContext(searchResults);
+        const repairCategoryRule = isFiveCategoryNewsQuery(userText) ? "इस प्रश्न में पाँच अलग श्रेणियाँ अनिवार्य हैं। स्रोत-संदर्भ में श्रेणी के अनुसार एक-एक खबर इसी क्रम में लिखो: सरकार, अर्थव्यवस्था, अदालत, विज्ञान, खेल। हर श्रेणी की खबर का शीर्षक उसी श्रेणी वाले स्रोत से लो; किसी श्रेणी को छोड़कर अगली खबर का क्रमांक आगे मत बढ़ाओ। ठीक पाँच प्रविष्टियाँ लिखो।" : "";
+        const repairPrompt = "नीचे दिए गए " + searchResults.length + " खोज परिणामों के लिए केवल हिंदी सार दो। ठीक " + searchResults.length + " अलग-अलग खबरें लिखो। " + repairCategoryRule + " एक ही घटना की दो रिपोर्टों को दो खबर मत बनाओ। हर प्रविष्टि में दो पंक्तियाँ अनिवार्य हैं: खबर 1: हिंदी शीर्षक और अगली पंक्ति सार: " + repairSummaryRule + "। इसी तरह क्रमांक जारी रखो। कोई बुलेट, बोल्ड, भूमिका, स्रोत या अतिरिक्त पंक्ति नहीं। केवल दिए गए स्रोत-अंश की जानकारी लिखो; जानकारी न हो तो अनुमान मत लगाओ।\n\n" + buildCompactNewsSourceContext(searchResults);
         const repairMessages = [{ role: "user", content: repairPrompt }];
         const parseRepairResponse = async response => {
           if (!response?.ok) return "";
@@ -2322,7 +2327,7 @@ export default {
             ? repairContent.map(part => typeof part === "string" ? part : (part?.text || part?.content || "")).join("")
             : repairContent;
           return typeof repairText === "string" && repairText.trim()
-            ? formatCurrentNewsSummaryReply(repairText.trim(), searchResults, requireTwoSentenceNews)
+            ? formatCurrentNewsSummaryReply(repairText.trim(), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText))
             : "";
         };
         let repairResponse;
