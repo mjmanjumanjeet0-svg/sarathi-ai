@@ -517,7 +517,7 @@ async function enrichGoldRateResults(results) {
         const section = visible.slice(heading.index, sectionEnd).replace(/\s+/g, " ").trim();
         const ratePattern = /(?:24\s*(?:K|karat|carat)|22\s*(?:K|karat|carat)|24 कैरेट|22 कैरेट|999(?:\s*(?:fine\s*)?silver)?|silver\s*999|चाँदी|चांदी)[^₹]{0,180}(?:₹|Rs\.?|INR)\s*[0-9][0-9,]*(?:\.[0-9]+)?\s*(?:per\s*1?\s*kg|per\s*10\s*g(?:m|rams?)?|1\s*kg|10\s*g(?:m|rams?)?|\/\s*(?:1\s*)?kg|\/\s*10\s*g)?/gi;
         for (const rateMatch of section.matchAll(ratePattern)) {
-          contexts.push("मूल HTML शहर-खंड: " + section.slice(0, Math.min(section.length, 90)) + " | " + rateMatch[0]);
+          contexts.push("मूल HTML शहर-खंड: " + heading[1].trim() + " | " + rateMatch[0]);
         }
       }
       const tableRows = [...html.matchAll(/<tr\b[^>]*>([\s\S]*?)<\/tr>/gi)]
@@ -1115,7 +1115,7 @@ function buildProviderBusySearchFallback(results, query, reason = "AI सेव�
         }
       }
       if (extracted.length) {
-        return reason + " खोजे गए स्रोतों की मूल HTML तालिका की केवल " + city.label + " वाली पंक्तियों से ये दरें स्पष्ट रूप से निकली हैं। AI सार उपलब्ध नहीं है, इसलिए नीचे केवल सीधे पढ़े जा सकने वाले आँकड़े दिए हैं:\\n\\n" + extracted.join("\\n\\n") + "\\n\\nध्यान दें: केवल उन्हीं श्रेणियों की दरें दिखाई गई हैं जिनकी संख्या और इकाई उसी शहर की एक ही तालिका-पंक्ति में स्पष्ट थीं।";
+        return reason + " खोजे गए स्रोतों के मूल HTML में केवल " + city.label + " वाली शहर-विशिष्ट पंक्तियों और खंडों से ये दरें स्पष्ट रूप से निकली हैं। AI सार उपलब्ध नहीं है, इसलिए नीचे केवल सीधे पढ़े जा सकने वाले आँकड़े दिए हैं:\\n\\n" + extracted.join("\\n\\n") + "\\n\\nध्यान दें: केवल उन्हीं श्रेणियों की दरें दिखाई गई हैं जिनकी संख्या और इकाई उसी शहर के स्पष्ट स्रोत-अंश में उपलब्ध थीं।";
       }
       return reason + " दिल्ली/माँगे गए शहर के खोज परिणाम मिले, लेकिन मूल HTML तालिका में शहर, शुद्धता, भाव और इकाई एक ही पंक्ति में स्पष्ट रूप से नहीं मिले। इसलिए कोई भाव अनुमान से नहीं दिया गया। नीचे स्रोतों की जानकारी उपलब्ध है।";
     }
