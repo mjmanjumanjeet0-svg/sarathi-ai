@@ -102,6 +102,12 @@ globalThis.fetch = async (input, init = {}) => {
         ]
       });
     }
+    if (exaMode === "news-india-scope" && exaRequest.category === "news") {
+      return Response.json({ results: [
+        { title: "Ronaldo announces international retirement", url: "https://www.hindustantimes.com/sports/football/ronaldo-retirement", publishedDate: new Date(Date.now() - 30 * 60 * 1000).toISOString(), highlights: ["The Portuguese forward announced his international retirement; the story also mentions that he has fans in India."] },
+        { title: "Supreme Court hears plea over Jantar Mantar protest", url: "https://www.thehindu.com/news/national/supreme-court-jantar-mantar", publishedDate: new Date(Date.now() - 20 * 60 * 1000).toISOString(), highlights: ["The Supreme Court of India is reviewing complaints about police conduct at Jantar Mantar in New Delhi."] }
+      ] });
+    }
     if (exaRequest.category === "news") {
       return Response.json({
         results: [
@@ -663,10 +669,32 @@ await test("news digest shows individually verified stories when fewer than five
     assert.ok(headlines.length > 0 && headlines.length < 5, "show only the individually validated summaries and disclose the shortfall");
     assert.doesNotMatch(r.data.reply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/);
     assert.match(r.data.reply, /अपुष्ट खबरें नहीं जोड़ी गईं/);
+    assert.match(r.data.reply, /मूल लिंक: https:\/\//);
+    assert.match(r.data.reply, /पुष्टि का आधार:/);
     assert.equal(r.data.sources.length, 4, "the original source list remains available for transparency");
     assert.ok(calls.slice(before).some(x => x.url.includes("api.groq.com")));
   } finally {
     groqMode = "success";
+    exaMode = "success";
+  }
+});
+
+await test("natural India news wording excludes foreign stories with incidental India mentions", async () => {
+  const before = calls.length;
+  exaMode = "news-india-scope";
+  try {
+    const r = await request("/api/chat", "POST", {
+      messages: [{ role: "user", content: "आज भारत की 5 ताज़ा और महत्वपूर्ण खबरें बताओ। हर खबर का स्रोत और तारीख भी बताना।" }]
+    }, token);
+    assert.equal(r.status, 200);
+    assert.equal(r.data.sources.length, 1, "only the India-focused article should survive");
+    assert.match(r.data.sources[0].title, /Supreme Court hears plea over Jantar Mantar protest/);
+    assert.doesNotMatch(r.data.sources[0].title, /Ronaldo/i,
+      "an international story mentioning Indian fans is not an India news story");
+    assert.match(r.data.reply, /केवल एक स्वतंत्र समाचार स्रोत मिला/);
+    assert.equal(calls.slice(before).some(x => x.url.includes("api.groq.com")), false,
+      "a single surviving source must not be expanded into a confident digest");
+  } finally {
     exaMode = "success";
   }
 });
