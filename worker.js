@@ -467,9 +467,9 @@ async function enrichGoldRateResults(results) {
         .replace(/&#8377;|&#x20b9;/gi, "₹"));
       // Keep the publisher's lead rate statement separate from city rows.
       // A country-wide query must not accidentally inherit a nearby city value.
-      const primaryRateSummaryMatch = visible.match(/On\\s+\\d{1,2}\\s+[A-Za-z]+\\s+\\d{4},[\\s\\S]{0,650}?\\bupdated\\s+\\d{1,2}\\s+[A-Za-z]+\\s+\\d{4}\\s+at\\s+\\d{1,2}:\\d{2}\\s+IST/i);
+      const primaryRateSummaryMatch = visible.match(/On\s+\d{1,2}\s+[A-Za-z]+\s+\d{4},[\s\S]{0,650}?\bupdated\s+\d{1,2}\s+[A-Za-z]+\s+\d{4}\s+at\s+\d{1,2}:\d{2}\s+IST/i);
       const primaryRateSummary = primaryRateSummaryMatch
-        ? primaryRateSummaryMatch[0].replace(/\\s+/g, " ").trim()
+        ? primaryRateSummaryMatch[0].replace(/\s+/g, " ").trim()
         : "";
       const contexts = [];
       // Price tables may separate city/purity labels and amounts into adjacent
