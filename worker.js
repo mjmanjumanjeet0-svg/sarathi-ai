@@ -206,7 +206,10 @@ function solveBasicArithmetic(text) {
 
 
 function isDateQuestion(text) {
-  return /आज की तारीख|आज कौन.?सा दिन|आज का दिन|आज डेट|आज की डेट|आज तारीख|वर्तमान तारीख|current date|today.?s date|what day is it today/i.test(text);
+  const q = String(text || "").toLocaleLowerCase("hi-IN").trim();
+  // Match only direct date/day questions. Do not treat phrases such as
+  // "आज का दिन अच्छा बनाने के लिए..." as requests for the calendar date.
+  return /^(?:आज\s+की\s+तारीख(?:\s+(?:क्या\s+है|बताओ|बताइए))?|आज\s+कौन.?सा\s+दिन(?:\s+है)?|आज\s+का\s+दिन\s+(?:कौन.?सा\s+है|क्या\s+है)|आज\s+(?:की\s+)?डेट\s+(?:क्या\s+है|बताओ|बताइए)|आज\s+तारीख\s+(?:क्या\s+है|बताओ|बताइए)|वर्तमान\s+तारीख\s+(?:क्या\s+है|बताओ|बताइए)|current\s+date|today.?s\s+date|what\s+day\s+is\s+it\s+today)\s*[?।.!]*$/i.test(q);
 }
 
 function explicitlyRequestsWebSearch(text) {
@@ -1733,6 +1736,34 @@ export default {
           } catch (error) {
             console.warn("Secondary precious-metal retry failed", error?.name || "unknown");
           }
+        }
+      }
+
+      // For ordinary chat/learning requests, a provider 429 should not immediately
+      // become a dead end. Try the secondary model once, using a compact prompt and
+      // the same conversation context. News and bullion have stricter source-only
+      // retry paths above and must not be routed through this generic fallback.
+      if (groqResponse?.status === 429 &&
+          !isCurrentNewsReply &&
+          !isPreciousMetalReply &&
+          activeGroqModel !== GROQ_FALLBACK_MODEL) {
+        const fallbackMessages = safeMessages.slice(-6).map(message => ({
+          role: message.role,
+          content: String(message.content || "").slice(-1400)
+        }));
+        const fallbackSystemPrompt = "तुम सारथी AI हो। उपयोगकर्ता की भाषा में सीधे, आसान और सही उत्तर दो। बातचीत के पिछले संदर्भ का उपयोग करो, लेकिन नवीनतम सवाल को प्राथमिकता दो। विद्यार्थी सीखना चाहे तो छोटे चरणों में समझाओ, एक उदाहरण दो और जरूरत पर एक ही अभ्यास प्रश्न पूछो। उपयोगकर्ता ने तारीख या समय सीधे न पूछा हो तो तारीख/समय मत बताओ। तथ्य, संख्या, स्रोत या प्रयोग के परिणाम मत गढ़ो। सवाल अस्पष्ट हो तो एक छोटा स्पष्टीकरण पूछो।";
+        try {
+          const fallbackResponse = await sendGroqRequest(
+            fallbackMessages,
+            2200,
+            fallbackSystemPrompt,
+            null,
+            GROQ_FALLBACK_MODEL
+          );
+          groqResponse = fallbackResponse;
+          if (fallbackResponse.ok) activeGroqModel = GROQ_FALLBACK_MODEL;
+        } catch (error) {
+          console.warn("General chat secondary-model retry failed", error?.name || "unknown");
         }
       }
 
