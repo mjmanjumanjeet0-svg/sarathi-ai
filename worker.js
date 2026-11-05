@@ -1052,8 +1052,11 @@ function buildSearchContext(results, query = "") {
         ? query.match(/\\b(?:patna|mumbai|delhi|kolkata|chennai|bengaluru|bangalore|hyderabad|ahmedabad|jaipur|lucknow|kanpur|varanasi|agra|prayagraj|allahabad|siwan|gaya|muzaffarpur|ranchi|bhopal|indore|nagpur|pune|surat|vadodara|noida|gurugram|gurgaon)\\b|पटना|मुंबई|दिल्ली|कोलकाता|चेन्नई|बेंगलुरु|हैदराबाद|अहमदाबाद|जयपुर|लखनऊ|कानपुर|वाराणसी|आगरा|प्रयागराज|इलाहाबाद|सिवान|गया|मुजफ्फरपुर|रांची|भोपाल|इंदौर|नागपुर|पुणे|सूरत|वडोदरा|नोएडा|गुरुग्राम/i)
         : null;
       const explicitCity = explicitCityMatch ? explicitCityMatch[0] : "";
+      // Bullion search snippets can contain city-table prices without their city labels.
+      // Never pass those snippets into an India-wide answer; use only the separately
+      // extracted publisher lead summary, and report national rates unavailable if it has no prices.
       const cleanSnippet = isPreciousMetalQuery
-        ? (item.snippet || "").split(" | पेज से मिला मूल्य-संदर्भ: ")[0]
+        ? ""
         : (item.snippet || "जानकारी उपलब्ध नहीं है।");
       const matchingCityRows = explicitCity && Array.isArray(item.rateContexts)
         ? item.rateContexts.filter(row => row.toLowerCase().includes(explicitCity.toLowerCase()))
@@ -1694,10 +1697,9 @@ export default {
           "स्रोत " + (index + 1) + ": " + cleanText(item.title || "").slice(0, 180) +
           "\nप्रकाशक: " + cleanText(item.publisher || "").slice(0, 80) +
           "\nप्रकाशित/अपडेट: " + cleanText(item.publishedAt ? formatNewsPublishedAt(item.publishedAt) : "समय उपलब्ध नहीं") +
-          "\nमूल अंश: " + cleanText(item.snippet || "").slice(0, 1400) +
-          (Array.isArray(item.rateContexts) && item.rateContexts.length
-            ? "\nपेज से निकाले गए मूल्य-संदर्भ: " + item.rateContexts.join(" || ").slice(0, 2400)
-            : "")
+          (item.primaryRateSummary
+            ? "\nप्रकाशक का मुख्य दर-सारांश: " + cleanText(item.primaryRateSummary).slice(0, 900)
+            : "\nमुख्य राष्ट्रीय दर-सारांश उपलब्ध नहीं है।")
         ).join("\n\n");
         const metalSystemPrompt = "तुम सारथी AI हो। केवल दिए गए स्रोत-अंश से सोना-चाँदी के भाव का उत्तर सहज हिंदी में दो। तारीख और स्रोत बताओ। 22K, 24K और 999 चाँदी अलग रखो। भाव, इकाई, शहर या अपडेट समय स्रोत में स्पष्ट न हो तो उसे मत गढ़ो; स्पष्ट लिखो कि उपलब्ध नहीं। खुदरा भाव, IBJA और MCX को न मिलाओ। अलग स्रोतों के भाव अलग हों तो अलग-अलग बताओ।";
         const metalRetryMessages = [{ role: "user", content: "सवाल: " + userText + "\nनीचे दिए स्रोतों के आधार पर भाव और तारीख बताओ। संख्या/इकाई स्पष्ट न हो तो साफ कहो कि उपलब्ध नहीं। कोई अनुमान नहीं।\n\n" + metalContext }];
