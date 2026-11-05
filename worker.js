@@ -973,6 +973,9 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     if (hasMixedScriptToken(generatedText)) continue;
     if (hasUnsupportedNumericClaim(generatedText, sourceEvidence)) continue;
     if (hasUnsupportedCertaintyClaim(generatedText, sourceEvidence)) continue;
+    const claimsWestAsiaConflict = /(?:पश्चिम एशिया|मध्य पूर्व|मिडिल ईस्ट|west asia|middle east|iran|iranian|israel|israeli).{0,70}(?:संघर्ष|युद्ध|तनाव|शांति|समाधान|conflict|war|tension|peace|ceasefire)|(?:संघर्ष|युद्ध|तनाव|शांति|समाधान|conflict|war|tension|peace|ceasefire).{0,70}(?:पश्चिम एशिया|मध्य पूर्व|मिडिल ईस्ट|west asia|middle east|iran|iranian|israel|israeli)/i.test(generatedText);
+    const sourceMentionsWestAsiaConflict = /(?:पश्चिम एशिया|मध्य पूर्व|मिडिल ईस्ट|west asia|middle east|iran|iranian|israel|israeli).{0,100}(?:संघर्ष|युद्ध|तनाव|शांति|समाधान|conflict|war|tension|peace|ceasefire)|(?:संघर्ष|युद्ध|तनाव|शांति|समाधान|conflict|war|tension|peace|ceasefire).{0,100}(?:पश्चिम एशिया|मध्य पूर्व|मिडिल ईस्ट|west asia|middle east|iran|iranian|israel|israeli)/i.test(sourceEvidence);
+    if (claimsWestAsiaConflict && !sourceMentionsWestAsiaConflict) continue;
     // A disclaimer about missing evidence is not a news summary. Reject the
     // story instead of replacing its summary with generic filler.
     if (/(?:उपलब्ध स्रोत|लेख-अंश|स्रोत-अंश).{0,90}(?:पुष्टि नहीं करता|पुष्टि नहीं होती|पर्याप्त जानकारी नहीं|विवरण उपलब्ध नहीं|निष्कर्ष नहीं निकाला जा सकता)/i.test(entry.summary)) continue;
