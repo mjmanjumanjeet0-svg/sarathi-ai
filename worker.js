@@ -1161,6 +1161,38 @@ function hasIncorrectOverallAqiCategory(text) {
   return /(?:AQI|वायु गुणवत्ता सूचकांक).{0,22}(?:301|30[1-9]|3[1-9]\d|400)\s*(?:पर\s*)?(?:है\s*)?(?:गंभीर|severe)(?:\s|$|[।,;])/i.test(value);
 }
 
+function normalizeNewsSummaryRepairText(rawReply) {
+  const raw = String(rawReply || "").trim().replace(/^\x60{3}(?:json)?\s*/i, "").replace(/\s*\x60{3}$/i, "");
+  const candidates = [raw];
+  const arrayStart = raw.indexOf("[");
+  const arrayEnd = raw.lastIndexOf("]");
+  if (arrayStart >= 0 && arrayEnd > arrayStart) candidates.push(raw.slice(arrayStart, arrayEnd + 1));
+  const objectStart = raw.indexOf("{");
+  const objectEnd = raw.lastIndexOf("}");
+  if (objectStart >= 0 && objectEnd > objectStart) candidates.push(raw.slice(objectStart, objectEnd + 1));
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate);
+      const entries = Array.isArray(parsed) ? parsed :
+        (Array.isArray(parsed?.stories) ? parsed.stories :
+        Array.isArray(parsed?.news) ? parsed.news :
+        Array.isArray(parsed?.items) ? parsed.items : []);
+      if (!entries.length) continue;
+      const lines = [];
+      entries.slice(0, 5).forEach((entry, index) => {
+        const number = Number(entry?.number || entry?.index || index + 1);
+        const headline = cleanText(entry?.headline || entry?.title || "");
+        const summary = cleanText(entry?.summary || entry?.description || "");
+        if (Number.isInteger(number) && number >= 1 && number <= 5 && headline && summary) {
+          lines.push("खबर " + number + ": " + headline, "सार: " + summary);
+        }
+      });
+      if (lines.length) return lines.join("\n");
+    } catch {}
+  }
+  return raw;
+}
+
 function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false) {
   const items = dedupeNewsResults(results).filter(item => {
     const title = cleanText(item?.title || "");
@@ -2384,7 +2416,7 @@ export default {
       try {
         const repairSummaryRule = requireTwoSentenceNews ? "ठीक 2 छोटे, तथ्यात्मक वाक्य" : "1 छोटा, तथ्यात्मक वाक्य";
         const repairCategoryRule = isFiveCategoryNewsQuery(userText) ? "इस प्रश्न में पाँच अलग श्रेणियाँ अनिवार्य हैं। स्रोत-संदर्भ में श्रेणी के अनुसार एक-एक खबर इसी क्रम में लिखो: सरकार, अर्थव्यवस्था, अदालत, विज्ञान, खेल। हर श्रेणी की खबर का शीर्षक उसी श्रेणी वाले स्रोत से लो; किसी श्रेणी को छोड़कर अगली खबर का क्रमांक आगे मत बढ़ाओ। ठीक पाँच प्रविष्टियाँ लिखो।" : "";
-        const repairPrompt = "नीचे दिए गए " + searchResults.length + " खोज परिणामों के लिए केवल हिंदी सार दो। ठीक " + searchResults.length + " अलग-अलग खबरें लिखो। " + repairCategoryRule + " एक ही घटना की दो रिपोर्टों को दो खबर मत बनाओ। हर प्रविष्टि में दो पंक्तियाँ अनिवार्य हैं: खबर 1: हिंदी शीर्षक और अगली पंक्ति सार: " + repairSummaryRule + "। इसी तरह क्रमांक जारी रखो। कोई बुलेट, बोल्ड, भूमिका, स्रोत या अतिरिक्त पंक्ति नहीं। केवल दिए गए स्रोत-अंश की जानकारी लिखो; जानकारी न हो तो अनुमान मत लगाओ। किसी संख्या/प्रतिशत/रकम/वर्ष को तभी लिखो जब वही मान उसी खबर के स्रोत-अंश में साफ मौजूद हो; अन्यथा उसे छोड़ दो। उत्तर में अनिवार्य रूप से ठीक ये पंक्तियाँ दोहराओ: 'खबर 1: शीर्षक' और अगली पंक्ति 'सार: दो छोटे वाक्य'; इसी तरह खबर 2 से खबर 5 तक। कोई भूमिका, बुलेट, बोल्ड, स्रोत-सूची या अतिरिक्त पंक्ति नहीं।\n\n" + buildCompactNewsSourceContext(searchResults);
+        const repairPrompt = "नीचे दिए गए खोज परिणामों के लिए केवल वैध JSON लौटाओ। कोई Markdown fence या अतिरिक्त पाठ नहीं। JSON object में stories नाम की array हो और हर वस्तु में number (1 से क्रम में), headline (हिंदी शीर्षक) तथा summary (ठीक 2 छोटे वाक्य) हों। ठीक " + searchResults.length + " अलग-अलग प्रविष्टियाँ दो। " + repairCategoryRule + " हर शीर्षक संबंधित स्रोत का सही हिंदी अनुवाद हो। सार में केवल उसी खबर के दिए स्रोत-अंश के तथ्य हों। कोई संख्या/प्रतिशत/रकम/वर्ष तभी लिखो जब वही मान उसी खबर के स्रोत-अंश में स्पष्ट मौजूद हो; अन्यथा संख्या छोड़ दो। अनुमान, कारण या अतिरिक्त तथ्य मत जोड़ो।\n\n" + buildCompactNewsSourceContext(searchResults);
         const repairMessages = [{ role: "user", content: repairPrompt }];
         const parseRepairResponse = async response => {
           if (!response?.ok) return "";
@@ -2394,7 +2426,7 @@ export default {
             ? repairContent.map(part => typeof part === "string" ? part : (part?.text || part?.content || "")).join("")
             : repairContent;
           return typeof repairText === "string" && repairText.trim()
-            ? formatCurrentNewsSummaryReply(repairText.trim(), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText))
+            ? formatCurrentNewsSummaryReply(normalizeNewsSummaryRepairText(repairText.trim()), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText))
             : "";
         };
         let repairResponse;
