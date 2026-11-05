@@ -452,8 +452,8 @@ async function enrichGoldRateResults(results) {
           dateValues.push(value);
         }
       }
-      const jsonDates = [...html.matchAll(/["'](?:datePublished|dateModified|dateCreated)["']\\s*:\\s*["']([^"']+)["']/gi)].map(match => match[1]);
-      const timeDates = [...html.matchAll(/<time\\b[^>]*datetime=["']([^"']+)["']/gi)].map(match => match[1]);
+      const jsonDates = [...html.matchAll(/["'](?:datePublished|dateModified|dateCreated)["']\s*:\s*["']([^"']+)["']/gi)].map(match => match[1]);
+      const timeDates = [...html.matchAll(/<time\b[^>]*datetime=["']([^"']+)["']/gi)].map(match => match[1]);
       const pageDate = [...dateValues, ...jsonDates, ...timeDates]
         .map(value => ({ value, time: Date.parse(value) }))
         .find(entry => Number.isFinite(entry.time) && entry.time <= Date.now());
