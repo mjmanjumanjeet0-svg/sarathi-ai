@@ -66,6 +66,40 @@ assert.deepEqual([...completeFiveNewsReply.matchAll(/खबर (\d+):/g)].map(ma
 assert.equal(formatCurrentNewsSummaryReply(fiveNewsDraft, fiveNewsSources.slice(0, 4), true), "", "four stories must never be presented as a complete five-story digest");
 const incompleteFiveNewsDraft = fiveNewsDraft.replace("सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।", "सार: ");
 assert.equal(formatCurrentNewsSummaryReply(incompleteFiveNewsDraft, fiveNewsSources, true), "", "a five-source digest must be rejected if even one story lacks a valid summary");
+const oneSentenceNewsDraft = fiveNewsDraft.replace(
+  "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
+  "सार: यह केवल एक वाक्य का सार है।"
+);
+assert.equal(formatCurrentNewsSummaryReply(oneSentenceNewsDraft, fiveNewsSources, true), "", "a requested two-to-three-sentence digest must reject a one-sentence summary");
+
+const boilerplateNewsDraft = fiveNewsDraft.replace(
+  "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
+  "सार: उपलब्ध स्रोत-अंश इस कारण की पुष्टि नहीं करता; इसलिए कारण के बारे में निष्कर्ष नहीं निकाला जा सकता।"
+);
+assert.equal(formatCurrentNewsSummaryReply(boilerplateNewsDraft, fiveNewsSources, false), "", "generic evidence disclaimers must not be passed off as a news summary");
+
+const unsupportedCauseDraft = fiveNewsDraft.replace(
+  "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
+  "सार: प्रदूषण निर्माण कार्यों के कारण बढ़ा। यह दूसरी पुष्ट जानकारी है।"
+);
+assert.equal(formatCurrentNewsSummaryReply(unsupportedCauseDraft, fiveNewsSources, true), "", "an unsupported causal explanation must reject the story instead of being rewritten as generic filler");
+
+const tentativeSources = fiveNewsSources.map(item => ({ ...item }));
+tentativeSources[0] = {
+  ...tentativeSources[0],
+  title: "Delhi government considers artificial rain after Diwali",
+  snippet: "The government is considering cloud seeding after Diwali; no official announcement is expected before Diwali."
+};
+const tentativeDraft = fiveNewsDraft.replace(
+  "खबर 1: अलग समाचार घटना 1",
+  "खबर 1: दिल्ली सरकार ने कृत्रिम बारिश कराने का निर्णय लिया"
+);
+assert.equal(formatCurrentNewsSummaryReply(tentativeDraft, tentativeSources, true), "", "a tentative source must not be turned into a confirmed decision in the headline");
+const preservedTentativeDraft = fiveNewsDraft.replace(
+  "खबर 1: अलग समाचार घटना 1",
+  "खबर 1: दिल्ली सरकार कृत्रिम बारिश कराने पर विचार कर रही है"
+);
+assert.match(formatCurrentNewsSummaryReply(preservedTentativeDraft, tentativeSources, true), /खबर 1: दिल्ली सरकार कृत्रिम बारिश कराने पर विचार कर रही है/, "a summary that preserves tentative status should pass");
 
 
 
