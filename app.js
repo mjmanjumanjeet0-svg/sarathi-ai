@@ -9,7 +9,8 @@ const $ = id => document.getElementById(id);
 
 const STORAGE_KEY = "sarathi_ai_chats_v1";
 const SETTINGS_KEY = "sarathi_ai_settings_v1";
-const AUTH_TOKEN_KEY = "sarathi_ai_auth_token_v1";
+let sessionAuthToken = null;
+let messageLoginGranted = false;
 
 const DEFAULT_SETTINGS = {
   workerUrl: "https://sarathi-ai.mjmanjumanjeet0.workers.dev",
@@ -186,15 +187,21 @@ async function loginWorker() {
     throw new Error(data.error || "लॉगिन नहीं हो सका।");
   }
 
-  localStorage.setItem(AUTH_TOKEN_KEY, data.token);
-  return data.token;
+  // Keep the credential only in memory. It disappears when the app/WebView closes.
+  sessionAuthToken = data.token;
+  return sessionAuthToken;
 }
 
-async function getAuthToken() {
-  let token = localStorage.getItem(AUTH_TOKEN_KEY);
+async function getAuthToken(requireMessageLogin = false) {
+  // App launch requires login, and the first message requires a second confirmation.
+  // After that, the in-memory token is reused for this open app session only.
+  if (requireMessageLogin && !messageLoginGranted) {
+    const token = await loginWorker();
+    messageLoginGranted = true;
+    return token;
+  }
 
-  if (token) return token;
-
+  if (sessionAuthToken) return sessionAuthToken;
   return await loginWorker();
 }
 
@@ -1056,7 +1063,7 @@ async function sendMessage(text) {
   setStatus(useWebSearch ? "सारथी इंटरनेट पर खोजकर जवाब तैयार कर रहा है…" : "सारथी जवाब तैयार कर रहा है…");
 
   try {
-    let token = await getAuthToken();
+    let token = await getAuthToken(true);
 
     const chatPayload = buildChatRequestPayload(prompt, useWebSearch);
     let response = await postChatWithRetry(workerUrl + "/api/chat", token, chatPayload);
@@ -1070,8 +1077,9 @@ async function sendMessage(text) {
     }
 
     if (response.status === 401 || response.status === 403) {
-      localStorage.removeItem(AUTH_TOKEN_KEY);
-      token = await loginWorker();
+      sessionAuthToken = null;
+      messageLoginGranted = false;
+      token = await getAuthToken(true);
 
       response = await postChatWithRetry(workerUrl + "/api/chat", token, chatPayload);
 
