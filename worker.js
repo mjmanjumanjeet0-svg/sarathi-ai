@@ -1768,7 +1768,9 @@ export default {
         } else {
           searchResults = dedupeNewsPublishers(searchResults);
         }
-        if (isFiveCategoryNewsQuery(userText) && searchResults.length) {\n          searchResults = await enrichNewsArticleEvidence(searchResults);\n        }\n        // A single fresh article is not enough to present a news digest as verified.
+        if (isFiveCategoryNewsQuery(userText) && searchResults.length) {
+          searchResults = await enrichNewsArticleEvidence(searchResults);
+        }\n        // A single fresh article is not enough to present a news digest as verified.
         // Stop before the language model can turn one weakly matching page into a confident event summary.
         if (searchResults.length > 0 && searchResults.length < 2) {
           const todayLabel = new Intl.DateTimeFormat("hi-IN", {
