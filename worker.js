@@ -1892,13 +1892,12 @@ export default {
       const requestedCity = bullionCityAliases.find(city => city.re.test(userText));
       if (requestedCity) {
         const pricedLines = rawReply.split(/\r?\n/).filter(line => /₹|\bINR\b|रु\.?/i.test(line));
-        const foreignPricedLine = pricedLines.find(line =>
-          bullionCityAliases.some(city => city.key !== requestedCity.key && city.re.test(line))
-        );
-        if (foreignPricedLine) {
-          const foreignCity = bullionCityAliases.find(city =>
-            city.key !== requestedCity.key && city.re.test(foreignPricedLine)
-          );
+        // City attribution may appear in the source/note rather than beside the numeric row.
+        // If a priced answer cites another city's market, reject the whole local-city quote.
+        const foreignCity = pricedLines.length
+          ? bullionCityAliases.find(city => city.key !== requestedCity.key && city.re.test(rawReply))
+          : null;
+        if (foreignCity) {
           rawReply = requestedCity.label + " के स्थानीय सोना-चाँदी भाव उपलब्ध खोज परिणामों से विश्वसनीय रूप से सत्यापित नहीं हो सके। खोज में " +
             (foreignCity?.label || "दूसरे शहर") + " के संदर्भ वाली दर मिली है; उसे " + requestedCity.label +
             " का भाव बताना सही नहीं होगा। इसलिए 24 कैरेट, 22 कैरेट और 999 चाँदी की कोई अपुष्ट कीमत नहीं दी जा रही है।\n\n" +
