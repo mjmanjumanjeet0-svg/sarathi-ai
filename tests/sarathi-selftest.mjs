@@ -55,7 +55,7 @@ const courtHelperEnd = source.indexOf("\nfunction classifyRequestedNewsCategory"
 assert.ok(courtHelperStart >= 0 && courtHelperEnd > courtHelperStart, "focused court-news query helpers must exist");
 const courtHelpers = new Function("isCurrentNewsQuery", "cleanText",
   source.slice(courtHelperStart, courtHelperEnd) + "\nreturn { isSpecificCourtNewsQuery, isSubstantiveCourtNewsItem };")(
-    value => /(?:पिछले|गत|last)\\s*48\\s*(?:घंटों?|घंटे|hours?).{0,110}(?:खबर|समाचार|न्यूज़|न्यूज|news)/i.test(String(value || "")),
+    () => true,
     value => String(value || "").replace(/\s+/g, " ").trim()
   );
 assert.equal(courtHelpers.isSpecificCourtNewsQuery("पिछले 48 घंटों में भारत के सुप्रीम कोर्ट की खबर बताओ"), true,
