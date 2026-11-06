@@ -17,6 +17,19 @@ assert.match(source, /स्रोत में न दिया कारण.*�
 assert.match(source, /Prefer headline evidence; snippets may mention unrelated topics incidentally/, "news categories must prioritize headline evidence over incidental snippet mentions");
 assert.match(source, /air quality\\|air pollution\\|pollution\\|weather\\|forecast\\|वायु गुणवत्ता\\|वायु प्रदूषण\\|प्रदूषण\\|मौसम\\|पूर्वानुमान/, "AQI and weather headlines must not be misclassified as science");
 assert.match(source, /stocks\? in news\\|stocks\? to watch\\|shares\? in focus\\|pre-market\\|market watch/, "generic stock watchlists must not fill the economy category");
+const categoryStart = source.indexOf("function classifyRequestedNewsCategory(item) {");
+const categoryEnd = source.indexOf("\\nfunction selectNewsForRequestedCategories", categoryStart);
+assert.ok(categoryStart >= 0 && categoryEnd > categoryStart, "news category classifier must exist");
+const cleanTextForCategoryTest = value => String(value || "").replace(/<[^>]*>/g, " ").replace(/\\s+/g, " ").trim();
+const classifyRequestedNewsCategory = new Function("cleanText", source.slice(categoryStart, categoryEnd) + "\\nreturn classifyRequestedNewsCategory;")(cleanTextForCategoryTest);
+assert.equal(classifyRequestedNewsCategory({ title: "Delhi's AQI ‘Very Poor’ for 4th day in a row, to be ‘Severe’ on Diwali weekend | Delhi News - The Indian Express" }), "", "Delhi AQI/pollution report must not fill science category");
+assert.equal(classifyRequestedNewsCategory({ title: "Stocks in news: Bharti Airtel, LIC, Titan, ONGC and other shares" }), "", "generic stock watchlist must not fill economy category");
+assert.equal(classifyRequestedNewsCategory({ title: "ISRO launches new earth observation satellite" }), "विज्ञान", "a genuine ISRO satellite launch must qualify as science");
+assert.equal(classifyRequestedNewsCategory({ title: "RBI keeps repo rate unchanged after policy review" }), "अर्थव्यवस्था", "an RBI rate decision must qualify as economy");
+assert.equal(classifyRequestedNewsCategory({ title: "Supreme Court orders release in unlawful detention case" }), "अदालत", "a Supreme Court ruling must qualify as court");
+assert.equal(classifyRequestedNewsCategory({ title: "Home Ministry announces new visa policy" }), "सरकार", "a ministry policy announcement must qualify as government");
+assert.equal(classifyRequestedNewsCategory({ title: "Indian athlete Parvez Khan faces doping ban" }), "खेल", "an athlete doping story must qualify as sports");
+
 assert.ok((source.match(/const category = classifyRequestedNewsCategory\(item\);/g) || []).length >= 2, "final news selection and fallback must reclassify the actual headline instead of trusting stale category metadata");
 assert.match(source, /पाँच-श्रेणी समाचार जाँच पूरी नहीं हुई/, "five-category fallback must identify incomplete category coverage rather than claiming all summaries failed");
 assert.ok(source.includes("वाक्य(?:ों)?"), "news intent detector must recognize Hindi wording दो वाक्यों में");
