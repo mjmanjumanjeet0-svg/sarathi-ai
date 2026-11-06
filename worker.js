@@ -1055,6 +1055,13 @@ function classifyRequestedNewsCategory(item) {
   // Prefer headline evidence; snippets may mention unrelated topics incidentally.
   const title = cleanText(item?.title || "").toLocaleLowerCase("hi-IN");
   const snippet = cleanText(item?.snippet || "").toLocaleLowerCase("hi-IN");
+  // Environmental monitoring and weather forecasts are not science stories
+  // merely because their snippets mention scientists, models or research.
+  // A science slot needs an actual research, discovery, mission or technology event.
+  if (/(?:\\bAQI\\b|air quality|air pollution|pollution|weather|forecast|वायु गुणवत्ता|वायु प्रदूषण|प्रदूषण|मौसम|पूर्वानुमान)/i.test(title)) return "";
+  // Generic market watchlists are not a distinct economy event; prefer a
+  // reported policy, data release, rate decision or clearly described market move.
+  if (/(?:stocks? in news|stocks? to watch|shares? in focus|pre-market|market watch|आज किन शेयरों|शेयरों पर नजर|शेयरों पर नज़र)/i.test(title)) return "";
   const rules = [
     ["अदालत", /\b(?:supreme court|high court|court|tribunal|judgment|judgement|verdict|legal bench|petition|bail|sentence|lawsuit|hearing)\b|सुप्रीम कोर्ट|उच्च न्यायालय|हाई कोर्ट|अदालत|न्यायालय|न्यायाधीश|फैसला|निर्णय|याचिका|जमानत|पीठ|सुनवाई/i],
     ["खेल", /\b(?:sports?|cricket|football|hockey|tennis|badminton|olympics?|paralympics?|athlete|athletics|athletic|tournament|ipl|icc|bcci|doping|anti-doping|wrestling|kabaddi|parvez khan|cas)\b|खेल|क्रिकेट|फुटबॉल|हॉकी|टेनिस|बैडमिंटन|ओलंपिक|खिलाड़ी|टूर्नामेंट|विश्व कप|डोपिंग|एथलेटिक्स|पहलवान|कबड्डी/i],
