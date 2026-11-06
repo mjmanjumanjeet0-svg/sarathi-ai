@@ -50,6 +50,25 @@ assert.equal(classifyRequestedNewsCategory({ title: "Joint CSIR-UGC NET December
 assert.equal(classifyRequestedNewsCategory({ title: "IISc team reports a breakthrough in quantum materials research" }), "विज्ञान", "Indian scientific institution and research headlines must qualify as science");
 assert.equal(classifyRequestedNewsCategory({ title: "RBI keeps repo rate unchanged after policy review" }), "अर्थव्यवस्था", "an RBI rate decision must qualify as economy");
 assert.equal(classifyRequestedNewsCategory({ title: "Supreme Court orders release in unlawful detention case" }), "अदालत", "a Supreme Court ruling must qualify as court");
+const courtHelperStart = source.indexOf("function isSpecificCourtNewsQuery(text) {");
+const courtHelperEnd = source.indexOf("\\nfunction isFiveCategoryNewsQuery", courtHelperStart);
+assert.ok(courtHelperStart >= 0 && courtHelperEnd > courtHelperStart, "focused court-news query helpers must exist");
+const courtHelpers = new Function("isFiveCategoryNewsQuery", "cleanText",
+  source.slice(courtHelperStart, courtHelperEnd) + "\\nreturn { isSpecificCourtNewsQuery, isSubstantiveCourtNewsItem };")(
+    () => false,
+    value => String(value || "").replace(/\\s+/g, " ").trim()
+  );
+assert.equal(courtHelpers.isSpecificCourtNewsQuery("पिछले 48 घंटों में भारत के सुप्रीम कोर्ट की खबर बताओ"), true,
+  "a focused recent Supreme Court query must use the court-only route");
+assert.equal(courtHelpers.isSpecificCourtNewsQuery("पिछले 48 घंटों में भारत की पाँच महत्वपूर्ण खबरें सरकार अदालत विज्ञान खेल अर्थव्यवस्था से बताओ"), false,
+  "the five-category digest must keep its existing route");
+assert.equal(courtHelpers.isSubstantiveCourtNewsItem({ title: "Supreme Court orders release in unlawful detention case" }), true,
+  "a substantive Supreme Court order must qualify");
+assert.equal(courtHelpers.isSubstantiveCourtNewsItem({ title: "Bomb threat to Bombay High Court and BSE" }), false,
+  "a threat mentioning a High Court must not qualify as judicial news");
+assert.match(source, /India Supreme Court and High Court latest judgments orders rulings hearings petitions bail constitutional bench/,
+  "focused court queries must use a judiciary-specific search query");
+
 assert.equal(classifyRequestedNewsCategory({ title: "Home Ministry announces new visa policy" }), "सरकार", "a ministry policy announcement must qualify as government");
 assert.equal(classifyRequestedNewsCategory({ title: "PM Modi asks new NITI Aayog team to craft ideas to improve lives of India’s poorest" }), "सरकार", "NITI Aayog policy direction must be classified as government, not economy");
 assert.match(source, /India court and judiciary news.*published within the last 48 hours/s, "five-category search must deliberately seek recent court coverage");
