@@ -54,13 +54,24 @@ assert.equal(hasIncorrectOverallAqiCategory("दिल्ली का AQI 370 �
 
 
 
+const digestFilterStart = worker.indexOf("function isMultiTopicNewsDigestTitle(title) {");
+const digestFilterEnd = worker.indexOf("\n}\n", digestFilterStart);
+assert.ok(digestFilterStart >= 0 && digestFilterEnd > digestFilterStart, "multi-topic news digest filter must exist");
+const isMultiTopicNewsDigestTitle = new Function(
+  "cleanText",
+  worker.slice(digestFilterStart, digestFilterEnd + 3) + "\nreturn isMultiTopicNewsDigestTitle;"
+)(value => String(value || "").replace(/\s+/g, " ").trim());
 const indiaFilterStart = worker.indexOf("function isIndiaFocusedNewsItem(item) {");
 const indiaFilterEnd = worker.indexOf("\n}\n", indiaFilterStart);
 assert.ok(indiaFilterStart >= 0 && indiaFilterEnd > indiaFilterStart, "India-focused news filter must exist");
 const isIndiaFocusedNewsItem = new Function(
-  "cleanText",
+  "cleanText", "isMultiTopicNewsDigestTitle",
   worker.slice(indiaFilterStart, indiaFilterEnd + 3) + "\nreturn isIndiaFocusedNewsItem;"
-)(value => String(value || "").replace(/\s+/g, " ").trim());
+)(value => String(value || "").replace(/\s+/g, " ").trim(), isMultiTopicNewsDigestTitle);
+assert.equal(isIndiaFocusedNewsItem({ title: "News This Week (Nov 2-6): Trump's Midterm Setback, Delhi's Toxic Air, Ramayana's Big Debut & More", snippet: "Karnataka ethanol story appears in this unrelated roundup" }), false,
+  "weekly multi-topic news digests must be rejected before evidence enrichment");
+assert.equal(isIndiaFocusedNewsItem({ title: "Supreme Court orders release in unlawful detention case" }), true,
+  "specific Indian court reporting must remain eligible");
 const categoryClassifierStart = worker.indexOf("function classifyRequestedNewsCategory(item) {");
 const categoryClassifierEnd = worker.indexOf("\n}\n", categoryClassifierStart);
 assert.ok(categoryClassifierStart >= 0 && categoryClassifierEnd > categoryClassifierStart, "news category classifier must exist");
