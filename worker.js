@@ -940,9 +940,29 @@ function groupNewsByEvent(results) {
       if (isSameIndianMarketEvent(item, group) || isSameIndianNewsEvent(item, group)) return true;
       const previousTokens = tokensFor(group.title);
       let shared = 0;
-      for (const token of titleTokens) if (previousTokens.has(token)) shared++;
+      const sharedTokens = [];
+      for (const token of titleTokens) {
+        if (previousTokens.has(token)) {
+          shared++;
+          sharedTokens.push(token);
+        }
+      }
       const smaller = Math.min(titleTokens.size, previousTokens.size);
-      return smaller > 0 && shared >= 3 && shared / smaller >= 0.8;
+      // Headlines from different publishers often use different word order
+      // and phrasing. Match only when several terms overlap and at least one
+      // distinctive event/entity term is shared; generic category words alone
+      // must never merge unrelated stories.
+      const genericEventTerms = new Set([
+        "india", "indian", "government", "minister", "ministry", "court",
+        "supreme", "high", "state", "tamil", "nadu", "karnataka", "police",
+        "official", "latest", "news", "today", "says", "said", "report",
+        "reports", "cricket", "sports", "economy", "market", "stock",
+        "sensex", "nifty", "isro", "satellite", "court", "rally"
+      ]);
+      const hasDistinctiveAnchor = sharedTokens.some(token =>
+        token.length >= 5 && !genericEventTerms.has(token)
+      );
+      return smaller > 0 && shared >= 3 && shared / smaller >= 0.45 && hasDistinctiveAnchor;
     });
     if (duplicateIndex < 0) {
       groups.push({ ...item, corroboratingSources: [] });
