@@ -1226,10 +1226,14 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
   const requiredCategories = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
   if (requireFiveCategories) {
     const latestByCategory = new Map();
+    const now = Date.now();
+    const earliestAllowed = now - 48 * 60 * 60 * 1000;
+    const latestAllowed = now + 5 * 60 * 1000;
     for (const item of items) {
       const category = classifyRequestedNewsCategory(item);
       const publishedAt = Date.parse(item?.publishedAt || "");
-      if (!category || !requiredCategories.includes(category) || !Number.isFinite(publishedAt)) continue;
+      if (!category || !requiredCategories.includes(category) || !Number.isFinite(publishedAt) ||
+          publishedAt < earliestAllowed || publishedAt > latestAllowed) continue;
       const previous = latestByCategory.get(category);
       if (!previous || publishedAt > Date.parse(previous.publishedAt || "")) latestByCategory.set(category, { ...item, requestedCategory: category });
     }
@@ -1237,7 +1241,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     if (items.length !== 5) {
       console.warn("Five-category news source selection incomplete", JSON.stringify({
         expected: requiredCategories,
-        received: [...byCategory.keys()],
+        received: [...latestByCategory.keys()],
         sourceCount: items.length
       }));
       return "";
@@ -1406,12 +1410,15 @@ function buildCurrentNewsHeadlineReply(results, query = "") {
 }
 function selectLatestFiveCategoryNewsItems(results) {
   const requiredCategories = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
+  const now = Date.now();
+  const earliestAllowed = now - 48 * 60 * 60 * 1000;
+  const latestAllowed = now + 5 * 60 * 1000;
   const byCategory = new Map();
   for (const item of dedupeNewsResults(Array.isArray(results) ? results : [])) {
     const category = classifyRequestedNewsCategory(item);
     if (!category || !requiredCategories.includes(category)) continue;
     const publishedAt = Date.parse(item?.publishedAt || "");
-    if (!Number.isFinite(publishedAt)) continue;
+    if (!Number.isFinite(publishedAt) || publishedAt < earliestAllowed || publishedAt > latestAllowed) continue;
     const previous = byCategory.get(category);
     if (!previous || publishedAt > Date.parse(previous.publishedAt || "")) {
       byCategory.set(category, { ...item, requestedCategory: category });
