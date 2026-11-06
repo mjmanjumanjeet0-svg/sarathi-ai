@@ -1056,7 +1056,7 @@ function classifyRequestedNewsCategory(item) {
   const title = cleanText(item?.title || "").toLocaleLowerCase("hi-IN");
   const snippet = cleanText(item?.snippet || "").toLocaleLowerCase("hi-IN");
   // NITI Aayog announcements and PM-directed policy work belong in the government slot, not the economy slot merely because poverty/development is mentioned.
-  if (/(?:niti\\s*aayog|नीति\\s*आयोग)/i.test(title)) return "सरकार";
+  if (/(?:niti\s*aayog|नीति\s*आयोग)/i.test(title)) return "सरकार";
   // Environmental monitoring and weather forecasts are not science stories
   // merely because their snippets mention scientists, models or research.
   // A science slot needs an actual research, discovery, mission or technology event.
