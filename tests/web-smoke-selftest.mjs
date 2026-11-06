@@ -95,8 +95,8 @@ const formatCurrentNewsSummaryReply = new Function(
   new Function(worker.slice(worker.indexOf("function hasUntranslatedEnglishHeadline("), worker.indexOf("\n}\n", worker.indexOf("function hasUntranslatedEnglishHeadline(")) + 3) + "\nreturn hasUntranslatedEnglishHeadline;")(),
   new Function(worker.slice(worker.indexOf("function hasIncorrectOverallAqiCategory("), worker.indexOf("\n}\n", worker.indexOf("function hasIncorrectOverallAqiCategory(")) + 3) + "\nreturn hasIncorrectOverallAqiCategory;")(),
   isIndiaFocusedNewsItem,
-  classifyRequestedNewsCategory,
-  hasKnownContradictedNewsFact
+  hasKnownContradictedNewsFact,
+  classifyRequestedNewsCategory
 );
 const groupNewsStart = worker.indexOf("function groupNewsByEvent(results) {");
 const groupNewsEnd = worker.indexOf("\n}\n", groupNewsStart);
