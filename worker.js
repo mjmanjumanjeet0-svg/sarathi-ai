@@ -1303,8 +1303,8 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     }
   }
   items = items.slice(0, 5);
-  // Validate each available independent article; a short list is allowed only
-  // for ordinary news requests, not for an explicit five-category request.
+  // Validate each available independent article, including partial five-category results.
+  // Missing categories are disclosed after validation; they are never filled with guesses.
   if (!items.length) return "";
   const entries = new Map();
   let current = null;
