@@ -1145,7 +1145,7 @@ function hasUnsupportedNumericClaim(generatedText, sourceEvidence, returnDetails
 function hasUntranslatedEnglishHeadline(text) {
   // Keep common institutional acronyms, but require ordinary headline words to be translated.
   const allowedAcronyms = new Set(["RBI","ISRO","CSIR","NEERI","BSE","NSE","ICC","BCCI","NASA","DRDO","IIT","IISc","AIIMS","IMD","CPCB","AQI","UPI","GDP","PM","SC","HC"]);
-  const words = String(text || "").match(/\b[A-Za-z][A-Za-z'-]*\b/g) || [];
+  const words = String(text || "").match(/[A-Za-z]+/g) || [];
   return words.some(word => !allowedAcronyms.has(word.toUpperCase()) && !/^[A-Z]{2,}$/.test(word));
 }
 
