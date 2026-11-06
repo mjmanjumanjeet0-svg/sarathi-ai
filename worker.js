@@ -2024,7 +2024,10 @@ export default {
           searchResults = searchResults
             .filter(isSubstantiveCourtNewsItem)
             .map(item => ({ ...item, requestedCategory: "अदालत" }));
-          searchResults = dedupeNewsPublishers(searchResults);
+          // A focused court-news request asks for one important story, not a multi-item digest.
+          // Select one distinct event before enrichment and AI summarization so every downstream
+          // stage (summary, fallback, and source cards) is constrained to the same single item.
+          searchResults = dedupeNewsPublishers(searchResults).slice(0, 1);
           if (searchResults.length) searchResults = await enrichNewsArticleEvidence(searchResults);
         } else if (isFiveCategoryNewsQuery(userText)) {
           // Preserve one distinct event for each requested category.

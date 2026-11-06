@@ -66,6 +66,8 @@ assert.equal(courtHelpers.isSubstantiveCourtNewsItem({ title: "Supreme Court ord
   "a substantive Supreme Court order must qualify");
 assert.equal(courtHelpers.isSubstantiveCourtNewsItem({ title: "Bomb threat to Bombay High Court and BSE" }), false,
   "a threat mentioning a High Court must not qualify as judicial news");
+assert.match(source, /searchResults = dedupeNewsPublishers\(searchResults\)\.slice\(0, 1\)/,
+  "a focused court-news request must be limited to one story before enrichment and summary generation");
 assert.match(source, /India Supreme Court and High Court latest judgments orders rulings hearings petitions bail constitutional bench/,
   "focused court queries must use a judiciary-specific search query");
 
