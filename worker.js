@@ -1218,9 +1218,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
   if (requireFiveCategories) {
     const byCategory = new Map();
     for (const item of items) {
-      const category = requiredCategories.includes(item?.requestedCategory)
-        ? item.requestedCategory
-        : classifyRequestedNewsCategory(item);
+      const category = classifyRequestedNewsCategory(item);
       if (category && requiredCategories.includes(category) && !byCategory.has(category)) {
         byCategory.set(category, { ...item, requestedCategory: category });
       }
@@ -1377,7 +1375,7 @@ function buildCurrentNewsHeadlineReply(results, query = "") {
     const required = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
     const byCategory = new Map();
     for (const item of items) {
-      const category = required.includes(item?.requestedCategory) ? item.requestedCategory : classifyRequestedNewsCategory(item);
+      const category = classifyRequestedNewsCategory(item);
       if (category && required.includes(category) && !byCategory.has(category)) byCategory.set(category, item);
     }
     const missing = required.filter(category => !byCategory.has(category));
