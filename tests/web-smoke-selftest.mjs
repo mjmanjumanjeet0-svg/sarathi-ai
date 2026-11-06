@@ -93,7 +93,7 @@ const completeFiveNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, fiveN
 assert.match(completeFiveNewsReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "five-category request must return all five stories only when all five summaries pass");
 const incompleteFiveCategoryReply = formatCurrentNewsSummaryReply(fiveNewsDraft.replace("खबर 5:", "खबर 4:"), fiveNewsSources, true, true);
 assert.equal(incompleteFiveCategoryReply, "", "five-category request must reject an incomplete or duplicated five-story response and trigger repair");
-assert.deepEqual([...completeFiveNewsReply.matchAll(/खबर (\d+):/g)].map(match => Number(match[1])), [1, 2, 3, 4, 5], "daily-news numbering must always be continuous from 1 through 5");
+assert.deepEqual([...completeFiveNewsReply.matchAll(/खबर (\d+)(?: \([^)]*\))?:/g)].map(match => Number(match[1])), [1, 2, 3, 4, 5], "daily-news numbering must always be continuous from 1 through 5");
 const fiveCategoryDetectorStart = worker.indexOf("function isFiveCategoryNewsQuery(text) {");
 const fiveCategoryDetectorEnd = worker.indexOf("\n}\n", fiveCategoryDetectorStart);
 assert.ok(fiveCategoryDetectorStart >= 0 && fiveCategoryDetectorEnd > fiveCategoryDetectorStart, "five-category news detector must exist");
@@ -110,16 +110,16 @@ const mixedMetadataReply = formatCurrentNewsSummaryReply(mixedMetadataDraft, fiv
 assert.doesNotMatch(mixedMetadataReply, /fake\.example|https:\/\/fake\.example/, "model-generated source metadata must never be shown; only matched search-result metadata is trusted");
 const partialFourNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, fiveNewsSources.slice(0, 4), true);
 assert.match(partialFourNewsReply, /आज 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं \(आपने 5 माँगी थीं\)/, "four verified stories should be shown with an explicit shortfall notice");
-assert.equal([...partialFourNewsReply.matchAll(/खबर (\d+):/g)].length, 4, "only four available validated stories should be displayed");
+assert.equal([...partialFourNewsReply.matchAll(/खबर (\d+)(?: \([^)]*\))?:/g)].length, 4, "only four available validated stories should be displayed");
 const incompleteFiveNewsDraft = fiveNewsDraft.replace("सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।", "सार: ");
 const incompleteFiveNewsReply = formatCurrentNewsSummaryReply(incompleteFiveNewsDraft, fiveNewsSources, true);
-assert.equal([...incompleteFiveNewsReply.matchAll(/खबर (\d+):/g)].length, 4, "a story without a valid summary must be omitted while other verified stories remain");
+assert.equal([...incompleteFiveNewsReply.matchAll(/खबर (\d+)(?: \([^)]*\))?:/g)].length, 4, "a story without a valid summary must be omitted while other verified stories remain");
 const oneSentenceNewsDraft = fiveNewsDraft.replace(
   "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
   "सार: यह केवल एक वाक्य का सार है।"
 );
 const oneSentenceNewsReply = formatCurrentNewsSummaryReply(oneSentenceNewsDraft, fiveNewsSources, true);
-assert.equal([...oneSentenceNewsReply.matchAll(/खबर (\d+):/g)].length, 4, "a one-sentence item must be omitted without discarding other valid summaries");
+assert.equal([...oneSentenceNewsReply.matchAll(/खबर (\d+)(?: \([^)]*\))?:/g)].length, 4, "a one-sentence item must be omitted without discarding other valid summaries");
 
 const boilerplateNewsDraft = fiveNewsDraft.replace(
   "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
