@@ -18,10 +18,10 @@ assert.match(source, /Prefer headline evidence; snippets may mention unrelated t
 assert.match(source, /air quality\\|air pollution\\|pollution\\|weather\\|forecast\\|वायु गुणवत्ता\\|वायु प्रदूषण\\|प्रदूषण\\|मौसम\\|पूर्वानुमान/, "AQI and weather headlines must not be misclassified as science");
 assert.match(source, /stocks\? in news\\|stocks\? to watch\\|shares\? in focus\\|pre-market\\|market watch/, "generic stock watchlists must not fill the economy category");
 const categoryStart = source.indexOf("function classifyRequestedNewsCategory(item) {");
-const categoryEnd = source.indexOf("function selectNewsForRequestedCategories", categoryStart);
+const categoryEnd = source.indexOf("\nfunction selectNewsForRequestedCategories", categoryStart);
 assert.ok(categoryStart >= 0 && categoryEnd > categoryStart, "news category classifier must exist");
-const cleanTextForCategoryTest = value => String(value || "").replace(/<[^>]*>/g, " ").replace(/\\s+/g, " ").trim();
-const classifyRequestedNewsCategory = new Function("cleanText", source.slice(categoryStart, categoryEnd) + "\\nreturn classifyRequestedNewsCategory;")(cleanTextForCategoryTest);
+const cleanTextForCategoryTest = value => String(value || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+const classifyRequestedNewsCategory = new Function("cleanText", source.slice(categoryStart, categoryEnd) + "\nreturn classifyRequestedNewsCategory;")(cleanTextForCategoryTest);
 assert.equal(classifyRequestedNewsCategory({ title: "Delhi's AQI ‘Very Poor’ for 4th day in a row, to be ‘Severe’ on Diwali weekend | Delhi News - The Indian Express" }), "", "Delhi AQI/pollution report must not fill science category");
 assert.equal(classifyRequestedNewsCategory({ title: "Stocks in news: Bharti Airtel, LIC, Titan, ONGC and other shares" }), "", "generic stock watchlist must not fill economy category");
 assert.equal(classifyRequestedNewsCategory({ title: "ISRO launches new earth observation satellite" }), "विज्ञान", "a genuine ISRO satellite launch must qualify as science");
