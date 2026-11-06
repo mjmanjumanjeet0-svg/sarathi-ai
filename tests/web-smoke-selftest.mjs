@@ -80,7 +80,13 @@ const formatCurrentNewsSummaryReply = new Function(
 const fiveNewsCategories = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
 const fiveNewsSources = Array.from({ length: 5 }, (_, index) => ({
   requestedCategory: fiveNewsCategories[index],
-  title: "भारत की अलग समाचार घटना " + (index + 1),
+  title: [
+    "भारत सरकार की अलग समाचार घटना",
+    "भारत की अर्थव्यवस्था की अलग समाचार घटना",
+    "भारत के सुप्रीम कोर्ट की अलग समाचार घटना",
+    "भारत के वैज्ञानिकों की अलग समाचार घटना",
+    "भारत के खेल की अलग समाचार घटना"
+  ][index],
   url: "https://publisher" + (index + 1) + ".example/news-" + (index + 1),
   publishedAt: "2026-11-05T08:00:00+05:30",
   snippet: "आज की अलग घटना का विवरण उपलब्ध है।"
