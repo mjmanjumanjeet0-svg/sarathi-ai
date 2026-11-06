@@ -1040,7 +1040,7 @@ function isFiveCategoryNewsQuery(text) {
   // Users naturally place freshness/adjectives between the count and "news".
   // Allow a short phrase such as "पाँच ताज़ा और महत्वपूर्ण खबरें" so the
   // five-category completeness rule cannot be bypassed by normal wording.
-  const hasFive = /(?:पाँच|पांच|5)\b?[^\n]{0,45}?(?:खबर|समाचार|news)/i.test(value);
+  const hasFive = /(?:पाँच|पांच|5)[^\n]{0,45}?(?:खबर|समाचार|news)/i.test(value);
   const categoryTerms = [
     /सरकार|government/i,
     /अर्थव्यवस्था|economy/i,
