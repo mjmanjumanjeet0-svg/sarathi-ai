@@ -1211,7 +1211,7 @@ function normalizeNewsSummaryRepairText(rawReply) {
     if (depth > 4 || !value || typeof value !== "object") return [];
     if (Array.isArray(value)) {
       if (value.some(item => item && typeof item === "object" &&
-          (item.headline || item.title || item.summary || item.description || item.summaryHindi))) return value;
+          (item.headline || item.title || item.शीर्षक || item.summary || item.सारांश || item.सार || item.description || item.summaryHindi))) return value;
       for (const item of value) {
         const nested = findEntries(item, depth + 1);
         if (nested.length) return nested;
@@ -1235,12 +1235,12 @@ function normalizeNewsSummaryRepairText(rawReply) {
       if (!entries.length) continue;
       const lines = [];
       entries.slice(0, 5).forEach((entry, index) => {
-        const rawNumber = entry?.number ?? entry?.index ?? entry?.id;
+        const rawNumber = entry?.number ?? entry?.index ?? entry?.id ?? entry?.क्रमांक ?? entry?.संख्या;
         const number = rawNumber === undefined || rawNumber === null || rawNumber === "" ? index + 1 : Number(rawNumber);
-        const headline = cleanText(asText(entry?.headline || entry?.title || entry?.हेडलाइन || ""));
-        const summary = cleanText(asText(entry?.summary || entry?.summaryHindi || entry?.description || entry?.सार || ""));
+        const headline = cleanText(asText(entry?.headline || entry?.title || entry?.हेडलाइन || entry?.शीर्षक || ""));
+        const summary = cleanText(asText(entry?.summary || entry?.summaryHindi || entry?.description || entry?.सार || entry?.सारांश || entry?.विवरण || ""));
         if (Number.isInteger(number) && number >= 1 && number <= 5 && headline && summary) {
-          const category = cleanText(asText(entry?.category || entry?.श्रेणी || ""));
+          const category = cleanText(asText(entry?.category || entry?.श्रेणी || entry?.विषय || ""));
           lines.push("खबर " + number + (category ? " (" + category + ")" : "") + ": " + headline, "सार: " + summary);
         }
       });
