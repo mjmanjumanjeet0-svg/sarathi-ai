@@ -145,7 +145,7 @@ assert.equal([...partialFourNewsReply.matchAll(/खबर (\d+)(?: \([^)]*\))?:/
 const incompleteFiveNewsDraft = fiveNewsDraft.replace("सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।", "सार: ");
 const incompleteFiveNewsReply = formatCurrentNewsSummaryReply(incompleteFiveNewsDraft, fiveNewsSources, true);
 assert.equal([...incompleteFiveNewsReply.matchAll(/खबर (\d+)(?: \([^)]*\))?:/g)].length, 4, "a story without a valid summary must be omitted while other verified stories remain");
-const oneSentenceNewsDraft = fiveNewsDraft.replace(
+const initialsNewsDraft = fiveNewsDraft.replace(\n  "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",\n  "सार: ISRO के अध्यक्ष वी. नारायणन ने बताया। उपग्रह पूरी तरह स्वस्थ है।"\n);\nconst initialsNewsReply = formatCurrentNewsSummaryReply(initialsNewsDraft, fiveNewsSources, true);\nassert.equal([...initialsNewsReply.matchAll(/खबर \\d+(?: \\([^)]*\\))?:/g)].length, 5, "initials such as V. must not be counted as extra sentence endings");\n\nconst oneSentenceNewsDraft = fiveNewsDraft.replace(
   "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
   "सार: यह केवल एक वाक्य का सार है।"
 );
