@@ -91,6 +91,14 @@ const fiveNewsDraft = fiveNewsSources.map((_, index) =>
 ).join("\n");
 const completeFiveNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, fiveNewsSources, true, true);
 assert.match(completeFiveNewsReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "five-category request must return all five stories only when all five summaries pass");
+const fiveNewsSourcesWithoutTransientTags = fiveNewsSources.map(({ requestedCategory, ...item }) => item);
+const recoveredCategoryReply = formatCurrentNewsSummaryReply(
+  fiveNewsDraft,
+  fiveNewsSourcesWithoutTransientTags,
+  true,
+  true
+);
+assert.match(recoveredCategoryReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "final validation must re-derive missing category tags from the article title and snippet");
 const incompleteFiveCategoryReply = formatCurrentNewsSummaryReply(fiveNewsDraft.replace("खबर 5:", "खबर 4:"), fiveNewsSources, true, true);
 assert.equal(incompleteFiveCategoryReply, "", "five-category request must reject an incomplete or duplicated five-story response and trigger repair");
 assert.deepEqual([...completeFiveNewsReply.matchAll(/खबर (\d+)(?: \([^)]*\))?:/g)].map(match => Number(match[1])), [1, 2, 3, 4, 5], "daily-news numbering must always be continuous from 1 through 5");
