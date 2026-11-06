@@ -486,6 +486,10 @@ for (const extension of ["txt", "csv", "md", "json", "pdf", "docx"]) {
 assert.ok(extractorSource.includes("/\\.(png|jpe?g|webp)$/i.test(name)"), "OCR must recognize image files by extension when MIME type is generic");
 assert.ok(worker.includes('reply: "इस ऐप सारथी AI को manju manjeet ने बनाया है।"'), "creator questions must return the exact Sarathi maker attribution without asking the model");
 assert.ok(worker.includes("asksWhoMadeSarathi"), "creator question intent must be handled deterministically before model fallback");
+assert.ok(worker.includes("भरोसेमंद बहुभाषी सहायक"), "Sarathi must be configured as a multilingual assistant");
+assert.ok(worker.includes("उर्दू, বাংলা, தமிழ், తెలుగు"), "language instructions must cover supported non-Hindi languages");
+assert.ok(worker.includes("Roman Urdu"), "Roman-script language input must be identified by meaning, not assumed to be English");
+
 assert.ok(worker.includes('zeroCostMode: true'), "disabled media APIs must clearly identify zero-cost mode");
 assert.ok(worker.includes('"/api/media/image"') && worker.includes('"/api/media/understand"'), "media API routes must be explicit and auditable");
 assert.ok(worker.includes("if (!env.EXA_API_KEY)"), "web search must report a missing configured Exa key rather than silently assuming search is available");
