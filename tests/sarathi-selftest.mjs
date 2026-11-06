@@ -1254,7 +1254,7 @@ await test("current news refuses headline-only output when Groq returns malforme
     assert.ok(r.data.sources.length > 1, "date-checked search results should remain available");
     assert.match(r.data.reply, /आज केवल 4 अलग-अलग, तारीख़-जाँचे समाचार स्रोत मिले|आज 5 तारीख़-जाँचे समाचार परिणाम मिले/);
     assert.doesNotMatch(r.data.reply, /प्रकाशकों के मूल शीर्षक|प्रकाशित:|खबर [1-5]:/);
-    assert.doesNotMatch(r.data.reply, /\\\\n\\\\n/, "fallback text must contain real line breaks, not visible escape sequences");
+    assert.doesNotMatch(r.data.reply, /\\n/, "fallback text must contain real line breaks, not visible escape sequences");
     assert.doesNotMatch(r.data.reply, /कृपया थोड़ी देर बाद फिर पूछें/);
   } finally {
     groqMode = "success";
