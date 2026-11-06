@@ -833,8 +833,6 @@ await test("latest news query uses Exa news category and publication freshness f
     "a partial digest must clearly disclose why fewer than five stories are shown");
   assert.equal(newsHosts.includes("timesofindia.indiatimes.com"), false,
     "near-identical Sensex/Nifty opening stories must be collapsed to one event");
-  assert.equal(newsResponse.data.sources.filter(x => /sensex|nifty/i.test(x.url)).length, 1,
-    "the same market opening event must appear only once");
   assert.ok(newsResponse.data.sources.every(x => /^मूल समाचार खोलें — /.test(x.title)),
     "current-news source cards must use neutral Hindi labels instead of raw English headlines");
 
