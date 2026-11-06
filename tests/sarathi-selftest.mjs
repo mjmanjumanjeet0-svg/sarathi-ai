@@ -32,6 +32,33 @@ assert.equal(classifyRequestedNewsCategory({ title: "Home Ministry announces new
 assert.equal(classifyRequestedNewsCategory({ title: "Indian athlete Parvez Khan faces doping ban" }), "खेल", "an athlete doping story must qualify as sports");
 assert.equal(classifyRequestedNewsCategory({ title: "Daily roundup of national headlines", snippet: "Sports officials and athletes discuss the latest tournament" }), "", "incidental sports terms in a snippet must not fill the sports category");
 
+const selectStart = source.indexOf("function selectNewsForRequestedCategories(results, query) {");
+const selectEnd = source.indexOf("\nfunction isCurrentNewsQuery", selectStart);
+assert.ok(selectStart >= 0 && selectEnd > selectStart, "five-category selector must exist");
+const isFiveCategoryNewsQuery = value => /(?:पाँच|पांच|5)[^\\n]{0,45}?(?:खबर|समाचार|news)/i.test(value) &&
+  ["सरकार","अर्थव्यवस्था","अदालत","विज्ञान","खेल"].every(word => value.includes(word));
+const selectNewsForRequestedCategories = new Function("classifyRequestedNewsCategory", "cleanText", "isFiveCategoryNewsQuery",
+  source.slice(selectStart, selectEnd) + "\nreturn selectNewsForRequestedCategories;")(
+    classifyRequestedNewsCategory, cleanTextForCategoryTest, isFiveCategoryNewsQuery
+  );
+const categoryFixture = [
+  { title: "Home Ministry announces new visa policy", url: "https://example.com/gov", requestedCategory: "खेल" },
+  { title: "RBI keeps repo rate unchanged after policy review", url: "https://example.com/economy", requestedCategory: "सरकार" },
+  { title: "Supreme Court orders release in unlawful detention case", url: "https://example.com/court", requestedCategory: "विज्ञान" },
+  { title: "ISRO launches new earth observation satellite", url: "https://example.com/science", requestedCategory: "खेल" },
+  { title: "Indian athlete faces doping ban", url: "https://example.com/sports", requestedCategory: "अदालत" },
+  { title: "Daily roundup of national headlines", snippet: "Sports officials discuss tournament", url: "https://example.com/roundup", requestedCategory: "खेल" }
+];
+const fiveCategorySelection = selectNewsForRequestedCategories(categoryFixture,
+  "आज भारत की पाँच ताज़ा खबरें: सरकार, अर्थव्यवस्था, अदालत, विज्ञान और खेल");
+assert.deepEqual(fiveCategorySelection.map(item => item.requestedCategory),
+  ["सरकार","अर्थव्यवस्था","अदालत","विज्ञान","खेल"],
+  "selector must return exactly one headline-grounded item per requested category in requested order");
+assert.deepEqual(fiveCategorySelection.map(item => item.url),
+  ["https://example.com/gov","https://example.com/economy","https://example.com/court","https://example.com/science","https://example.com/sports"],
+  "selector must ignore stale category metadata and snippet-only roundup matches");
+
+
 assert.ok((source.match(/const category = classifyRequestedNewsCategory\(item\);/g) || []).length >= 2, "final news selection and fallback must reclassify the actual headline instead of trusting stale category metadata");
 assert.match(source, /पाँच-श्रेणी समाचार जाँच पूरी नहीं हुई/, "five-category fallback must identify incomplete category coverage rather than claiming all summaries failed");
 assert.ok(source.includes("वाक्य(?:ों)?"), "news intent detector must recognize Hindi wording दो वाक्यों में");
