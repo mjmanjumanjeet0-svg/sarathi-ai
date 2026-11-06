@@ -182,10 +182,10 @@ assert.match(completeFiveNewsReply, /आज की 5 अलग-अलग, ता
 
 const olympicsNewsSource = {
   requestedCategory: "खेल",
-  title: "IndianOil launches athletes scholarship for Olympic and Asian Games",
+  title: "Indian athletes: IndianOil launches scholarship for Olympic and Asian Games",
   url: "https://sport.example/scholarship",
   publishedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
-  snippet: "The scheme supports athletes preparing for the 2028 Olympics and 2026 Asian Games."
+  snippet: "Indian athletes prepare for the 2028 Olympics and 2026 Asian Games."
 };
 const wrongOlympicsCityReply = formatCurrentNewsSummaryReply(
   "खबर 1 (खेल): खिलाड़ियों को ओलंपिक छात्रवृत्ति\nसार: यह योजना 2028 एथेंस ओलंपिक के खिलाड़ियों को सहायता देगी। खिलाड़ियों को प्रशिक्षण सहायता मिलेगी।",
@@ -199,9 +199,9 @@ const knownFactGuardStart = worker.indexOf("function hasKnownContradictedNewsFac
 const knownFactGuardEnd = worker.indexOf("\n}\n", knownFactGuardStart);
 assert.ok(knownFactGuardStart >= 0 && knownFactGuardEnd > knownFactGuardStart, "known-fact contradiction guard must exist");
 const hasKnownContradictedNewsFact = new Function(
-  "cleanText", "asText",
+  "cleanText",
   worker.slice(knownFactGuardStart, knownFactGuardEnd + 3) + "\nreturn hasKnownContradictedNewsFact;"
-)(value => String(value || "").replace(/\s+/g, " ").trim(), value => String(value || ""));
+)(value => String(value || "").replace(/\s+/g, " ").trim());
 assert.equal(hasKnownContradictedNewsFact("यह योजना 2028 एथेंस ओलंपिक के खिलाड़ियों को सहायता देगी।"), true,
   "a false claim that the 2028 Olympics are in Athens must be rejected");
 assert.equal(hasKnownContradictedNewsFact("यह योजना 2028 लॉस एंजिल्स ओलंपिक के खिलाड़ियों को सहायता देगी।"), false,
