@@ -157,6 +157,15 @@ const wrappedJsonNews = normalizeNewsSummaryRepairText(JSON.stringify({
   })) }
 }));
 assert.equal([...formatCurrentNewsSummaryReply(wrappedJsonNews, fiveNewsSources, true, true).matchAll(/खबर [1-5](?: \([^)]*\))?:/g)].length, 5, "nested JSON envelopes and sentence-array summaries must normalize into all five checked stories");
+const wrappedJsonHindiDigits = normalizeNewsSummaryRepairText(JSON.stringify({
+  stories: fiveNewsSources.map((source, index) => ({
+    number: "०१२३४५"[index + 1], category: fiveNewsCategories[index],
+    headline: "अलग समाचार घटना " + (index + 1),
+    summary: "यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।"
+  }))
+}));
+assert.equal([...formatCurrentNewsSummaryReply(wrappedJsonHindiDigits, fiveNewsSources, true, true).matchAll(/खबर [1-5](?: \([^)]*\))?:/g)].length, 5, "Hindi Devanagari story numbers must normalize and preserve all five checked stories");
+assert.match(worker, /response_format:\s*\{\s*type:\s*"json_object"\s*\}/, "compact news requests must enable Groq JSON mode");
 assert.match(completeFiveNewsReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "five-category request must return all five stories only when all five summaries pass");
 const splitHeadlineDraft = fiveNewsDraft.replace(/खबर ([1-5]): (.+)\\nसार:/g, "खबर $1\\nशीर्षक: $2\\nसार:");
 const splitHeadlineReply = formatCurrentNewsSummaryReply(splitHeadlineDraft, fiveNewsSources, true, true);
