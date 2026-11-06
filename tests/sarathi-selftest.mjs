@@ -30,6 +30,8 @@ assert.equal(hasUnsupportedNumericClaim("दोनों पक्षों न�
 assert.equal(hasUnsupportedNumericClaim("दो पक्षों ने बयान दिए।", "पक्षों ने बयान दिए।"), true, "standalone unsupported Hindi number words must still be rejected");
 assert.equal(hasUnsupportedNumericClaim("यह एक महत्वपूर्ण फैसला है।", "Supreme Court decision"), false, "the common Hindi article एक must not be mistaken for a numeric claim");
 assert.equal(hasUnsupportedNumericClaim("This is one important decision.", "Supreme Court decision"), false, "the common English article one must not be mistaken for a numeric claim");
+assert.equal(hasUnsupportedNumericClaim("नौकरी के नए अवसरों पर चर्चा हुई।", "रोजगार के अवसरों पर चर्चा हुई।"), false, "the prefix नौ inside नौकरी must not be mistaken for numeric nine");
+assert.equal(hasUnsupportedNumericClaim("नौ लोगों ने याचिका दायर की।", "लोगों ने याचिका दायर की।"), true, "standalone unsupported Hindi nine must still be rejected");
 
 assert.match(source, /स्रोत में न दिया कारण.*जिम्मेदार व्यक्ति/, "news prompt must forbid invented causes and responsibility");
 assert.match(source, /प्रवेश की पुरानी तारीख.*आगे के प्रवास के लिए वीज़ा/, "immigration news summaries must distinguish past entry date from current visa requirement");
@@ -115,6 +117,8 @@ const hasUntranslatedEnglishHeadline = new Function(source.slice(englishGuardSta
 assert.equal(hasUntranslatedEnglishHeadline("सुप्रीम कोर्ट ने Azam Khan की जमानत याचिका पर विचार किया।", "Supreme Court considers Azam Khan bail plea"), false, "source-grounded proper names may remain in Latin script inside a Hindi headline");
 assert.equal(hasUntranslatedEnglishHeadline("Supreme Court agrees to hear the plea", "Supreme Court agrees to hear the plea"), true, "source grounding must not allow an untranslated English headline");
 assert.equal(hasUntranslatedEnglishHeadline("सुप्रीम कोर्ट ने Azam Khan की याचिका सुनी।", "Supreme Court considers a plea"), true, "ungrounded Latin-script names must still be rejected");
+assert.equal(hasUntranslatedEnglishHeadline("सुप्रीम कोर्ट ने DMK नेता की चुनाव याचिका पर सुनवाई स्वीकार की।", "Supreme Court agrees to hear DMK leader's plea challenging rejection of election petition"), false, "the DMK court story must pass when its headline is translated into Hindi and only the grounded acronym remains in Latin script");
+assert.equal(hasUntranslatedEnglishHeadline("Supreme Court agrees to hear DMK leader's plea challenging rejection of election petition", "Supreme Court agrees to hear DMK leader's plea challenging rejection of election petition"), true, "the exact raw English source headline must remain rejected");
 
 assert.match(source, /untranslatedEnglishHeadline/, "news diagnostics must report untranslated English headlines");
 assert.match(source, /categoryMismatch/, "five-category news validation must reject incorrect or missing category labels");
