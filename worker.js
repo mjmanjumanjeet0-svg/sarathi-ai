@@ -2244,7 +2244,12 @@ export default {
             temperature: 0.3,
             max_tokens: maxTokens,
             ...(systemContent === compactNewsSystemPrompt ? { response_format: { type: "json_object" } } : {}),
-            ...(reasoningEffort ? { reasoning_effort: reasoningEffort, reasoning_format: "hidden" } : {}),
+            ...(reasoningEffort ? {
+              reasoning_effort: reasoningEffort,
+              ...(model.startsWith("openai/gpt-oss-")
+                ? { include_reasoning: false }
+                : { reasoning_format: "hidden" }),
+            } : {}),
           }),
           signal: controller.signal,
         });
