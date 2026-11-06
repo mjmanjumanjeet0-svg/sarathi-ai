@@ -1259,15 +1259,24 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     // Accept the common category-tagged variants returned by chat models,
     // e.g. "खबर 1 (सरकार): ..." as well as the strict "खबर 1: ..." format.
     const headline = line.match(/^(?:(?:खबर|समाचार)\s*(?:संख्या\s*)?)?(\d+)\s*(?:\([^)]{1,40}\)\s*)?[:：.)\-–—]\s*(.+)$/i) ||
-      line.match(/^(?:खबर|समाचार)\s*(?:संख्या\s*)?(\d+)\s*[:：.)\-–—]\s*(.+)$/i);
+      line.match(/^(?:खबर|समाचार)\s*(?:संख्या\s*)?(\d+)\s*[:：.)\-–—]\s*(.+)$/i) ||
+      line.match(/^(?:खबर|समाचार)\s*(?:संख्या\s*)?(\d+)\s*(?:[️⃣⃣])?\s*$/i) ||
+      line.match(/^(\d+)\s*[️⃣⃣]\s*(.*)$/u);
     if (headline) {
       current = Number(headline[1]);
       if (current >= 1 && current <= items.length) {
-        entries.set(current, { headline: cleanText(headline[2]).replace(/मध्यमार्गीय चुनावों?/gi, "मध्यावधि चुनाव").slice(0, 220), summary: "" });
+        entries.set(current, { headline: cleanText(headline[2] || "").replace(/^(?:शीर्षक|हेडलाइन)\s*[:：-]\s*/i, "").replace(/मध्यमार्गीय चुनावों?/gi, "मध्यावधि चुनाव").slice(0, 220), summary: "" });
       } else {
         current = null;
       }
       continue;
+    }
+    if (current !== null && entries.has(current)) {
+      const titleOnly = line.match(/^(?:शीर्षक|हेडलाइन|headline)\s*[:：-]\s*(.+)$/i);
+      if (titleOnly && !entries.get(current).headline) {
+        entries.get(current).headline = cleanText(titleOnly[1]).replace(/मध्यमार्गीय चुनावों?/gi, "मध्यावधि चुनाव").slice(0, 220);
+        continue;
+      }
     }
     if (current === null || !entries.has(current) || !line) continue;
     // Source metadata must come only from the matched search result, never
