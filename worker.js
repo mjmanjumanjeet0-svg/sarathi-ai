@@ -1314,7 +1314,8 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     if (!entry?.headline || !entry?.summary) { rejectCounts.missingEntry++; continue; }
     if (hasUnsupportedNewsHeadlineMix(entry.headline, items[index]?.title || "", items[index]?.snippet || "")) { rejectCounts.headlineGrounding++; continue; }
     if (hasIncorrectOverallAqiCategory(entry.headline + " " + entry.summary)) { rejectCounts.aqi++; continue; }
-    // Count Hindi sentence punctuation and terminal periods, but ignore initials such as "V." and abbreviations so they do not inflate the sentence total.\n    const sentenceEnds = entry.summary.match(/[।!?]+|(?<!\\b[A-Za-z])\\.(?=\\s|$)/g) || [];
+    // Count Hindi sentence punctuation and terminal periods, but ignore initials such as "V." and abbreviations so they do not inflate the sentence total.
+    const sentenceEnds = entry.summary.match(/[।!?]+|(?<!\b[A-Za-z])\.(?=\s|$)/g) || [];
     if (requireTwoSentences && (sentenceEnds.length < 2 || sentenceEnds.length > 3)) { rejectCounts.sentenceCount++; continue; }
     const relatedEvidence = (Array.isArray(items[index]?.corroboratingSources) ? items[index].corroboratingSources : [])
       .map(source => cleanText((source?.title || "") + " " + (source?.snippet || ""))).join(" ");
