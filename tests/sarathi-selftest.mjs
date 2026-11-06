@@ -75,6 +75,8 @@ assert.match(source, /categoryMismatch/, "five-category news validation must rej
 assert.match(source, /questions|raises doubts|questions the norm/, "court news prompt must distinguish questioning a norm from a final ruling");
 assert.match(source, /आगे रहने के लिए आवश्यक वीज़ा/, "immigration prompt must distinguish entry rules from continued-stay visa requirements");
 assert.match(source, /पाँच-श्रेणी समाचार जाँच पूरी नहीं हुई/, "five-category fallback must identify incomplete category coverage rather than claiming all summaries failed");
+assert.match(source, /अंग्रेज़ी शीर्षक को हिंदी बताकर नहीं दिखाया गया है/, "five-category fallback must not expose raw English headlines when Hindi validation fails");
+assert.match(source, /इस खबर का आसान हिंदी शीर्षक और सार स्रोत-जाँच में सफल नहीं हुआ/, "five-category fallback must explain that source-linked Hindi title and summary validation failed");
 assert.ok(source.includes("वाक्य(?:ों)?"), "news intent detector must recognize Hindi wording दो वाक्यों में");
 assert.match(source, /upsc\\s\*key|upsc-\[ \\]current-\[ \\]affairs|current affairs news/, "general news filtering must exclude UPSC exam-preparation explainers");
 assert.match(source, /function groupNewsByEvent\(results\)/, "news processing must retain matching coverage from independent publishers");
