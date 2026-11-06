@@ -1465,18 +1465,21 @@ function buildCurrentNewsHeadlineReply(results, query = "") {
     const missing = required.filter(category => !byCategory.has(category));
     const lines = required.filter(category => byCategory.has(category)).map(category => {
       const item = byCategory.get(category);
-      return "श्रेणी: " + category + "\nशीर्षक: " + cleanText(item.title) +
-        "\nमूल स्रोत: " + (cleanText(item.publisher || "") || "प्रकाशक उपलब्ध नहीं") +
-        "\nप्रकाशित: " + formatNewsPublishedAt(item.publishedAt) +
-        "\nमूल लिंक: " + item.url +
-        "\nपुष्टि का आधार: खोज में इस प्रकाशक का लेख मिला; स्वतंत्र पुष्टि उपलब्ध होने का दावा नहीं किया जा रहा।";
+      let publisher = cleanText(item.publisher || "");
+      if (!publisher) {
+        try { publisher = new URL(item.url).hostname.replace(/^www\\./i, ""); } catch { publisher = "प्रकाशक उपलब्ध नहीं"; }
+      }
+      return "श्रेणी: " + category +
+        "\\nमूल स्रोत: " + publisher +
+        "\\nप्रकाशित: " + formatNewsPublishedAt(item.publishedAt) +
+        "\\nमूल लिंक: " + item.url +
+        "\\nस्थिति: स्रोत मिला, लेकिन इस खबर का आसान हिंदी शीर्षक और सार स्रोत-जाँच में सफल नहीं हुआ।";
     });
-    return "पाँच-श्रेणी समाचार जाँच पूरी नहीं हुई। उपलब्ध परिणामों से " + byCategory.size +
-      " अलग श्रेणियाँ पहचानी गईं। " +
-      (missing.length ? "इन श्रेणियों की ताज़ा खबर नहीं मिली: " + missing.join(", ") + "।" :
-        "पाँचों श्रेणियों के स्रोत मिले, लेकिन हिंदी सार का सत्यापन पूरा नहीं हुआ।") +
-      "\n\nअपुष्ट सार नहीं दिया जा रहा। नीचे केवल पहचाने गए स्रोत हैं; इन्हें पूरी पाँच-खबरों की सूची न मानें।\n\n" +
-      lines.join("\n\n");
+    return "पाँच-श्रेणी समाचार जाँच पूरी नहीं हुई। " +
+      (missing.length ? "इन श्रेणियों की 48 घंटे के भीतर की खबर नहीं मिली: " + missing.join(", ") + "।" :
+        "पाँचों श्रेणियों के स्रोत मिले, लेकिन हिंदी शीर्षक और सार का सत्यापन पूरा नहीं हुआ।") +
+      "\\n\\nअंग्रेज़ी शीर्षक को हिंदी बताकर नहीं दिखाया गया है। अपुष्ट सार भी नहीं जोड़ा गया।" +
+      (lines.length ? "\\n\\nपहचाने गए स्रोत (पूरी समाचार सूची नहीं):\\n\\n" + lines.join("\\n\\n") : "");
   }
   if (items.length < 5) return "आज केवल " + items.length + " अलग-अलग, तारीख़-जाँचे समाचार स्रोत मिले। पाँच अलग खबरों की सूची पूरी करने के लिए पर्याप्त स्रोत नहीं मिले; इसलिए अपुष्ट खबरें नहीं जोड़ी गईं।";
   return "आज 5 तारीख़-जाँचे समाचार परिणाम मिले, लेकिन हिंदी सार स्रोत-जाँच में सफल नहीं हुआ। इसलिए अपुष्ट सार नहीं दिया जा रहा।";
