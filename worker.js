@@ -1265,7 +1265,7 @@ function normalizeNewsSummaryRepairText(rawReply) {
 }
 
 function hasKnownContradictedNewsFact(text) {
-  const value = cleanText(asText(text || ""));
+  const value = cleanText(String(text || ""));
   // The 2028 Summer Olympic Games are hosted by Los Angeles, not Athens.
   const olympics = /(?:ओलंपिक|olympics?)/i.test(value);
   const yearNearAthens = /(?:2028|२०२८).{0,45}(?:एथेंस|अथेन्स|athens)|(?:एथेंस|अथेन्स|athens).{0,45}(?:2028|२०२८)/i.test(value);
