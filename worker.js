@@ -1371,6 +1371,9 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
   const lines = [];
   const acceptedCategories = [];
   const rejectedNumericDetails = [];
+  // Capture only the rejected public-news fields needed to diagnose validation.
+  // Do not log chat history, credentials, or unrelated user content.
+  const rejectedStoryDetails = [];
   const rejectCounts = {
     missingEntry: 0, headlineGrounding: 0, untranslatedEnglishHeadline: 0, categoryMismatch: 0, knownFactConflict: 0, aqi: 0, sentenceCount: 0,
     agniveerDetail: 0, mixedScript: 0, unsupportedNumber: 0,
@@ -1382,7 +1385,16 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     // not erase other stories whose Hindi summaries pass every source check.
     if (!entry?.headline || !entry?.summary) { rejectCounts.missingEntry++; continue; }
     if (hasUnsupportedNewsHeadlineMix(entry.headline, items[index]?.title || "", items[index]?.snippet || "")) { rejectCounts.headlineGrounding++; continue; }
-    if (hasUntranslatedEnglishHeadline(entry.headline)) { rejectCounts.untranslatedEnglishHeadline++; continue; }
+    if (hasUntranslatedEnglishHeadline(entry.headline)) {
+      rejectCounts.untranslatedEnglishHeadline++;
+      rejectedStoryDetails.push({
+        reason: "untranslatedEnglishHeadline",
+        category: items[index]?.requestedCategory || null,
+        sourceTitle: cleanText(items[index]?.title || "").slice(0, 180),
+        headline: cleanText(entry.headline).slice(0, 180)
+      });
+      continue;
+    }
     if (requireFiveCategories && entry.category && entry.category !== items[index]?.requestedCategory) { rejectCounts.categoryMismatch++; continue; }
     if (hasKnownContradictedNewsFact(entry.headline + " " + entry.summary)) { rejectCounts.knownFactConflict++; continue; }
     if (hasIncorrectOverallAqiCategory(entry.headline + " " + entry.summary)) { rejectCounts.aqi++; continue; }
@@ -1401,6 +1413,14 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     if (unsupportedNumericTokens.length) {
       rejectCounts.unsupportedNumber++;
       rejectedNumericDetails.push({ category: items[index]?.requestedCategory || null, tokens: unsupportedNumericTokens.slice(0, 5) });
+      rejectedStoryDetails.push({
+        reason: "unsupportedNumber",
+        category: items[index]?.requestedCategory || null,
+        sourceTitle: cleanText(items[index]?.title || "").slice(0, 180),
+        headline: cleanText(entry.headline).slice(0, 180),
+        summary: cleanText(entry.summary).slice(0, 260),
+        sourceEvidence: cleanText(sourceEvidence).slice(0, 500)
+      });
       continue;
     }
     if (hasUnsupportedCertaintyClaim(generatedText, sourceEvidence)) { rejectCounts.unsupportedCertainty++; continue; }
@@ -1444,6 +1464,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     acceptedEntries: lines.length,
     rejected: rejectCounts,
     rejectedNumericDetails,
+    rejectedStoryDetails: rejectedStoryDetails.slice(0, 5),
     requireTwoSentences,
     requireFiveCategories
   }));
