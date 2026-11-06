@@ -1406,8 +1406,20 @@ function buildCurrentNewsHeadlineReply(results, query = "") {
   if (items.length < 5) return "आज केवल " + items.length + " अलग-अलग, तारीख़-जाँचे समाचार स्रोत मिले। पाँच अलग खबरों की सूची पूरी करने के लिए पर्याप्त स्रोत नहीं मिले; इसलिए अपुष्ट खबरें नहीं जोड़ी गईं।";
   return "आज 5 तारीख़-जाँचे समाचार परिणाम मिले, लेकिन हिंदी सार स्रोत-जाँच में सफल नहीं हुआ। इसलिए अपुष्ट सार नहीं दिया जा रहा।";
 }
-function buildCompactNewsSourceContext(results) {
-  return (Array.isArray(results) ? results : []).slice(0, 6).map((item, index) => {
+function buildCompactNewsSourceContext(results, requireFiveCategories = false) {
+  let sourceItems = Array.isArray(results) ? results : [];
+  if (requireFiveCategories) {
+    const requiredCategories = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
+    const selected = new Map();
+    for (const item of sourceItems) {
+      const category = classifyRequestedNewsCategory(item);
+      if (category && requiredCategories.includes(category) && !selected.has(category)) {
+        selected.set(category, { ...item, requestedCategory: category });
+      }
+    }
+    sourceItems = requiredCategories.map(category => selected.get(category)).filter(Boolean);
+  }
+  return sourceItems.slice(0, 5).map((item, index) => {
     const title = cleanText(item?.title || "").slice(0, 240);
     const snippet = cleanText(item?.snippet || "").slice(0, 900);
     const publisher = cleanText(item?.publisher || "").slice(0, 100);
@@ -2147,7 +2159,7 @@ export default {
     let activeGroqModel = GROQ_MODEL;
     try {
       if (isCurrentNewsReply) {
-        const newsMessage = "सवाल: " + userText + "\n\nकेवल इन वास्तविक खोज परिणामों का हिंदी सार लिखो:\n\n" + buildCompactNewsSourceContext(searchResults);
+        const newsMessage = "सवाल: " + userText + "\n\nकेवल इन वास्तविक खोज परिणामों का हिंदी सार लिखो:\n\n" + buildCompactNewsSourceContext(searchResults, isFiveCategoryNewsQuery(userText));
         // GPT-OSS defaults to medium reasoning. For a short news digest, use low
         // reasoning so the completion budget is spent on the Hindi summary itself.
         groqResponse = await sendGroqRequest(
@@ -2472,7 +2484,7 @@ export default {
       try {
         const repairSummaryRule = requireTwoSentenceNews ? "ठीक 2 छोटे, तथ्यात्मक वाक्य" : "1 छोटा, तथ्यात्मक वाक्य";
         const repairCategoryRule = isFiveCategoryNewsQuery(userText) ? "इस प्रश्न में पाँच अलग श्रेणियाँ अनिवार्य हैं। स्रोत-संदर्भ में श्रेणी के अनुसार एक-एक खबर इसी क्रम में लिखो: सरकार, अर्थव्यवस्था, अदालत, विज्ञान, खेल। हर श्रेणी की खबर का शीर्षक उसी श्रेणी वाले स्रोत से लो; किसी श्रेणी को छोड़कर अगली खबर का क्रमांक आगे मत बढ़ाओ। ठीक पाँच प्रविष्टियाँ लिखो।" : "";
-        const repairPrompt = "नीचे दिए गए खोज परिणामों के लिए केवल वैध JSON लौटाओ। कोई Markdown fence या अतिरिक्त पाठ नहीं। JSON object में stories नाम की array हो और हर वस्तु में number (1 से क्रम में), headline (हिंदी शीर्षक) तथा summary (ठीक 2 छोटे वाक्य) हों। ठीक " + searchResults.length + " अलग-अलग प्रविष्टियाँ दो। " + repairCategoryRule + " हर शीर्षक संबंधित स्रोत का सही हिंदी अनुवाद हो। सार में केवल उसी खबर के दिए स्रोत-अंश के तथ्य हों। कोई संख्या/प्रतिशत/रकम/वर्ष तभी लिखो जब वही मान उसी खबर के स्रोत-अंश में स्पष्ट मौजूद हो; अन्यथा संख्या छोड़ दो। अनुमान, कारण या अतिरिक्त तथ्य मत जोड़ो।\n\n" + buildCompactNewsSourceContext(searchResults);
+        const repairPrompt = "नीचे दिए गए खोज परिणामों के लिए केवल वैध JSON लौटाओ। कोई Markdown fence या अतिरिक्त पाठ नहीं। JSON object में stories नाम की array हो और हर वस्तु में number (1 से क्रम में), headline (हिंदी शीर्षक) तथा summary (ठीक 2 छोटे वाक्य) हों। ठीक " + searchResults.length + " अलग-अलग प्रविष्टियाँ दो। " + repairCategoryRule + " हर शीर्षक संबंधित स्रोत का सही हिंदी अनुवाद हो। सार में केवल उसी खबर के दिए स्रोत-अंश के तथ्य हों। कोई संख्या/प्रतिशत/रकम/वर्ष तभी लिखो जब वही मान उसी खबर के स्रोत-अंश में स्पष्ट मौजूद हो; अन्यथा संख्या छोड़ दो। अनुमान, कारण या अतिरिक्त तथ्य मत जोड़ो।\n\n" + buildCompactNewsSourceContext(searchResults, isFiveCategoryNewsQuery(userText));
         const repairMessages = [{ role: "user", content: repairPrompt }];
         const parseRepairResponse = async response => {
           if (!response?.ok) return "";
