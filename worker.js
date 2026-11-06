@@ -1225,7 +1225,15 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
   // metadata; source title/snippet remain the authoritative category evidence.
   const requiredCategories = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
   if (requireFiveCategories) {
-    items = selectLatestFiveCategoryNewsItems(items);
+    const latestByCategory = new Map();
+    for (const item of items) {
+      const category = classifyRequestedNewsCategory(item);
+      const publishedAt = Date.parse(item?.publishedAt || "");
+      if (!category || !requiredCategories.includes(category) || !Number.isFinite(publishedAt)) continue;
+      const previous = latestByCategory.get(category);
+      if (!previous || publishedAt > Date.parse(previous.publishedAt || "")) latestByCategory.set(category, { ...item, requestedCategory: category });
+    }
+    items = requiredCategories.map(category => latestByCategory.get(category)).filter(Boolean);
     if (items.length !== 5) {
       console.warn("Five-category news source selection incomplete", JSON.stringify({
         expected: requiredCategories,
