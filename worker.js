@@ -1037,7 +1037,10 @@ function buildNewsFallback(results, dateTime) {
 
 function isFiveCategoryNewsQuery(text) {
   const value = String(text || "");
-  const hasFive = /(?:पाँच|पांच|5)\s*(?:अलग-अलग\s*)?(?:महत्वपूर्ण\s*)?(?:खबर|समाचार|news)/i.test(value);
+  // Users naturally place freshness/adjectives between the count and "news".
+  // Allow a short phrase such as "पाँच ताज़ा और महत्वपूर्ण खबरें" so the
+  // five-category completeness rule cannot be bypassed by normal wording.
+  const hasFive = /(?:पाँच|पांच|5)\b?[^\n]{0,45}?(?:खबर|समाचार|news)/i.test(value);
   const categoryTerms = [
     /सरकार|government/i,
     /अर्थव्यवस्था|economy/i,
@@ -1205,7 +1208,15 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
       return url.protocol === "https:" && Boolean(url.hostname) && Number.isFinite(publishedAt);
     } catch { return false; }
   }).slice(0, 5);
-  // Validate each available independent article; a short list is allowed when disclosed.
+  // A five-category request is all-or-nothing: never silently downgrade it
+  // to a generic 2- or 3-story digest when a category has no eligible source.
+  const requiredCategories = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
+  if (requireFiveCategories && (
+    items.length !== 5 ||
+    requiredCategories.some((category, index) => items[index]?.requestedCategory !== category)
+  )) return "";
+  // Validate each available independent article; a short list is allowed only
+  // for ordinary news requests, not for an explicit five-category request.
   if (!items.length) return "";
   const entries = new Map();
   let current = null;
@@ -1226,21 +1237,27 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
       continue;
     }
     if (current === null || !entries.has(current) || !line) continue;
+    // Source metadata must come only from the matched search result, never
+    // from model-generated publisher names, dates, or URLs. Ignore such lines.
+    if (/^(?:मूल\s*)?(?:प्रकाशक|स्रोत|मूल\s*लिंक|सीधा\s*लिंक|लिंक|प्रकाशित|प्रकाशन\s*तिथि|प्रकाशन\s*तारीख|पुष्टि\s*का\s*आधार|अतिरिक्त\s*प्रकाशक)\s*[:：]/i.test(line)) continue;
+    const stripModelMetadata = value => cleanText(value)
+      .split(/\s+(?:मूल\s*स्रोत|मूल\s*लिंक|सीधा\s*लिंक|प्रकाशक|प्रकाशित|प्रकाशन\s*तिथि|प्रकाशन\s*तारीख|पुष्टि\s*का\s*आधार)\s*[:：]/i)[0]
+      .replace(/मध्यमार्गीय चुनावों?/gi, "मध्यावधि चुनाव").slice(0, 420);
     const summary = line.match(/^(?:सार|सारांश|संक्षेप|विवरण)\s*[:：-]\s*(.+)$/i);
     if (summary) {
-      entries.get(current).summary = cleanText(summary[1]).replace(/मध्यमार्गीय चुनावों?/gi, "मध्यावधि चुनाव").slice(0, 420);
+      entries.get(current).summary = stripModelMetadata(summary[1]);
       continue;
     }
     // Allow a second summary sentence on the following line, but never absorb
     // publisher metadata or the next numbered headline into the summary.
-    if (entries.get(current).summary && !/^(?:प्रकाशक|स्रोत|प्रकाशित|लिंक)\s*[:：]/i.test(line)) {
-      entries.get(current).summary = (entries.get(current).summary + " " + cleanText(line)).slice(0, 420);
+    if (entries.get(current).summary) {
+      const extra = stripModelMetadata(line);
+      if (extra) entries.get(current).summary = (entries.get(current).summary + " " + extra).slice(0, 420);
       continue;
     }
     // Accept a plain first summary line when the model omits the "सार:" label.
-    if (!entries.get(current).summary && !/^(?:प्रकाशक|स्रोत|प्रकाशित|लिंक)\s*[:：]/i.test(line)) {
-      entries.get(current).summary = cleanText(line).slice(0, 420);
-    }
+    const plain = stripModelMetadata(line);
+    if (plain) entries.get(current).summary = plain;
   }
   const lines = [];
   const rejectCounts = {
@@ -1311,7 +1328,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
   // For an explicit five-category request, a partial model answer is invalid.
   // Returning empty triggers the constrained repair attempt instead of silently
   // presenting three stories when five category sources were selected.
-  if (requireFiveCategories && items.length >= 5 && lines.length !== 5) return "";
+  if (requireFiveCategories && (items.length !== 5 || lines.length !== 5)) return "";
   // Show only individually validated stories; never pad with unsupported items.
   if (!lines.length) return "";
   const count = lines.length;
