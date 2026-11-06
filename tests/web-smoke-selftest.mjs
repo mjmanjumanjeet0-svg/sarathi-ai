@@ -58,6 +58,13 @@ const isIndiaFocusedNewsItem = new Function(
   "cleanText",
   worker.slice(indiaFilterStart, indiaFilterEnd + 3) + "\nreturn isIndiaFocusedNewsItem;"
 )(value => String(value || "").replace(/\s+/g, " ").trim());
+const categoryClassifierStart = worker.indexOf("function classifyRequestedNewsCategory(item) {");
+const categoryClassifierEnd = worker.indexOf("\n}\n", categoryClassifierStart);
+assert.ok(categoryClassifierStart >= 0 && categoryClassifierEnd > categoryClassifierStart, "news category classifier must exist");
+const classifyRequestedNewsCategory = new Function(
+  "cleanText",
+  worker.slice(categoryClassifierStart, categoryClassifierEnd + 3) + "\nreturn classifyRequestedNewsCategory;"
+)(value => String(value || "").replace(/\s+/g, " ").trim());
 const newsFormatterStart = worker.indexOf("function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false) {");
 const newsFormatterEnd = worker.indexOf("\n}\n", newsFormatterStart);
 assert.ok(newsFormatterStart >= 0 && newsFormatterEnd > newsFormatterStart, "daily-news formatter must exist");
@@ -65,6 +72,7 @@ const formatCurrentNewsSummaryReply = new Function(
   "dedupeNewsResults", "cleanText", "formatNewsPublishedAt",
   "hasMixedScriptToken", "hasUnsupportedNumericClaim", "hasUnsupportedCertaintyClaim",
   "hasUnsupportedNewsHeadlineMix", "hasIncorrectOverallAqiCategory", "isIndiaFocusedNewsItem",
+  "classifyRequestedNewsCategory",
   worker.slice(newsFormatterStart, newsFormatterEnd + 3) + "\nreturn formatCurrentNewsSummaryReply;"
 )(
   results => results,
@@ -75,7 +83,8 @@ const formatCurrentNewsSummaryReply = new Function(
   hasUnsupportedCertaintyClaim,
   new Function("cleanText", worker.slice(worker.indexOf("function hasUnsupportedNewsHeadlineMix("), worker.indexOf("\n}\n", worker.indexOf("function hasUnsupportedNewsHeadlineMix(")) + 3) + "\nreturn hasUnsupportedNewsHeadlineMix;")(value => String(value || "").replace(/\s+/g, " ").trim()),
   new Function(worker.slice(worker.indexOf("function hasIncorrectOverallAqiCategory("), worker.indexOf("\n}\n", worker.indexOf("function hasIncorrectOverallAqiCategory(")) + 3) + "\nreturn hasIncorrectOverallAqiCategory;")(),
-  isIndiaFocusedNewsItem
+  isIndiaFocusedNewsItem,
+  classifyRequestedNewsCategory
 );
 const fiveNewsCategories = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
 const fiveNewsSources = Array.from({ length: 5 }, (_, index) => ({
