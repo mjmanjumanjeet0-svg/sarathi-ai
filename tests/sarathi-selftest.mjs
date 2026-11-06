@@ -19,6 +19,7 @@ assert.match(busyFallback, /title: "मूल समाचार खोलें
 assert.match(appSource, /data\.providerBusy !== true && data\.newsSummaryUnverified !== true && isCurrentNewsPrompt && !hasUsableInlineNewsUrl/, "unverified-news fallback must not append a second inline source list");
 assert.match(appSource, /data\.newsSummaryUnverified === true/, "unverified-news fallback must use a distinct validation message and sanitize source labels");
 assert.match(source, /newsSummaryUnverified: isCurrentNewsReply && !formattedNewsReply/, "Worker must mark current-news replies whose Hindi summaries fail validation");
+assert.match(source, /title: isCurrentNewsReply\s*\?\s*"मूल समाचार खोलें — "\s*\+\s*\(item\.publisher \|\| new URL\(item\.url\)\.hostname\)/, "current-news source cards must never expose raw English article headlines");
 assert.match(source, /const claimsCause = .*test\(generatedText\)/, "news summaries must detect unsupported causal claims");
 assert.match(source, /sourceExplicitlyStatesCause.*test\(sourceEvidence\)/, "causal claims must be backed by the same source");
 const numericGuardStart = source.indexOf("function hasUnsupportedNumericClaim(");
