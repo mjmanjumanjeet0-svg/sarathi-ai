@@ -1197,7 +1197,7 @@ function normalizeNewsSummaryRepairText(rawReply) {
 }
 
 function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false) {
-  const items = dedupeNewsResults(results).filter(item => {
+  let items = dedupeNewsResults(results).filter(item => {
     const title = cleanText(item?.title || "");
     const publishedAt = Date.parse(item?.publishedAt || "");
     // Re-check India relevance at the final display boundary so an incidental
@@ -1207,14 +1207,32 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
       const url = new URL(item?.url || "");
       return url.protocol === "https:" && Boolean(url.hostname) && Number.isFinite(publishedAt);
     } catch { return false; }
-  }).slice(0, 5);
-  // A five-category request is all-or-nothing: never silently downgrade it
-  // to a generic 2- or 3-story digest when a category has no eligible source.
+  });
+  // Re-derive category tags at the final validation boundary. Some enrichment
+  // or deduplication paths may return a fresh article object without custom
+  // metadata; source title/snippet remain the authoritative category evidence.
   const requiredCategories = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
-  if (requireFiveCategories && (
-    items.length !== 5 ||
-    requiredCategories.some((category, index) => items[index]?.requestedCategory !== category)
-  )) return "";
+  if (requireFiveCategories) {
+    const byCategory = new Map();
+    for (const item of items) {
+      const category = requiredCategories.includes(item?.requestedCategory)
+        ? item.requestedCategory
+        : classifyRequestedNewsCategory(item);
+      if (category && requiredCategories.includes(category) && !byCategory.has(category)) {
+        byCategory.set(category, { ...item, requestedCategory: category });
+      }
+    }
+    items = requiredCategories.map(category => byCategory.get(category)).filter(Boolean);
+    if (items.length !== 5) {
+      console.warn("Five-category news source selection incomplete", JSON.stringify({
+        expected: requiredCategories,
+        received: [...byCategory.keys()],
+        sourceCount: items.length
+      }));
+      return "";
+    }
+  }
+  items = items.slice(0, 5);
   // Validate each available independent article; a short list is allowed only
   // for ordinary news requests, not for an explicit five-category request.
   if (!items.length) return "";
