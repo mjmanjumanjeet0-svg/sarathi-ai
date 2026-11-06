@@ -74,10 +74,10 @@ assert.equal(classifyRequestedNewsCategory({ title: "PM Modi asks new NITI Aayog
 assert.match(source, /India court and judiciary news.*published within the last 48 hours/s, "five-category search must deliberately seek recent court coverage");
 assert.equal(classifyRequestedNewsCategory({ title: "Indian athlete Parvez Khan faces doping ban" }), "खेल", "an athlete doping story must qualify as sports");
 const digestHelperStart = source.indexOf("function isMultiTopicNewsDigestTitle(title) {");
-const digestHelperEnd = source.indexOf("\\nfunction isIndiaFocusedNewsItem", digestHelperStart);
+const digestHelperEnd = source.indexOf("\nfunction isIndiaFocusedNewsItem", digestHelperStart);
 assert.ok(digestHelperStart >= 0 && digestHelperEnd > digestHelperStart, "multi-topic news digest filter must exist");
 const isMultiTopicNewsDigestTitle = new Function("cleanText",
-  source.slice(digestHelperStart, digestHelperEnd) + "\\nreturn isMultiTopicNewsDigestTitle;")(
+  source.slice(digestHelperStart, digestHelperEnd) + "\nreturn isMultiTopicNewsDigestTitle;")(
     cleanTextForCategoryTest
   );
 assert.equal(isMultiTopicNewsDigestTitle("News This Week (Nov 2-6): Trump's Midterm Setback, Delhi's Toxic Air, Ramayana's Big Debut & More"), true,
