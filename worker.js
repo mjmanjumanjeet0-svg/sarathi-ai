@@ -1055,6 +1055,22 @@ function buildNewsFallback(results, dateTime) {
   return "आज की खबरों की खोज में " + items.length + " स्रोत मिले, लेकिन उनका भरोसेमंद हिंदी सार तैयार नहीं हो पाया। इसलिए अंग्रेज़ी लेखों को ज्यों-का-त्यों दिखाने या अधूरी जानकारी को खबर बताने के बजाय मैं इस बार अपुष्ट सार नहीं दे रहा हूँ। कृपया थोड़ी देर बाद फिर पूछें।";
 }
 
+function isSpecificCourtNewsQuery(text) {
+  const value = String(text || "");
+  const asksCourt = /(?:सुप्रीम\s*कोर्ट|सर्वोच्च\s*न्यायालय|हाई\s*कोर्ट|उच्च\s*न्यायालय|अदालत|न्यायालय|supreme\s+court|high\s+court|court\s+news|judiciary)/i.test(value);
+  const asksRecent = /(?:पिछले|गत|last)\s*48\s*(?:घंटों?|घंटे|hours?)/i.test(value) || /(?:ताज़ा|ताजा|latest|recent)/i.test(value);
+  return asksCourt && asksRecent && !isFiveCategoryNewsQuery(value);
+}
+
+function isSubstantiveCourtNewsItem(item) {
+  const title = cleanText(item?.title || "").toLocaleLowerCase("hi-IN");
+  const snippet = cleanText(item?.snippet || "").toLocaleLowerCase("hi-IN");
+  const combined = title + " " + snippet;
+  if (!/(?:supreme\s+court|high\s+court|court|tribunal|सुप्रीम\s*कोर्ट|सर्वोच्च\s*न्यायालय|हाई\s*कोर्ट|उच्च\s*न्यायालय|अदालत|न्यायालय)/i.test(title)) return false;
+  if (/(?:bomb\s+threat|बम\s+धमकी|धमकी\s+भरा|security\s+alert|evacuat|अदालत\s+को\s+धमकी|न्यायालय\s+को\s+धमकी)/i.test(combined)) return false;
+  return /(?:orders?|ordered|rules?|ruled|judg(?:e)?ment|verdict|hearing|hears|directs?|directed|asks?|asked|issues?\s+(?:notice|order)|grants?|denies?|stays?|quashes?|upholds?|strikes?\s+down|dismisses?|sets?\s+aside|observes?|holds?|allows?|bail|petition|plea|सुनवाई|फैसला|निर्णय|आदेश|निर्देश|नोटिस|जमानत|याचिका|खारिज|रद्द|रोक|टिप्पणी|कहा|माना)/i.test(title);
+}
+
 function isFiveCategoryNewsQuery(text) {
   const value = String(text || "");
   // Users naturally place freshness/adjectives between the count and "news".
@@ -1982,7 +1998,9 @@ export default {
       const isHistoricalQuestion = isHistoricalResearchQuery(userText);
       const indiaToday = new Intl.DateTimeFormat("en-CA", { timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
       const isOfficialEducationQuestion = /(सिलेबस|पाठ्यक्रम|परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|(?:परीक्षा|बोर्ड|विश्वविद्यालय|चुनाव)\s*(?:का|के)?\s*परिणाम|परिणाम\s*(?:घोषित|जारी|देखें|चेक)|आवेदन|फॉर्म|फीस|पात्रता|नियम|छात्रवृत्ति|स्कॉलरशिप|scholarship|fellowship|stipend|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(userText);
-      const searchQuery = isCurrentNewsQuestion
+      const searchQuery = isSpecificCourtNewsQuery(userText)
+        ? "India Supreme Court and High Court latest judgments orders rulings hearings petitions bail constitutional bench court decisions published in the last 48 hours. Search only substantive judicial proceedings and decisions by the Supreme Court of India or Indian High Courts. Exclude bomb threats, security alerts, incidents at court buildings, unrelated news roundups, opinion, live blogs, and stories that merely mention a court. Return direct article URLs and exact publication timestamps."
+        : isCurrentNewsQuestion
         ? (isFiveCategoryNewsQuery(userText) ? "Latest India news, one distinct reported event in each category: government policy, economy and markets, India court and judiciary news (Supreme Court of India orders/judgments, High Court rulings, constitutional benches, bail and major tribunal decisions published within the last 48 hours; search court coverage deliberately, not just incidental mentions), Indian science research and technology discoveries (ISRO, IISc, CSIR, ICMR, space missions, satellites, clinical research, scientific discoveries), and Indian sports (cricket, football, hockey, badminton, tennis, wrestling, athletics, tournaments and athlete results). Seek at least one distinct recent sports report as well as one result in every other category. Prioritize substantive science and research headlines, not defence weapon tests, AQI/weather reports, school-assembly roundups, opinion pieces, live blogs, or international stories with incidental India mentions. Return recent India-focused articles from established publishers with publication timestamps and direct article URLs." : "Latest national news from India: major reported developments in government, politics, economy, business, courts, science, technology, weather and sports. Prioritize distinct, substantive Indian news events from established publishers; exclude opinion pieces, live blogs, daily roundups and international stories with only incidental India mentions.")
         : isGoldRateQuestion || isSilverRateQuestion
           ? "India city-wise retail rate today 22K 24K gold 999 silver per gram per 10 gram per kilogram source updated time " + indiaToday
@@ -2002,20 +2020,22 @@ export default {
         // Keep the newest same-day report for a repeated event, then deduplicate
         // event headlines and publishers. Exa relevance order is not chronological.
         searchResults = groupNewsByEvent(sortNewsByPublicationTime(filterFreshNewsResults(searchResults)));
-        // For an explicit five-category digest, retain one distinct event per
-        // requested category. Do not let publisher deduplication discard the
-        // only court/science/sports item; corroborating links remain grouped.
-        if (isFiveCategoryNewsQuery(userText)) {
+        if (isSpecificCourtNewsQuery(userText)) {
+          searchResults = searchResults
+            .filter(isSubstantiveCourtNewsItem)
+            .map(item => ({ ...item, requestedCategory: "अदालत" }));
+          searchResults = dedupeNewsPublishers(searchResults);
+          if (searchResults.length) searchResults = await enrichNewsArticleEvidence(searchResults);
+        } else if (isFiveCategoryNewsQuery(userText)) {
+          // Preserve one distinct event for each requested category.
           searchResults = selectNewsForRequestedCategories(searchResults, userText);
+          if (searchResults.length) searchResults = await enrichNewsArticleEvidence(searchResults);
         } else {
           searchResults = dedupeNewsPublishers(searchResults);
         }
-        if (isFiveCategoryNewsQuery(userText) && searchResults.length) {
-          searchResults = await enrichNewsArticleEvidence(searchResults);
-        }
-        // A single fresh article is not enough to present a news digest as verified.
-        // Stop before the language model can turn one weakly matching page into a confident event summary.
-        if (searchResults.length > 0 && searchResults.length < 2) {
+        // A single result is sufficient for a focused one-story court request;
+        // the five-category digest keeps its stricter multi-source threshold.
+        if (!isSpecificCourtNewsQuery(userText) && searchResults.length > 0 && searchResults.length < 2) {
           const todayLabel = new Intl.DateTimeFormat("hi-IN", {
             timeZone: INDIA_TIME_ZONE, day: "numeric", month: "long", year: "numeric"
           }).format(new Date());
