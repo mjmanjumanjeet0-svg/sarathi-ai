@@ -86,6 +86,46 @@ const formatCurrentNewsSummaryReply = new Function(
   isIndiaFocusedNewsItem,
   classifyRequestedNewsCategory
 );
+const groupNewsStart = worker.indexOf("function groupNewsByEvent(results) {");
+const groupNewsEnd = worker.indexOf("\n}\n", groupNewsStart);
+assert.ok(groupNewsStart >= 0 && groupNewsEnd > groupNewsStart, "cross-publisher news event grouping must exist");
+const groupNewsByEvent = new Function(
+  "cleanText", "isSameIndianMarketEvent", "isSameIndianNewsEvent",
+  worker.slice(groupNewsStart, groupNewsEnd + 3) + "\nreturn groupNewsByEvent;"
+)(
+  value => String(value || "").replace(/\\s+/g, " ").trim(),
+  () => false,
+  () => false
+);
+const sameCourtEvent = groupNewsByEvent([
+  {
+    title: "Tamil Nadu seeks urgent oral mentioning in Supreme Court over Cauvery water issue",
+    url: "https://www.thehindu.com/news/cauvery-water-case",
+    publisher: "The Hindu",
+    snippet: "Tamil Nadu asks the Supreme Court to hear the Cauvery water dispute."
+  },
+  {
+    title: "Cauvery water release: Tamil Nadu moves Supreme Court against Karnataka",
+    url: "https://indianexpress.com/article/cauvery-water-release-tamil-nadu-supreme-court/",
+    publisher: "The Indian Express",
+    snippet: "The state seeks urgent hearing over the Cauvery water release."
+  }
+]);
+assert.equal(sameCourtEvent.length, 1, "same event with different publisher headline wording should be grouped");
+assert.equal(sameCourtEvent[0].corroboratingSources.length, 1, "second publisher report should be retained as corroborating evidence");
+assert.equal(sameCourtEvent[0].corroboratingSources[0].publisher, "The Indian Express", "corroborating publisher metadata must be preserved");
+const unrelatedCourtEvents = groupNewsByEvent([
+  { title: "Supreme Court hears Cauvery water dispute in Tamil Nadu", url: "https://a.example/cauvery", publisher: "A" },
+  { title: "Supreme Court grants bail in Tamil Nadu election case", url: "https://b.example/election", publisher: "B" }
+]);
+assert.equal(unrelatedCourtEvents.length, 2, "different court events must not be grouped based only on generic court/state words");
+const samePublisherCopies = groupNewsByEvent([
+  { title: "Cauvery water dispute reaches Supreme Court in Tamil Nadu", url: "https://thehindu.com/cauvery-one", publisher: "The Hindu" },
+  { title: "Tamil Nadu moves Supreme Court over Cauvery water dispute", url: "https://thehindu.com/cauvery-two", publisher: "The Hindu" }
+]);
+assert.equal(samePublisherCopies.length, 1, "same-publisher updates must not count as independent corroboration");
+assert.equal(samePublisherCopies[0].corroboratingSources.length, 0, "same-publisher copies must not appear as independent corroborators");
+
 const fiveNewsCategories = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
 const fiveNewsSources = Array.from({ length: 5 }, (_, index) => ({
   requestedCategory: fiveNewsCategories[index],
