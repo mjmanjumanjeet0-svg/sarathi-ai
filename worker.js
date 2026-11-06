@@ -722,7 +722,7 @@ function isMultiTopicNewsDigestTitle(title) {
   // several unrelated events in its body, causing the summary model to attach
   // a fact from one event to the wrong headline. Reject these source pages
   // before category selection and evidence enrichment.
-  return /(?:\\bnews\\s+this\\s+week\\b|\\bthis\\s+week(?:'s)?\\s+news\\b|\\bweekly\\s+news(?:\\s+(?:roundup|wrap|digest))?\\b|\\bweek(?:ly)?\\s+in\\s+review\\b|\\bnews\\s+(?:roundup|digest|wrap[- ]?up)\\b|\\b(?:evening|morning|daily)\\s+news\\s+brief\\b|\\bdaily\\s+roundup\\b|\\btop\\s+headlines\\b|साप्ताहिक\\s+समाचार|सप्ताह\\s+की\\s+(?:प्रमुख\\s+)?खबरें|हफ्ते\\s+की\\s+खबरें)/i.test(value);
+  return /(?:\bnews\s+this\s+week\b|\bthis\s+week(?:'s)?\s+news\b|\bweekly\s+news(?:\s+(?:roundup|wrap|digest))?\b|\bweek(?:ly)?\s+in\s+review\b|\bnews\s+(?:roundup|digest|wrap[- ]?up)\b|\b(?:evening|morning|daily)\s+news\s+brief\b|\bdaily\s+roundup\b|\btop\s+headlines\b|साप्ताहिक\s+समाचार|सप्ताह\s+की\s+(?:प्रमुख\s+)?खबरें|हफ्ते\s+की\s+खबरें)/i.test(value);
 }
 
 function isIndiaFocusedNewsItem(item) {
