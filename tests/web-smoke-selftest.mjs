@@ -77,7 +77,9 @@ const formatCurrentNewsSummaryReply = new Function(
   new Function(worker.slice(worker.indexOf("function hasIncorrectOverallAqiCategory("), worker.indexOf("\n}\n", worker.indexOf("function hasIncorrectOverallAqiCategory(")) + 3) + "\nreturn hasIncorrectOverallAqiCategory;")(),
   isIndiaFocusedNewsItem
 );
+const fiveNewsCategories = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
 const fiveNewsSources = Array.from({ length: 5 }, (_, index) => ({
+  requestedCategory: fiveNewsCategories[index],
   title: "भारत की अलग समाचार घटना " + (index + 1),
   url: "https://publisher" + (index + 1) + ".example/news-" + (index + 1),
   publishedAt: "2026-11-05T08:00:00+05:30",
@@ -92,6 +94,20 @@ assert.match(completeFiveNewsReply, /आज की 5 अलग-अलग, ता
 const incompleteFiveCategoryReply = formatCurrentNewsSummaryReply(fiveNewsDraft.replace("खबर 5:", "खबर 4:"), fiveNewsSources, true, true);
 assert.equal(incompleteFiveCategoryReply, "", "five-category request must reject an incomplete or duplicated five-story response and trigger repair");
 assert.deepEqual([...completeFiveNewsReply.matchAll(/खबर (\d+):/g)].map(match => Number(match[1])), [1, 2, 3, 4, 5], "daily-news numbering must always be continuous from 1 through 5");
+const fiveCategoryDetectorStart = worker.indexOf("function isFiveCategoryNewsQuery(text) {");
+const fiveCategoryDetectorEnd = worker.indexOf("\n}\n", fiveCategoryDetectorStart);
+assert.ok(fiveCategoryDetectorStart >= 0 && fiveCategoryDetectorEnd > fiveCategoryDetectorStart, "five-category news detector must exist");
+const isFiveCategoryNewsQuery = new Function(
+  "isCurrentNewsQuery",
+  worker.slice(fiveCategoryDetectorStart, fiveCategoryDetectorEnd + 3) + "\nreturn isFiveCategoryNewsQuery;"
+)(value => /आज.{0,60}(?:खबर|समाचार)/i.test(String(value || "")));
+assert.equal(isFiveCategoryNewsQuery("आज भारत की पाँच ताज़ा और महत्वपूर्ण खबरें बताओ। सरकार, अर्थव्यवस्था, अदालत, विज्ञान और खेल से एक-एक अलग खबर शामिल करो।"), true, "natural five-category wording with freshness adjectives must activate the all-five rule");
+const mixedMetadataDraft = fiveNewsDraft.replace(
+  "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
+  "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है। मूल स्रोत: fake.example; सीधा लिंक: https://fake.example/story"
+);
+const mixedMetadataReply = formatCurrentNewsSummaryReply(mixedMetadataDraft, fiveNewsSources, true, true);
+assert.doesNotMatch(mixedMetadataReply, /fake\.example|https:\/\/fake\.example/, "model-generated source metadata must never be shown; only matched search-result metadata is trusted");
 const partialFourNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, fiveNewsSources.slice(0, 4), true);
 assert.match(partialFourNewsReply, /आज 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं \(आपने 5 माँगी थीं\)/, "four verified stories should be shown with an explicit shortfall notice");
 assert.equal([...partialFourNewsReply.matchAll(/खबर (\d+):/g)].length, 4, "only four available validated stories should be displayed");
