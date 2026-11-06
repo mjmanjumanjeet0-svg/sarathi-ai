@@ -1140,19 +1140,23 @@ async function sendMessage(text) {
 
     // Provider-busy replies can be cut off in transit. Prefer a complete, honest
     // fallback message while keeping the real retrieved links in the source panel.
-    if (data.providerBusy === true && Array.isArray(data.sources) && data.sources.length > 0) {
-      // When the language model is unavailable, do not expose raw English
-      // headlines as if they satisfied the user's Hindi-headline request.
-      // Keep the real publisher/date/URL metadata in the separate source panel.
+    if ((data.providerBusy === true || data.newsSummaryUnverified === true) &&
+        Array.isArray(data.sources) && data.sources.length > 0) {
+      // Do not expose raw English headlines when the Hindi summary failed validation.
+      // Keep publisher/date/URL metadata, but use a neutral Hindi link label.
       const fallbackSources = sanitizeSourceRecords(data.sources, 5).map(source => ({
         ...source,
         title: "मूल समाचार खोलें — " + (source.publisher || new URL(source.url).hostname)
       }));
-      cleanAnswer =
-        "इंटरनेट खोज में " + fallbackSources.length +
-        " स्रोत मिले, लेकिन AI सेवा व्यस्त होने के कारण आसान हिंदी शीर्षक और दो-वाक्यीय सार सत्यापित नहीं हो पाए। " +
-        "इसलिए अपुष्ट या अंग्रेज़ी शीर्षक नहीं दिखाए जा रहे हैं। नीचे प्रकाशक, प्रकाशन-तारीख और मूल समाचार का लिंक दिया गया है। " +
-        "इन्हें पाँच श्रेणियों की पूरी और पुष्टि की गई समाचार-सूची न मानें।";
+      cleanAnswer = data.newsSummaryUnverified === true
+        ? "इंटरनेट खोज में " + fallbackSources.length +
+          " स्रोत मिले, लेकिन उनके हिंदी शीर्षक और दो-वाक्यीय सार स्रोत-जाँच में सफल नहीं हुए। " +
+          "इसलिए अपुष्ट सार या अंग्रेज़ी शीर्षक नहीं दिखाए जा रहे हैं। नीचे प्रकाशक, प्रकाशन-तारीख और मूल समाचार का लिंक दिया गया है। " +
+          "इन्हें पूरी और पुष्टि की गई पाँच-श्रेणी समाचार-सूची न मानें।"
+        : "इंटरनेट खोज में " + fallbackSources.length +
+          " स्रोत मिले, लेकिन AI सेवा व्यस्त होने के कारण आसान हिंदी शीर्षक और दो-वाक्यीय सार सत्यापित नहीं हो पाए। " +
+          "इसलिए अपुष्ट या अंग्रेज़ी शीर्षक नहीं दिखाए जा रहे हैं। नीचे प्रकाशक, प्रकाशन-तारीख और मूल समाचार का लिंक दिया गया है। " +
+          "इन्हें पाँच श्रेणियों की पूरी और पुष्टि की गई समाचार-सूची न मानें।";
       data.sources = fallbackSources;
     }
 
@@ -1191,7 +1195,7 @@ async function sendMessage(text) {
     // in data.sources are displayed. This also covers a blank "मूल लिंक:" field.
     const isCurrentNewsPrompt = /(?:आज|ताज़ा|ताजा|नवीनतम|latest|today).{0,50}(?:खबर|समाचार|न्यूज़|न्यूज|news)|(?:खबर|समाचार|news).{0,50}(?:आज|ताज़ा|ताजा|latest|today)/i.test(prompt);
     const hasUsableInlineNewsUrl = /मूल लिंक\s*[:：]\s*https:\/\/[^\s]+/i.test(cleanAnswer);
-    if (data.providerBusy !== true && isCurrentNewsPrompt && !hasUsableInlineNewsUrl && Array.isArray(data.sources)) {
+    if (data.providerBusy !== true && data.newsSummaryUnverified !== true && isCurrentNewsPrompt && !hasUsableInlineNewsUrl && Array.isArray(data.sources)) {
       const verifiedNewsSources = sanitizeSourceRecords(data.sources, 5);
       if (verifiedNewsSources.length) {
         const sourceLinks = verifiedNewsSources.map((source, index) => {
@@ -1205,7 +1209,7 @@ async function sendMessage(text) {
     }
 
     // Keep search failures visible in the chat, not only in the temporary status line.
-    if (!(data.providerBusy === true && Array.isArray(data.sources) && data.sources.length > 0) &&
+    if (!((data.providerBusy === true || data.newsSummaryUnverified === true) && Array.isArray(data.sources) && data.sources.length > 0) &&
         shouldShowSearchWarning(data) && !cleanAnswer.includes(data.searchWarning)) {
       cleanAnswer += "\n\n⚠️ इंटरनेट खोज: " + data.searchWarning;
     }
