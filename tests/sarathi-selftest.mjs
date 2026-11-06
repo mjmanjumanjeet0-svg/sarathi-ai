@@ -28,6 +28,11 @@ assert.ok(numericGuardStart >= 0 && numericGuardEnd > numericGuardStart, "news n
 const hasUnsupportedNumericClaim = new Function(source.slice(numericGuardStart, numericGuardEnd) + "\nreturn hasUnsupportedNumericClaim;")();
 assert.equal(hasUnsupportedNumericClaim("दोनों पक्षों ने अलग-अलग बयान दिए।", "दोनों पक्षों ने बयान दिए।"), false, "Hindi word 'दोनों' must not be mistaken for numeric two");
 assert.equal(hasUnsupportedNumericClaim("दो पक्षों ने बयान दिए।", "पक्षों ने बयान दिए।"), true, "standalone unsupported Hindi number words must still be rejected");
+assert.equal(hasUnsupportedNumericClaim("यह एक महत्वपूर्ण फैसला है।", "Supreme Court decision"), false, "the common Hindi article एक must not be mistaken for a numeric claim");
+assert.equal(hasUnsupportedNumericClaim("This is one important decision.", "Supreme Court decision"), false, "the common English article one must not be mistaken for a numeric claim");
+assert.equal(hasUnsupportedNumericClaim("नौकरी के नए अवसरों पर चर्चा हुई।", "रोजगार के अवसरों पर चर्चा हुई।"), false, "the prefix नौ inside नौकरी must not be mistaken for numeric nine");
+assert.equal(hasUnsupportedNumericClaim("नौ लोगों ने याचिका दायर की।", "लोगों ने याचिका दायर की।"), true, "standalone unsupported Hindi nine must still be rejected");
+
 assert.match(source, /स्रोत में न दिया कारण.*जिम्मेदार व्यक्ति/, "news prompt must forbid invented causes and responsibility");
 assert.match(source, /प्रवेश की पुरानी तारीख.*आगे के प्रवास के लिए वीज़ा/, "immigration news summaries must distinguish past entry date from current visa requirement");
 assert.match(source, /मौखिक उल्लेख.*जल्दी सूचीबद्ध करने पर सहमति.*याचिका स्वीकार/, "court news summaries must distinguish procedural listing from accepting a petition or deciding the case");
@@ -104,7 +109,17 @@ assert.deepEqual(fiveCategorySelection.map(item => item.url),
 
 assert.ok((source.match(/const category = classifyRequestedNewsCategory\(item\);/g) || []).length >= 2, "final news selection and fallback must reclassify the actual headline instead of trusting stale category metadata");
 assert.match(source, /formatCurrentNewsSummaryReply\(normalizeNewsSummaryRepairText\(rawReply\), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery\(userText\)\)/, "the first news-summary response must normalize JSON before validation");
-assert.ok(source.includes("function hasUntranslatedEnglishHeadline(text)"), "news validation must reject untranslated English headlines");
+assert.ok(source.includes("function hasUntranslatedEnglishHeadline(text, sourceEvidence = \"\""), "news validation must reject untranslated English headlines");
+const englishGuardStart = source.indexOf("function hasUntranslatedEnglishHeadline(");
+const englishGuardEnd = source.indexOf("\nfunction hasMixedScriptToken", englishGuardStart);
+assert.ok(englishGuardStart >= 0 && englishGuardEnd > englishGuardStart, "source-aware Hindi headline validator must exist");
+const hasUntranslatedEnglishHeadline = new Function(source.slice(englishGuardStart, englishGuardEnd) + "\nreturn hasUntranslatedEnglishHeadline;")();
+assert.equal(hasUntranslatedEnglishHeadline("सुप्रीम कोर्ट ने Azam Khan की जमानत याचिका पर विचार किया।", "Supreme Court considers Azam Khan bail plea"), false, "source-grounded proper names may remain in Latin script inside a Hindi headline");
+assert.equal(hasUntranslatedEnglishHeadline("Supreme Court agrees to hear the plea", "Supreme Court agrees to hear the plea"), true, "source grounding must not allow an untranslated English headline");
+assert.equal(hasUntranslatedEnglishHeadline("सुप्रीम कोर्ट ने Azam Khan की याचिका सुनी।", "Supreme Court considers a plea"), true, "ungrounded Latin-script names must still be rejected");
+assert.equal(hasUntranslatedEnglishHeadline("सुप्रीम कोर्ट ने DMK नेता की चुनाव याचिका पर सुनवाई स्वीकार की।", "Supreme Court agrees to hear DMK leader's plea challenging rejection of election petition"), false, "the DMK court story must pass when its headline is translated into Hindi and only the grounded acronym remains in Latin script");
+assert.equal(hasUntranslatedEnglishHeadline("Supreme Court agrees to hear DMK leader's plea challenging rejection of election petition", "Supreme Court agrees to hear DMK leader's plea challenging rejection of election petition"), true, "the exact raw English source headline must remain rejected");
+
 assert.match(source, /untranslatedEnglishHeadline/, "news diagnostics must report untranslated English headlines");
 assert.match(source, /categoryMismatch/, "five-category news validation must reject incorrect or missing category labels");
 assert.match(source, /const acceptedCategories = \[\]/, "five-category validation must retain the categories of individually accepted stories");

@@ -1150,7 +1150,7 @@ function hasUnsupportedNumericClaim(generatedText, sourceEvidence, returnDetails
   const normalize = value => String(value || "")
     .replace(/[०-९]/g, digit => String("०१२३४५६७८९".indexOf(digit)))
     .replace(/\b(seventy-five|zero|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|lakh|crore)\b/gi, word => englishNumbers[word.toLowerCase()] || word)
-    .replace(/(?<![\\p{L}\\p{M}])(?:शून्य|दो|तीन|चार|पाँच|पांच|छह|छः|सात|आठ|नौ|दस|ग्यारह|बारह|पंद्रह|बीस|पच्चीस|तीस|चालीस|पचास|साठ|सत्तर|पचहत्तर|अस्सी|नब्बे|सौ|हजार|लाख|करोड़)(?![\\p{L}\\p{M}])/gu, word => hindiNumbers[word] || word);
+    .replace(/(?<![\p{L}\p{M}])(?:शून्य|दो|तीन|चार|पाँच|पांच|छह|छः|सात|आठ|नौ|दस|ग्यारह|बारह|पंद्रह|बीस|पच्चीस|तीस|चालीस|पचास|साठ|सत्तर|पचहत्तर|अस्सी|नब्बे|सौ|हजार|लाख|करोड़)(?![\p{L}\p{M}])/gu, word => hindiNumbers[word] || word);
   // Treat thousands separators consistently: 14,500 and 14500 are the same value.
   const numericTokens = value => normalize(value)
     .replace(/(?<=\d),(?=\d{3}(?:\D|$))/g, "")
@@ -1161,11 +1161,23 @@ function hasUnsupportedNumericClaim(generatedText, sourceEvidence, returnDetails
   return returnDetails ? unsupported : unsupported.length > 0;
 }
 
-function hasUntranslatedEnglishHeadline(text) {
-  // Keep common institutional acronyms, but require ordinary headline words to be translated.
-  const allowedAcronyms = new Set(["RBI","ISRO","CSIR","NEERI","BSE","NSE","ICC","BCCI","NASA","DRDO","IIT","IISc","AIIMS","IMD","CPCB","AQI","UPI","GDP","PM","SC","HC"]);
+function hasUntranslatedEnglishHeadline(text, sourceEvidence = "") {
+  // Keep known acronyms and source-grounded proper names, but do not let
+  // ordinary English headline vocabulary pass merely because it appears in
+  // an English publisher headline.
+  const allowedAcronyms = new Set(["RBI","ISRO","CSIR","NEERI","BSE","NSE","ICC","BCCI","NASA","DRDO","IIT","IISc","AIIMS","IMD","CPCB","AQI","UPI","GDP","PM","SC","HC","DMK","ED"]);
+  const commonHeadlineWords = new Set([
+    "a","an","the","and","or","but","to","of","in","on","at","by","for","from","with","over","after","before","as","is","are","was","were","be","been","being","has","have","had","will","would","may","might","can","could","says","said","say","agrees","agree","agreed","hears","hear","heard","allows","allow","allowed","rejects","reject","rejected","challenging","challenge","challenged","rejection","election","petition","plea","leader","court","supreme","high","case","order","orders","judge","judges","justice","government","minister","official","officials","report","reports","news","update","latest","india","indian","new","old","after","during","over","amid","seeks","seek","seeking","gets","get","got","backs","back","backed","asks","ask","asked","moves","move","moved","files","file","filed","against","suspends","suspend","suspended","grants","grant","granted","denies","deny","denied"
+  ]);
+  const source = String(sourceEvidence || "");
+  const sourceNameTokens = new Set((source.match(/\b[A-Z][a-z]{2,}\b/g) || []).map(word => word.toLowerCase()));
   const words = String(text || "").match(/[A-Za-z]+/g) || [];
-  return words.some(word => !allowedAcronyms.has(word.toUpperCase()) && !/^[A-Z]{2,}$/.test(word));
+  return words.some(word => {
+    if (allowedAcronyms.has(word.toUpperCase()) || /^[A-Z]{2,}$/.test(word)) return false;
+    const lower = word.toLowerCase();
+    const isGroundedName = /^[A-Z][a-z]{2,}$/.test(word) && sourceNameTokens.has(lower) && !commonHeadlineWords.has(lower);
+    return !isGroundedName;
+  });
 }
 
 function hasMixedScriptToken(text) {
@@ -1401,7 +1413,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     // not erase other stories whose Hindi summaries pass every source check.
     if (!entry?.headline || !entry?.summary) { rejectCounts.missingEntry++; continue; }
     if (hasUnsupportedNewsHeadlineMix(entry.headline, items[index]?.title || "", items[index]?.snippet || "")) { rejectCounts.headlineGrounding++; continue; }
-    if (hasUntranslatedEnglishHeadline(entry.headline)) {
+    if (hasUntranslatedEnglishHeadline(entry.headline, (items[index]?.title || "") + " " + (items[index]?.snippet || ""))) {
       rejectCounts.untranslatedEnglishHeadline++;
       rejectedStoryDetails.push({
         reason: "untranslatedEnglishHeadline",
@@ -1434,7 +1446,8 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
         category: items[index]?.requestedCategory || null,
         sourceTitle: cleanText(items[index]?.title || "").slice(0, 180),
         headline: cleanText(entry.headline).slice(0, 180),
-        summary: cleanText(entry.summary).slice(0, 260),
+        summary: cleanText(entry.summary).slice(0, 700),
+        summaryTruncated: cleanText(entry.summary).length > 700,
         sourceEvidence: cleanText(sourceEvidence).slice(0, 500)
       });
       continue;

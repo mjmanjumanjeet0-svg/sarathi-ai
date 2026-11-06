@@ -71,13 +71,16 @@ const classifyRequestedNewsCategory = new Function(
 const newsFormatterStart = worker.indexOf("function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false) {");
 const newsFormatterEnd = worker.indexOf("\n}\n", newsFormatterStart);
 assert.ok(newsFormatterStart >= 0 && newsFormatterEnd > newsFormatterStart, "daily-news formatter must exist");
-const untranslatedHeadlineStart = worker.indexOf("function hasUntranslatedEnglishHeadline(text) {");
+const untranslatedHeadlineStart = worker.indexOf("function hasUntranslatedEnglishHeadline(text, sourceEvidence = \"\") {");
 const untranslatedHeadlineEnd = worker.indexOf("\n}\n", untranslatedHeadlineStart);
 assert.ok(untranslatedHeadlineStart >= 0 && untranslatedHeadlineEnd > untranslatedHeadlineStart, "untranslated English headline guard must exist");
 const hasUntranslatedEnglishHeadline = new Function(worker.slice(untranslatedHeadlineStart, untranslatedHeadlineEnd + 3) + "\nreturn hasUntranslatedEnglishHeadline;")();
 assert.equal(hasUntranslatedEnglishHeadline("Visa must for undocumented six communities"), true, "English headline words must be rejected");
 assert.equal(hasUntranslatedEnglishHeadline("छह समुदायों के लिए वीज़ा अनिवार्य"), false, "Hindi headline must pass");
 assert.equal(hasUntranslatedEnglishHeadline("CSIR-NEERI की प्रयोगशाला में जाँच"), false, "recognized institutional acronyms may remain in Latin script");
+assert.equal(hasUntranslatedEnglishHeadline("सुप्रीम कोर्ट ने Azam Khan की जमानत याचिका पर विचार किया।", "Supreme Court considers Azam Khan bail plea"), false, "source-grounded proper names may remain in Latin script in Hindi headlines");
+assert.equal(hasUntranslatedEnglishHeadline("सुप्रीम कोर्ट ने Azam Khan की याचिका सुनी।", "Supreme Court considers a plea"), true, "ungrounded Latin-script names must be rejected");
+
 const knownFactGuardStart = worker.indexOf("function hasKnownContradictedNewsFact(text) {");
 const knownFactGuardEnd = worker.indexOf("\n}\n", knownFactGuardStart);
 assert.ok(knownFactGuardStart >= 0 && knownFactGuardEnd > knownFactGuardStart, "known-fact contradiction guard must exist");
