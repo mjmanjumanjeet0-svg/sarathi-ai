@@ -1125,7 +1125,7 @@ function isCurrentNewsQuery(text) {
   return /(?:पिछले|गत|last)\s*48\s*(?:घंटों?|घंटे|hours?).{0,110}(?:खबर|समाचार|न्यूज़|न्यूज|news)|(?:ताज़ा|ताजा|मुख्य|प्रमुख).{0,35}खबर|आज.{0,60}(?:खबर|समाचार)|(?:latest|breaking|current)\s+news|today.?s\s+news|समाचार/i.test(String(text || ""));
 }
 
-function hasUnsupportedNumericClaim(generatedText, sourceEvidence) {
+function hasUnsupportedNumericClaim(generatedText, sourceEvidence, returnDetails = false) {
   const hindiNumbers = {"शून्य":"0","दो":"2","तीन":"3","चार":"4","पाँच":"5","पांच":"5","छह":"6","छः":"6","सात":"7","आठ":"8","नौ":"9","दस":"10","ग्यारह":"11","बारह":"12","पंद्रह":"15","बीस":"20","पच्चीस":"25","तीस":"30","चालीस":"40","पचास":"50","साठ":"60","सत्तर":"70","पचहत्तर":"75","अस्सी":"80","नब्बे":"90","सौ":"100","हजार":"1000","लाख":"100000","करोड़":"10000000"};
   const englishNumbers = {"zero":"0","two":"2","three":"3","four":"4","five":"5","six":"6","seven":"7","eight":"8","nine":"9","ten":"10","eleven":"11","twelve":"12","fifteen":"15","twenty":"20","thirty":"30","forty":"40","fifty":"50","sixty":"60","seventy":"70","seventy-five":"75","eighty":"80","ninety":"90","hundred":"100","thousand":"1000","lakh":"100000","crore":"10000000"};
   const normalize = value => String(value || "")
@@ -1138,7 +1138,8 @@ function hasUnsupportedNumericClaim(generatedText, sourceEvidence) {
     .match(/\d+(?:\.\d+)?%?/g) || [];
   const sourceNumbers = new Set(numericTokens(sourceEvidence));
   const generatedNumbers = numericTokens(generatedText);
-  return generatedNumbers.some(number => !sourceNumbers.has(number));
+  const unsupported = [...new Set(generatedNumbers.filter(number => !sourceNumbers.has(number)))];
+  return returnDetails ? unsupported : unsupported.length > 0;
 }
 
 function hasMixedScriptToken(text) {
@@ -1347,6 +1348,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     if (plain) entries.get(current).summary = plain;
   }
   const lines = [];
+  const rejectedNumericDetails = [];
   const rejectCounts = {
     missingEntry: 0, headlineGrounding: 0, aqi: 0, sentenceCount: 0,
     agniveerDetail: 0, mixedScript: 0, unsupportedNumber: 0,
@@ -1370,7 +1372,12 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
       /(?:75\s*%|७५\s*प्रतिशत|remaining\s+75|शेष\s+७५)/i.test(sourceEvidence);
     if (isAgniveerExtension && !/(?:75\s*%|७५\s*(?:प्रतिशत|फीसदी)|शेष\s+७५|पचहत्तर\s*(?:प्रतिशत|फीसदी)?)/i.test(generatedText)) { rejectCounts.agniveerDetail++; continue; }
     if (hasMixedScriptToken(generatedText)) { rejectCounts.mixedScript++; continue; }
-    if (hasUnsupportedNumericClaim(generatedText, sourceEvidence)) { rejectCounts.unsupportedNumber++; continue; }
+    const unsupportedNumericTokens = hasUnsupportedNumericClaim(generatedText, sourceEvidence, true);
+    if (unsupportedNumericTokens.length) {
+      rejectCounts.unsupportedNumber++;
+      rejectedNumericDetails.push({ category: items[index]?.requestedCategory || null, tokens: unsupportedNumericTokens.slice(0, 5) });
+      continue;
+    }
     if (hasUnsupportedCertaintyClaim(generatedText, sourceEvidence)) { rejectCounts.unsupportedCertainty++; continue; }
     const claimsWestAsiaConflict = /(?:पश्चिम एशिया|मध्य पूर्व|मिडिल ईस्ट|west asia|middle east|iran|iranian|israel|israeli).{0,70}(?:संघर्ष|युद्ध|तनाव|शांति|समाधान|conflict|war|tension|peace|ceasefire)|(?:संघर्ष|युद्ध|तनाव|शांति|समाधान|conflict|war|tension|peace|ceasefire).{0,70}(?:पश्चिम एशिया|मध्य पूर्व|मिडिल ईस्ट|west asia|middle east|iran|iranian|israel|israeli)/i.test(generatedText);
     const sourceMentionsWestAsiaConflict = /(?:पश्चिम एशिया|मध्य पूर्व|मिडिल ईस्ट|west asia|middle east|iran|iranian|israel|israeli).{0,100}(?:संघर्ष|युद्ध|तनाव|शांति|समाधान|conflict|war|tension|peace|ceasefire)|(?:संघर्ष|युद्ध|तनाव|शांति|समाधान|conflict|war|tension|peace|ceasefire).{0,100}(?:पश्चिम एशिया|मध्य पूर्व|मिडिल ईस्ट|west asia|middle east|iran|iranian|israel|israeli)/i.test(sourceEvidence);
@@ -1410,6 +1417,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     parsedEntries: entries.size,
     acceptedEntries: lines.length,
     rejected: rejectCounts,
+    rejectedNumericDetails,
     requireTwoSentences,
     requireFiveCategories
   }));
