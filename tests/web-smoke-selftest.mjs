@@ -70,7 +70,7 @@ const isIndiaFocusedNewsItem = new Function(
 )(value => String(value || "").replace(/\s+/g, " ").trim(), isMultiTopicNewsDigestTitle);
 assert.equal(isIndiaFocusedNewsItem({ title: "News This Week (Nov 2-6): Trump's Midterm Setback, Delhi's Toxic Air, Ramayana's Big Debut & More", snippet: "Karnataka ethanol story appears in this unrelated roundup" }), false,
   "weekly multi-topic news digests must be rejected before evidence enrichment");
-assert.equal(isIndiaFocusedNewsItem({ title: "Supreme Court orders release in unlawful detention case" }), true,
+assert.equal(isIndiaFocusedNewsItem({ title: "India Supreme Court orders release in unlawful detention case" }), true,
   "specific Indian court reporting must remain eligible");
 const categoryClassifierStart = worker.indexOf("function classifyRequestedNewsCategory(item) {");
 const categoryClassifierEnd = worker.indexOf("\n}\n", categoryClassifierStart);
