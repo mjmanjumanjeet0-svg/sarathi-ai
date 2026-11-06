@@ -197,7 +197,9 @@ const staleCourtNewsSources = fiveNewsSources.map((item, index) => index === 2
   ? { ...item, publishedAt: new Date(Date.now() - 49 * 60 * 60 * 1000).toISOString() }
   : item);
 const staleCourtNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, staleCourtNewsSources, true, true);
-assert.equal(staleCourtNewsReply, "", "five-category request must reject a court story older than the requested 48-hour window");
+assert.match(staleCourtNewsReply, /आज 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं/, "five-category request must retain the four eligible stories when the court source is older than 48 hours");
+assert.match(staleCourtNewsReply, /इन श्रेणियों की खबर स्रोत-जाँच में सफल नहीं हुई: अदालत/, "five-category request must explicitly disclose that the stale court story is unavailable");
+assert.doesNotMatch(staleCourtNewsReply, /खबर \\d+ \\(अदालत\\):/, "a court story older than the requested 48-hour window must never be displayed");
 assert.deepEqual([...completeFiveNewsReply.matchAll(/खबर (\d+)(?: \([^)]*\))?:/g)].map(match => Number(match[1])), [1, 2, 3, 4, 5], "daily-news numbering must always be continuous from 1 through 5");
 const fiveCategoryDetectorStart = worker.indexOf("function isFiveCategoryNewsQuery(text) {");
 const fiveCategoryDetectorEnd = worker.indexOf("\n}\n", fiveCategoryDetectorStart);
