@@ -4,6 +4,10 @@ import { readFile } from "node:fs/promises";
 // Load the exact Worker source without changing its Cloudflare module format.
 const source = await readFile(new URL("../worker.js", import.meta.url), "utf8");
 const appSource = await readFile(new URL("../app.js", import.meta.url), "utf8");
+
+// Groq reasoning controls are model-specific: GPT-OSS rejects reasoning_format.
+assert.match(source, /model\.startsWith\("openai\/gpt-oss-"\)[\s\S]*include_reasoning: false[\s\S]*reasoning_format: "hidden"/, "GPT-OSS must use include_reasoning=false while non-GPT-OSS reasoning models use reasoning_format=hidden");
+assert.match(source, /reasoning_effort: reasoningEffort/, "reasoning effort must remain enabled when requested");
 assert.ok(appSource.includes('replyText.includes("खबर 1:")') && appSource.includes('replyText.includes("प्रकाशक:")') && appSource.includes('replyText.includes("प्रकाशित:")'), "inline Hindi news summaries must not render a duplicate source panel");
 const busyFallbackStart = appSource.indexOf("if (data.providerBusy === true && Array.isArray(data.sources)");
 const busyFallbackEnd = appSource.indexOf("\n    }", busyFallbackStart);
