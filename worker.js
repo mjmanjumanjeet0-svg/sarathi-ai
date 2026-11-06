@@ -2663,7 +2663,12 @@ export default {
       // The client uses this flag to suppress raw English source headlines.
       newsSummaryUnverified: isCurrentNewsReply && !formattedNewsReply,
       sources: searchResults.map(item => ({
-        title: item.title,
+        // Current-news source cards are links to the original articles, not
+        // validated Hindi headlines. Keep raw English titles out of the UI
+        // even when one or more stories pass the digest validator.
+        title: isCurrentNewsReply
+          ? "मूल समाचार खोलें — " + (item.publisher || new URL(item.url).hostname)
+          : item.title,
         url: item.url,
         publisher: item.publisher || "",
         publishedAt: item.publishedAt || "",
