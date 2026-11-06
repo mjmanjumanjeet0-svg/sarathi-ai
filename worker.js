@@ -1292,12 +1292,14 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     }
     items = requiredCategories.map(category => latestByCategory.get(category)).filter(Boolean);
     if (items.length !== 5) {
+      // A missing category must not block validation of the categories that
+      // do have recent, India-focused, headline-classified source evidence.
+      // The final formatter reports every category that remains unverified.
       console.warn("Five-category news source selection incomplete", JSON.stringify({
         expected: requiredCategories,
         received: [...latestByCategory.keys()],
         sourceCount: items.length
       }));
-      return "";
     }
   }
   items = items.slice(0, 5);
