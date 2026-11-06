@@ -106,6 +106,9 @@ const fiveNewsDraft = fiveNewsSources.map((_, index) =>
 ).join("\n");
 const completeFiveNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, fiveNewsSources, true, true);
 assert.match(completeFiveNewsReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "five-category request must return all five stories only when all five summaries pass");
+const splitHeadlineDraft = fiveNewsDraft.replace(/खबर ([1-5]): (.+)\\nसार:/g, "खबर $1\\nशीर्षक: $2\\nसार:");
+const splitHeadlineReply = formatCurrentNewsSummaryReply(splitHeadlineDraft, fiveNewsSources, true, true);
+assert.match(splitHeadlineReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "parser must accept category models that put the headline on a separate line");
 const fiveNewsSourcesWithoutTransientTags = fiveNewsSources.map(({ requestedCategory, ...item }) => item);
 const recoveredCategoryReply = formatCurrentNewsSummaryReply(
   fiveNewsDraft,
