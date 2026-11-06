@@ -1236,7 +1236,10 @@ function normalizeNewsSummaryRepairText(rawReply) {
       const lines = [];
       entries.slice(0, 5).forEach((entry, index) => {
         const rawNumber = entry?.number ?? entry?.index ?? entry?.id ?? entry?.क्रमांक ?? entry?.संख्या;
-        const number = rawNumber === undefined || rawNumber === null || rawNumber === "" ? index + 1 : Number(rawNumber);
+        const normalizedNumber = typeof rawNumber === "string"
+          ? rawNumber.replace(/[०-९]/g, digit => String("०१२३४५६७८९".indexOf(digit))).trim()
+          : rawNumber;
+        const number = normalizedNumber === undefined || normalizedNumber === null || normalizedNumber === "" ? index + 1 : Number(normalizedNumber);
         const headline = cleanText(asText(entry?.headline || entry?.title || entry?.हेडलाइन || entry?.शीर्षक || ""));
         const summary = cleanText(asText(entry?.summary || entry?.summaryHindi || entry?.description || entry?.सार || entry?.सारांश || entry?.विवरण || ""));
         if (Number.isInteger(number) && number >= 1 && number <= 5 && headline && summary) {
@@ -2219,6 +2222,7 @@ export default {
             messages: [{ role: "system", content: systemContent }, ...requestMessages],
             temperature: 0.3,
             max_tokens: maxTokens,
+            ...(systemContent === compactNewsSystemPrompt ? { response_format: { type: "json_object" } } : {}),
             ...(reasoningEffort ? { reasoning_effort: reasoningEffort, reasoning_format: "hidden" } : {}),
           }),
           signal: controller.signal,
