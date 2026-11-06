@@ -1052,17 +1052,20 @@ function isFiveCategoryNewsQuery(text) {
 }
 
 function classifyRequestedNewsCategory(item) {
-  const text = cleanText((item?.title || "") + " " + (item?.snippet || "")).toLocaleLowerCase("hi-IN");
+  // Prefer headline evidence; snippets may mention unrelated topics incidentally.
+  const title = cleanText(item?.title || "").toLocaleLowerCase("hi-IN");
+  const snippet = cleanText(item?.snippet || "").toLocaleLowerCase("hi-IN");
   const rules = [
+    ["अदालत", /\b(?:supreme court|high court|court|tribunal|judgment|judgement|verdict|legal bench|petition|bail|sentence|lawsuit|hearing)\b|सुप्रीम कोर्ट|उच्च न्यायालय|हाई कोर्ट|अदालत|न्यायालय|न्यायाधीश|फैसला|निर्णय|याचिका|जमानत|पीठ|सुनवाई/i],
     ["खेल", /\b(?:sports?|cricket|football|hockey|tennis|badminton|olympics?|paralympics?|athlete|athletics|athletic|tournament|ipl|icc|bcci|doping|anti-doping|wrestling|kabaddi|parvez khan|cas)\b|खेल|क्रिकेट|फुटबॉल|हॉकी|टेनिस|बैडमिंटन|ओलंपिक|खिलाड़ी|टूर्नामेंट|विश्व कप|डोपिंग|एथलेटिक्स|पहलवान|कबड्डी/i],
-    ["अदालत", /\b(?:supreme court|high court|court|tribunal|judgment|judgement|verdict|legal|bench|petition|bail|sentence)\b|सुप्रीम कोर्ट|उच्च न्यायालय|हाई कोर्ट|अदालत|न्यायालय|न्यायाधीश|फैसला|निर्णय|याचिका|जमानत|पीठ/i],
-    ["विज्ञान", /\b(?:science|scientific|research|researchers|isro| nasa|space mission|satellite|launch vehicle|discovery|scientists?|clinical trial|genome)\b|विज्ञान|वैज्ञानिक|अनुसंधान|शोध|इसरो|अंतरिक्ष|उपग्रह|प्रक्षेपण|खोज|वैज्ञानिकों|जीनोम/i],
+    ["विज्ञान", /\b(?:science|scientific|research|researchers|isro|nasa|space mission|satellite|launch vehicle|discovery|scientists?|clinical trial|genome)\b|विज्ञान|वैज्ञानिक|अनुसंधान|शोध|इसरो|अंतरिक्ष|उपग्रह|प्रक्षेपण|खोज|वैज्ञानिकों|जीनोम/i],
     ["अर्थव्यवस्था", /\b(?:economy|economic|gdp|inflation|rbi|reserve bank|stock market|sensex|nifty|rupee|fiscal|trade deficit|exports?|imports?|budget|interest rate|banking|manufacturing|unemployment)\b|अर्थव्यवस्था|आर्थिक|जीडीपी|महंगाई|मुद्रास्फीति|आरबीआई|रिजर्व बैंक|शेयर बाजार|सेंसेक्स|निफ्टी|रुपया|निर्यात|आयात|बजट|ब्याज दर|बैंकिंग|बेरोजगारी/i],
     ["सरकार", /\b(?:government|cabinet|minister|ministry|parliament|lok sabha|rajya sabha|prime minister|policy|bill|ordinance|scheme|election commission|governor)\b|सरकार|मंत्रिमंडल|कैबिनेट|मंत्री|मंत्रालय|संसद|लोकसभा|राज्यसभा|प्रधानमंत्री|नीति|विधेयक|अध्यादेश|योजना|निर्वाचन आयोग|राज्यपाल/i]
   ];
-  return rules.find(([, re]) => re.test(text))?.[0] || "";
+  return rules.find(([, re]) => re.test(title))?.[0]
+    || rules.find(([, re]) => re.test(snippet))?.[0]
+    || "";
 }
-
 function selectNewsForRequestedCategories(results, query) {
   if (!isFiveCategoryNewsQuery(query)) return results;
   const required = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
@@ -1359,32 +1362,43 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
   return prefix + "\n\n" + lines.join("\n\n") +
     "\n\nध्यान दें: हर सार संबंधित समाचार के उपलब्ध लेख-अंश पर आधारित है." + shortfall;
 }
-function buildCurrentNewsHeadlineReply(results) {
-  // Count only distinct, displayable articles with a real HTTPS publisher URL; never emit headline-only output.
-  // A headline-only list does not satisfy a request for Hindi summaries.
-  // If the summarizer and repair attempt both fail, do not expose English
-  // headlines as though they were a useful substitute for the requested digest.
+function buildCurrentNewsHeadlineReply(results, query = "") {
   const items = dedupeNewsResults(results).filter(item => {
     const title = cleanText(item?.title || "");
     const publishedAt = Date.parse(item?.publishedAt || "");
     if (!title || !isIndiaFocusedNewsItem(item)) return false;
     try {
       const url = new URL(item?.url || "");
-      return title.length > 0 && url.protocol === "https:" &&
-        Boolean(url.hostname) && Number.isFinite(publishedAt);
-    } catch {
-      return false;
+      return url.protocol === "https:" && Boolean(url.hostname) && Number.isFinite(publishedAt);
+    } catch { return false; }
+  }).slice(0, 8);
+  if (!items.length) return "आज की ताज़ा खबरों के लिए तारीख़-जाँचे हुए भरोसेमंद समाचार परिणाम नहीं मिले। कृपया कुछ देर बाद फिर कोशिश करें।";
+  if (isFiveCategoryNewsQuery(query)) {
+    const required = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
+    const byCategory = new Map();
+    for (const item of items) {
+      const category = required.includes(item?.requestedCategory) ? item.requestedCategory : classifyRequestedNewsCategory(item);
+      if (category && required.includes(category) && !byCategory.has(category)) byCategory.set(category, item);
     }
-  }).slice(0, 5);
-  if (!items.length) {
-    return "आज की ताज़ा खबरों के लिए तारीख़-जाँचे हुए भरोसेमंद समाचार परिणाम नहीं मिले। कृपया कुछ देर बाद फिर कोशिश करें।";
+    const missing = required.filter(category => !byCategory.has(category));
+    const lines = required.filter(category => byCategory.has(category)).map(category => {
+      const item = byCategory.get(category);
+      return "श्रेणी: " + category + "\nशीर्षक: " + cleanText(item.title) +
+        "\nमूल स्रोत: " + (cleanText(item.publisher || "") || "प्रकाशक उपलब्ध नहीं") +
+        "\nप्रकाशित: " + formatNewsPublishedAt(item.publishedAt) +
+        "\nमूल लिंक: " + item.url +
+        "\nपुष्टि का आधार: खोज में इस प्रकाशक का लेख मिला; स्वतंत्र पुष्टि उपलब्ध होने का दावा नहीं किया जा रहा।";
+    });
+    return "पाँच-श्रेणी समाचार जाँच पूरी नहीं हुई। उपलब्ध परिणामों से " + byCategory.size +
+      " अलग श्रेणियाँ पहचानी गईं। " +
+      (missing.length ? "इन श्रेणियों की ताज़ा खबर नहीं मिली: " + missing.join(", ") + "।" :
+        "पाँचों श्रेणियों के स्रोत मिले, लेकिन हिंदी सार का सत्यापन पूरा नहीं हुआ।") +
+      "\n\nअपुष्ट सार नहीं दिया जा रहा। नीचे केवल पहचाने गए स्रोत हैं; इन्हें पूरी पाँच-खबरों की सूची न मानें।\n\n" +
+      lines.join("\n\n");
   }
-  if (items.length < 5) {
-    return "आज केवल " + items.length + " अलग-अलग, तारीख़-जाँचे समाचार स्रोत मिले। पाँच अलग खबरों की सूची पूरी करने के लिए पर्याप्त स्रोत नहीं मिले; इसलिए अपुष्ट खबरें नहीं जोड़ी गईं। मैं अधूरी सूची नहीं दिखा रहा हूँ। कृपया कुछ देर बाद फिर कोशिश करें।";
-  }
-  return "आज 5 तारीख़-जाँचे समाचार परिणाम मिले, लेकिन सभी 5 खबरों के हिंदी सार स्रोत-जाँच में सफल नहीं हुए। आपकी माँग के अनुसार 5 अलग खबरें और हर खबर का 2–3 वाक्यों का सार देना आवश्यक है; इसलिए अधूरी सूची या अपुष्ट सार नहीं दिखाया जा रहा। कृपया कुछ देर बाद फिर कोशिश करें।";
+  if (items.length < 5) return "आज केवल " + items.length + " अलग-अलग, तारीख़-जाँचे समाचार स्रोत मिले। पाँच अलग खबरों की सूची पूरी करने के लिए पर्याप्त स्रोत नहीं मिले; इसलिए अपुष्ट खबरें नहीं जोड़ी गईं।";
+  return "आज 5 तारीख़-जाँचे समाचार परिणाम मिले, लेकिन हिंदी सार स्रोत-जाँच में सफल नहीं हुआ। इसलिए अपुष्ट सार नहीं दिया जा रहा।";
 }
-
 function buildCompactNewsSourceContext(results) {
   return (Array.isArray(results) ? results : []).slice(0, 6).map((item, index) => {
     const title = cleanText(item?.title || "").slice(0, 240);
@@ -2364,7 +2378,7 @@ export default {
       if (isCurrentNewsReply && searchResults.length) {
         return jsonResponse({
           success: true,
-          reply: buildCurrentNewsHeadlineReply(searchResults),
+          reply: buildCurrentNewsHeadlineReply(searchResults, userText),
           ...dateTime,
           webSearch: true,
           searchAttempted: true,
@@ -2501,7 +2515,7 @@ export default {
     }
 
     const finalReply = isCurrentNewsReply
-      ? (formattedNewsReply || buildCurrentNewsHeadlineReply(searchResults))
+      ? (formattedNewsReply || buildCurrentNewsHeadlineReply(searchResults, userText))
       : rawReply;
 
     return jsonResponse({
