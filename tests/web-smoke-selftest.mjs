@@ -78,6 +78,13 @@ const hasUntranslatedEnglishHeadline = new Function(worker.slice(untranslatedHea
 assert.equal(hasUntranslatedEnglishHeadline("Visa must for undocumented six communities"), true, "English headline words must be rejected");
 assert.equal(hasUntranslatedEnglishHeadline("छह समुदायों के लिए वीज़ा अनिवार्य"), false, "Hindi headline must pass");
 assert.equal(hasUntranslatedEnglishHeadline("CSIR-NEERI की प्रयोगशाला में जाँच"), false, "recognized institutional acronyms may remain in Latin script");
+const knownFactGuardStart = worker.indexOf("function hasKnownContradictedNewsFact(text) {");
+const knownFactGuardEnd = worker.indexOf("\n}\n", knownFactGuardStart);
+assert.ok(knownFactGuardStart >= 0 && knownFactGuardEnd > knownFactGuardStart, "known-fact contradiction guard must exist");
+const hasKnownContradictedNewsFact = new Function(
+  "cleanText",
+  worker.slice(knownFactGuardStart, knownFactGuardEnd + 3) + "\nreturn hasKnownContradictedNewsFact;"
+)(value => String(value || "").replace(/\s+/g, " ").trim());
 const formatCurrentNewsSummaryReply = new Function(
   "dedupeNewsResults", "cleanText", "formatNewsPublishedAt",
   "hasMixedScriptToken", "hasUnsupportedNumericClaim", "hasUnsupportedCertaintyClaim",
@@ -195,14 +202,357 @@ assert.doesNotMatch(wrongOlympicsCityReply, /एथेंस|Athens/i,
   "a sports summary must be rejected if it invents Athens as the 2028 Olympic host city");
 
 
-const knownFactGuardStart = worker.indexOf("function hasKnownContradictedNewsFact(text) {");
-const knownFactGuardEnd = worker.indexOf("\n}\n", knownFactGuardStart);
-assert.ok(knownFactGuardStart >= 0 && knownFactGuardEnd > knownFactGuardStart, "known-fact contradiction guard must exist");
-const hasKnownContradictedNewsFact = new Function(
-  "cleanText",
-  worker.slice(knownFactGuardStart, knownFactGuardEnd + 3) + "\nreturn hasKnownContradictedNewsFact;"
-)(value => String(value || "").replace(/\s+/g, " ").trim());
+
 assert.equal(hasKnownContradictedNewsFact("यह योजना 2028 एथेंस ओलंपिक के खिलाड़ियों को सहायता देगी।"), true,
+  "a false claim that the 2028 Olympics are in Athens must be rejected");
+assert.equal(hasKnownContradictedNewsFact("यह योजना 2028 लॉस एंजिल्स ओलंपिक के खिलाड़ियों को सहायता देगी।"), false,
+  "the correct 2028 Olympic host city must not be rejected");
+assert.equal(hasKnownContradictedNewsFact("खिलाड़ियों को 2028 ओलंपिक की तैयारी में सहायता मिलेगी।"), false,
+  "a summary that does not name a host city must remain acceptable");
+const splitHeadlineDraft = fiveNewsDraft.replace(/खबर ([1-5]): (.+)\\nसार:/g, "खबर $1\\nशीर्षक: $2\\nसार:");
+const splitHeadlineReply = formatCurrentNewsSummaryReply(splitHeadlineDraft, fiveNewsSources, true, true);
+assert.match(splitHeadlineReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "parser must accept category models that put the headline on a separate line");
+const fiveNewsSourcesWithoutTransientTags = fiveNewsSources.map(({ requestedCategory, ...item }) => item);
+const recoveredCategoryReply = formatCurrentNewsSummaryReply(
+  fiveNewsDraft,
+  fiveNewsSourcesWithoutTransientTags,
+  true,
+  true
+);
+assert.match(recoveredCategoryReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "final validation must re-derive missing category tags from the article title and snippet");
+const incompleteFiveCategoryReply = formatCurrentNewsSummaryReply(fiveNewsDraft.replace("खबर 5:", "खबर 4:"), fiveNewsSources, true, true);
+assert.match(incompleteFiveCategoryReply, /आज 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं/, "five-category request must retain the four individually verified stories when one generated entry is missing");
+assert.match(incompleteFiveCategoryReply, /इन श्रेणियों की खबर स्रोत-जाँच में सफल नहीं हुई: खेल/, "partial five-category output must name the category whose story failed validation");
+assert.equal([...incompleteFiveCategoryReply.matchAll(/खबर [1-5]/g)].length, 4, "an incomplete five-category response must never be padded with an unverified fifth story");
+const staleCourtNewsSources = fiveNewsSources.map((item, index) => index === 2
+  ? { ...item, publishedAt: new Date(Date.now() - 49 * 60 * 60 * 1000).toISOString() }
+  : item);
+const staleCourtNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, staleCourtNewsSources, true, true);
+assert.match(staleCourtNewsReply, /आज 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं/, "five-category request must retain the four eligible stories when the court source is older than 48 hours");
+assert.match(staleCourtNewsReply, /इन श्रेणियों की खबर स्रोत-जाँच में सफल नहीं हुई: अदालत/, "five-category request must explicitly disclose that the stale court story is unavailable");
+assert.doesNotMatch(staleCourtNewsReply, /खबर \\d+ \\(अदालत\\):/, "a court story older than the requested 48-hour window must never be displayed");
+assert.deepEqual([...completeFiveNewsReply.matchAll(/खबर (\d+)(?: \([^)]*\))?:/g)].map(match => Number(match[1])), [1, 2, 3, 4, 5], "daily-news numbering must always be continuous from 1 through 5");
+const fiveCategoryDetectorStart = worker.indexOf("function isFiveCategoryNewsQuery(text) {");
+const fiveCategoryDetectorEnd = worker.indexOf("\n}\n", fiveCategoryDetectorStart);
+assert.ok(fiveCategoryDetectorStart >= 0 && fiveCategoryDetectorEnd > fiveCategoryDetectorStart, "five-category news detector must exist");
+const isFiveCategoryNewsQuery = new Function(
+  "isCurrentNewsQuery",
+  worker.slice(fiveCategoryDetectorStart, fiveCategoryDetectorEnd + 3) + "\nreturn isFiveCategoryNewsQuery;"
+)(value => /आज.{0,60}(?:खबर|समाचार)/i.test(String(value || "")));
+assert.equal(isFiveCategoryNewsQuery("आज भारत की पाँच ताज़ा और महत्वपूर्ण खबरें बताओ। सरकार, अर्थव्यवस्था, अदालत, विज्ञान और खेल से एक-एक अलग खबर शामिल करो।"), true, "natural five-category wording with freshness adjectives must activate the all-five rule");
+const mixedMetadataDraft = fiveNewsDraft.replace(
+  "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
+  "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है। मूल स्रोत: fake.example; सीधा लिंक: https://fake.example/story"
+);
+const mixedMetadataReply = formatCurrentNewsSummaryReply(mixedMetadataDraft, fiveNewsSources, true, true);
+assert.doesNotMatch(mixedMetadataReply, /fake\.example|https:\/\/fake\.example/, "model-generated source metadata must never be shown; only matched search-result metadata is trusted");
+const partialFourNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, fiveNewsSources.slice(0, 4), true);
+assert.match(partialFourNewsReply, /आज 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं \(आपने 5 माँगी थीं\)/, "four verified stories should be shown with an explicit shortfall notice");
+assert.equal([...partialFourNewsReply.matchAll(/खबर (\d+)(?: \([^)]*\))?:/g)].length, 4, "only four available validated stories should be displayed");
+const incompleteFiveNewsDraft = fiveNewsDraft.replace("सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।", "सार: ");
+const incompleteFiveNewsReply = formatCurrentNewsSummaryReply(incompleteFiveNewsDraft, fiveNewsSources, true);
+assert.equal([...incompleteFiveNewsReply.matchAll(/खबर (\d+)(?: \([^)]*\))?:/g)].length, 4, "a story without a valid summary must be omitted while other verified stories remain");
+const initialsNewsDraft = fiveNewsDraft.replace(
+  "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
+  "सार: ISRO के अध्यक्ष वी. नारायणन ने बताया। उपग्रह पूरी तरह स्वस्थ है।"
+);
+const initialsNewsReply = formatCurrentNewsSummaryReply(initialsNewsDraft, fiveNewsSources, true);
+assert.equal([...initialsNewsReply.matchAll(/खबर (\d+)(?: \([^)]*\))?:/g)].length, 5, "initials such as V. must not be counted as extra sentence endings");
+
+const oneSentenceNewsDraft = fiveNewsDraft.replace(
+  "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
+  "सार: यह केवल एक वाक्य का सार है।"
+);
+const oneSentenceNewsReply = formatCurrentNewsSummaryReply(oneSentenceNewsDraft, fiveNewsSources, true);
+assert.equal([...oneSentenceNewsReply.matchAll(/खबर (\d+)(?: \([^)]*\))?:/g)].length, 4, "a one-sentence item must be omitted without discarding other valid summaries");
+
+const boilerplateNewsDraft = fiveNewsDraft.replace(
+  "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
+  "सार: उपलब्ध स्रोत-अंश इस कारण की पुष्टि नहीं करता; इसलिए कारण के बारे में निष्कर्ष नहीं निकाला जा सकता।"
+);
+assert.equal([...formatCurrentNewsSummaryReply(boilerplateNewsDraft, fiveNewsSources, false).matchAll(/खबर \d+(?: \([^)]*\))?:/g)].length, 4, "a generic disclaimer must be omitted while other validated stories remain");
+
+const unsupportedCauseDraft = fiveNewsDraft.replace(
+  "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
+  "सार: प्रदूषण निर्माण कार्यों के कारण बढ़ा। यह दूसरी पुष्ट जानकारी है।"
+);
+assert.equal([...formatCurrentNewsSummaryReply(unsupportedCauseDraft, fiveNewsSources, true).matchAll(/खबर \d+(?: \([^)]*\))?:/g)].length, 4, "an unsupported causal explanation must reject only that story");
+
+const tentativeSources = fiveNewsSources.map(item => ({ ...item }));
+tentativeSources[0] = {
+  ...tentativeSources[0],
+  title: "Delhi government considers artificial rain after Diwali",
+  snippet: "The government is considering cloud seeding after Diwali; no official announcement is expected before Diwali."
+};
+const tentativeDraft = fiveNewsDraft.replace(
+  "खबर 1: अलग समाचार घटना 1",
+  "खबर 1: दिल्ली सरकार ने कृत्रिम बारिश कराने का निर्णय लिया"
+);
+assert.equal([...formatCurrentNewsSummaryReply(tentativeDraft, tentativeSources, true).matchAll(/खबर \d+(?: \([^)]*\))?:/g)].length, 4, "a tentative source must be omitted without discarding other valid stories");
+const preservedTentativeDraft = fiveNewsDraft.replace(
+  "खबर 1: अलग समाचार घटना 1",
+  "खबर 1: दिल्ली सरकार कृत्रिम बारिश कराने पर विचार कर रही है"
+);
+assert.match(formatCurrentNewsSummaryReply(preservedTentativeDraft, tentativeSources, true), /खबर 1(?: \([^)]*\))?: दिल्ली सरकार कृत्रिम बारिश कराने पर विचार कर रही है/, "a summary that preserves tentative status should pass");
+
+const unsupportedGeopoliticsDraft = fiveNewsDraft.replace(
+  "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
+  "सार: पश्चिम एशिया में संघर्ष के समाधान की उम्मीद से बाजार में तेजी आई। यह दूसरी पुष्ट जानकारी है।"
+);
+assert.equal([...formatCurrentNewsSummaryReply(unsupportedGeopoliticsDraft, fiveNewsSources, true).matchAll(/खबर \d+(?: \([^)]*\))?:/g)].length, 4, "an unsupported geopolitical claim must reject only its own story");
+
+const midtermDraft = fiveNewsDraft.replace(
+  "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
+  "सार: अमेरिकी मध्यमार्गीय चुनावों के बाद बाजार में तेजी आई। यह दूसरी पुष्ट जानकारी है।"
+);
+assert.match(formatCurrentNewsSummaryReply(midtermDraft, fiveNewsSources, true), /अमेरिकी मध्यावधि चुनाव/, "midterm elections must use the correct Hindi translation");
+
+
+
+
+const ids = [...html.matchAll(/\bid=["']([^"']+)["']/g)].map(match => match[1]);
+const duplicates = ids.filter((id, index) => ids.indexOf(id) !== index);
+assert.deepEqual([...new Set(duplicates)], [], "HTML must not contain duplicate IDs");
+
+const requiredIds = [
+  "sidebar", "newChatBtn", "historyList", "settingsBtn", "menuBtn",
+  "topNewBtn", "moreBtn", "moreMenu", "chatArea", "welcome", "messages",
+  "status", "voicePanel", "voiceTitle", "voiceHint", "voiceStop",
+  "voiceWave", "voiceActiveNote", "webToggle", "chatForm", "attachBtn",
+  "messageInput", "micBtn", "sendBtn", "fileInput", "attachmentPreview",
+  "settingsDialog", "workerUrl", "assistantName", "findDialog", "findInput",
+  "findNext", "findResult"
+];
+for (const id of requiredIds) {
+  assert.ok(ids.includes(id), "Required interface element missing: #" + id);
+}
+
+assert.ok(html.includes('accept="image/*,.pdf,.txt,.docx,.csv,.md,.json"'), "attachment picker must expose photos and supported document formats without video");
+assert.ok(html.indexOf('id="attachmentPreview"') < html.indexOf('id="messageInput"'), "attachment tray must appear inside the composer above the message input");
+assert.ok(app.includes('preview.classList.toggle("hidden", !hasAttachments)'), "attachment preview must remove the hidden class when files are selected");
+assert.ok(app.includes("attachment-thumbnail"), "selected photos must show a local thumbnail");
+assert.ok(app.includes("URL.revokeObjectURL(objectUrl)"), "removed photo previews must release local object URLs");
+assert.doesNotMatch(html, /वीडियो|video\//i, "attachment picker must not expose video");
+assert.ok(html.includes("PDF, DOCX, TXT, CSV, MD और JSON"), "attachment instructions must list every supported document format");
+
+const scriptFiles = [...html.matchAll(/<script\b[^>]*\bsrc=["']([^"']+)["']/gi)]
+  .map(match => match[1])
+  .filter(src => !/^(https?:)?\/\//i.test(src));
+for (const src of scriptFiles) {
+  assert.ok(!src.includes(".."), "Local script must stay inside the site root: " + src);
+  await readFile(new URL(src, root), "utf8");
+}
+const sourceHelperStart = app.indexOf("function shouldShowSearchSources(data) {");
+const sourceHelperEnd = app.indexOf("\n}\n", sourceHelperStart);
+assert.ok(sourceHelperStart >= 0 && sourceHelperEnd > sourceHelperStart, "automatic-search source visibility helper must exist");
+const shouldShowSearchSources = new Function(
+  "safeSourceUrl",
+  app.slice(sourceHelperStart, sourceHelperEnd + 3) + "\nreturn shouldShowSearchSources;"
+)(value => {
+  try {
+    const url = new URL(String(value || ""));
+    return url.protocol === "https:" && url.hostname && !url.username && !url.password ? url.href : "";
+  } catch { return ""; }
+});
+assert.equal(shouldShowSearchSources({ searchAttempted: true, sources: [{ title: "Official notice", url: "https://example.gov.in/notice" }] }), true, "sources from automatic Worker search must be shown even when the web toggle is off");
+assert.equal(shouldShowSearchSources({ searchAttempted: false, sources: [{ title: "Unrequested", url: "https://example.com" }] }), false, "sources must not be shown when the Worker did not search");
+assert.equal(shouldShowSearchSources({ searchAttempted: true, sources: [] }), false, "empty search results must not create an empty source list");
+assert.equal(shouldShowSearchSources({ searchAttempted: true, reply: "खबर 1: भारत की खबर\\nप्रकाशक: example.com\\nमूल लिंक:", sources: [{ title: "India news", url: "https://example.com/india" }] }), true, "show source cards if inline news links are missing");
+assert.equal(shouldShowSearchSources({ searchAttempted: true, reply: "खबर 1: भारत की खबर\\nप्रकाशक: example.com\\nप्रकाशित: आज\\nमूल लिंक: https://example.com/india", sources: [{ title: "India news", url: "https://example.com/india" }] }), false, "avoid duplicate source cards when inline news links are present");
+const escapeStart = app.indexOf("function escapeHTML(value) {");
+const escapeEnd = app.indexOf("\n}\n", escapeStart);
+const safeUrlStart = app.indexOf("function safeSourceUrl(value) {");
+const safeUrlEnd = app.indexOf("\n}\n", safeUrlStart);
+const inlineStart = app.indexOf("function formatInline(text) {");
+const inlineEnd = app.indexOf("\n}\n", inlineStart);
+assert.ok(escapeStart >= 0 && safeUrlStart >= 0 && inlineStart >= 0, "safe link formatting helpers must exist");
+const formatInline = new Function(
+  app.slice(escapeStart, escapeEnd + 3) +
+  app.slice(safeUrlStart, safeUrlEnd + 3) +
+  app.slice(inlineStart, inlineEnd + 3) +
+  "\nreturn formatInline;"
+)();
+const renderedArticleLink = formatInline("मूल लिंक: https://example.com/article?x=1।");
+assert.match(renderedArticleLink, /<a href="https:\/\/example\.com\/article\?x=1"/, "plain HTTPS news URLs must become clickable links");
+assert.match(renderedArticleLink, /noopener noreferrer/, "external article links must use safe target attributes");
+assert.match(renderedArticleLink, /<\/a>।$/, "Hindi sentence punctuation must remain outside the clickable URL");
+assert.doesNotMatch(formatInline("लिंक: javascript:alert(1)"), /<a\s/i, "unsafe non-HTTPS URLs must never become links");
+const warningHelperStart = app.indexOf("function shouldShowSearchWarning(data) {");
+const warningHelperEnd = app.indexOf("\n}\n", warningHelperStart);
+assert.ok(warningHelperStart >= 0 && warningHelperEnd > warningHelperStart, "search warning visibility helper must exist");
+const shouldShowSearchWarning = new Function(app.slice(warningHelperStart, warningHelperEnd + 3) + "\nreturn shouldShowSearchWarning;")();
+assert.equal(shouldShowSearchWarning({ searchAttempted: true, searchWarning: "Exa से वास्तविक वेब परिणाम मिले।", sources: [{ title: "Verified", url: "https://example.com" }] }), false, "successful search must not show a warning");
+assert.equal(shouldShowSearchWarning({ searchAttempted: true, searchWarning: "Exa service unavailable", searchUnavailable: true, sources: [] }), true, "unavailable search must show its warning");
+assert.equal(shouldShowSearchWarning({ searchAttempted: true, searchWarning: "AI provider busy", providerBusy: true, sources: [{ title: "Real result", url: "https://example.com" }] }), true, "provider fallback must explain that a generated summary was unavailable");
+assert.equal(shouldShowSearchWarning({ searchAttempted: true, searchWarning: "No fresh articles", sources: [] }), true, "rejected or empty search results must explain why no sources are shown");
+assert.equal(shouldShowSearchWarning({ searchAttempted: false, searchWarning: "No search attempted", sources: [] }), false, "non-search replies must not show search warnings");
+const safeSourceStart = app.indexOf("function safeSourceUrl(value) {");
+const safeSourceEnd = app.indexOf("\n}\n", safeSourceStart);
+assert.ok(safeSourceStart >= 0 && safeSourceEnd > safeSourceStart, "safe source URL helper must exist");
+const safeSourceUrl = new Function("URL", app.slice(safeSourceStart, safeSourceEnd + 3) + "\nreturn safeSourceUrl;")(URL);
+assert.equal(safeSourceUrl("https://example.com/article#section"), "https://example.com/article", "HTTPS links should be normalized");
+assert.equal(safeSourceUrl("http://example.com/article"), "", "HTTP links must be rejected");
+assert.equal(safeSourceUrl(["java", "script:"].join("") + "alert(1)"), "", "non-web protocols must be rejected");
+assert.equal(safeSourceUrl("https://user:pass@example.com/"), "", "URLs containing credentials must be rejected");
+assert.equal(safeSourceUrl("not a URL"), "", "malformed source URLs must be rejected");
+assert.equal(safeSourceUrl("https://thehindu.com/news/article-xxxxxx"), "", "placeholder article IDs must be rejected");
+assert.equal(safeSourceUrl("https://example.com/placeholder/story"), "", "placeholder path segments must be rejected");
+assert.equal(safeSourceUrl("https://example.com/real-article-2026"), "https://example.com/real-article-2026", "realistic article paths must remain valid");
+const sanitizerStart = app.indexOf("function sanitizeSourceRecords(sources, limit = 8) {");
+const sanitizerEnd = app.indexOf("\n}\n", sanitizerStart);
+assert.ok(sanitizerStart >= 0 && sanitizerEnd > sanitizerStart, "source record sanitizer must exist");
+const sanitizeSourceRecords = new Function("URL", app.slice(safeSourceStart, sanitizerEnd + 3) + "\nreturn sanitizeSourceRecords;")(URL);
+const safeRecords = sanitizeSourceRecords([
+  { title: "First", url: "https://example.com/story#top" },
+  { title: "Duplicate", url: "https://example.com/story" },
+  { title: "Insecure", url: "http://example.org/story" },
+  { title: "", url: "https://example.net/story" },
+  null
+]);
+assert.equal(safeRecords.length, 1, "only unique titled HTTPS sources should remain");
+assert.equal(safeRecords[0].url, "https://example.com/story");
+
+assert.ok(app.includes("shouldShowSearchSources(data) ? filterSourcesForPrompt"), "assistant messages must display sources returned by automatic search");
+assert.ok(app.includes("if (shouldShowSearchWarning(data))"), "only meaningful search failures must be surfaced in status");
+const providerBusyStart = app.indexOf('if ((data.providerBusy === true || data.newsSummaryUnverified === true) &&');
+const providerBusyEnd = app.indexOf('    // Recover a known truncated news-fallback prefix', providerBusyStart);
+assert.ok(providerBusyStart >= 0 && providerBusyEnd > providerBusyStart, "provider-busy news fallback must exist");
+const providerBusyFallback = app.slice(providerBusyStart, providerBusyEnd);
+assert.match(providerBusyFallback, /आसान हिंदी शीर्षक और दो-वाक्यीय सार सत्यापित नहीं हो पाए/, "provider-busy fallback must clearly say the Hindi digest is unavailable");
+assert.doesNotMatch(providerBusyFallback, /source\.title/, "provider-busy fallback must not expose raw English headlines");
+assert.match(providerBusyFallback, /title: "मूल समाचार खोलें/, "provider-busy source links must use a Hindi label");
+assert.match(app, /data\.providerBusy !== true && data\.newsSummaryUnverified !== true && isCurrentNewsPrompt && !hasUsableInlineNewsUrl/, "unverified-news fallback must not append duplicate inline source links");
+
+
+const scriptPaths = scriptFiles.map(src => src.split("?")[0]);
+assert.ok(scriptPaths.indexOf("app.js") >= 0, "Main app script must be loaded");
+assert.ok(scriptPaths.indexOf("voice.js") > scriptPaths.indexOf("app.js"), "Voice integration must load after app.js");
+assert.match(html, /data-voice-action=["']start["']/, "Welcome voice action must be present");
+assert.match(app, /data-voice-action/, "Main app must wire the welcome voice action");
+assert.match(voice, /window\.SarathiVoice\.start = start/, "Voice start API must be exposed");
+assert.ok(voice.includes("let activeBrowserUtterance = null;"), "browser TTS must track the active utterance");
+assert.ok(voice.includes("if (activeBrowserUtterance !== utterance) return;"), "stale browser TTS callbacks must not restart microphone during a newer reply");
+assert.ok(voice.indexOf("activeBrowserUtterance = null;") < voice.indexOf("if (window.speechSynthesis) window.speechSynthesis.cancel();"), "stopping voice must invalidate pending browser TTS callbacks before cancellation");
+
+for (const selector of [".message-content", ".message-body", ".composer", ".send-btn", ".mic-btn", ".bottom-nav"]) {
+  assert.ok(css.includes(selector), "Required layout styling missing: " + selector);
+}
+
+const quizParserStart = app.indexOf("function parseSarathiQuiz(raw) {");
+const quizParserEnd = app.indexOf("\n}\n", quizParserStart);
+assert.ok(quizParserStart >= 0 && quizParserEnd > quizParserStart, "MCQ parser must exist");
+const parseSarathiQuiz = new Function(app.slice(quizParserStart, quizParserEnd + 3) + "\nreturn parseSarathiQuiz;")();
+const validQuiz = {
+  title: "अभ्यास",
+  questions: Array.from({ length: 3 }, (_, i) => ({
+    question: "प्रश्न " + (i + 1),
+    options: ["विकल्प A", "विकल्प B", "विकल्प C", "विकल्प D"],
+    answer: 1,
+    explanation: "कारण"
+  }))
+};
+assert.equal(parseSarathiQuiz(JSON.stringify(validQuiz)).questions.length, 3, "valid four-option MCQ questions should parse");
+assert.equal(parseSarathiQuiz("not JSON"), null, "invalid MCQ JSON must be rejected");
+assert.equal(parseSarathiQuiz(JSON.stringify({ ...validQuiz, questions: validQuiz.questions.slice(0, 2) })), null, "too few MCQ questions must be rejected");
+assert.equal(parseSarathiQuiz(JSON.stringify({ ...validQuiz, questions: validQuiz.questions.map((q, i) => i ? q : { ...q, answer: null }) })), null, "null answer must not be treated as option A");
+assert.equal(parseSarathiQuiz(JSON.stringify({ ...validQuiz, questions: validQuiz.questions.map((q, i) => i ? q : { ...q, options: ["A", "", "C", "D"] }) })), null, "empty MCQ options must be rejected");
+assert.equal(parseSarathiQuiz(JSON.stringify({ ...validQuiz, questions: validQuiz.questions.map((q, i) => i ? q : { ...q, answer: 4 }) })), null, "out-of-range MCQ answers must be rejected");
+
+const studyActions = [...html.matchAll(/data-study="([^"]+)"/g)].map(match => match[1]);
+assert.equal(studyActions.length, 14, "SARATHI LEARNING must expose all 14 study actions");
+assert.equal(new Set(studyActions).size, 14, "SARATHI LEARNING action IDs must be unique");
+const studySectionStart = app.indexOf("function runStudyAction(action) {");
+const studySectionEnd = app.indexOf("function bindEvents()", studySectionStart);
+assert.ok(studySectionStart >= 0 && studySectionEnd > studySectionStart, "study action handler and progress logic must exist");
+const studySection = app.slice(studySectionStart, studySectionEnd);
+for (const action of studyActions) {
+  assert.ok(studySection.includes(action + ":"), "study action must have a task prompt: " + action);
+}
+assert.ok(studySection.includes('addEventListener("input", saveProfile)'), "study topic must autosave while typing");
+assert.ok(studySection.includes('addEventListener("change", saveProfile)'), "study profile fields must save after editing");
+assert.ok(studySection.includes('progress.lastDate !== today'), "study progress must prevent duplicate daily session counts");
+assert.ok(studySection.includes('localStorage.removeItem(STUDY_PROGRESS_KEY)'), "study progress reset must clear the saved progress");
+assert.ok(studySection.includes("पहले एक प्रश्न पूछो"), "flashcards must be delivered one question at a time");
+assert.ok(studySection.includes("मेरा उत्तर आने पर सही उत्तर"), "flashcards must wait for the learner's response before revealing the answer");
+assert.ok(studySection.includes("उपलब्ध आधिकारिक पेपर के स्रोत बताओ"), "old-paper help must point to available official sources");
+assert.ok(studySection.includes("पेपर न मिले तो साफ कहो"), "old-paper help must not pretend an unavailable paper exists");
+assert.ok(app.includes('submit.disabled = quiz.questions.some((_, i) => !Number.isInteger(chosen[i]))'), "MCQ test must require every answer before submission");
+assert.ok(app.includes('quiz.score = quiz.questions.reduce'), "MCQ test must calculate a score from selected answers");
+assert.ok(app.includes('quiz.submitted = true'), "MCQ test must lock answers after submission");
+
+
+
+const sendMessageStart = app.indexOf("async function sendMessage(text) {");
+const sendMessageEnd = app.indexOf("\n}\n", sendMessageStart);
+assert.ok(sendMessageStart >= 0 && sendMessageEnd > sendMessageStart, "message sending flow must exist");
+const sendMessageSource = app.slice(sendMessageStart, sendMessageEnd + 3);
+assert.ok(sendMessageSource.includes("चुनी गई फाइलों से निकाला गया पाठ इंटरनेट के जरिए AI सेवा को भेजा जाएगा"), "selected file content must require explicit consent");
+assert.ok(sendMessageSource.indexOf("चुनी गई फाइलों से निकाला गया पाठ इंटरनेट के जरिए AI सेवा को भेजा जाएगा") < sendMessageSource.indexOf("extractAttachmentsText(state.attachments)"), "file content must not be extracted before consent");
+assert.ok(!sendMessageSource.includes("extractVideoFrames") && !sendMessageSource.includes("requestSarathiMediaUnderstanding"), "video analysis must remain removed");
+assert.doesNotMatch(sendMessageSource, /requestSarathiImage|\/api\/media\/image/, "chat sending must not upload photos to image generation");
+assert.ok(sendMessageSource.includes("asksForImageCreation") && sendMessageSource.includes("AI फोटो बनाना या एडिट करना अभी उपलब्ध नहीं है"), "image creation/edit requests must be answered locally as disabled");
+assert.ok(sendMessageSource.indexOf("क्या भेजना है?") < sendMessageSource.indexOf("extractAttachmentsText(state.attachments)"), "document text must not be extracted for sending before consent");
+const attachmentStart = app.indexOf("function addFiles(fileList) {");
+const attachmentEnd = app.indexOf("\n}\n", attachmentStart);
+assert.ok(attachmentStart >= 0 && attachmentEnd > attachmentStart, "attachment selection filter must exist");
+const attachmentSource = app.slice(attachmentStart, attachmentEnd + 3);
+for (const extension of ["pdf", "docx", "txt", "csv", "md", "json"]) {
+  assert.ok(attachmentSource.includes(extension), "attachment picker must allow ." + extension);
+}
+assert.ok(attachmentSource.includes('file.name.toLowerCase().endsWith(".pdf")'), "PDF files with a missing or generic MIME type must still be selectable by extension");
+assert.ok(attachmentSource.includes("/\\.(png|jpe?g|webp)$/i.test(file.name)"), "JPG/PNG/WEBP files with generic MIME types must still be selectable by extension");
+assert.ok(attachmentSource.includes("20 * 1024 * 1024"), "attachment picker must enforce the 20 MB per-file limit");
+assert.ok(attachmentSource.includes("const tooLarge = selected.filter"), "oversized files must be counted and explained");
+assert.ok(attachmentSource.includes("const unsupported = selected.filter"), "unsupported files must be counted and explained");
+assert.ok(attachmentSource.includes("const skippedByLimit = eligible.length - files.length"), "files beyond the five-file cap must be reported");
+assert.ok(attachmentSource.includes("20 MB से बड़ी होने के कारण नहीं जोड़ी गईं"), "the user must be told when a file exceeds 20 MB");
+assert.ok(attachmentSource.includes("अधिकतम 5 फाइलें"), "the user must be told when the attachment count limit is reached");
+
+const extractorStart = app.indexOf("async function extractOneFile(file) {");
+const extractorEnd = app.indexOf("\n}\n", extractorStart);
+assert.ok(extractorStart >= 0 && extractorEnd > extractorStart, "file text extraction function must exist");
+const extractorSource = app.slice(extractorStart, extractorEnd + 3);
+assert.ok(app.includes("function limitExtractedFileText(value)"), "file extraction must explicitly mark per-file text truncation");
+assert.ok(app.includes("delete window.__sarathiScriptPromises[src]"), "failed CDN script loads must be cleared so users can retry after network recovery");
+assert.ok(app.includes("script.remove()"), "failed external library script elements must be removed before retry");
+assert.ok(app.includes("PDF पढ़ने की लाइब्रेरी डाउनलोड नहीं हो सकी"), "PDF CDN failures must show a clear Hindi retry message");
+
+assert.ok(app.includes("केवल शुरुआती 8,500 अक्षर पढ़े गए"), "users must be told when a single file is truncated");
+assert.ok(app.includes("let limited = limitExtractedFileText(readablePages.join"), "PDF extraction must use the visible text truncation warning");
+assert.ok(app.includes("इस PDF के कुल "), "PDFs over the page limit must disclose that later pages were not read");
+assert.ok(app.includes("const pagesNeedingOcr = []"), "mixed PDFs must identify pages that need OCR even when other pages contain text");
+assert.ok(app.includes('const pageTexts = Array(pageLimit).fill("")'), "mixed PDF text and OCR results must be stored by page number");
+assert.ok(app.includes("pageTexts[pageNo - 1]"), "scanned PDF text must be restored to its original page position");
+assert.ok(app.includes("const readablePages = pageTexts.filter(Boolean)"), "PDF output must preserve original page order while omitting unreadable pages");
+assert.ok(app.includes("PDF पृष्ठ पढ़ने के लिए कैनवास उपलब्ध नहीं है।"), "PDF OCR must report unavailable canvas context instead of failing silently");
+assert.ok(app.includes("पृष्ठों से पढ़ने योग्य टेक्स्ट नहीं मिला।"), "empty or unreadable PDFs must return a clear notice");
+
+assert.ok(app.includes("pagesNeedingOcr.slice(0, ocrLimit)"), "OCR work on scanned PDF pages must remain bounded");
+assert.ok(app.includes("स्कैन/चित्र वाले पृष्ठ OCR की सीमा"), "users must be told when scanned PDF pages were not OCR-processed");
+
+
+assert.ok(app.includes("कुल 9,500 अक्षरों की सीमा"), "users must be told when combined attachment text is truncated");
+assert.ok(app.includes("आगे की फाइलें इस संदेश में शामिल नहीं हुईं"), "users must be told when later attachments are skipped due to text limits");
+assert.ok(app.includes("const combinedPrompt = prompt +"), "attachment content must be combined before the final request-length check");
+assert.ok(app.includes("अनुरोध की कुल लंबाई सीमा के कारण कुछ सामग्री शामिल नहीं हुई"), "users must be told if the final prompt limit removes attachment content");
+
+
+for (const extension of ["txt", "csv", "md", "json", "pdf", "docx"]) {
+  assert.ok(extractorSource.includes(extension), "file text extraction must support ." + extension);
+}
+assert.ok(extractorSource.includes("/\\.(png|jpe?g|webp)$/i.test(name)"), "OCR must recognize image files by extension when MIME type is generic");
+assert.ok(worker.includes('reply: "इस ऐप सारथी AI को manju manjeet ने बनाया है।"'), "creator questions must return the exact Sarathi maker attribution without asking the model");
+assert.ok(worker.includes("asksWhoMadeSarathi"), "creator question intent must be handled deterministically before model fallback");
+assert.ok(worker.includes("भरोसेमंद बहुभाषी सहायक"), "Sarathi must be configured as a multilingual assistant");
+assert.ok(worker.includes("उर्दू, বাংলা, தமிழ், తెలుగు"), "language instructions must cover supported non-Hindi languages");
+assert.ok(worker.includes("Roman Urdu"), "Roman-script language input must be identified by meaning, not assumed to be English");
+
+assert.ok(worker.includes('zeroCostMode: true'), "disabled media APIs must clearly identify zero-cost mode");
+assert.ok(worker.includes('"/api/media/image"') && worker.includes('"/api/media/understand"'), "media API routes must be explicit and auditable");
+assert.ok(worker.includes("if (!env.EXA_API_KEY)"), "web search must report a missing configured Exa key rather than silently assuming search is available");
+
+console.log("WEB SMOKE SELF-TEST: " + requiredIds.length + " required IDs, duplicate-ID check, local scripts, voice wiring and core styles passed");
+
   "a false claim that the 2028 Olympics are in Athens must be rejected");
 assert.equal(hasKnownContradictedNewsFact("यह योजना 2028 लॉस एंजिल्स ओलंपिक के खिलाड़ियों को सहायता देगी।"), false,
   "the correct 2028 Olympic host city must not be rejected");
