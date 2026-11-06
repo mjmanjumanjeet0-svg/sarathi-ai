@@ -18,6 +18,8 @@ assert.match(source, /Prefer headline evidence; snippets may mention unrelated t
 assert.match(source, /only the headline may assign a category/, "five-category classification must not fall back to incidental snippet keywords");
 assert.match(source, /air quality\\|air pollution\\|pollution\\|weather\\|forecast\\|वायु गुणवत्ता\\|वायु प्रदूषण\\|प्रदूषण\\|मौसम\\|पूर्वानुमान/, "AQI and weather headlines must not be misclassified as science");
 assert.match(source, /stocks\? in news\\|stocks\? to watch\\|shares\? in focus\\|pre-market\\|market watch/, "generic stock watchlists must not fill the economy category");
+assert.match(source, /const requireTwoSentenceNews = \/2\\s\*/, "two-sentence request detector must use real whitespace matching");
+assert.match(source, /ठीक दो छोटे, सीधे हिंदी वाक्य/, "news prompt must request two sentences when the user explicitly asks for them");
 const categoryStart = source.indexOf("function classifyRequestedNewsCategory(item) {");
 const categoryEnd = source.indexOf("\nfunction selectNewsForRequestedCategories", categoryStart);
 assert.ok(categoryStart >= 0 && categoryEnd > categoryStart, "news category classifier must exist");
@@ -31,6 +33,7 @@ assert.equal(classifyRequestedNewsCategory({ title: "IISc team reports a breakth
 assert.equal(classifyRequestedNewsCategory({ title: "RBI keeps repo rate unchanged after policy review" }), "अर्थव्यवस्था", "an RBI rate decision must qualify as economy");
 assert.equal(classifyRequestedNewsCategory({ title: "Supreme Court orders release in unlawful detention case" }), "अदालत", "a Supreme Court ruling must qualify as court");
 assert.equal(classifyRequestedNewsCategory({ title: "Home Ministry announces new visa policy" }), "सरकार", "a ministry policy announcement must qualify as government");
+assert.equal(classifyRequestedNewsCategory({ title: "PM Modi asks new NITI Aayog team to craft ideas to improve lives of India’s poorest" }), "सरकार", "NITI Aayog policy direction must be classified as government, not economy");
 assert.equal(classifyRequestedNewsCategory({ title: "Indian athlete Parvez Khan faces doping ban" }), "खेल", "an athlete doping story must qualify as sports");
 assert.equal(classifyRequestedNewsCategory({ title: "Daily roundup of national headlines", snippet: "Sports officials and athletes discuss the latest tournament" }), "", "incidental sports terms in a snippet must not fill the sports category");
 
