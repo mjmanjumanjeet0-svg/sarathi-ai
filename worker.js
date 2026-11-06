@@ -1225,14 +1225,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
   // metadata; source title/snippet remain the authoritative category evidence.
   const requiredCategories = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
   if (requireFiveCategories) {
-    const byCategory = new Map();
-    for (const item of items) {
-      const category = classifyRequestedNewsCategory(item);
-      if (category && requiredCategories.includes(category) && !byCategory.has(category)) {
-        byCategory.set(category, { ...item, requestedCategory: category });
-      }
-    }
-    items = requiredCategories.map(category => byCategory.get(category)).filter(Boolean);
+    items = selectLatestFiveCategoryNewsItems(items);
     if (items.length !== 5) {
       console.warn("Five-category news source selection incomplete", JSON.stringify({
         expected: requiredCategories,
@@ -1382,11 +1375,8 @@ function buildCurrentNewsHeadlineReply(results, query = "") {
   if (!items.length) return "आज की ताज़ा खबरों के लिए तारीख़-जाँचे हुए भरोसेमंद समाचार परिणाम नहीं मिले। कृपया कुछ देर बाद फिर कोशिश करें।";
   if (isFiveCategoryNewsQuery(query)) {
     const required = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
-    const byCategory = new Map();
-    for (const item of items) {
-      const category = classifyRequestedNewsCategory(item);
-      if (category && required.includes(category) && !byCategory.has(category)) byCategory.set(category, item);
-    }
+    const selected = selectLatestFiveCategoryNewsItems(items);
+    const byCategory = new Map(selected.map(item => [item.requestedCategory, item]));
     const missing = required.filter(category => !byCategory.has(category));
     const lines = required.filter(category => byCategory.has(category)).map(category => {
       const item = byCategory.get(category);
@@ -1406,19 +1396,26 @@ function buildCurrentNewsHeadlineReply(results, query = "") {
   if (items.length < 5) return "आज केवल " + items.length + " अलग-अलग, तारीख़-जाँचे समाचार स्रोत मिले। पाँच अलग खबरों की सूची पूरी करने के लिए पर्याप्त स्रोत नहीं मिले; इसलिए अपुष्ट खबरें नहीं जोड़ी गईं।";
   return "आज 5 तारीख़-जाँचे समाचार परिणाम मिले, लेकिन हिंदी सार स्रोत-जाँच में सफल नहीं हुआ। इसलिए अपुष्ट सार नहीं दिया जा रहा।";
 }
-function buildCompactNewsSourceContext(results, requireFiveCategories = false) {
-  let sourceItems = Array.isArray(results) ? results : [];
-  if (requireFiveCategories) {
-    const requiredCategories = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
-    const selected = new Map();
-    for (const item of sourceItems) {
-      const category = classifyRequestedNewsCategory(item);
-      if (category && requiredCategories.includes(category) && !selected.has(category)) {
-        selected.set(category, { ...item, requestedCategory: category });
-      }
+function selectLatestFiveCategoryNewsItems(results) {
+  const requiredCategories = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
+  const byCategory = new Map();
+  for (const item of dedupeNewsResults(Array.isArray(results) ? results : [])) {
+    const category = classifyRequestedNewsCategory(item);
+    if (!category || !requiredCategories.includes(category)) continue;
+    const publishedAt = Date.parse(item?.publishedAt || "");
+    if (!Number.isFinite(publishedAt)) continue;
+    const previous = byCategory.get(category);
+    if (!previous || publishedAt > Date.parse(previous.publishedAt || "")) {
+      byCategory.set(category, { ...item, requestedCategory: category });
     }
-    sourceItems = requiredCategories.map(category => selected.get(category)).filter(Boolean);
   }
+  return requiredCategories.map(category => byCategory.get(category)).filter(Boolean);
+}
+
+function buildCompactNewsSourceContext(results, requireFiveCategories = false) {
+  let sourceItems = requireFiveCategories
+    ? selectLatestFiveCategoryNewsItems(results)
+    : dedupeNewsResults(Array.isArray(results) ? results : []);
   return sourceItems.slice(0, 5).map((item, index) => {
     const title = cleanText(item?.title || "").slice(0, 240);
     const snippet = cleanText(item?.snippet || "").slice(0, 900);
