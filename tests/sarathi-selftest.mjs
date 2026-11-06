@@ -56,7 +56,7 @@ assert.ok(courtHelperStart >= 0 && courtHelperEnd > courtHelperStart, "focused c
 const courtHelpers = new Function("isFiveCategoryNewsQuery", "cleanText",
   source.slice(courtHelperStart, courtHelperEnd) + "\nreturn { isSpecificCourtNewsQuery, isSubstantiveCourtNewsItem };")(
     () => false,
-    value => String(value || "").replace(/\\s+/g, " ").trim()
+    value => String(value || "").replace(/\s+/g, " ").trim()
   );
 assert.equal(courtHelpers.isSpecificCourtNewsQuery("पिछले 48 घंटों में भारत के सुप्रीम कोर्ट की खबर बताओ"), true,
   "a focused recent Supreme Court query must use the court-only route");
