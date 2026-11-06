@@ -2652,6 +2652,9 @@ export default {
       webSearch: searchResults.length > 0,
       searchAttempted: wantsSearch,
       searchWarning,
+      // Distinguish failed Hindi-summary validation from an actual provider outage.
+      // The client uses this flag to suppress raw English source headlines.
+      newsSummaryUnverified: isCurrentNewsReply && !formattedNewsReply,
       sources: searchResults.map(item => ({
         title: item.title,
         url: item.url,
