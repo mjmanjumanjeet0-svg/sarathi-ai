@@ -2469,7 +2469,13 @@ export default {
         : status >= 500
           ? "AI सेवा अस्थायी रूप से उपलब्ध नहीं है। थोड़ी देर बाद फिर कोशिश करें।"
           : `AI सेवा अनुरोध स्वीकार नहीं कर सकी (HTTP ${status})।`;
-      console.error("Groq request failed", status);
+      let providerErrorDetail = "";
+      try {
+        // Log only Groq's error response (never request headers, API keys, or user content)
+        // so invalid-parameter HTTP 400 responses can be diagnosed safely.
+        providerErrorDetail = (await groqResponse.clone().text()).slice(0, 1200);
+      } catch {}
+      console.error("Groq request failed", status, providerErrorDetail);
       return jsonResponse({
         success: false,
         error: message,
