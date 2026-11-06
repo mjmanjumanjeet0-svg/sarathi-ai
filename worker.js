@@ -1413,7 +1413,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     // not erase other stories whose Hindi summaries pass every source check.
     if (!entry?.headline || !entry?.summary) { rejectCounts.missingEntry++; continue; }
     if (hasUnsupportedNewsHeadlineMix(entry.headline, items[index]?.title || "", items[index]?.snippet || "")) { rejectCounts.headlineGrounding++; continue; }
-    if (hasUntranslatedEnglishHeadline(entry.headline, (items[index]?.title || \"\") + \" \" + (items[index]?.snippet || \"\"))) {
+    if (hasUntranslatedEnglishHeadline(entry.headline, (items[index]?.title || "") + " " + (items[index]?.snippet || ""))) {
       rejectCounts.untranslatedEnglishHeadline++;
       rejectedStoryDetails.push({
         reason: "untranslatedEnglishHeadline",
