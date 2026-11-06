@@ -1177,7 +1177,9 @@ function hasIncorrectOverallAqiCategory(text) {
 }
 
 function normalizeNewsSummaryRepairText(rawReply) {
-  const raw = String(rawReply || "").trim().replace(/^\x60{3}(?:json)?\s*/i, "").replace(/\s*\x60{3}$/i, "");
+  const raw = String(rawReply || "").trim()
+    .replace(/^\x60{3}(?:json)?\s*/i, "")
+    .replace(/\s*\x60{3}$/i, "");
   const candidates = [raw];
   const arrayStart = raw.indexOf("[");
   const arrayEnd = raw.lastIndexOf("]");
@@ -1185,21 +1187,41 @@ function normalizeNewsSummaryRepairText(rawReply) {
   const objectStart = raw.indexOf("{");
   const objectEnd = raw.lastIndexOf("}");
   if (objectStart >= 0 && objectEnd > objectStart) candidates.push(raw.slice(objectStart, objectEnd + 1));
+  const findEntries = (value, depth = 0) => {
+    if (depth > 4 || !value || typeof value !== "object") return [];
+    if (Array.isArray(value)) {
+      if (value.some(item => item && typeof item === "object" &&
+          (item.headline || item.title || item.summary || item.description || item.summaryHindi))) return value;
+      for (const item of value) {
+        const nested = findEntries(item, depth + 1);
+        if (nested.length) return nested;
+      }
+      return [];
+    }
+    for (const key of ["stories", "news", "items", "articles", "results", "data", "output", "response"]) {
+      if (value[key] !== undefined) {
+        const nested = findEntries(value[key], depth + 1);
+        if (nested.length) return nested;
+      }
+    }
+    return [];
+  };
+  const asText = value => Array.isArray(value)
+    ? value.map(part => typeof part === "string" ? part : (part?.text || part?.content || "")).filter(Boolean).join(" ")
+    : (typeof value === "string" ? value : (value && typeof value === "object" ? (value.text || value.content || "") : ""));
   for (const candidate of candidates) {
     try {
-      const parsed = JSON.parse(candidate);
-      const entries = Array.isArray(parsed) ? parsed :
-        (Array.isArray(parsed?.stories) ? parsed.stories :
-        Array.isArray(parsed?.news) ? parsed.news :
-        Array.isArray(parsed?.items) ? parsed.items : []);
+      const entries = findEntries(JSON.parse(candidate));
       if (!entries.length) continue;
       const lines = [];
       entries.slice(0, 5).forEach((entry, index) => {
-        const number = Number(entry?.number || entry?.index || index + 1);
-        const headline = cleanText(entry?.headline || entry?.title || "");
-        const summary = cleanText(entry?.summary || entry?.description || "");
+        const rawNumber = entry?.number ?? entry?.index ?? entry?.id;
+        const number = rawNumber === undefined || rawNumber === null || rawNumber === "" ? index + 1 : Number(rawNumber);
+        const headline = cleanText(asText(entry?.headline || entry?.title || entry?.हेडलाइन || ""));
+        const summary = cleanText(asText(entry?.summary || entry?.summaryHindi || entry?.description || entry?.सार || ""));
         if (Number.isInteger(number) && number >= 1 && number <= 5 && headline && summary) {
-          lines.push("खबर " + number + ": " + headline, "सार: " + summary);
+          const category = cleanText(asText(entry?.category || entry?.श्रेणी || ""));
+          lines.push("खबर " + number + (category ? " (" + category + ")" : "") + ": " + headline, "सार: " + summary);
         }
       });
       if (lines.length) return lines.join("\n");
