@@ -69,6 +69,11 @@ assert.deepEqual(fiveCategorySelection.map(item => item.url),
 
 assert.ok((source.match(/const category = classifyRequestedNewsCategory\(item\);/g) || []).length >= 2, "final news selection and fallback must reclassify the actual headline instead of trusting stale category metadata");
 assert.match(source, /formatCurrentNewsSummaryReply\(normalizeNewsSummaryRepairText\(rawReply\), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery\(userText\)\)/, "the first news-summary response must normalize JSON before validation");
+assert.match(source, /function hasUntranslatedEnglishHeadline\\(text\\)/, "news validation must reject untranslated English headlines");
+assert.match(source, /untranslatedEnglishHeadline/, "news diagnostics must report untranslated English headlines");
+assert.match(source, /categoryMismatch/, "five-category news validation must reject incorrect or missing category labels");
+assert.match(source, /questions|raises doubts|questions the norm/, "court news prompt must distinguish questioning a norm from a final ruling");
+assert.match(source, /आगे रहने के लिए आवश्यक वीज़ा/, "immigration prompt must distinguish entry rules from continued-stay visa requirements");
 assert.match(source, /पाँच-श्रेणी समाचार जाँच पूरी नहीं हुई/, "five-category fallback must identify incomplete category coverage rather than claiming all summaries failed");
 assert.ok(source.includes("वाक्य(?:ों)?"), "news intent detector must recognize Hindi wording दो वाक्यों में");
 assert.match(source, /upsc\\s\*key|upsc-\[ \\]current-\[ \\]affairs|current affairs news/, "general news filtering must exclude UPSC exam-preparation explainers");
