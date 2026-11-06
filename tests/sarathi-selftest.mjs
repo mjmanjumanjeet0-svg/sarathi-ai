@@ -18,7 +18,7 @@ assert.match(source, /Prefer headline evidence; snippets may mention unrelated t
 assert.match(source, /air quality\\|air pollution\\|pollution\\|weather\\|forecast\\|वायु गुणवत्ता\\|वायु प्रदूषण\\|प्रदूषण\\|मौसम\\|पूर्वानुमान/, "AQI and weather headlines must not be misclassified as science");
 assert.match(source, /stocks\? in news\\|stocks\? to watch\\|shares\? in focus\\|pre-market\\|market watch/, "generic stock watchlists must not fill the economy category");
 const categoryStart = source.indexOf("function classifyRequestedNewsCategory(item) {");
-const categoryEnd = source.indexOf("\\nfunction selectNewsForRequestedCategories", categoryStart);
+const categoryEnd = source.indexOf("function selectNewsForRequestedCategories", categoryStart);
 assert.ok(categoryStart >= 0 && categoryEnd > categoryStart, "news category classifier must exist");
 const cleanTextForCategoryTest = value => String(value || "").replace(/<[^>]*>/g, " ").replace(/\\s+/g, " ").trim();
 const classifyRequestedNewsCategory = new Function("cleanText", source.slice(categoryStart, categoryEnd) + "\\nreturn classifyRequestedNewsCategory;")(cleanTextForCategoryTest);
