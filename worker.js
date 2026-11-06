@@ -1069,9 +1069,9 @@ function classifyRequestedNewsCategory(item) {
     ["अर्थव्यवस्था", /\b(?:economy|economic|gdp|inflation|rbi|reserve bank|stock market|sensex|nifty|rupee|fiscal|trade deficit|exports?|imports?|budget|interest rate|banking|manufacturing|unemployment)\b|अर्थव्यवस्था|आर्थिक|जीडीपी|महंगाई|मुद्रास्फीति|आरबीआई|रिजर्व बैंक|शेयर बाजार|सेंसेक्स|निफ्टी|रुपया|निर्यात|आयात|बजट|ब्याज दर|बैंकिंग|बेरोजगारी/i],
     ["सरकार", /\b(?:government|cabinet|minister|ministry|parliament|lok sabha|rajya sabha|prime minister|policy|bill|ordinance|scheme|election commission|governor)\b|सरकार|मंत्रिमंडल|कैबिनेट|मंत्री|मंत्रालय|संसद|लोकसभा|राज्यसभा|प्रधानमंत्री|नीति|विधेयक|अध्यादेश|योजना|निर्वाचन आयोग|राज्यपाल/i]
   ];
-  return rules.find(([, re]) => re.test(title))?.[0]
-    || rules.find(([, re]) => re.test(snippet))?.[0]
-    || "";
+  // In the strict five-category digest, only the headline may assign a category.
+  // A snippet can mention unrelated topics and must never fill a missing category.
+  return rules.find(([, re]) => re.test(title))?.[0] || "";
 }
 function selectNewsForRequestedCategories(results, query) {
   if (!isFiveCategoryNewsQuery(query)) return results;
