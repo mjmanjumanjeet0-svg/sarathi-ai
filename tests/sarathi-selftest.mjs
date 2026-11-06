@@ -46,6 +46,7 @@ assert.equal(classifyRequestedNewsCategory({ title: "Delhi's AQI ‘Very Poor’
 assert.equal(classifyRequestedNewsCategory({ title: "Stocks in news: Bharti Airtel, LIC, Titan, ONGC and other shares" }), "", "generic stock watchlist must not fill economy category");
 assert.equal(classifyRequestedNewsCategory({ title: "ISRO launches new earth observation satellite" }), "विज्ञान", "a genuine ISRO satellite launch must qualify as science");
 assert.equal(classifyRequestedNewsCategory({ title: "CSIR researchers develop a new low-cost water purification material" }), "विज्ञान", "Indian CSIR research headlines must qualify as science");
+assert.equal(classifyRequestedNewsCategory({ title: "Joint CSIR-UGC NET December 2026: NTA records 2.36 lakh registrations as application deadline extended" }), "", "CSIR-UGC NET exam registration notices must not fill the science category");
 assert.equal(classifyRequestedNewsCategory({ title: "IISc team reports a breakthrough in quantum materials research" }), "विज्ञान", "Indian scientific institution and research headlines must qualify as science");
 assert.equal(classifyRequestedNewsCategory({ title: "RBI keeps repo rate unchanged after policy review" }), "अर्थव्यवस्था", "an RBI rate decision must qualify as economy");
 assert.equal(classifyRequestedNewsCategory({ title: "Supreme Court orders release in unlawful detention case" }), "अदालत", "a Supreme Court ruling must qualify as court");
