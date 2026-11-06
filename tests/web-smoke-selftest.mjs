@@ -379,14 +379,14 @@ assert.equal(safeRecords[0].url, "https://example.com/story");
 
 assert.ok(app.includes("shouldShowSearchSources(data) ? filterSourcesForPrompt"), "assistant messages must display sources returned by automatic search");
 assert.ok(app.includes("if (shouldShowSearchWarning(data))"), "only meaningful search failures must be surfaced in status");
-const providerBusyStart = app.indexOf('if (data.providerBusy === true');
+const providerBusyStart = app.indexOf('if ((data.providerBusy === true || data.newsSummaryUnverified === true) &&');
 const providerBusyEnd = app.indexOf('    // Recover a known truncated news-fallback prefix', providerBusyStart);
 assert.ok(providerBusyStart >= 0 && providerBusyEnd > providerBusyStart, "provider-busy news fallback must exist");
 const providerBusyFallback = app.slice(providerBusyStart, providerBusyEnd);
 assert.match(providerBusyFallback, /आसान हिंदी शीर्षक और दो-वाक्यीय सार सत्यापित नहीं हो पाए/, "provider-busy fallback must clearly say the Hindi digest is unavailable");
 assert.doesNotMatch(providerBusyFallback, /source\.title/, "provider-busy fallback must not expose raw English headlines");
 assert.match(providerBusyFallback, /title: "मूल समाचार खोलें/, "provider-busy source links must use a Hindi label");
-assert.match(app, /data\.providerBusy !== true && isCurrentNewsPrompt && !hasUsableInlineNewsUrl/, "provider-busy fallback must not append duplicate inline source links");
+assert.match(app, /data\.providerBusy !== true && data\.newsSummaryUnverified !== true && isCurrentNewsPrompt && !hasUsableInlineNewsUrl/, "unverified-news fallback must not append duplicate inline source links");
 
 
 const scriptPaths = scriptFiles.map(src => src.split("?")[0]);
