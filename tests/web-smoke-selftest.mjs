@@ -18,7 +18,7 @@ const metalResults = [
 ];
 assert.deepEqual(filterRelevantSearchResults("gold 22K and silver price", metalResults).map(item => item.title), ["24K gold rate today", "Silver price today"], "combined gold and silver searches must retain both metal result types and exclude unrelated results");
 
-const numericGuardStart = worker.indexOf("function hasUnsupportedNumericClaim(generatedText, sourceEvidence) {");
+const numericGuardStart = worker.indexOf("function hasUnsupportedNumericClaim(generatedText, sourceEvidence, returnDetails = false) {");
 const numericGuardEnd = worker.indexOf("\n}\n", numericGuardStart);
 assert.ok(numericGuardStart >= 0 && numericGuardEnd > numericGuardStart, "news numeric-claim guard must exist");
 const hasUnsupportedNumericClaim = new Function(worker.slice(numericGuardStart, numericGuardEnd + 3) + "\nreturn hasUnsupportedNumericClaim;")();
