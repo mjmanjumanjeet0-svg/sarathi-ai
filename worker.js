@@ -1412,7 +1412,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
       }).slice(0, 2);
     const corroborationText = corroborators.length
       ? "\nअतिरिक्त प्रकाशक रिपोर्ट: " + corroborators.map(source =>
-          (source.publisher || new URL(source.url).hostname) + " — " + source.title +
+          (source.publisher || new URL(source.url).hostname) + " — मूल रिपोर्ट खोलें" +
           " (" + formatNewsPublishedAt(source.publishedAt) + ")\nलिंक: " + source.url
         ).join("\n")
       : "";
