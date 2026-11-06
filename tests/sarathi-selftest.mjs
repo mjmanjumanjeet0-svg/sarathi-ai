@@ -15,6 +15,7 @@ assert.equal(hasUnsupportedNumericClaim("दोनों पक्षों न�
 assert.equal(hasUnsupportedNumericClaim("दो पक्षों ने बयान दिए।", "पक्षों ने बयान दिए।"), true, "standalone unsupported Hindi number words must still be rejected");
 assert.match(source, /स्रोत में न दिया कारण.*जिम्मेदार व्यक्ति/, "news prompt must forbid invented causes and responsibility");
 assert.match(source, /Prefer headline evidence; snippets may mention unrelated topics incidentally/, "news categories must prioritize headline evidence over incidental snippet mentions");
+assert.match(source, /only the headline may assign a category/, "five-category classification must not fall back to incidental snippet keywords");
 assert.match(source, /air quality\\|air pollution\\|pollution\\|weather\\|forecast\\|वायु गुणवत्ता\\|वायु प्रदूषण\\|प्रदूषण\\|मौसम\\|पूर्वानुमान/, "AQI and weather headlines must not be misclassified as science");
 assert.match(source, /stocks\? in news\\|stocks\? to watch\\|shares\? in focus\\|pre-market\\|market watch/, "generic stock watchlists must not fill the economy category");
 const categoryStart = source.indexOf("function classifyRequestedNewsCategory(item) {");
@@ -29,6 +30,7 @@ assert.equal(classifyRequestedNewsCategory({ title: "RBI keeps repo rate unchang
 assert.equal(classifyRequestedNewsCategory({ title: "Supreme Court orders release in unlawful detention case" }), "अदालत", "a Supreme Court ruling must qualify as court");
 assert.equal(classifyRequestedNewsCategory({ title: "Home Ministry announces new visa policy" }), "सरकार", "a ministry policy announcement must qualify as government");
 assert.equal(classifyRequestedNewsCategory({ title: "Indian athlete Parvez Khan faces doping ban" }), "खेल", "an athlete doping story must qualify as sports");
+assert.equal(classifyRequestedNewsCategory({ title: "Election Commission updates electoral roll schedule", snippet: "Sports officials and athletes discuss the latest tournament" }), "", "incidental sports terms in a snippet must not fill the sports category");
 
 assert.ok((source.match(/const category = classifyRequestedNewsCategory\(item\);/g) || []).length >= 2, "final news selection and fallback must reclassify the actual headline instead of trusting stale category metadata");
 assert.match(source, /पाँच-श्रेणी समाचार जाँच पूरी नहीं हुई/, "five-category fallback must identify incomplete category coverage rather than claiming all summaries failed");
