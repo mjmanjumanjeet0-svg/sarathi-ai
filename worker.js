@@ -1077,6 +1077,9 @@ function classifyRequestedNewsCategory(item) {
   const snippet = cleanText(item?.snippet || "").toLocaleLowerCase("hi-IN");
   // NITI Aayog announcements and PM-directed policy work belong in the government slot, not the economy slot merely because poverty/development is mentioned.
   if (/(?:niti\s*aayog|नीति\s*आयोग)/i.test(title)) return "सरकार";
+  // Exam notices and application deadlines are education updates, not science reporting.
+  // CSIR alone must not classify a CSIR-UGC NET registration story as a scientific development.
+  if (/(?:\b(?:net|ugc|nta)\b|परीक्षा|आवेदन|पंजीकरण|रजिस्ट्रेशन|अंतिम तिथि|डेडलाइन|admit card|application deadline|registrations?)/i.test(title)) return "";
   // Environmental monitoring and weather forecasts are not science stories
   // merely because their snippets mention scientists, models or research.
   // A science slot needs an actual research, discovery, mission or technology event.
