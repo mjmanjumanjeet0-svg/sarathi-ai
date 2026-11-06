@@ -51,11 +51,10 @@ assert.equal(classifyRequestedNewsCategory({ title: "IISc team reports a breakth
 assert.equal(classifyRequestedNewsCategory({ title: "RBI keeps repo rate unchanged after policy review" }), "अर्थव्यवस्था", "an RBI rate decision must qualify as economy");
 assert.equal(classifyRequestedNewsCategory({ title: "Supreme Court orders release in unlawful detention case" }), "अदालत", "a Supreme Court ruling must qualify as court");
 const courtHelperStart = source.indexOf("function isSpecificCourtNewsQuery(text) {");
-const courtHelperEnd = source.indexOf("\nfunction isFiveCategoryNewsQuery", courtHelperStart);
+const courtHelperEnd = source.indexOf("\nfunction classifyRequestedNewsCategory", courtHelperStart);
 assert.ok(courtHelperStart >= 0 && courtHelperEnd > courtHelperStart, "focused court-news query helpers must exist");
-const courtHelpers = new Function("isFiveCategoryNewsQuery", "cleanText",
+const courtHelpers = new Function("cleanText",
   source.slice(courtHelperStart, courtHelperEnd) + "\nreturn { isSpecificCourtNewsQuery, isSubstantiveCourtNewsItem };")(
-    () => false,
     value => String(value || "").replace(/\s+/g, " ").trim()
   );
 assert.equal(courtHelpers.isSpecificCourtNewsQuery("पिछले 48 घंटों में भारत के सुप्रीम कोर्ट की खबर बताओ"), true,
