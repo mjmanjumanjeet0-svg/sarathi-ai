@@ -1150,7 +1150,7 @@ function hasUnsupportedNumericClaim(generatedText, sourceEvidence, returnDetails
   const normalize = value => String(value || "")
     .replace(/[०-९]/g, digit => String("०१२३४५६७८९".indexOf(digit)))
     .replace(/\b(seventy-five|zero|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|lakh|crore)\b/gi, word => englishNumbers[word.toLowerCase()] || word)
-    .replace(/(?<![\\p{L}\\p{M}])(?:शून्य|दो|तीन|चार|पाँच|पांच|छह|छः|सात|आठ|नौ|दस|ग्यारह|बारह|पंद्रह|बीस|पच्चीस|तीस|चालीस|पचास|साठ|सत्तर|पचहत्तर|अस्सी|नब्बे|सौ|हजार|लाख|करोड़)(?![\\p{L}\\p{M}])/gu, word => hindiNumbers[word] || word);
+    .replace(/(?<![\p{L}\p{M}])(?:शून्य|दो|तीन|चार|पाँच|पांच|छह|छः|सात|आठ|नौ|दस|ग्यारह|बारह|पंद्रह|बीस|पच्चीस|तीस|चालीस|पचास|साठ|सत्तर|पचहत्तर|अस्सी|नब्बे|सौ|हजार|लाख|करोड़)(?![\p{L}\p{M}])/gu, word => hindiNumbers[word] || word);
   // Treat thousands separators consistently: 14,500 and 14500 are the same value.
   const numericTokens = value => normalize(value)
     .replace(/(?<=\d),(?=\d{3}(?:\D|$))/g, "")
