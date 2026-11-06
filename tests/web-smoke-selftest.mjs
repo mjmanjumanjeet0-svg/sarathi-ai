@@ -116,7 +116,7 @@ const wrappedJsonNews = normalizeNewsSummaryRepairText(JSON.stringify({
     summary: ["यह पहली पुष्ट जानकारी है।", "यह दूसरी पुष्ट जानकारी है।"]
   })) }
 }));
-assert.equal([...formatCurrentNewsSummaryReply(wrappedJsonNews, fiveNewsSources, true, true).matchAll(/खबर (\\d+)(?: \\([^)]*\\))?:/g)].length, 5, "nested JSON envelopes and sentence-array summaries must normalize into all five checked stories");
+assert.equal([...formatCurrentNewsSummaryReply(wrappedJsonNews, fiveNewsSources, true, true).matchAll(/खबर [1-5](?: \([^)]*\))?:/g)].length, 5, "nested JSON envelopes and sentence-array summaries must normalize into all five checked stories");
 assert.match(completeFiveNewsReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "five-category request must return all five stories only when all five summaries pass");
 const splitHeadlineDraft = fiveNewsDraft.replace(/खबर ([1-5]): (.+)\\nसार:/g, "खबर $1\\nशीर्षक: $2\\nसार:");
 const splitHeadlineReply = formatCurrentNewsSummaryReply(splitHeadlineDraft, fiveNewsSources, true, true);
