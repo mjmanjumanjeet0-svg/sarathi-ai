@@ -188,7 +188,7 @@ const olympicsNewsSource = {
   snippet: "The scheme supports athletes preparing for the 2028 Olympics and 2026 Asian Games."
 };
 const wrongOlympicsCityReply = formatCurrentNewsSummaryReply(
-  "खबर 1 (खेल): खिलाड़ियों को ओलंपिक छात्रवृत्ति\\nसार: यह योजना 2028 एथेंस ओलंपिक के खिलाड़ियों को सहायता देगी। खिलाड़ियों को प्रशिक्षण सहायता मिलेगी।",
+  "खबर 1 (खेल): खिलाड़ियों को ओलंपिक छात्रवृत्ति\nसार: यह योजना 2028 एथेंस ओलंपिक के खिलाड़ियों को सहायता देगी। खिलाड़ियों को प्रशिक्षण सहायता मिलेगी।",
   [olympicsNewsSource], true, true
 );
 assert.doesNotMatch(wrongOlympicsCityReply, /एथेंस|Athens/i,
