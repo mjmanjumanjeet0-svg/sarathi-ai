@@ -1058,7 +1058,7 @@ function classifyRequestedNewsCategory(item) {
   // Environmental monitoring and weather forecasts are not science stories
   // merely because their snippets mention scientists, models or research.
   // A science slot needs an actual research, discovery, mission or technology event.
-  if (/(?:\\bAQI\\b|air quality|air pollution|pollution|weather|forecast|वायु गुणवत्ता|वायु प्रदूषण|प्रदूषण|मौसम|पूर्वानुमान)/i.test(title)) return "";
+  if (/(?:\bAQI\b|air quality|air pollution|pollution|weather|forecast|वायु गुणवत्ता|वायु प्रदूषण|प्रदूषण|मौसम|पूर्वानुमान)/i.test(title)) return "";
   // Generic market watchlists are not a distinct economy event; prefer a
   // reported policy, data release, rate decision or clearly described market move.
   if (/(?:stocks? in news|stocks? to watch|shares? in focus|pre-market|market watch|आज किन शेयरों|शेयरों पर नजर|शेयरों पर नज़र)/i.test(title)) return "";
