@@ -178,6 +178,21 @@ const wrappedJsonHindiDigits = normalizeNewsSummaryRepairText(JSON.stringify({
 assert.equal([...formatCurrentNewsSummaryReply(wrappedJsonHindiDigits, fiveNewsSources, true, true).matchAll(/खबर [1-5](?: \([^)]*\))?:/g)].length, 5, "Hindi Devanagari story numbers must normalize and preserve all five checked stories");
 assert.match(worker, /response_format:\s*\{\s*type:\s*"json_object"\s*\}/, "compact news requests must enable Groq JSON mode");
 assert.match(completeFiveNewsReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "five-category request must return all five stories only when all five summaries pass");
+
+const knownFactGuardStart = worker.indexOf("function hasKnownContradictedNewsFact(text) {");
+const knownFactGuardEnd = worker.indexOf("\\n}\\n", knownFactGuardStart);
+assert.ok(knownFactGuardStart >= 0 && knownFactGuardEnd > knownFactGuardStart, "known-fact contradiction guard must exist");
+const hasKnownContradictedNewsFact = new Function(
+  "cleanText", "asText",
+  worker.slice(knownFactGuardStart, knownFactGuardEnd + 3) + "\\nreturn hasKnownContradictedNewsFact;"
+)(value => String(value || "").replace(/\\s+/g, " ").trim(), value => String(value || ""));
+assert.equal(hasKnownContradictedNewsFact("यह योजना 2028 एथेंस ओलंपिक के खिलाड़ियों को सहायता देगी।"), true,
+  "a false claim that the 2028 Olympics are in Athens must be rejected");
+assert.equal(hasKnownContradictedNewsFact("यह योजना 2028 लॉस एंजिल्स ओलंपिक के खिलाड़ियों को सहायता देगी।"), false,
+  "the correct 2028 Olympic host city must not be rejected");
+assert.equal(hasKnownContradictedNewsFact("खिलाड़ियों को 2028 ओलंपिक की तैयारी में सहायता मिलेगी।"), false,
+  "a summary that does not name a host city must remain acceptable");
+
 const splitHeadlineDraft = fiveNewsDraft.replace(/खबर ([1-5]): (.+)\\nसार:/g, "खबर $1\\nशीर्षक: $2\\nसार:");
 const splitHeadlineReply = formatCurrentNewsSummaryReply(splitHeadlineDraft, fiveNewsSources, true, true);
 assert.match(splitHeadlineReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "parser must accept category models that put the headline on a separate line");
