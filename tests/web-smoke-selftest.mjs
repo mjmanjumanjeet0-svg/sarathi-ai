@@ -25,6 +25,9 @@ const hasUnsupportedNumericClaim = new Function(worker.slice(numericGuardStart, 
 assert.equal(hasUnsupportedNumericClaim("यह एक महत्वपूर्ण फैसला है।", "Supreme Court decision on green crackers"), false, "the common Hindi article 'एक' must not be mistaken for an unsupported numeric claim");
 assert.equal(hasUnsupportedNumericClaim("This is one important decision.", "Supreme Court decision on green crackers"), false, "the common English article 'one' must not be mistaken for an unsupported numeric claim");
 assert.equal(hasUnsupportedNumericClaim("अदालत ने दो व्यक्तियों को दोषी ठहराया।", "The court convicted people in the case"), true, "explicit Hindi number words must still be checked when they add an unsupported count");
+assert.deepEqual(hasUnsupportedNumericClaim("834 रन और छह पारियों में रिकॉर्ड", "834 runs in six innings", true), [], "Hindi number words and grouped source numerals should match their English source equivalents");
+assert.deepEqual(hasUnsupportedNumericClaim("कुल 6000 करोड़ रुपये", "Rs 6000 crore investment", true), [], "currency and scale claims already stated in the source must pass");
+assert.deepEqual(hasUnsupportedNumericClaim("अदालत ने दो लोगों को दोषी ठहराया", "The court convicted people", true), ["2"], "diagnostic mode must return only unsupported normalized numeric tokens");
 const certaintyGuardStart = worker.indexOf("function hasUnsupportedCertaintyClaim(generatedText, sourceEvidence) {");
 const certaintyGuardEnd = worker.indexOf("\n}\n", certaintyGuardStart);
 assert.ok(certaintyGuardStart >= 0 && certaintyGuardEnd > certaintyGuardStart, "news certainty guard must exist");
