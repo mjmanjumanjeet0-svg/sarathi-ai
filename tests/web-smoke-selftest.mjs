@@ -190,7 +190,9 @@ const recoveredCategoryReply = formatCurrentNewsSummaryReply(
 );
 assert.match(recoveredCategoryReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "final validation must re-derive missing category tags from the article title and snippet");
 const incompleteFiveCategoryReply = formatCurrentNewsSummaryReply(fiveNewsDraft.replace("खबर 5:", "खबर 4:"), fiveNewsSources, true, true);
-assert.equal(incompleteFiveCategoryReply, "", "five-category request must reject an incomplete or duplicated five-story response and trigger repair");
+assert.match(incompleteFiveCategoryReply, /आज 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं/, "five-category request must retain the four individually verified stories when one generated entry is missing");
+assert.match(incompleteFiveCategoryReply, /इन श्रेणियों की खबर स्रोत-जाँच में सफल नहीं हुई: खेल/, "partial five-category output must name the category whose story failed validation");
+assert.equal([...incompleteFiveCategoryReply.matchAll(/खबर [1-5](?: ([^)]*\))?:/g)].length, 4, "an incomplete five-category response must never be padded with an unverified fifth story");
 const staleCourtNewsSources = fiveNewsSources.map((item, index) => index === 2
   ? { ...item, publishedAt: new Date(Date.now() - 49 * 60 * 60 * 1000).toISOString() }
   : item);
