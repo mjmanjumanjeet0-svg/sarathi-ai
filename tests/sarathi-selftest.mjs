@@ -86,6 +86,9 @@ assert.match(source, /formatCurrentNewsSummaryReply\(normalizeNewsSummaryRepairT
 assert.ok(source.includes("function hasUntranslatedEnglishHeadline(text)"), "news validation must reject untranslated English headlines");
 assert.match(source, /untranslatedEnglishHeadline/, "news diagnostics must report untranslated English headlines");
 assert.match(source, /categoryMismatch/, "five-category news validation must reject incorrect or missing category labels");
+assert.match(source, /const acceptedCategories = \[\]/, "five-category validation must retain the categories of individually accepted stories");
+assert.doesNotMatch(source, /if \(requireFiveCategories && \(items\.length !== 5 \|\| lines\.length !== 5\)\) return ""/, "one rejected story must not erase the other individually verified category stories");
+assert.match(source, /इन श्रेणियों की खबर स्रोत-जाँच में सफल नहीं हुई/, "partial five-category digests must disclose exactly which requested categories were not verified");
 assert.match(source, /questions|raises doubts|questions the norm/, "court news prompt must distinguish questioning a norm from a final ruling");
 assert.match(source, /आगे रहने के लिए आवश्यक वीज़ा/, "immigration prompt must distinguish entry rules from continued-stay visa requirements");
 assert.match(source, /पाँच-श्रेणी समाचार जाँच पूरी नहीं हुई/, "five-category fallback must identify incomplete category coverage rather than claiming all summaries failed");
