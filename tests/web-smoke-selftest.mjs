@@ -97,7 +97,7 @@ const fiveNewsSources = Array.from({ length: 5 }, (_, index) => ({
     "भारत के खेल की अलग समाचार घटना"
   ][index],
   url: "https://publisher" + (index + 1) + ".example/news-" + (index + 1),
-  publishedAt: "2026-11-05T08:00:00+05:30",
+  publishedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
   snippet: "आज की अलग घटना का विवरण उपलब्ध है।"
 }));
 const fiveNewsDraft = fiveNewsSources.map((_, index) =>
@@ -116,6 +116,11 @@ const recoveredCategoryReply = formatCurrentNewsSummaryReply(
 assert.match(recoveredCategoryReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "final validation must re-derive missing category tags from the article title and snippet");
 const incompleteFiveCategoryReply = formatCurrentNewsSummaryReply(fiveNewsDraft.replace("खबर 5:", "खबर 4:"), fiveNewsSources, true, true);
 assert.equal(incompleteFiveCategoryReply, "", "five-category request must reject an incomplete or duplicated five-story response and trigger repair");
+const staleCourtNewsSources = fiveNewsSources.map((item, index) => index === 2
+  ? { ...item, publishedAt: new Date(Date.now() - 49 * 60 * 60 * 1000).toISOString() }
+  : item);
+const staleCourtNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, staleCourtNewsSources, true, true);
+assert.equal(staleCourtNewsReply, "", "five-category request must reject a court story older than the requested 48-hour window");
 assert.deepEqual([...completeFiveNewsReply.matchAll(/खबर (\d+)(?: \([^)]*\))?:/g)].map(match => Number(match[1])), [1, 2, 3, 4, 5], "daily-news numbering must always be continuous from 1 through 5");
 const fiveCategoryDetectorStart = worker.indexOf("function isFiveCategoryNewsQuery(text) {");
 const fiveCategoryDetectorEnd = worker.indexOf("\n}\n", fiveCategoryDetectorStart);
