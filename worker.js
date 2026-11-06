@@ -2459,7 +2459,7 @@ export default {
     // The summary parser itself validates every source-summary pair. Avoid a
     // separate brittle heading counter that can reject harmless punctuation.
     let formattedNewsReply = isCurrentNewsReply && !looksLikeRawEnglishArticle
-      ? formatCurrentNewsSummaryReply(rawReply, searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText))
+      ? formatCurrentNewsSummaryReply(normalizeNewsSummaryRepairText(rawReply), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText))
       : "";
 
     // If the first completion used an unexpected layout, make one constrained
