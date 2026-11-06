@@ -71,10 +71,17 @@ const classifyRequestedNewsCategory = new Function(
 const newsFormatterStart = worker.indexOf("function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false) {");
 const newsFormatterEnd = worker.indexOf("\n}\n", newsFormatterStart);
 assert.ok(newsFormatterStart >= 0 && newsFormatterEnd > newsFormatterStart, "daily-news formatter must exist");
+const untranslatedHeadlineStart = worker.indexOf("function hasUntranslatedEnglishHeadline(text) {");
+const untranslatedHeadlineEnd = worker.indexOf("\n}\n", untranslatedHeadlineStart);
+assert.ok(untranslatedHeadlineStart >= 0 && untranslatedHeadlineEnd > untranslatedHeadlineStart, "untranslated English headline guard must exist");
+const hasUntranslatedEnglishHeadline = new Function(worker.slice(untranslatedHeadlineStart, untranslatedHeadlineEnd + 3) + "\nreturn hasUntranslatedEnglishHeadline;")();
+assert.equal(hasUntranslatedEnglishHeadline("Visa must for undocumented six communities"), true, "English headline words must be rejected");
+assert.equal(hasUntranslatedEnglishHeadline("छह समुदायों के लिए वीज़ा अनिवार्य"), false, "Hindi headline must pass");
+assert.equal(hasUntranslatedEnglishHeadline("CSIR-NEERI की प्रयोगशाला में जाँच"), false, "recognized institutional acronyms may remain in Latin script");
 const formatCurrentNewsSummaryReply = new Function(
   "dedupeNewsResults", "cleanText", "formatNewsPublishedAt",
   "hasMixedScriptToken", "hasUnsupportedNumericClaim", "hasUnsupportedCertaintyClaim",
-  "hasUnsupportedNewsHeadlineMix", "hasIncorrectOverallAqiCategory", "isIndiaFocusedNewsItem",
+  "hasUnsupportedNewsHeadlineMix", "hasUntranslatedEnglishHeadline", "hasIncorrectOverallAqiCategory", "isIndiaFocusedNewsItem",
   "classifyRequestedNewsCategory",
   worker.slice(newsFormatterStart, newsFormatterEnd + 3) + "\nreturn formatCurrentNewsSummaryReply;"
 )(
@@ -85,6 +92,7 @@ const formatCurrentNewsSummaryReply = new Function(
   () => false,
   hasUnsupportedCertaintyClaim,
   new Function("cleanText", worker.slice(worker.indexOf("function hasUnsupportedNewsHeadlineMix("), worker.indexOf("\n}\n", worker.indexOf("function hasUnsupportedNewsHeadlineMix(")) + 3) + "\nreturn hasUnsupportedNewsHeadlineMix;")(value => String(value || "").replace(/\s+/g, " ").trim()),
+  new Function(worker.slice(worker.indexOf("function hasUntranslatedEnglishHeadline("), worker.indexOf("\n}\n", worker.indexOf("function hasUntranslatedEnglishHeadline(")) + 3) + "\nreturn hasUntranslatedEnglishHeadline;")(),
   new Function(worker.slice(worker.indexOf("function hasIncorrectOverallAqiCategory("), worker.indexOf("\n}\n", worker.indexOf("function hasIncorrectOverallAqiCategory(")) + 3) + "\nreturn hasIncorrectOverallAqiCategory;")(),
   isIndiaFocusedNewsItem,
   classifyRequestedNewsCategory
