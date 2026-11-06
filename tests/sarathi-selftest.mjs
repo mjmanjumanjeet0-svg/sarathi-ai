@@ -22,6 +22,7 @@ assert.match(source, /newsSummaryUnverified: isCurrentNewsReply && !formattedNew
 assert.match(source, /title: isCurrentNewsReply\s*\?\s*"मूल समाचार खोलें — "\s*\+\s*\(item\.publisher \|\| new URL\(item\.url\)\.hostname\)/, "current-news source cards must never expose raw English article headlines");
 assert.match(source, /const claimsCause = .*test\(generatedText\)/, "news summaries must detect unsupported causal claims");
 assert.match(source, /sourceExplicitlyStatesCause.*test\(sourceEvidence\)/, "causal claims must be backed by the same source");
+assert.match(source, /reason: "mixedScript"[\s\S]*?sourceTitle:[\s\S]*?headline:[\s\S]*?summary:/, "mixed-script rejections must log bounded public story details");
 const numericGuardStart = source.indexOf("function hasUnsupportedNumericClaim(");
 const numericGuardEnd = source.indexOf("\nfunction hasMixedScriptToken", numericGuardStart);
 assert.ok(numericGuardStart >= 0 && numericGuardEnd > numericGuardStart, "news numeric-claim validator must exist");
