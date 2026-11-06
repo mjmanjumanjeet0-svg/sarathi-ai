@@ -1356,6 +1356,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     if (plain) entries.get(current).summary = plain;
   }
   const lines = [];
+  const acceptedCategories = [];
   const rejectedNumericDetails = [];
   const rejectCounts = {
     missingEntry: 0, headlineGrounding: 0, untranslatedEnglishHeadline: 0, categoryMismatch: 0, aqi: 0, sentenceCount: 0,
@@ -1421,6 +1422,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
       "\nमूल लिंक: " + items[index].url +
       "\nप्रकाशित: " + formatNewsPublishedAt(items[index].publishedAt) +
       corroborationText + "\n" + basisText);
+    if (items[index]?.requestedCategory) acceptedCategories.push(items[index].requestedCategory);
   }
   console.warn("News digest validation diagnostics", JSON.stringify({
     selectedItems: items.length,
@@ -1431,18 +1433,21 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     requireTwoSentences,
     requireFiveCategories
   }));
-  // For an explicit five-category request, a partial model answer is invalid.
-  // Returning empty triggers the constrained repair attempt instead of silently
-  // presenting three stories when five category sources were selected.
-  if (requireFiveCategories && (items.length !== 5 || lines.length !== 5)) return "";
+  // Keep individually validated stories even when one requested category fails.
+  // The caller must disclose the missing category; never pad the list with an unverified story.
   // Show only individually validated stories; never pad with unsupported items.
   if (!lines.length) return "";
   const count = lines.length;
   const prefix = count === 5
     ? "आज की 5 अलग-अलग, तारीख़-जाँची खबरें:"
     : "आज " + count + " अलग-अलग, तारीख़-जाँची खबरें मिलीं (आपने 5 माँगी थीं):";
+  const missingCategories = requireFiveCategories
+    ? requiredCategories.filter(category => !acceptedCategories.includes(category))
+    : [];
   const shortfall = count < 5
-    ? "\n\nध्यान दें: पर्याप्त स्वतंत्र और पुष्ट खबरें नहीं मिलीं, इसलिए अपुष्ट खबरें नहीं जोड़ी गईं।"
+    ? (requireFiveCategories
+        ? "\n\nध्यान दें: इन श्रेणियों की खबर स्रोत-जाँच में सफल नहीं हुई: " + (missingCategories.join(", ") || "कुछ श्रेणियाँ") + "। केवल सत्यापित खबरें दिखाई गई हैं; अपुष्ट खबर नहीं जोड़ी गई।"
+        : "\n\nध्यान दें: पर्याप्त स्वतंत्र और पुष्ट खबरें नहीं मिलीं, इसलिए अपुष्ट खबरें नहीं जोड़ी गईं।")
     : "";
   return prefix + "\n\n" + lines.join("\n\n") +
     "\n\nध्यान दें: हर सार संबंधित समाचार के उपलब्ध लेख-अंश पर आधारित है." + shortfall;
