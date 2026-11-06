@@ -1763,6 +1763,20 @@ export default {
     }
 
     const dateTime = getIndiaDateTime();
+ 
+    // Answer maker/creator questions deterministically so fallback models cannot
+    // misidentify Sarathi as Gemini or attribute the app to another company.
+    const asksWhoMadeSarathi = /(?:किसने|कौन|कवन|केकरा)\s*.{0,32}(?:बनाया|बनाई|बनवाया|बनवल|बनवले|बनइले|तैयार|डेवलप|क्रिएट)|(?:तुम्हें|तुमको|आपको|इस\s+ऐप\s+को|ऐप\s+किसने|सारथी\s+को).{0,35}(?:किसने|कौन|कवन|केकरा).{0,20}(?:बनाया|बनवल|बनवले|बनइले)?|(?:who\s+(?:made|created|built|developed)|creator\s+of|maker\s+of).{0,35}(?:you|this\s+app|sarathi)?/i.test(userText);
+    if (asksWhoMadeSarathi) {
+      return jsonResponse({
+        success: true,
+        reply: "इस ऐप सारथी AI को manju manjeet ने बनाया है।",
+        ...dateTime,
+        webSearch: false,
+        sources: []
+      });
+    }
+
 
     if (/^(?:बुध|बूध|बुद्ध|budh|buddha)(?:\s+(?:के बारे में|की जानकारी|बताओ|बताइए|कौन हैं?|क्या है))?\s*[?।.!]*$/i.test(userText)) {
       return jsonResponse({
