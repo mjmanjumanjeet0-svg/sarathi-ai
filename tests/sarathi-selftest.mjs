@@ -17,6 +17,7 @@ assert.match(source, /स्रोत में न दिया कारण.*�
 assert.match(source, /Prefer headline evidence; snippets may mention unrelated topics incidentally/, "news categories must prioritize headline evidence over incidental snippet mentions");
 assert.ok((source.match(/const category = classifyRequestedNewsCategory\(item\);/g) || []).length >= 2, "final news selection and fallback must reclassify the actual headline instead of trusting stale category metadata");
 assert.match(source, /पाँच-श्रेणी समाचार जाँच पूरी नहीं हुई/, "five-category fallback must identify incomplete category coverage rather than claiming all summaries failed");
+assert.ok(source.includes("वाक्य(?:ों)?"), "news intent detector must recognize Hindi wording दो वाक्यों में");
 assert.match(source, /upsc\\s\*key|upsc-\[ \\]current-\[ \\]affairs|current affairs news/, "general news filtering must exclude UPSC exam-preparation explainers");
 assert.match(source, /function groupNewsByEvent\(results\)/, "news processing must retain matching coverage from independent publishers");
 assert.match(source, /function isSameIndianNewsEvent\(a, b\)/, "news grouping must recognize related Delhi cloud-seeding and Karnataka drought-relief headlines");
