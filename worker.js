@@ -2175,13 +2175,7 @@ export default {
       // limit. Retry once with fewer source characters and a smaller completion
       // budget; if the provider is still rate-limited, keep the honest fallback.
       if (groqResponse.status === 429 && isCurrentNewsReply && searchResults.length) {
-        const compactNewsContext = searchResults.slice(0, 5).map((item, index) =>
-          "स्रोत " + (index + 1) + ": " + cleanText(item.title || "").slice(0, 180) +
-          "\nप्रकाशक: " + cleanText(item.publisher || "").slice(0, 80) +
-          "\nमूल लिंक: " + (typeof item.url === "string" && /^https:\/\//i.test(item.url) ? item.url : "") +
-          "\nप्रकाशित: " + formatNewsPublishedAt(item.publishedAt || "") +
-          "\nलेख-अंश: " + cleanText(item.snippet || "").slice(0, 320)
-        ).join("\n\n");
+        const compactNewsContext = buildCompactNewsSourceContext(searchResults, isFiveCategoryNewsQuery(userText));
         const compactRetryMessages = [{ role: "user", content: "इन ताज़ा खोज परिणामों का संक्षिप्त हिंदी सार दो। हर खबर के लिए खबर 1: सही हिंदी शीर्षक और अगली पंक्ति सार: 2 छोटे तथ्यात्मक वाक्य लिखो। केवल दिए गए तथ्य लिखो, अनुमान मत लगाओ।\n\n" + compactNewsContext }];
         try {
           groqResponse = await sendGroqRequest(
@@ -2484,7 +2478,7 @@ export default {
       try {
         const repairSummaryRule = requireTwoSentenceNews ? "ठीक 2 छोटे, तथ्यात्मक वाक्य" : "1 छोटा, तथ्यात्मक वाक्य";
         const repairCategoryRule = isFiveCategoryNewsQuery(userText) ? "इस प्रश्न में पाँच अलग श्रेणियाँ अनिवार्य हैं। स्रोत-संदर्भ में श्रेणी के अनुसार एक-एक खबर इसी क्रम में लिखो: सरकार, अर्थव्यवस्था, अदालत, विज्ञान, खेल। हर श्रेणी की खबर का शीर्षक उसी श्रेणी वाले स्रोत से लो; किसी श्रेणी को छोड़कर अगली खबर का क्रमांक आगे मत बढ़ाओ। ठीक पाँच प्रविष्टियाँ लिखो।" : "";
-        const repairPrompt = "नीचे दिए गए खोज परिणामों के लिए केवल वैध JSON लौटाओ। कोई Markdown fence या अतिरिक्त पाठ नहीं। JSON object में stories नाम की array हो और हर वस्तु में number (1 से क्रम में), headline (हिंदी शीर्षक) तथा summary (ठीक 2 छोटे वाक्य) हों। ठीक " + searchResults.length + " अलग-अलग प्रविष्टियाँ दो। " + repairCategoryRule + " हर शीर्षक संबंधित स्रोत का सही हिंदी अनुवाद हो। सार में केवल उसी खबर के दिए स्रोत-अंश के तथ्य हों। कोई संख्या/प्रतिशत/रकम/वर्ष तभी लिखो जब वही मान उसी खबर के स्रोत-अंश में स्पष्ट मौजूद हो; अन्यथा संख्या छोड़ दो। अनुमान, कारण या अतिरिक्त तथ्य मत जोड़ो।\n\n" + buildCompactNewsSourceContext(searchResults, isFiveCategoryNewsQuery(userText));
+        const repairPrompt = "नीचे दिए गए खोज परिणामों के लिए केवल वैध JSON लौटाओ। कोई Markdown fence या अतिरिक्त पाठ नहीं। JSON object में stories नाम की array हो और हर वस्तु में number (1 से क्रम में), headline (हिंदी शीर्षक) तथा summary (ठीक 2 छोटे वाक्य) हों। ठीक " + (isFiveCategoryNewsQuery(userText) ? 5 : Math.min(searchResults.length, 5)) + " अलग-अलग प्रविष्टियाँ दो। " + repairCategoryRule + " हर शीर्षक संबंधित स्रोत का सही हिंदी अनुवाद हो। सार में केवल उसी खबर के दिए स्रोत-अंश के तथ्य हों। कोई संख्या/प्रतिशत/रकम/वर्ष तभी लिखो जब वही मान उसी खबर के स्रोत-अंश में स्पष्ट मौजूद हो; अन्यथा संख्या छोड़ दो। अनुमान, कारण या अतिरिक्त तथ्य मत जोड़ो।\n\n" + buildCompactNewsSourceContext(searchResults, isFiveCategoryNewsQuery(userText));
         const repairMessages = [{ role: "user", content: repairPrompt }];
         const parseRepairResponse = async response => {
           if (!response?.ok) return "";
