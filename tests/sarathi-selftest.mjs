@@ -240,3 +240,15 @@ assert.match(source, /Fail closed: a newsroom article without a matching officia
 assert.match(source, /Limit only after verification/, "a single-story limit must not discard a later officially verified result");
 
 console.log("\nSarathi Worker self-test: court-news regression checks passed.");
+
+const partyParserStart = source.indexOf("function courtRecordPartyNames(value) {");
+const partyParserEnd = source.indexOf("\\nfunction courtRecordMatchesStory", partyParserStart);
+assert.ok(partyParserStart >= 0 && partyParserEnd > partyParserStart, "court party parser must exist");
+const courtRecordPartyNames = new Function("cleanText", source.slice(partyParserStart, partyParserEnd) + "\\nreturn courtRecordPartyNames;")(cleanTextForCategoryTest);
+const captionParties = courtRecordPartyNames("IN THE MATTER: Rekha Sharma v. State of Bihar. Photo Credit: Ashish Tripathi. Byline: Rohan Kumar. Advocate: Meenakshi Arora.");
+assert.ok(captionParties.has("rekha sharma"), "case-caption petitioner must be extracted");
+assert.ok(captionParties.has("state of bihar"), "case-caption respondent must be extracted");
+assert.ok(!captionParties.has("ashish tripathi") && !captionParties.has("rohan kumar") && !captionParties.has("meenakshi arora"),
+  "photo credits, bylines and advocate names must not be treated as parties");
+assert.deepEqual([...courtRecordPartyNames("Photo Credit: Ashish Tripathi. Byline: Rohan Kumar. Justice: Maya Kumari.")], [],
+  "article metadata and judicial names without a party caption must not produce party identities");
