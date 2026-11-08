@@ -174,4 +174,4 @@ const goldStory = { title: "Madras High Court gold loan and pledged jewellery PI
 assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "Madras High Court PIL on gold loan and pledged jewellery auction; RBI", snippet: "public interest petition" }, goldStory), true, "matching official court records must share multiple distinctive story anchors");
 assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "Madras High Court unrelated service matter", snippet: "appointment case" }, goldStory), false, "unrelated court records must not be attached to a news story");
 
-console.log(`\nSarathi Worker self-test: ${passed}/${passed} passed (mock provider mode; no real API credits used).`);
+console.log("\nSarathi Worker self-test: court-news regression checks passed.");
