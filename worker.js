@@ -1117,7 +1117,21 @@ function previouslyUsedAssistantNewsUrls(messages) {
   return used;
 }
 function isOfficialIndianCourtRecord(item) {
-  try { const host = new URL(item?.url || "").hostname.toLowerCase().replace(/^www\./, ""); return OFFICIAL_INDIAN_COURT_DOMAINS.includes(host) || (host.endsWith(".nic.in") && /court|highcourt|judiciary|ecourts/i.test(host)) || (host.endsWith(".gov.in") && /court|highcourt|judiciary|ecourts|sci/i.test(host)); } catch { return false; }
+  try {
+    const url = new URL(item?.url || "");
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    const officialHost = OFFICIAL_INDIAN_COURT_DOMAINS.includes(host) ||
+      (host.endsWith(".nic.in") && /court|highcourt|judiciary|ecourts/i.test(host)) ||
+      (host.endsWith(".gov.in") && /court|highcourt|judiciary|ecourts|sci/i.test(host));
+    if (!officialHost) return false;
+    const path = url.pathname.toLowerCase();
+    // A court homepage, cause-list landing page, daily-order index, or generic
+    // search portal is not itself evidence of a particular judgment/order.
+    // Accept only a document or a case-specific order/judgment detail URL.
+    const directPdf = /\\.pdf$/i.test(path);
+    const caseSpecificDetail = /\\/(?:judgments?|orders?|court[-_/]?orders?)\\/[a-z0-9_-]{4,}(?:\\.html?)?$/i.test(path);
+    return directPdf || caseSpecificDetail;
+  } catch { return false; }
 }
 function courtRecordPartyNames(value) {
   // Keep only contiguous capitalized phrases; do not join a sentence-start
@@ -1170,7 +1184,7 @@ function courtRecordMatchesStory(record, story) {
   // When both titles identify a named party, a different party is a hard
   // mismatch even if the case number and subject words happen to overlap.
   return sharedCaseRef && shared.length >= 2 && sharedTitle.length >= 1 &&
-    (!hasPartyIdentityEvidence || sharedParty);
+    hasPartyIdentityEvidence && sharedParty;
 }
 function courtRecordMatchDiagnostics(record, story) {
   const stop = new Set(["supreme","high","court","india","indian","judgment","judgement","order","orders","case","petition","plea","hearing","latest","news","report","reported","says","said","the","and","for","with","from","that","this","में","का","की","के","और","पर","से","को","एक","यह","था","थी","है","हैं","द्वारा","याचिका","आदेश","न्यायालय","अदालत","सुप्रीम","हाई"]);
@@ -1197,8 +1211,8 @@ function courtRecordMatchDiagnostics(record, story) {
   if (shared.length < 2) reasons.push("दो विशिष्ट साझा विषय-शब्द नहीं मिले");
   if (sharedTitle.length < 1) reasons.push("शीर्षक में साझा विशिष्ट शब्द नहीं मिला");
   if (hasPartyEvidence && !sharedParty) reasons.push("पक्षकारों के नाम अलग");
-  if (!hasPartyEvidence) reasons.push("दोनों शीर्षकों से पक्षकारों के नाम निकालने योग्य नहीं; इसलिए पक्षकार-मिलान निर्णायक नहीं");
-  const matched = sharedCaseRef && shared.length >= 2 && sharedTitle.length >= 1 && (!hasPartyEvidence || sharedParty);
+  if (!hasPartyEvidence) reasons.push("दोनों शीर्षकों से पक्षकारों के नाम नहीं मिले; अनिवार्य पक्षकार-मिलान पूरा नहीं हुआ");
+  const matched = sharedCaseRef && shared.length >= 2 && sharedTitle.length >= 1 && hasPartyEvidence && sharedParty;
   return {
     matched,
     reasons,
