@@ -1057,6 +1057,26 @@ function buildNewsFallback(results, dateTime) {
   return "आज की खबरों की खोज में " + items.length + " स्रोत मिले, लेकिन उनका भरोसेमंद हिंदी सार तैयार नहीं हो पाया। इसलिए अंग्रेज़ी लेखों को ज्यों-का-त्यों दिखाने या अधूरी जानकारी को खबर बताने के बजाय मैं इस बार अपुष्ट सार नहीं दे रहा हूँ। कृपया थोड़ी देर बाद फिर पूछें।";
 }
 
+function isCourtSearchDiagnosticsQuery(text) {
+  const value = String(text || "");
+  const asksCourt = /(?:अदालत|न्यायालय|सुप्रीम\\s*कोर्ट|हाई\\s*कोर्ट|supreme\\s+court|high\\s+court|court)/i.test(value);
+  const asksDiagnostics = /(?:तकनीकी\\s*(?:जाँच|जांच|विवरण|रिपोर्ट)|जाँच\\s*(?:विवरण|रिपोर्ट|लॉग)|जांच\\s*(?:विवरण|रिपोर्ट|लॉग)|diagnostic|audit|execution\\s+log|खोज\\s*(?:का\\s*)?(?:रिकॉर्ड|लॉग|विवरण))/i.test(value);
+  const refersToPriorSearch = /(?:पिछली|पिछले|पहले|पूर्व|previous|prior|last)\\s*(?:की\\s*)?(?:अदालत|न्यायालय|court|खोज|सर्च|search)|(?:पिछली|पिछले|previous|prior)\\s*(?:खोज|सर्च|search)/i.test(value);
+  return asksCourt && asksDiagnostics && refersToPriorSearch;
+}
+
+function buildCourtSearchDiagnosticsUnavailableReply() {
+  return "पिछली अदालत-समाचार खोज का तकनीकी लॉग इस बातचीत में उपलब्ध नहीं है। इसलिए वास्तविक स्थिति इस प्रकार है:\\n\\n" +
+    "• खोज वास्तव में चली थी या नहीं: जानकारी उपलब्ध नहीं।\\n" +
+    "• आधिकारिक अदालत वेबसाइटें: जानकारी उपलब्ध नहीं।\\n" +
+    "• पिछली खोज की तारीख और समय: जानकारी उपलब्ध नहीं।\\n" +
+    "• मिले समाचार स्रोतों की संख्या: जानकारी उपलब्ध नहीं।\\n" +
+    "• मिले आधिकारिक अदालत रिकॉर्ड की संख्या: जानकारी उपलब्ध नहीं।\\n" +
+    "• केस नंबर और पक्षकारों के नाम का मिलान: जानकारी उपलब्ध नहीं।\\n" +
+    "• खबर अस्वीकार होने का सटीक तकनीकी कारण: जानकारी उपलब्ध नहीं।\\n\\n" +
+    "इस तकनीकी जाँच वाले अनुरोध पर अभी कोई नई इंटरनेट खोज नहीं की गई है और कोई समाचार लेख नहीं जोड़ा गया है। पिछली खोज का लॉग उपलब्ध न होने पर मैं खोज हुई थी या नहीं—इसका अनुमान नहीं लगाऊँगा।";
+}
+
 function isSpecificCourtNewsQuery(text) {
   const value = String(text || "");
   const asksCourt = /(?:सुप्रीम\s*कोर्ट|सर्वोच्च\s*न्यायालय|हाई\s*कोर्ट|उच्च\s*न्यायालय|अदालत|न्यायालय|supreme\s+court|high\s+court|court\s+news|judiciary)/i.test(value);
@@ -2109,6 +2129,31 @@ export default {
         zeroCostMode: true,
         error: "सारथी की उपयोग सीमा अभी पूरी हुई है। लगभग एक मिनट बाद फिर प्रयास करें।"
       }, 429);
+    }
+
+    // A request to inspect a previous court-search run is not a request for
+    // current news. Handle it locally before generic news detection so an
+    // unrelated article can never be presented as a diagnostic answer.
+    if (isCourtSearchDiagnosticsQuery(userText)) {
+      return jsonResponse({
+        success: true,
+        reply: buildCourtSearchDiagnosticsUnavailableReply(),
+        ...dateTime,
+        webSearch: false,
+        searchAttempted: false,
+        searchUnavailable: true,
+        courtSearchDiagnostics: {
+          previousRunLogAvailable: false,
+          previousSearchAttempted: null,
+          officialCourtDomains: null,
+          previousSearchTimestamp: null,
+          newsSourceCount: null,
+          officialRecordCount: null,
+          partyIdentityMatchPerformed: null,
+          rejectionReason: null
+        },
+        sources: []
+      });
     }
 
     // Treat browser-supplied webSearch/internet flags as advisory only.
