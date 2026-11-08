@@ -59,7 +59,7 @@ const courtHelperStart = source.indexOf("function isCourtSearchDiagnosticsQuery(
 const courtHelperEnd = source.indexOf("\nfunction classifyRequestedNewsCategory", courtHelperStart);
 assert.ok(courtHelperStart >= 0 && courtHelperEnd > courtHelperStart, "focused court-news query helpers must exist");
 const courtHelpers = new Function("isCurrentNewsQuery", "cleanText",
-  source.slice(courtHelperStart, courtHelperEnd) + "\nreturn { isCourtSearchDiagnosticsQuery, buildCourtSearchDiagnosticsUnavailableReply, isSpecificCourtNewsQuery, isSingleRequestedNewsStory, isSubstantiveCourtNewsItem };")(
+  source.slice(courtHelperStart, courtHelperEnd) + "\nreturn { isCourtSearchDiagnosticsQuery, isCourtOfficialSearchRequest, buildCourtSearchDiagnosticsUnavailableReply, isSpecificCourtNewsQuery, isSingleRequestedNewsStory, isSubstantiveCourtNewsItem };")(
     value => /(?:खबर|समाचार|news|court|कोर्ट|न्यायालय|अदालत)/i.test(String(value || "")),
     value => String(value || "").replace(/\s+/g, " ").trim()
   );
@@ -67,6 +67,12 @@ assert.equal(courtHelpers.isCourtSearchDiagnosticsQuery("पिछली अद�
   "a previous court-search diagnostics request must be detected before generic news search");
 assert.equal(courtHelpers.isCourtSearchDiagnosticsQuery("पिछले 48 घंटों में सुप्रीम कोर्ट की एक खबर बताओ"), false,
   "a genuine recent court-news request must not be mistaken for a diagnostics request");
+assert.equal(courtHelpers.isCourtSearchDiagnosticsQuery("पिछली अदालत-समाचार खोज में आधिकारिक रिकॉर्ड क्यों नहीं मिला, इसकी तकनीकी जाँच करो। इस बार सुप्रीम कोर्ट और हाई कोर्ट की आधिकारिक वेबसाइटों पर खोज का प्रयास करो।"), false,
+  "a mixed diagnostics plus fresh official-site search request must not be short-circuited");
+assert.equal(courtHelpers.isCourtOfficialSearchRequest("इस बार सुप्रीम कोर्ट और हाई कोर्ट की आधिकारिक वेबसाइटों पर खोज का प्रयास करो"), true,
+  "an explicit official court website search request must be recognized");
+assert.equal(courtHelpers.isSpecificCourtNewsQuery("पिछली अदालत-समाचार खोज में तकनीकी जाँच करो। इस बार सुप्रीम कोर्ट और हाई कोर्ट की आधिकारिक वेबसाइटों पर खोज का प्रयास करो।"), true,
+  "a mixed court audit/search request must use the court-specific official-record search route");
 assert.match(courtHelpers.buildCourtSearchDiagnosticsUnavailableReply(), /पिछली अदालत-समाचार खोज का तकनीकी लॉग.*उपलब्ध नहीं/,
   "missing prior execution logs must be disclosed instead of invented");
 assert.match(source, /if \(isCourtSearchDiagnosticsQuery\(userText\)\)[\s\S]*?searchAttempted: false[\s\S]*?sources: \[\]/,
