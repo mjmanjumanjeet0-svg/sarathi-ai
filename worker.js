@@ -1059,9 +1059,9 @@ function buildNewsFallback(results, dateTime) {
 
 function isCourtSearchDiagnosticsQuery(text) {
   const value = String(text || "");
-  const asksCourt = /(?:अदालत|न्यायालय|सुप्रीम\\s*कोर्ट|हाई\\s*कोर्ट|supreme\\s+court|high\\s+court|court)/i.test(value);
-  const asksDiagnostics = /(?:तकनीकी\\s*(?:जाँच|जांच|विवरण|रिपोर्ट)|जाँच\\s*(?:विवरण|रिपोर्ट|लॉग)|जांच\\s*(?:विवरण|रिपोर्ट|लॉग)|diagnostic|audit|execution\\s+log|खोज\\s*(?:का\\s*)?(?:रिकॉर्ड|लॉग|विवरण))/i.test(value);
-  const refersToPriorSearch = /(?:पिछली|पिछले|पहले|पूर्व|previous|prior|last)\\s*(?:की\\s*)?(?:अदालत|न्यायालय|court|खोज|सर्च|search)|(?:पिछली|पिछले|previous|prior)\\s*(?:खोज|सर्च|search)/i.test(value);
+  const asksCourt = /(?:अदालत|न्यायालय|सुप्रीम\s*कोर्ट|हाई\s*कोर्ट|supreme\s+court|high\s+court|court)/i.test(value);
+  const asksDiagnostics = /(?:तकनीकी\s*(?:जाँच|जांच|विवरण|रिपोर्ट)|जाँच\s*(?:विवरण|रिपोर्ट|लॉग)|जांच\s*(?:विवरण|रिपोर्ट|लॉग)|diagnostic|audit|execution\s+log|खोज\s*(?:का\s*)?(?:रिकॉर्ड|लॉग|विवरण))/i.test(value);
+  const refersToPriorSearch = /(?:पिछली|पिछले|पहले|पूर्व|previous|prior|last)\s*(?:की\s*)?(?:अदालत|न्यायालय|court|खोज|सर्च|search)|(?:पिछली|पिछले|previous|prior)\s*(?:खोज|सर्च|search)/i.test(value);
   return asksCourt && asksDiagnostics && refersToPriorSearch;
 }
 
