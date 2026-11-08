@@ -1336,6 +1336,18 @@ function hasUnsupportedCourtDisposition(generatedText, sourceEvidence) {
   return isCourtStory && outcomes.some(outcome => outcome.generated.test(generated) && !outcome.source.test(source));
 }
 
+function formatHindiNewsCount(count) {
+  if (count === 1) return "आज 1 अलग, तारीख़-जाँची खबर मिली:";
+  if (count === 5) return "आज की 5 अलग-अलग, तारीख़-जाँची खबरें:";
+  return "आज " + count + " अलग-अलग, तारीख़-जाँची खबरें मिलीं:";
+}
+
+function buildNewsDigestNote(shortfall = "") {
+  const notes = ["हर सार संबंधित समाचार के उपलब्ध लेख-अंश पर आधारित है।"];
+  if (shortfall) notes.push(shortfall);
+  return "ध्यान दें: " + notes.join(" ");
+}
+
 function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false) {
   let items = dedupeNewsResults(results).filter(item => {
     const title = cleanText(item?.title || "");
@@ -1539,21 +1551,19 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
   // Show only individually validated stories; never pad with unsupported items.
   if (!lines.length) return "";
   const count = lines.length;
-  const prefix = count === 5
-    ? "आज की 5 अलग-अलग, तारीख़-जाँची खबरें:"
-    : requireFiveCategories
-      ? "आज " + count + " अलग-अलग, तारीख़-जाँची खबरें मिलीं (पाँच श्रेणियों में से " + count + " खबरें सत्यापन में सफल हुईं):"
-      : "आज " + count + " अलग-अलग, तारीख़-जाँची खबरें मिलीं:";
+  const prefix = requireFiveCategories && count < 5
+    ? "आज " + count + (count === 1 ? " अलग, तारीख़-जाँची खबर मिली" : " अलग-अलग, तारीख़-जाँची खबरें मिलीं") + " (पाँच श्रेणियों में से " + count + " खबरें सत्यापन में सफल हुईं):"
+    : formatHindiNewsCount(count);
   const missingCategories = requireFiveCategories
     ? requiredCategories.filter(category => !acceptedCategories.includes(category))
     : [];
   const shortfall = count < 5
     ? (requireFiveCategories
-        ? "\n\nध्यान दें: इन श्रेणियों की खबर स्रोत-जाँच में सफल नहीं हुई: " + (missingCategories.join(", ") || "कुछ श्रेणियाँ") + "। केवल सत्यापित खबरें दिखाई गई हैं; अपुष्ट खबर नहीं जोड़ी गई।"
-        : "\n\nध्यान दें: पर्याप्त स्वतंत्र और पुष्ट खबरें नहीं मिलीं, इसलिए अपुष्ट खबरें नहीं जोड़ी गईं।")
+        ? "इन श्रेणियों की खबर स्रोत-जाँच में सफल नहीं हुई: " + (missingCategories.join(", ") || "कुछ श्रेणियाँ") + "। केवल सत्यापित खबरें दिखाई गई हैं; अपुष्ट खबर नहीं जोड़ी गई।"
+        : "पर्याप्त स्वतंत्र और पुष्ट खबरें नहीं मिलीं, इसलिए अपुष्ट खबरें नहीं जोड़ी गईं।")
     : "";
   return prefix + "\n\n" + lines.join("\n\n") +
-    "\n\nध्यान दें: हर सार संबंधित समाचार के उपलब्ध लेख-अंश पर आधारित है." + shortfall;
+    "\n\n" + buildNewsDigestNote(shortfall);
 }
 function buildCurrentNewsHeadlineReply(results, query = "") {
   const items = dedupeNewsResults(results).filter(item => {
