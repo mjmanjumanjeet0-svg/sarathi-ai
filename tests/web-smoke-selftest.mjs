@@ -133,7 +133,7 @@ const formatCurrentNewsSummaryReply = new Function(
   "dedupeNewsResults", "cleanText", "formatNewsPublishedAt",
   "hasMixedScriptToken", "hasUnsupportedNumericClaim", "hasUnsupportedCertaintyClaim",
   "hasUnsupportedNewsHeadlineMix", "hasUntranslatedEnglishHeadline", "hasIncorrectOverallAqiCategory", "isIndiaFocusedNewsItem", "hasKnownContradictedNewsFact", "hasUnsupportedCourtDisposition",
-  "classifyRequestedNewsCategory",
+  "classifyRequestedNewsCategory", "getIndiaDayStartTimestamp",
   worker.slice(newsFormatterStart, newsFormatterEnd + 3) + "\nreturn formatCurrentNewsSummaryReply;"
 )(
   newsFormatHelpers.formatHindiNewsCount,
@@ -150,7 +150,8 @@ const formatCurrentNewsSummaryReply = new Function(
   isIndiaFocusedNewsItem,
   hasKnownContradictedNewsFact,
   () => false,
-  classifyRequestedNewsCategory
+  classifyRequestedNewsCategory,
+  getIndiaDayStartTimestamp
 );
 const groupNewsStart = worker.indexOf("function groupNewsByEvent(results) {");
 const groupNewsEnd = worker.indexOf("\n}\n", groupNewsStart);
