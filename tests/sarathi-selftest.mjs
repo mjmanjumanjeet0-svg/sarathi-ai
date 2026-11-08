@@ -85,7 +85,7 @@ assert.equal(hasUnsupportedCourtDisposition("मद्रास हाई को
   "a summary must not turn a court's closure/disposal into dismissal");
 assert.equal(hasUnsupportedCourtDisposition("मद्रास हाई कोर्ट ने याचिका बंद की", "Madras High Court closes plea to regulate gold loans"), false,
   "a summary may describe a closure when the source itself says the plea was closed");
-assert.match(source, /India Supreme Court and High Court latest judgments orders rulings petitions bail constitutional bench/,
+assert.match(source, /India court and judiciary news.*published within the last 48 hours/s,
   "focused court queries must use a judiciary-specific search query");
 
 assert.equal(classifyRequestedNewsCategory({ title: "Home Ministry announces new visa policy" }), "सरकार", "a ministry policy announcement must qualify as government");
