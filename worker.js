@@ -1508,16 +1508,18 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
   // Show only individually validated stories; never pad with unsupported items.
   if (!lines.length) return "";
   const count = lines.length;
-  const prefix = count === 5
-    ? "आज की 5 अलग-अलग, तारीख़-जाँची खबरें:"
-    : "आज " + count + " अलग-अलग, तारीख़-जाँची खबरें मिलीं (आपने 5 माँगी थीं):";
+  const prefix = requireFiveCategories
+    ? (count === 5
+        ? "आज की 5 अलग-अलग, तारीख़-जाँची खबरें:"
+        : "आज " + count + " अलग-अलग, तारीख़-जाँची खबरें मिलीं (आपने 5 माँगी थीं):")
+    : (count === 1
+        ? "एक तारीख़-जाँची खबर:"
+        : "आज " + count + " अलग-अलग, तारीख़-जाँची खबरें:");
   const missingCategories = requireFiveCategories
     ? requiredCategories.filter(category => !acceptedCategories.includes(category))
     : [];
-  const shortfall = count < 5
-    ? (requireFiveCategories
-        ? "\n\nध्यान दें: इन श्रेणियों की खबर स्रोत-जाँच में सफल नहीं हुई: " + (missingCategories.join(", ") || "कुछ श्रेणियाँ") + "। केवल सत्यापित खबरें दिखाई गई हैं; अपुष्ट खबर नहीं जोड़ी गई।"
-        : "\n\nध्यान दें: पर्याप्त स्वतंत्र और पुष्ट खबरें नहीं मिलीं, इसलिए अपुष्ट खबरें नहीं जोड़ी गईं।")
+  const shortfall = requireFiveCategories && count < 5
+    ? "\n\nध्यान दें: इन श्रेणियों की खबर स्रोत-जाँच में सफल नहीं हुई: " + (missingCategories.join(", ") || "कुछ श्रेणियाँ") + "। केवल सत्यापित खबरें दिखाई गई हैं; अपुष्ट खबर नहीं जोड़ी गई।"
     : "";
   return prefix + "\n\n" + lines.join("\n\n") +
     "\n\nध्यान दें: हर सार संबंधित समाचार के उपलब्ध लेख-अंश पर आधारित है." + shortfall;
