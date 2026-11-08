@@ -91,7 +91,7 @@ const hasKnownContradictedNewsFact = new Function(
 const formatCurrentNewsSummaryReply = new Function(
   "dedupeNewsResults", "cleanText", "formatNewsPublishedAt",
   "hasMixedScriptToken", "hasUnsupportedNumericClaim", "hasUnsupportedCertaintyClaim",
-  "hasUnsupportedNewsHeadlineMix", "hasUntranslatedEnglishHeadline", "hasIncorrectOverallAqiCategory", "isIndiaFocusedNewsItem", "hasKnownContradictedNewsFact",
+  "hasUnsupportedNewsHeadlineMix", "hasUntranslatedEnglishHeadline", "hasIncorrectOverallAqiCategory", "isIndiaFocusedNewsItem", "hasKnownContradictedNewsFact", "hasUnsupportedCourtDisposition",
   "classifyRequestedNewsCategory",
   worker.slice(newsFormatterStart, newsFormatterEnd + 3) + "\nreturn formatCurrentNewsSummaryReply;"
 )(
@@ -106,6 +106,7 @@ const formatCurrentNewsSummaryReply = new Function(
   new Function(worker.slice(worker.indexOf("function hasIncorrectOverallAqiCategory("), worker.indexOf("\n}\n", worker.indexOf("function hasIncorrectOverallAqiCategory(")) + 3) + "\nreturn hasIncorrectOverallAqiCategory;")(),
   isIndiaFocusedNewsItem,
   hasKnownContradictedNewsFact,
+  () => false,
   classifyRequestedNewsCategory
 );
 const groupNewsStart = worker.indexOf("function groupNewsByEvent(results) {");
