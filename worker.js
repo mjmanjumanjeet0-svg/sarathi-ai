@@ -308,7 +308,7 @@ function validHttpUrl(value) {
     return false;
   }
 }
-async function searchInternet(query, env) {
+async function searchInternet(query, env, maxResults = null) {
   const searchQuery = String(query || "").trim().slice(0, 1024);
   if (!searchQuery) return { results: [], warning: "खोज का सवाल खाली है।" };
 
@@ -337,7 +337,7 @@ async function searchInternet(query, env) {
       // News needs a larger candidate pool because the final safety filters
       // remove untrusted publishers, undated pages, and articles not published
       // on the current India calendar day.
-      numResults: isHistoricalResearchQuery(searchQuery) ? 15 : (isNewsQuery ? 40 : (isPreciousMetalQuery || isEducationQuery ? 8 : 5)),
+      numResults: Number.isInteger(maxResults) ? Math.max(1, Math.min(maxResults, 40)) : (isHistoricalResearchQuery(searchQuery) ? 15 : (isNewsQuery ? 40 : (isPreciousMetalQuery || isEducationQuery ? 8 : 5))),
       contents: { highlights: true }
     };
     if (isHistoricalResearchQuery(searchQuery)) {
@@ -416,7 +416,7 @@ async function searchInternet(query, env) {
     const items = Array.isArray(payload?.results) ? payload.results : [];
     const results = items
       .filter(item => item && typeof item.title === "string" && typeof item.url === "string" && validHttpUrl(item.url))
-      .slice(0, isHistoricalResearchQuery(searchQuery) ? 15 : (isNewsQuery ? 40 : (isPreciousMetalQuery ? 8 : 5)))
+      .slice(0, Number.isInteger(maxResults) ? Math.max(1, Math.min(maxResults, 40)) : (isHistoricalResearchQuery(searchQuery) ? 15 : (isNewsQuery ? 40 : (isPreciousMetalQuery ? 8 : 5))))
       .map(item => {
         let publisher = "वेबसाइट";
         try { publisher = new URL(item.url).hostname.replace(/^www\./i, ""); } catch {}
@@ -1120,6 +1120,21 @@ function classifyRequestedNewsCategory(item) {
   // A snippet can mention unrelated topics and must never fill a missing category.
   return rules.find(([, re]) => re.test(title))?.[0] || "";
 }
+function buildMissingCategoryNewsQueries(results, query) {
+  if (!isFiveCategoryNewsQuery(query)) return [];
+  const required = [
+    ["सरकार", "India government policy cabinet ministry Parliament government news latest"],
+    ["अर्थव्यवस्था", "India economy RBI GDP inflation trade business market policy news latest"],
+    ["अदालत", "India Supreme Court High Court judgment order ruling court judiciary news latest"],
+    ["विज्ञान", "India science research discovery ISRO IISc CSIR ICMR technology news latest"],
+    ["खेल", "India sports cricket football hockey badminton tennis athletics tournament athlete news latest"]
+  ];
+  const present = new Set((Array.isArray(results) ? results : [])
+    .map(classifyRequestedNewsCategory).filter(Boolean));
+  return required.filter(([category]) => !present.has(category))
+    .map(([category, searchQuery]) => ({ category, searchQuery }));
+}
+
 function selectNewsForRequestedCategories(results, query) {
   if (!isFiveCategoryNewsQuery(query)) return results;
   const required = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
@@ -2051,8 +2066,25 @@ export default {
           if (isSingleRequestedNewsStory(userText)) searchResults = searchResults.slice(0, 1);
           if (searchResults.length) searchResults = await enrichNewsArticleEvidence(searchResults);
         } else if (isFiveCategoryNewsQuery(userText)) {
-          // Preserve one distinct event for each requested category.
-          searchResults = selectNewsForRequestedCategories(searchResults, userText);
+          // First use the broad India search. If it misses categories, run a
+          // bounded, category-specific search only for those gaps; this avoids
+          // paying for five searches when the broad result set is already complete.
+          let categoryCandidates = searchResults;
+          const missingQueries = buildMissingCategoryNewsQueries(categoryCandidates, userText);
+          if (missingQueries.length) {
+            const targetedBatches = await Promise.all(missingQueries.map(async ({ category, searchQuery }) => {
+              const targeted = await searchInternet(searchQuery, env, 10);
+              if (!Array.isArray(targeted.results) || !targeted.results.length) return [];
+              const relevant = filterRelevantSearchResults(userText, targeted.results);
+              const fresh = filterFreshNewsResults(relevant);
+              return fresh.map(item => ({ ...item, _targetedCategory: category }));
+            }));
+            categoryCandidates = groupNewsByEvent(sortNewsByPublicationTime([
+              ...categoryCandidates,
+              ...targetedBatches.flat()
+            ]));
+          }
+          searchResults = selectNewsForRequestedCategories(categoryCandidates, userText);
           if (searchResults.length) searchResults = await enrichNewsArticleEvidence(searchResults);
         } else {
           searchResults = dedupeNewsPublishers(searchResults);
