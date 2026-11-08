@@ -1095,7 +1095,7 @@ function courtRecordMatchesStory(record, story) {
   const a = anchors((record?.title || "") + " " + (record?.snippet || ""));
   const b = anchors((story?.title || "") + " " + (story?.snippet || ""));
   const shared = [...a].filter(token => b.has(token));
-  const caseRefs = value => (String(value || "").match(/\b(?:wp|w\.?p\.?|slp|crl|civil|criminal|diary|case)\s*\(?[a-z]*\)?\s*(?:no\.?\s*)?\d{1,6}\s*\/?\s*20\d{2}\b/gi) || []).map(x => x.toLowerCase().replace(/\s+/g,""));
+  const caseRefs = value => (String(value || "").match(/\b(?:wp|w\.?p\.?|slp|crl|civil|criminal|diary|case)\s*\(?[a-z]*\)?\s*(?:no\.?\s*)?\d{1,6}\s*(?:\/|of\s+)\s*20\d{2}\b/gi) || []).map(x => x.toLowerCase().replace(/\s+/g,"").replace(/of/,"/"));
   const recordText = (record?.title || "") + " " + (record?.snippet || "");
   const storyText = (story?.title || "") + " " + (story?.snippet || "");
   const recordRefs = caseRefs(recordText);
