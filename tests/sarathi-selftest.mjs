@@ -173,7 +173,7 @@ assert.match(source, /पिछले उत्तर में दी गई �
 const courtRecordHelpersStart = source.indexOf("const OFFICIAL_INDIAN_COURT_DOMAINS =");
 const courtRecordHelpersEnd = source.indexOf("function isSubstantiveCourtNewsItem(item)", courtRecordHelpersStart);
 assert.ok(courtRecordHelpersStart >= 0 && courtRecordHelpersEnd > courtRecordHelpersStart, "court official-record and repeat-filter helpers must exist");
-const courtRecordHelpers = new Function("URL", "cleanText", source.slice(courtRecordHelpersStart, courtRecordHelpersEnd) + "\nreturn { canonicalNewsUrl, previouslyUsedAssistantNewsUrls, isOfficialIndianCourtRecord, courtRecordMatchesStory, courtRecordMatchDiagnostics, buildCourtSearchDiagnostics };")(URL, value => String(value || "").replace(/\s+/g, " ").trim());
+const courtRecordHelpers = new Function("URL", "cleanText", source.slice(courtRecordHelpersStart, courtRecordHelpersEnd) + "\nreturn { canonicalNewsUrl, previouslyUsedAssistantNewsUrls, isOfficialIndianCourtRecord, courtRecordPartyNames, courtRecordMatchesStory, courtRecordMatchDiagnostics, buildCourtSearchDiagnostics };")(URL, value => String(value || "").replace(/\s+/g, " ").trim());
 assert.equal(courtRecordHelpers.canonicalNewsUrl("https://thehindu.com/story/123?utm_source=test#top"), "https://thehindu.com/story/123", "canonical URL comparison must ignore tracking and fragments");
 const priorUrls = courtRecordHelpers.previouslyUsedAssistantNewsUrls([
   { role: "assistant", content: "खबर 1 (अदालत): पुरानी खबर\nमूल लिंक: https://thehindu.com/story/old" },
