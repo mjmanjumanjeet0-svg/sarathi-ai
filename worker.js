@@ -1062,6 +1062,12 @@ function isSpecificCourtNewsQuery(text) {
   return asksCourt && asksRecent && !isFiveCategoryNewsQuery(value);
 }
 
+function isSingleRequestedNewsStory(text) {
+  const value = String(text || "");
+  return /(?:\b(?:one|a single)\b|एक)\s*(?:(?:ही|महत्वपूर्ण|ज़रूरी|जरूरी|ताज़ा|ताजा|important|major|latest|recent)\s*){0,3}(?:खबर|समाचार|story|news)\b?/i.test(value) ||
+    /(?:खबर|समाचार|story|news)\s*(?:बताओ|बताइए|दो|दें|चाहिए|please)?\s*(?:एक|one)\b/i.test(value);
+}
+
 function isSubstantiveCourtNewsItem(item) {
   const title = cleanText(item?.title || "").toLocaleLowerCase("hi-IN");
   const snippet = cleanText(item?.snippet || "").toLocaleLowerCase("hi-IN");
@@ -2038,6 +2044,11 @@ export default {
             .filter(isSubstantiveCourtNewsItem)
             .map(item => ({ ...item, requestedCategory: "अदालत" }));
           searchResults = dedupeNewsPublishers(searchResults);
+          // A focused request for one court story must send one source to the
+          // summarizer and validator. Otherwise the model is asked to summarize
+          // multiple search results the user never requested, causing
+          // missingEntry rejections for the unused results.
+          if (isSingleRequestedNewsStory(userText)) searchResults = searchResults.slice(0, 1);
           if (searchResults.length) searchResults = await enrichNewsArticleEvidence(searchResults);
         } else if (isFiveCategoryNewsQuery(userText)) {
           // Preserve one distinct event for each requested category.
