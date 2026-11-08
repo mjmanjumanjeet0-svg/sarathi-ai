@@ -1105,7 +1105,70 @@ function isSingleRequestedNewsStory(text) {
     /(?:खबर|समाचार|story|news)\s*(?:बताओ|बताइए|दो|दें|चाहिए|please)?\s*(?:एक|one)\b/i.test(value);
 }
 
-const OFFICIAL_INDIAN_COURT_DOMAINS = ["sci.gov.in","main.sci.gov.in","ecourts.gov.in","ecommitteesci.gov.in","allahabadhighcourt.in","delhihighcourt.nic.in","hcmadras.tn.nic.in","mhc.tn.gov.in","bombayhighcourt.nic.in","calcuttahighcourt.gov.in","patnahighcourt.gov.in","jharkhandhighcourt.nic.in","highcourtchd.gov.in","mphc.gov.in","rajasthanhighcourt.nic.in","orissahighcourt.nic.in","keralahighcourt.nic.in","hck.gov.in","manipurhighcourt.nic.in","meghalayahighcourt.nic.in","sikkimhighcourt.nic.in","gauhaticourt.nic.in","highcourt.cg.gov.in","highcourt.hp.gov.in","highcourtofuttarakhand.gov.in","highcourtoftripura.nic.in","highcourtofap.gov.in","hcbombayatgoa.nic.in"];
+const OFFICIAL_INDIAN_COURT_DOMAINS = ["sci.gov.in","main.sci.gov.in","api.sci.gov.in","judgments.ecourts.gov.in","ecourts.gov.in","ecommitteesci.gov.in","allahabadhighcourt.in","delhihighcourt.nic.in","hcmadras.tn.nic.in","mhc.tn.gov.in","bombayhighcourt.nic.in","calcuttahighcourt.gov.in","patnahighcourt.gov.in","jharkhandhighcourt.nic.in","highcourtchd.gov.in","mphc.gov.in","rajasthanhighcourt.nic.in","orissahighcourt.nic.in","keralahighcourt.nic.in","hck.gov.in","manipurhighcourt.nic.in","meghalayahighcourt.nic.in","sikkimhighcourt.nic.in","gauhaticourt.nic.in","highcourt.cg.gov.in","highcourt.hp.gov.in","highcourtofuttarakhand.gov.in","highcourtoftripura.nic.in","highcourtofap.gov.in","hcbombayatgoa.nic.in"];
+function buildCourtCandidateSearchPlans(stories) {
+  const plans = [];
+  for (const story of (Array.isArray(stories) ? stories : []).slice(0, 4)) {
+    const text = cleanText((story.title || "") + " " + (story.snippet || ""));
+    const lower = text.toLowerCase();
+    let domains = OFFICIAL_INDIAN_COURT_DOMAINS;
+    if (/supreme court|सुप्रीम कोर्ट|सर्वोच्च न्यायालय/i.test(lower)) domains = ["sci.gov.in","main.sci.gov.in","api.sci.gov.in","judgments.ecourts.gov.in","ecourts.gov.in"];
+    else if (/madras high court|madras hc|मद्रास हाई कोर्ट/i.test(lower)) domains = ["mhc.tn.gov.in","hcmadras.tn.nic.in","judgments.ecourts.gov.in"];
+    else if (/delhi high court|दिल्ली हाई कोर्ट/i.test(lower)) domains = ["delhihighcourt.nic.in","judgments.ecourts.gov.in"];
+    else if (/patna high court|पटना हाई कोर्ट/i.test(lower)) domains = ["patnahighcourt.gov.in","judgments.ecourts.gov.in"];
+    else if (/bombay high court|मुंबई हाई कोर्ट/i.test(lower)) domains = ["bombayhighcourt.nic.in","hcbombayatgoa.nic.in","judgments.ecourts.gov.in"];
+    else if (/calcutta high court|कोलकाता हाई कोर्ट/i.test(lower)) domains = ["calcuttahighcourt.gov.in","judgments.ecourts.gov.in"];
+    else if (/allahabad high court|इलाहाबाद हाई कोर्ट/i.test(lower)) domains = ["allahabadhighcourt.in","judgments.ecourts.gov.in"];
+    else if (/kerala high court|केरल हाई कोर्ट/i.test(lower)) domains = ["keralahighcourt.nic.in","judgments.ecourts.gov.in"];
+    const parties = [...courtRecordPartyNames(story.title || "")].slice(0, 3);
+    const query = [
+      story.title || "",
+      parties.length ? "parties " + parties.join(" ") : "",
+      "official individual judgment final order case record"
+    ].filter(Boolean).join(" ").slice(0, 900);
+    plans.push({ newsTitle: cleanText(story.title || "").slice(0, 200), newsUrl: story.url || "", query, domains });
+  }
+  return plans;
+}
+async function enrichCourtNewsArticleEvidence(items) {
+  return await Promise.all((Array.isArray(items) ? items : []).slice(0, 4).map(async item => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6500);
+    try {
+      const response = await fetch(item.url, {
+        method: "GET",
+        headers: { "Accept": "text/html,application/xhtml+xml", "User-Agent": "Mozilla/5.0 (compatible; SarathiAI/1.0)" },
+        signal: controller.signal,
+        redirect: "manual"
+      });
+      if (!response.ok) return { ...item, articleFetchAttempted: true, articleFetchStatus: response.status, articleEvidenceFetched: false };
+      const contentType = response.headers.get("content-type") || "";
+      if (!/text\/html|application\/xhtml\+xml/i.test(contentType)) {
+        return { ...item, articleFetchAttempted: true, articleFetchStatus: response.status, articleEvidenceFetched: false };
+      }
+      const html = (await response.text()).slice(0, 600000);
+      const visible = cleanText(html
+        .replace(/<script[\s\S]*?<\/script>/gi, " ")
+        .replace(/<style[\s\S]*?<\/style>/gi, " ")
+        .replace(/<nav[\s\S]*?<\/nav>/gi, " ")
+        .replace(/<footer[\s\S]*?<\/footer>/gi, " ")
+        .replace(/<[^>]+>/g, " "));
+      const articleText = visible.slice(0, 10000);
+      return {
+        ...item,
+        snippet: cleanText((item.snippet || "") + " " + articleText).slice(0, 12000),
+        articleFetchAttempted: true,
+        articleFetchStatus: response.status,
+        articleEvidenceFetched: articleText.length > 500,
+        articleEvidenceLength: articleText.length
+      };
+    } catch (error) {
+      return { ...item, articleFetchAttempted: true, articleFetchStatus: error?.name === "AbortError" ? 504 : 502, articleFetchError: String(error?.name || "FETCH_ERROR"), articleEvidenceFetched: false };
+    } finally {
+      clearTimeout(timeout);
+    }
+  }));
+}
 function canonicalNewsUrl(value) { try { const u = new URL(value); u.hash = ""; u.search = ""; return u.origin.toLowerCase() + u.pathname.toLowerCase().replace(/\/$/, ""); } catch { return ""; } }
 function previouslyUsedAssistantNewsUrls(messages) {
   const used = new Set();
@@ -1186,8 +1249,8 @@ function courtRecordMatchesStory(record, story) {
   // Require the same explicit case reference, at least two distinctive
   // shared anchors, and at least one shared title anchor. This prevents
   // snippet-only topic overlap from attaching the wrong party's court record.
-  const recordParties = courtRecordPartyNames(record?.title || "");
-  const storyParties = courtRecordPartyNames(story?.title || "");
+  const recordParties = courtRecordPartyNames((record?.title || "") + " " + (record?.snippet || ""));
+  const storyParties = courtRecordPartyNames((story?.title || "") + " " + (story?.snippet || ""));
   const hasPartyIdentityEvidence = recordParties.size > 0 && storyParties.size > 0;
   const sharedParty = [...recordParties].some(name => storyParties.has(name));
   // When both titles identify a named party, a different party is a hard
@@ -1210,8 +1273,8 @@ function courtRecordMatchDiagnostics(record, story) {
   const sharedTitle = [...recordTitle].filter(token => storyTitle.has(token));
   const recordAnchors = anchors(recordText), storyAnchors = anchors(storyText);
   const shared = [...recordAnchors].filter(token => storyAnchors.has(token));
-  const recordParties = [...courtRecordPartyNames(record?.title || "")];
-  const storyParties = [...courtRecordPartyNames(story?.title || "")];
+  const recordParties = [...courtRecordPartyNames((record?.title || "") + " " + (record?.snippet || ""))];
+  const storyParties = [...courtRecordPartyNames((story?.title || "") + " " + (story?.snippet || ""))];
   const hasPartyEvidence = recordParties.length > 0 && storyParties.length > 0;
   const sharedParty = recordParties.some(name => storyParties.includes(name));
   const reasons = [];
@@ -1236,7 +1299,7 @@ function courtRecordMatchDiagnostics(record, story) {
     officialPartyNames: recordParties.slice(0, 5)
   };
 }
-function buildCourtSearchDiagnostics({ startedAt, finishedAt, officialSearch, newsSearch, newsCandidates, officialRecords }) {
+function buildCourtSearchDiagnostics({ startedAt, finishedAt, officialSearch, targetedSearches, newsSearch, newsCandidates, officialRecords }) {
   const candidates = (Array.isArray(newsCandidates) ? newsCandidates : []).slice(0, 8);
   const records = (Array.isArray(officialRecords) ? officialRecords : []).slice(0, 30);
   const extractCaseRefs = value => (String(value || "").match(/\b(?:wp|w\.?p\.?|slp|crl|civil|criminal|diary|case)\s*\(?[a-z]*\)?\s*(?:no\.?\s*)?\d{1,6}\s*(?:\/|of\s+)\s*20\d{2}\b/gi) || []).map(x => x.toLowerCase().replace(/\s+/g,"").replace(/of/,"/"));
@@ -1250,8 +1313,9 @@ function buildCourtSearchDiagnostics({ startedAt, finishedAt, officialSearch, ne
       newsTitle: cleanText(story.title || "").slice(0, 220),
       newsUrl: story.url || "",
       newsPublishedAt: story.publishedAt || null,
+      articleFetch: { attempted: story.articleFetchAttempted === true, httpStatus: story.articleFetchStatus ?? null, evidenceFetched: story.articleEvidenceFetched === true, evidenceLength: story.articleEvidenceLength ?? 0 },
       caseNumbers: extractCaseRefs((story.title || "") + " " + (story.snippet || "")).slice(0, 5),
-      partyNames: [...courtRecordPartyNames(story.title || "")].slice(0, 5),
+      partyNames: [...courtRecordPartyNames((story.title || "") + " " + (story.snippet || ""))].slice(0, 5),
       matchedOfficialRecord: matched ? { title: cleanText(matched.record.title || "").slice(0, 220), url: matched.record.url } : null,
       recordComparisons: checks.slice(0, 10).map(check => ({
         title: cleanText(check.record.title || "").slice(0, 180),
@@ -1281,6 +1345,7 @@ function buildCourtSearchDiagnostics({ startedAt, finishedAt, officialSearch, ne
         rawResultCount: Array.isArray(officialSearch?.results) ? officialSearch.results.length : 0,
         officialDomainRecordCount: Array.isArray(officialRecords) ? officialRecords.length : 0,
         recordsInspected: records.length,
+        targetedCandidateSearches: (Array.isArray(targetedSearches) ? targetedSearches : []).map(item => ({ newsTitle: item.newsTitle, newsUrl: item.newsUrl, domains: item.domains, attempted: item.attempted === true, httpStatus: item.httpStatus ?? null, errorCode: item.errorCode ?? null, resultCount: item.resultCount ?? 0 })),
         recordCandidates: records.map(record => ({ title: cleanText(record.title || "").slice(0, 200), url: record.url || "", indexedDate: record.publishedAt || null }))
       },
       newsSearch: {
@@ -2385,12 +2450,29 @@ export default {
             .filter(item => !previouslyUsedUrls.has(canonicalNewsUrl(item.url)))
             .map(item => ({ ...item, requestedCategory: "अदालत" }));
           searchResults = dedupeNewsPublishers(searchResults);
-          const courtNewsCandidates = searchResults.slice();
-          const officialRecords = (courtOfficialSearch?.results || []).filter(isOfficialIndianCourtRecord);
+          // Read the original publisher page before checking for case and party details.
+          const courtNewsCandidates = await enrichCourtNewsArticleEvidence(searchResults.slice());
+          // Search official court domains again for each candidate, using its
+          // actual headline and the court named by the report.
+          const candidatePlans = buildCourtCandidateSearchPlans(courtNewsCandidates);
+          const targetedSearchResults = await Promise.all(candidatePlans.map(async plan => {
+            const result = await searchInternet(plan.query, env, 12, { news: false, includeDomains: plan.domains });
+            return { ...plan, attempted: result.attempted === true, httpStatus: result.httpStatus ?? null, errorCode: result.errorCode ?? null, resultCount: (result.results || []).length, results: result.results || [] };
+          }));
+          const allOfficialSearchResults = [
+            ...(courtOfficialSearch?.results || []),
+            ...targetedSearchResults.flatMap(item => item.results || [])
+          ];
+          const officialSeen = new Set();
+          const officialRecords = allOfficialSearchResults
+            .filter(item => { const key = canonicalNewsUrl(item.url); if (!key || officialSeen.has(key)) return false; officialSeen.add(key); return true; })
+            .filter(isOfficialIndianCourtRecord);
+          const targetedSearchDiagnostics = targetedSearchResults.map(({ results, ...item }) => item);
           const courtDiagnostics = buildCourtSearchDiagnostics({
             startedAt: courtSearchStartedAt,
-            finishedAt: courtSearchFinishedAt,
+            finishedAt: new Date().toISOString(),
             officialSearch: courtOfficialSearch,
+            targetedSearches: targetedSearchDiagnostics,
             newsSearch: search,
             newsCandidates: courtNewsCandidates,
             officialRecords
