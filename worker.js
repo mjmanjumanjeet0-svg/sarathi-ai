@@ -1135,7 +1135,7 @@ function isOfficialIndianCourtRecord(item) {
     const detailSections = new Set(["judgment", "judgments", "order", "orders", "court-order", "court_orders"]);
     const caseSpecificDetail = pathParts.length >= 2 && detailSections.has(pathParts[pathParts.length - 2]) && pathParts[pathParts.length - 1].length >= 4;
     const orderDocumentPath = directPdf && pathParts.some(part => detailSections.has(part)) &&
-      !/(cause\\s*list|daily\\s*list|circular|roster|listing\\s*notice)/i.test(path);
+      !/(cause\s*list|daily\s*list|circular|roster|listing\s*notice)/i.test(path);
     const caseReference = /\b(?:wp|w\.?p\.?|slp|crl|civil|criminal|diary|case)\s*\(?[a-z]*\)?\s*(?:no\.?\s*)?\d{1,6}\s*(?:\/|of\s+)\s*20\d{2}\b/i.test(title + " " + snippet);
     const orderEvidence = /\b(judg(?:e)?ment|final\s*order|interim\s*order|disposed|dismissed|allowed|pronounced|order\s*dated)\b/i.test(title + " " + snippet);
     // A PDF must identify a case or an order in its indexed metadata.
