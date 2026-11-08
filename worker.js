@@ -1306,7 +1306,7 @@ function hasKnownContradictedNewsFact(text) {
   return olympics && yearNearAthens;
 }
 
-function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false) {
+function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false, singleStoryRequest = false) {
   let items = dedupeNewsResults(results).filter(item => {
     const title = cleanText(item?.title || "");
     const publishedAt = Date.parse(item?.publishedAt || "");
@@ -1508,17 +1508,21 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
   // Show only individually validated stories; never pad with unsupported items.
   if (!lines.length) return "";
   const count = lines.length;
-  const prefix = count === 5
-    ? "आज की 5 अलग-अलग, तारीख़-जाँची खबरें:"
-    : "आज " + count + " अलग-अलग, तारीख़-जाँची खबरें मिलीं (आपने 5 माँगी थीं):";
+  const prefix = singleStoryRequest
+    ? "एक तारीख़-जाँची खबर:"
+    : count === 5
+      ? "आज की 5 अलग-अलग, तारीख़-जाँची खबरें:"
+      : "आज " + count + " अलग-अलग, तारीख़-जाँची खबरें मिलीं (आपने 5 माँगी थीं):";
   const missingCategories = requireFiveCategories
     ? requiredCategories.filter(category => !acceptedCategories.includes(category))
     : [];
-  const shortfall = count < 5
-    ? (requireFiveCategories
-        ? "\n\nध्यान दें: इन श्रेणियों की खबर स्रोत-जाँच में सफल नहीं हुई: " + (missingCategories.join(", ") || "कुछ श्रेणियाँ") + "। केवल सत्यापित खबरें दिखाई गई हैं; अपुष्ट खबर नहीं जोड़ी गई।"
-        : "\n\nध्यान दें: पर्याप्त स्वतंत्र और पुष्ट खबरें नहीं मिलीं, इसलिए अपुष्ट खबरें नहीं जोड़ी गईं।")
-    : "";
+  const shortfall = singleStoryRequest
+    ? ""
+    : count < 5
+      ? (requireFiveCategories
+          ? "\n\nध्यान दें: इन श्रेणियों की खबर स्रोत-जाँच में सफल नहीं हुई: " + (missingCategories.join(", ") || "कुछ श्रेणियाँ") + "। केवल सत्यापित खबरें दिखाई गई हैं; अपुष्ट खबर नहीं जोड़ी गई।"
+          : "\n\nध्यान दें: पर्याप्त स्वतंत्र और पुष्ट खबरें नहीं मिलीं, इसलिए अपुष्ट खबरें नहीं जोड़ी गईं।")
+      : "";
   return prefix + "\n\n" + lines.join("\n\n") +
     "\n\nध्यान दें: हर सार संबंधित समाचार के उपलब्ध लेख-अंश पर आधारित है." + shortfall;
 }
@@ -2665,7 +2669,7 @@ export default {
     // The summary parser itself validates every source-summary pair. Avoid a
     // separate brittle heading counter that can reject harmless punctuation.
     let formattedNewsReply = isCurrentNewsReply && !looksLikeRawEnglishArticle
-      ? formatCurrentNewsSummaryReply(normalizeNewsSummaryRepairText(rawReply), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText))
+      ? formatCurrentNewsSummaryReply(normalizeNewsSummaryRepairText(rawReply), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText), isSingleRequestedNewsStory(userText))
       : "";
 
     // If the first completion used an unexpected layout, make one constrained
@@ -2686,7 +2690,7 @@ export default {
             ? repairContent.map(part => typeof part === "string" ? part : (part?.text || part?.content || "")).join("")
             : repairContent;
           return typeof repairText === "string" && repairText.trim()
-            ? formatCurrentNewsSummaryReply(normalizeNewsSummaryRepairText(repairText.trim()), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText))
+            ? formatCurrentNewsSummaryReply(normalizeNewsSummaryRepairText(repairText.trim()), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText), isSingleRequestedNewsStory(userText))
             : "";
         };
         let repairResponse;

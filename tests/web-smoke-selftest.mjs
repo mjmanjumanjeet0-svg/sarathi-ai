@@ -68,7 +68,7 @@ const classifyRequestedNewsCategory = new Function(
   "cleanText",
   worker.slice(categoryClassifierStart, categoryClassifierEnd + 3) + "\nreturn classifyRequestedNewsCategory;"
 )(value => String(value || "").replace(/\s+/g, " ").trim());
-const newsFormatterStart = worker.indexOf("function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false) {");
+const newsFormatterStart = worker.indexOf("function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false, singleStoryRequest = false) {");
 const newsFormatterEnd = worker.indexOf("\n}\n", newsFormatterStart);
 assert.ok(newsFormatterStart >= 0 && newsFormatterEnd > newsFormatterStart, "daily-news formatter must exist");
 const untranslatedHeadlineStart = worker.indexOf("function hasUntranslatedEnglishHeadline(text, sourceEvidence = \"\") {");
