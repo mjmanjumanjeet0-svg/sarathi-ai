@@ -182,10 +182,14 @@ const priorUrls = courtRecordHelpers.previouslyUsedAssistantNewsUrls([
 ]);
 assert.equal(priorUrls.has("https://thehindu.com/story/old"), true, "previous court-news article links must be remembered during the conversation");
 assert.equal(priorUrls.has("https://example.com/unrelated"), false, "unrelated assistant links must not suppress court-news results");
-assert.equal(courtRecordHelpers.isOfficialIndianCourtRecord({ url: "https://main.sci.gov.in/judgments" }), true, "Supreme Court official domain must be accepted");
+assert.equal(courtRecordHelpers.isOfficialIndianCourtRecord({ url: "https://main.sci.gov.in/judgments/2026/11/order-123.pdf" }), true, "a direct Supreme Court order PDF must be accepted");
+assert.equal(courtRecordHelpers.isOfficialIndianCourtRecord({ url: "https://www.sci.gov.in/" }), false, "a court homepage must not count as an official case record");
+assert.equal(courtRecordHelpers.isOfficialIndianCourtRecord({ url: "https://www.sci.gov.in/published-cause-list/" }), false, "a generic cause-list landing page must not count as a specific order");
+assert.equal(courtRecordHelpers.isOfficialIndianCourtRecord({ url: "https://mhc.tn.gov.in/judis/madras-do/" }), false, "a daily-orders index must not count as a specific order");
 assert.equal(courtRecordHelpers.isOfficialIndianCourtRecord({ url: "https://thehindu.com/courts/story" }), false, "news publishers must not be treated as official court records");
-const goldStory = { title: "Madras High Court gold loan and pledged jewellery PIL WP(C) 55 of 2025", snippet: "RBI auction regulation petition" };
-assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "Madras High Court PIL on gold loan and pledged jewellery auction WP(C) 55/2025; RBI", snippet: "public interest petition" }, goldStory), true, "matching official court records must share multiple distinctive story anchors and the same case reference");
+const goldStory = { title: "Madras High Court Ramesh Kumar gold loan and pledged jewellery PIL WP(C) 55 of 2025", snippet: "RBI auction regulation petition" };
+assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "Madras High Court Ramesh Kumar PIL on gold loan and pledged jewellery auction WP(C) 55/2025; RBI", snippet: "public interest petition" }, goldStory), true, "matching official court records must share the same case reference, distinctive anchors, and named party");
+assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "Madras High Court gold loan and pledged jewellery PIL WP(C) 55/2025; RBI", snippet: "public interest petition" }, { title: "Madras High Court gold loan and pledged jewellery PIL WP(C) 55 of 2025", snippet: "RBI auction regulation petition" }), false, "case and topic overlap without named party identity must not verify a story");
 assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "Madras High Court unrelated service matter", snippet: "appointment case" }, goldStory), false, "unrelated court records must not be attached to a news story");
 const rekhaStory = { title: "Woman with low vision Rekha Sharma awaits judicial appointment", snippet: "Supreme Court case WP(C) 733 of 2024 and Rajasthan Civil Judge appointment" };
 assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "WP(C) 733/2024 Rekha Sharma", snippet: "Rajasthan Civil Judge appointment and low vision" }, rekhaStory), true, "a matching named case record must match a court-news story");
