@@ -75,10 +75,21 @@ assert.equal(courtHelpers.isSubstantiveCourtNewsItem({ title: "Supreme Court ord
   "a substantive Supreme Court order must qualify");
 assert.equal(courtHelpers.isSubstantiveCourtNewsItem({ title: "Bomb threat to Bombay High Court and BSE" }), false,
   "a threat mentioning a High Court must not qualify as judicial news");
-assert.match(source, /India Supreme Court and High Court latest judgments orders rulings hearings petitions bail constitutional bench/,
+const courtOutcomeStart = source.indexOf("function hasUnsupportedCourtDisposition(");
+const courtOutcomeEnd = source.indexOf("\nfunction formatCurrentNewsSummaryReply", courtOutcomeStart);
+assert.ok(courtOutcomeStart >= 0 && courtOutcomeEnd > courtOutcomeStart, "court disposition guard must exist");
+const hasUnsupportedCourtDisposition = new Function("cleanText", source.slice(courtOutcomeStart, courtOutcomeEnd) + "\nreturn hasUnsupportedCourtDisposition;")(
+  value => String(value || "").replace(/<[^>]*>/g, " ").replace(/\\s+/g, " ").trim()
+);
+assert.equal(hasUnsupportedCourtDisposition("मद्रास हाई कोर्ट ने याचिका खारिज कर दी", "Madras High Court closes plea to regulate gold loans"), true,
+  "a summary must not turn a court's closure/disposal into dismissal");
+assert.equal(hasUnsupportedCourtDisposition("मद्रास हाई कोर्ट ने याचिका बंद की", "Madras High Court closes plea to regulate gold loans"), false,
+  "a summary may describe a closure when the source itself says the plea was closed");
+assert.match(source, /India Supreme Court and High Court latest judgments orders rulings petitions bail constitutional bench/,
   "focused court queries must use a judiciary-specific search query");
 
 assert.equal(classifyRequestedNewsCategory({ title: "Home Ministry announces new visa policy" }), "सरकार", "a ministry policy announcement must qualify as government");
+assert.equal(classifyRequestedNewsCategory({ title: "Delhi govt urges citizens to burst only green crackers" }), "सरकार", "govt abbreviations must be classified as government, not left for an unrelated category");
 assert.equal(classifyRequestedNewsCategory({ title: "PM Modi asks new NITI Aayog team to craft ideas to improve lives of India’s poorest" }), "सरकार", "NITI Aayog policy direction must be classified as government, not economy");
 assert.match(source, /India court and judiciary news.*published within the last 48 hours/s, "five-category search must deliberately seek recent court coverage");
 assert.equal(classifyRequestedNewsCategory({ title: "Indian athlete Parvez Khan faces doping ban" }), "खेल", "an athlete doping story must qualify as sports");
@@ -822,7 +833,8 @@ await test("news digest shows only summaries that pass source validation", async
       messages: [{ role: "user", content: "आज की भारत की 5 अलग-अलग ताज़ा खबरें बताओ। हर खबर का हिंदी में 2–3 वाक्यों में सार बताओ।" }]
     }, token);
     assert.equal(r.status, 200);
-    assert.match(r.data.reply, /अलग-अलग, तारीख़-जाँची खबरें मिलीं \(आपने 5 माँगी थीं\)/);
+    assert.match(r.data.reply, /अलग-अलग, तारीख़-जाँची खबरें मिलीं/);
+    assert.doesNotMatch(r.data.reply, /आपने 5 माँगी थीं/, "a generic short result must not claim the user requested five stories");
     const headlines = r.data.reply.split("\n").filter(line => /^खबर [1-5]: /.test(line));
     assert.ok(headlines.length > 0 && headlines.length < 5, "show only the individually validated summaries and disclose the shortfall");
     assert.doesNotMatch(r.data.reply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/);
