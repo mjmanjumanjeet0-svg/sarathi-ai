@@ -87,7 +87,7 @@ assert.equal(classifyRequestedNewsCategory({ title: "Daily roundup of national h
 const selectStart = source.indexOf("function selectNewsForRequestedCategories(results, query) {");
 const selectEnd = source.indexOf("\nfunction isCurrentNewsQuery", selectStart);
 assert.ok(selectStart >= 0 && selectEnd > selectStart, "five-category selector must exist");
-const isFiveCategoryNewsQuery = value => /(?:पाँच|पांच|5)[^\\n]{0,45}?(?:खबर|समाचार|news)/i.test(value) &&
+const isFiveCategoryNewsQuery = value => /(?:पाँच|पांच|5)[^\n]{0,45}?(?:खबर|समाचार|news)/i.test(value) &&
   ["सरकार","अर्थव्यवस्था","अदालत","विज्ञान","खेल"].every(word => value.includes(word));
 const selectNewsForRequestedCategories = new Function("classifyRequestedNewsCategory", "cleanText", "isFiveCategoryNewsQuery",
   source.slice(selectStart, selectEnd) + "\nreturn selectNewsForRequestedCategories;")(
@@ -111,10 +111,10 @@ assert.deepEqual(fiveCategorySelection.map(item => item.url),
   "selector must ignore stale category metadata and snippet-only roundup matches");
 
 const missingQueryStart = source.indexOf("function buildMissingCategoryNewsQueries(results, query) {");
-const missingQueryEnd = source.indexOf("\\nfunction selectNewsForRequestedCategories", missingQueryStart);
+const missingQueryEnd = source.indexOf("\nfunction selectNewsForRequestedCategories", missingQueryStart);
 assert.ok(missingQueryStart >= 0 && missingQueryEnd > missingQueryStart, "missing-category search planner must exist");
 const buildMissingCategoryNewsQueries = new Function("classifyRequestedNewsCategory", "isFiveCategoryNewsQuery",
-  source.slice(missingQueryStart, missingQueryEnd) + "\\nreturn buildMissingCategoryNewsQueries;")(
+  source.slice(missingQueryStart, missingQueryEnd) + "\nreturn buildMissingCategoryNewsQueries;")(
     classifyRequestedNewsCategory, isFiveCategoryNewsQuery
   );
 assert.deepEqual(buildMissingCategoryNewsQueries(categoryFixture.slice(0, 2),
@@ -125,7 +125,7 @@ assert.deepEqual(buildMissingCategoryNewsQueries(fiveCategorySelection,
   "आज भारत की पाँच ताज़ा खबरें: सरकार, अर्थव्यवस्था, अदालत, विज्ञान और खेल"),
   [],
   "targeted discovery must not make extra searches when all five categories already exist");
-assert.match(source, /async function searchInternet\\(query, env, maxResults = null\\)/,
+assert.match(source, /async function searchInternet\(query, env, maxResults = null\)/,
   "targeted category searches must support a bounded result limit");
 
 
@@ -338,7 +338,7 @@ globalThis.fetch = async (input, init = {}) => {
         "सार: अग्निवीरों की सेवा अवधि बढ़ाने की खबर प्रकाशित हुई।",
         "खबर 4: दिल्ली में वायु गुणवत्ता",
         "सार: दिवाली से पहले दिल्ली की वायु गुणवत्ता और खराब होने की खबर प्रकाशित हुई।"
-      ].join("\\n") } }] });
+      ].join("\n") } }] });
     }
     if (groqMode === "malformed-news-secondary") return Response.json({ choices: [{ message: { content: "आज की खबरें जल्द पढ़ें।" } }] });
     if (groqMode === "news-plain-summary") return Response.json({ choices: [{ message: { content: "**खबर 1 – ऊर्जा भंडारण योजना को मंजूरी**\nसरकार ने बड़े स्तर पर ऊर्जा भंडारण विकसित करने के लिए योजना को मंजूरी दी।\n**खबर 2 – शेयर बाजार में तेजी**\nसेंसेक्स और निफ्टी में कारोबार के दौरान बढ़त दर्ज हुई।\n**खबर 3 – दिल्ली की हवा की गुणवत्ता**\nदिल्ली में वायु गुणवत्ता खराब होने की खबर प्रकाशित हुई।\n**खबर 4 – अग्निवीर सेवा अवधि**\nअग्निवीरों की सेवा अवधि बढ़ाने के फैसले की खबर प्रकाशित हुई।" } }] });
@@ -1222,7 +1222,7 @@ await test("current news retries one provider rate limit with compact source con
     assert.equal(retryBody.max_tokens, 1000);
     assert.match(retryBody.messages.at(-1).content, /लेख-अंश/);
     assert.match(retryBody.messages.at(-1).content, /\nप्रकाशक:/, "compact retry context must use real line breaks");
-    assert.doesNotMatch(retryBody.messages.at(-1).content, /\\nप्रकाशक:/, "compact retry must not send literal backslash-n text");
+    assert.doesNotMatch(retryBody.messages.at(-1).content, /\nप्रकाशक:/, "compact retry must not send literal backslash-n text");
     assert.ok((r.data.reply.match(/सार:/g) || []).length > 0 && (r.data.reply.match(/सार:/g) || []).length < 5,
       "a four-source retry may show only individually validated summaries and must not claim five stories");
     assert.match(r.data.reply, /अपुष्ट खबरें नहीं जोड़ी गईं/);
@@ -1326,7 +1326,7 @@ await test("current news refuses headline-only output when Groq returns malforme
     assert.ok(r.data.sources.length > 1, "date-checked search results should remain available");
     assert.match(r.data.reply, /आज केवल 4 अलग-अलग, तारीख़-जाँचे समाचार स्रोत मिले|आज 5 तारीख़-जाँचे समाचार परिणाम मिले/);
     assert.doesNotMatch(r.data.reply, /प्रकाशकों के मूल शीर्षक|प्रकाशित:|खबर [1-5]:/);
-    assert.doesNotMatch(r.data.reply, /\\n/, "fallback text must contain real line breaks, not visible escape sequences");
+    assert.doesNotMatch(r.data.reply, /\n/, "fallback text must contain real line breaks, not visible escape sequences");
     assert.doesNotMatch(r.data.reply, /कृपया थोड़ी देर बाद फिर पूछें/);
   } finally {
     groqMode = "success";
