@@ -111,13 +111,15 @@ assert.equal(hasUnsupportedCourtDisposition("मद्रास हाई को
   "a summary must not turn a court's closure/disposal into dismissal");
 assert.equal(hasUnsupportedCourtDisposition("मद्रास हाई कोर्ट ने याचिका बंद की", "Madras High Court closes plea to regulate gold loans"), false,
   "a summary may describe a closure when the source itself says the plea was closed");
-assert.match(source, /India court and judiciary news.*published within the last 48 hours/s,
+assert.match(source, /India court and judiciary news.*published today/s,
+assert.match(source, /Asia\\/Kolkata/, "news publication window must use the current India calendar day");
+assert.match(source, /istMidnightUtc/, "news search must start at midnight IST rather than a rolling 48-hour window");
   "focused court queries must use a judiciary-specific search query");
 
 assert.equal(classifyRequestedNewsCategory({ title: "Home Ministry announces new visa policy" }), "सरकार", "a ministry policy announcement must qualify as government");
 assert.equal(classifyRequestedNewsCategory({ title: "Delhi govt urges citizens to burst only green crackers" }), "सरकार", "govt abbreviations must be classified as government, not left for an unrelated category");
 assert.equal(classifyRequestedNewsCategory({ title: "PM Modi asks new NITI Aayog team to craft ideas to improve lives of India’s poorest" }), "सरकार", "NITI Aayog policy direction must be classified as government, not economy");
-assert.match(source, /India court and judiciary news.*published within the last 48 hours/s, "five-category search must deliberately seek recent court coverage");
+assert.match(source, /India court and judiciary news.*published today/s, "five-category search must deliberately seek recent court coverage");
 assert.equal(classifyRequestedNewsCategory({ title: "Indian athlete Parvez Khan faces doping ban" }), "खेल", "an athlete doping story must qualify as sports");
 assert.equal(classifyRequestedNewsCategory({ title: "Daily roundup of national headlines", snippet: "Sports officials and athletes discuss the latest tournament" }), "", "incidental sports terms in a snippet must not fill the sports category");
 
