@@ -1267,7 +1267,11 @@ function courtRecordMatchesStory(record, story) {
   const recordParties = courtRecordPartyNames((record?.title || "") + " " + (record?.snippet || ""));
   const storyParties = courtRecordPartyNames((story?.title || "") + " " + (story?.snippet || ""));
   const hasPartyIdentityEvidence = recordParties.size > 0 && storyParties.size > 0;
-  const sharedParty = [...recordParties].some(name => storyParties.has(name));
+  // Require the complete extracted party set to agree. A shared State/authority
+  // as respondent must not hide a different petitioner/appellant.
+  const sharedParty = hasPartyIdentityEvidence &&
+    recordParties.size === storyParties.size &&
+    [...recordParties].every(name => storyParties.has(name));
   // When both titles identify a named party, a different party is a hard
   // mismatch even if the case number and subject words happen to overlap.
   return sharedCaseRef && shared.length >= 2 && sharedTitle.length >= 1 &&
@@ -1291,7 +1295,10 @@ function courtRecordMatchDiagnostics(record, story) {
   const recordParties = [...courtRecordPartyNames((record?.title || "") + " " + (record?.snippet || ""))];
   const storyParties = [...courtRecordPartyNames((story?.title || "") + " " + (story?.snippet || ""))];
   const hasPartyEvidence = recordParties.length > 0 && storyParties.length > 0;
-  const sharedParty = recordParties.some(name => storyParties.includes(name));
+  // Compare both sides of the case caption, not merely one common respondent.
+  const sharedParty = hasPartyEvidence &&
+    recordParties.length === storyParties.length &&
+    recordParties.every(name => storyParties.includes(name));
   const reasons = [];
   if (!recordRefs.length || !storyRefs.length) reasons.push("केस नंबर उपलब्ध/पहचान योग्य नहीं");
   else if (!sharedCaseRef) reasons.push("केस नंबर अलग");
