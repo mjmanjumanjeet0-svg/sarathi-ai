@@ -251,7 +251,8 @@ const mixedMetadataDraft = fiveNewsDraft.replace(
 const mixedMetadataReply = formatCurrentNewsSummaryReply(mixedMetadataDraft, fiveNewsSources, true, true);
 assert.doesNotMatch(mixedMetadataReply, /fake\.example|https:\/\/fake\.example/, "model-generated source metadata must never be shown; only matched search-result metadata is trusted");
 const partialFourNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, fiveNewsSources.slice(0, 4), true);
-assert.match(partialFourNewsReply, /आज 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं \(आपने 5 माँगी थीं\)/, "four verified stories should be shown with an explicit shortfall notice");
+assert.match(partialFourNewsReply, /आज 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं:/, "four verified stories should be shown with an explicit shortfall notice");
+assert.doesNotMatch(partialFourNewsReply, /आपने 5 माँगी थीं/, "generic shortfall wording must not assume a five-story request");
 assert.equal([...partialFourNewsReply.matchAll(/खबर (\d+)(?: \([^)]*\))?:/g)].length, 4, "only four available validated stories should be displayed");
 const incompleteFiveNewsDraft = fiveNewsDraft.replace("सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।", "सार: ");
 const incompleteFiveNewsReply = formatCurrentNewsSummaryReply(incompleteFiveNewsDraft, fiveNewsSources, true);
