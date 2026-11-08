@@ -173,8 +173,17 @@ assert.match(source, /पिछले उत्तर में दी गई �
 const courtRecordHelpersStart = source.indexOf("const OFFICIAL_INDIAN_COURT_DOMAINS =");
 const courtRecordHelpersEnd = source.indexOf("function isSubstantiveCourtNewsItem(item)", courtRecordHelpersStart);
 assert.ok(courtRecordHelpersStart >= 0 && courtRecordHelpersEnd > courtRecordHelpersStart, "court official-record and repeat-filter helpers must exist");
-const courtRecordHelpers = new Function("URL", "cleanText", source.slice(courtRecordHelpersStart, courtRecordHelpersEnd) + "\nreturn { canonicalNewsUrl, previouslyUsedAssistantNewsUrls, isOfficialIndianCourtRecord, courtRecordPartyNames, courtRecordMatchesStory, courtRecordMatchDiagnostics, buildCourtSearchDiagnostics };")(URL, value => String(value || "").replace(/\s+/g, " ").trim());
+const courtRecordHelpers = new Function("URL", "cleanText", source.slice(courtRecordHelpersStart, courtRecordHelpersEnd) + "\nreturn { canonicalNewsUrl, previouslyUsedAssistantNewsUrls, isOfficialIndianCourtRecord, courtRecordPartyNames, buildCourtCandidateSearchPlans, courtRecordMatchesStory, courtRecordMatchDiagnostics, buildCourtSearchDiagnostics };")(URL, value => String(value || "").replace(/\s+/g, " ").trim());
 assert.equal(courtRecordHelpers.canonicalNewsUrl("https://thehindu.com/story/123?utm_source=test#top"), "https://thehindu.com/story/123", "canonical URL comparison must ignore tracking and fragments");
+const candidatePlans = courtRecordHelpers.buildCourtCandidateSearchPlans([
+  { title: "Supreme Court orders relief in a service case", url: "https://example.com/sc" },
+  { title: "Madras High Court closes gold loan plea", url: "https://example.com/mhc" }
+]);
+assert.equal(candidatePlans.length, 2, "each candidate must receive a targeted official search plan");
+assert.ok(candidatePlans[0].domains.includes("api.sci.gov.in"), "Supreme Court searches must include its official API domain");
+assert.ok(candidatePlans[1].domains.includes("mhc.tn.gov.in"), "Madras High Court searches must be scoped to its official domain");
+assert.match(candidatePlans[1].query, /gold loan/i, "targeted queries must retain the candidate's distinctive subject");
+
 const priorUrls = courtRecordHelpers.previouslyUsedAssistantNewsUrls([
   { role: "assistant", content: "खबर 1 (अदालत): पुरानी खबर\nमूल लिंक: https://thehindu.com/story/old" },
   { role: "assistant", content: "सामान्य जानकारी: https://example.com/unrelated" },
