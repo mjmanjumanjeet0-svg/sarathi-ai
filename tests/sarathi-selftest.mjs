@@ -1222,7 +1222,7 @@ await test("current news retries one provider rate limit with compact source con
     assert.equal(retryBody.max_tokens, 1000);
     assert.match(retryBody.messages.at(-1).content, /लेख-अंश/);
     assert.match(retryBody.messages.at(-1).content, /\nप्रकाशक:/, "compact retry context must use real line breaks");
-    assert.doesNotMatch(retryBody.messages.at(-1).content, /\nप्रकाशक:/, "compact retry must not send literal backslash-n text");
+    assert.doesNotMatch(retryBody.messages.at(-1).content, /\\nप्रकाशक:/, "compact retry must not send literal backslash-n text");
     assert.ok((r.data.reply.match(/सार:/g) || []).length > 0 && (r.data.reply.match(/सार:/g) || []).length < 5,
       "a four-source retry may show only individually validated summaries and must not claim five stories");
     assert.match(r.data.reply, /अपुष्ट खबरें नहीं जोड़ी गईं/);
