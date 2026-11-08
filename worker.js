@@ -1128,8 +1128,10 @@ function isOfficialIndianCourtRecord(item) {
     // A court homepage, cause-list landing page, daily-order index, or generic
     // search portal is not itself evidence of a particular judgment/order.
     // Accept only a document or a case-specific order/judgment detail URL.
-    const directPdf = /\\.pdf$/i.test(path);
-    const caseSpecificDetail = /\\/(?:judgments?|orders?|court[-_/]?orders?)\\/[a-z0-9_-]{4,}(?:\\.html?)?$/i.test(path);
+    const directPdf = path.endsWith(".pdf");
+    const pathParts = path.split("/").filter(Boolean);
+    const detailSections = new Set(["judgment", "judgments", "order", "orders", "court-order", "court_orders"]);
+    const caseSpecificDetail = pathParts.length >= 2 && detailSections.has(pathParts[pathParts.length - 2]) && pathParts[pathParts.length - 1].length >= 4;
     return directPdf || caseSpecificDetail;
   } catch { return false; }
 }
