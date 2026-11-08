@@ -1700,9 +1700,11 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
   let items = dedupeNewsResults(results).filter(item => {
     const title = cleanText(item?.title || "");
     const publishedAt = Date.parse(item?.publishedAt || "");
-    // Re-check India relevance at the final display boundary so an incidental
-    // India mention cannot turn an international story into an India headline.
-    if (!title || (!allowGlobalNews && !isIndiaFocusedNewsItem(item))) return false;
+    const now = Date.now();
+    // Enforce today's India-local calendar date again at the final display boundary.
+    if (!title || !Number.isFinite(publishedAt) ||
+        publishedAt < getIndiaDayStartTimestamp(now) || publishedAt > now + 5 * 60 * 1000 ||
+        (!allowGlobalNews && !isIndiaFocusedNewsItem(item))) return false;
     try {
       const url = new URL(item?.url || "");
       return url.protocol === "https:" && Boolean(url.hostname) && Number.isFinite(publishedAt);
@@ -1917,7 +1919,10 @@ function buildCurrentNewsHeadlineReply(results, query = "") {
   const items = dedupeNewsResults(results).filter(item => {
     const title = cleanText(item?.title || "");
     const publishedAt = Date.parse(item?.publishedAt || "");
-    if (!title || (!isGlobalNewsQuery(query) && !isIndiaFocusedNewsItem(item))) return false;
+    const now = Date.now();
+    if (!title || !Number.isFinite(publishedAt) ||
+        publishedAt < getIndiaDayStartTimestamp(now) || publishedAt > now + 5 * 60 * 1000 ||
+        (!isGlobalNewsQuery(query) && !isIndiaFocusedNewsItem(item))) return false;
     try {
       const url = new URL(item?.url || "");
       return url.protocol === "https:" && Boolean(url.hostname) && Number.isFinite(publishedAt);
