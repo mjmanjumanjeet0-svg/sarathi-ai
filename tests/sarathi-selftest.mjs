@@ -110,6 +110,25 @@ assert.deepEqual(fiveCategorySelection.map(item => item.url),
   ["https://example.com/gov","https://example.com/economy","https://example.com/court","https://example.com/science","https://example.com/sports"],
   "selector must ignore stale category metadata and snippet-only roundup matches");
 
+const missingQueryStart = source.indexOf("function buildMissingCategoryNewsQueries(results, query) {");
+const missingQueryEnd = source.indexOf("\\nfunction selectNewsForRequestedCategories", missingQueryStart);
+assert.ok(missingQueryStart >= 0 && missingQueryEnd > missingQueryStart, "missing-category search planner must exist");
+const buildMissingCategoryNewsQueries = new Function("classifyRequestedNewsCategory", "isFiveCategoryNewsQuery",
+  source.slice(missingQueryStart, missingQueryEnd) + "\\nreturn buildMissingCategoryNewsQueries;")(
+    classifyRequestedNewsCategory, isFiveCategoryNewsQuery
+  );
+assert.deepEqual(buildMissingCategoryNewsQueries(categoryFixture.slice(0, 2),
+  "आज भारत की पाँच ताज़ा खबरें: सरकार, अर्थव्यवस्था, अदालत, विज्ञान और खेल").map(item => item.category),
+  ["अदालत","विज्ञान","खेल"],
+  "targeted discovery must search only the categories missing from the broad result set");
+assert.deepEqual(buildMissingCategoryNewsQueries(fiveCategorySelection,
+  "आज भारत की पाँच ताज़ा खबरें: सरकार, अर्थव्यवस्था, अदालत, विज्ञान और खेल"),
+  [],
+  "targeted discovery must not make extra searches when all five categories already exist");
+assert.match(source, /async function searchInternet\\(query, env, maxResults = null\\)/,
+  "targeted category searches must support a bounded result limit");
+
+
 
 assert.ok((source.match(/const category = classifyRequestedNewsCategory\(item\);/g) || []).length >= 2, "final news selection and fallback must reclassify the actual headline instead of trusting stale category metadata");
 assert.match(source, /formatCurrentNewsSummaryReply\(normalizeNewsSummaryRepairText\(rawReply\), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery\(userText\)\)/, "the first news-summary response must normalize JSON before validation");
