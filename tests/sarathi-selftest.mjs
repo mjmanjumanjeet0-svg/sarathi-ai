@@ -59,10 +59,18 @@ const courtHelperStart = source.indexOf("function isSpecificCourtNewsQuery(text)
 const courtHelperEnd = source.indexOf("\nfunction classifyRequestedNewsCategory", courtHelperStart);
 assert.ok(courtHelperStart >= 0 && courtHelperEnd > courtHelperStart, "focused court-news query helpers must exist");
 const courtHelpers = new Function("isCurrentNewsQuery", "cleanText",
-  source.slice(courtHelperStart, courtHelperEnd) + "\nreturn { isSpecificCourtNewsQuery, isSingleRequestedNewsStory, isSubstantiveCourtNewsItem };")(
+  source.slice(courtHelperStart, courtHelperEnd) + "\nreturn { isCourtSearchDiagnosticsQuery, buildCourtSearchDiagnosticsUnavailableReply, isSpecificCourtNewsQuery, isSingleRequestedNewsStory, isSubstantiveCourtNewsItem };")(
     value => /(?:खबर|समाचार|news|court|कोर्ट|न्यायालय|अदालत)/i.test(String(value || "")),
     value => String(value || "").replace(/\s+/g, " ").trim()
   );
+assert.equal(courtHelpers.isCourtSearchDiagnosticsQuery("पिछली अदालत-समाचार खोज का तकनीकी जाँच विवरण दो"), true,
+  "a previous court-search diagnostics request must be detected before generic news search");
+assert.equal(courtHelpers.isCourtSearchDiagnosticsQuery("पिछले 48 घंटों में सुप्रीम कोर्ट की एक खबर बताओ"), false,
+  "a genuine recent court-news request must not be mistaken for a diagnostics request");
+assert.match(courtHelpers.buildCourtSearchDiagnosticsUnavailableReply(), /पिछली अदालत-समाचार खोज का तकनीकी लॉग.*उपलब्ध नहीं/,
+  "missing prior execution logs must be disclosed instead of invented");
+assert.match(source, /if \(isCourtSearchDiagnosticsQuery\(userText\)\)[\s\S]*?searchAttempted: false[\s\S]*?sources: \[\]/,
+  "court diagnostics must return locally without starting a news search or attaching unrelated sources");
 assert.equal(courtHelpers.isSpecificCourtNewsQuery("पिछले 48 घंटों में भारत के सुप्रीम कोर्ट की खबर बताओ"), true,
   "a focused recent Supreme Court query must use the court-only route");
 assert.equal(courtHelpers.isSpecificCourtNewsQuery("पिछले 48 घंटों में भारत की पाँच महत्वपूर्ण खबरें सरकार अदालत विज्ञान खेल अर्थव्यवस्था से बताओ"), false,
