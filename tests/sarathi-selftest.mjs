@@ -178,6 +178,9 @@ assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "WP(C) 733/2024
 assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "Supreme Court order on unrelated service matter", snippet: "appointment petition" }, rekhaStory), false, "generic court words must not falsely match an unrelated official record");
 assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "Rekha Sharma Rajasthan Civil Judge appointment", snippet: "low vision judicial appointment" }, rekhaStory), false, "matching names and subject without the same explicit case number must not verify a court story");
 assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "WP(C) 733/2024 unrelated applicant", snippet: "Rajasthan Civil Judge appointment" }, rekhaStory), false, "matching case number and one generic subject anchor without the party identity must not verify a court story");
+assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "WP(C) 733/2024 Rakesh Verma Rajasthan Civil Judge appointment", snippet: "low vision judicial appointment" }, rekhaStory), false, "same case number and overlapping subject must not verify a record naming a different party");
+assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "WP(C) 733/2024 Rekha Sharma Rajasthan Civil Judge appointment", snippet: "low vision judicial appointment" }, rekhaStory), true, "same case number, subject and named party must verify");
+
 assert.match(source, /Fail closed: a newsroom article without a matching official court[\s\S]*?is not published as verified court news/, "court stories without a matching official record must be blocked");
 assert.match(source, /Limit only after verification/, "a single-story limit must not discard a later officially verified result");
 
