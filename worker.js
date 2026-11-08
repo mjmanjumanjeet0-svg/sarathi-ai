@@ -1031,11 +1031,19 @@ function dedupeNewsPublishers(results) {
   return accepted;
 }
 
+function getIndiaDayStartTimestamp(now = Date.now()) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit"
+  }).formatToParts(new Date(now));
+  const date = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  // India has a fixed UTC+05:30 offset and no daylight-saving transition.
+  return Date.UTC(Number(date.year), Number(date.month) - 1, Number(date.day)) - 330 * 60 * 1000;
+}
+
 function filterFreshNewsResults(results, now = Date.now()) {
-  // "Today's latest news" may include a report published late yesterday.
-  // Keep a strict rolling 48-hour window, reject future/undated articles, and
-  // always display each article's actual publication date to avoid relabeling it.
-  const earliestAllowed = now - 48 * 60 * 60 * 1000;
+  // Include only articles published on the current India-local calendar day.
+  // Reject yesterday's articles, future timestamps, and undated results.
+  const earliestAllowed = getIndiaDayStartTimestamp(now);
   return (Array.isArray(results) ? results : []).filter(item => {
     const publishedAt = item && typeof item.publishedAt === "string" ? item.publishedAt.trim() : "";
     if (!publishedAt) return false;
@@ -1707,7 +1715,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
   if (requireFiveCategories) {
     const latestByCategory = new Map();
     const now = Date.now();
-    const earliestAllowed = now - 48 * 60 * 60 * 1000;
+    const earliestAllowed = getIndiaDayStartTimestamp(now);
     const latestAllowed = now + 5 * 60 * 1000;
     for (const item of items) {
       const category = classifyRequestedNewsCategory(item);
@@ -1909,7 +1917,7 @@ function buildCurrentNewsHeadlineReply(results, query = "") {
   const items = dedupeNewsResults(results).filter(item => {
     const title = cleanText(item?.title || "");
     const publishedAt = Date.parse(item?.publishedAt || "");
-    if (!title || !isIndiaFocusedNewsItem(item)) return false;
+    if (!title || (!isGlobalNewsQuery(query) && !isIndiaFocusedNewsItem(item))) return false;
     try {
       const url = new URL(item?.url || "");
       return url.protocol === "https:" && Boolean(url.hostname) && Number.isFinite(publishedAt);
@@ -1934,7 +1942,7 @@ function buildCurrentNewsHeadlineReply(results, query = "") {
         "\nस्थिति: स्रोत मिला, लेकिन इस खबर का आसान हिंदी शीर्षक और सार स्रोत-जाँच में सफल नहीं हुआ।";
     });
     return "पाँच-श्रेणी समाचार जाँच पूरी नहीं हुई। " +
-      (missing.length ? "इन श्रेणियों की 48 घंटे के भीतर की खबर नहीं मिली: " + missing.join(", ") + "।" :
+      (missing.length ? "इन श्रेणियों में आज प्रकाशित खबर नहीं मिली: " + missing.join(", ") + "।" :
         "पाँचों श्रेणियों के स्रोत मिले, लेकिन हिंदी शीर्षक और सार का सत्यापन पूरा नहीं हुआ।") +
       "\n\nअंग्रेज़ी शीर्षक को हिंदी बताकर नहीं दिखाया गया है। अपुष्ट सार भी नहीं जोड़ा गया।" +
       (lines.length ? "\n\nपहचाने गए स्रोत (पूरी समाचार सूची नहीं):\n\n" + lines.join("\n\n") : "");
@@ -1945,7 +1953,7 @@ function buildCurrentNewsHeadlineReply(results, query = "") {
 function selectLatestFiveCategoryNewsItems(results) {
   const requiredCategories = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
   const now = Date.now();
-  const earliestAllowed = now - 48 * 60 * 60 * 1000;
+  const earliestAllowed = getIndiaDayStartTimestamp(now);
   const latestAllowed = now + 5 * 60 * 1000;
   const byCategory = new Map();
   for (const item of dedupeNewsResults(Array.isArray(results) ? results : [])) {
@@ -3220,7 +3228,7 @@ export default {
             ? repairContent.map(part => typeof part === "string" ? part : (part?.text || part?.content || "")).join("")
             : repairContent;
           return typeof repairText === "string" && repairText.trim()
-            ? formatCurrentNewsSummaryReply(normalizeNewsSummaryRepairText(repairText.trim()), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText))
+            ? formatCurrentNewsSummaryReply(normalizeNewsSummaryRepairText(repairText.trim()), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText), isGlobalNewsQuery(userText))
             : "";
         };
         let repairResponse;
