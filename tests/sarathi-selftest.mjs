@@ -185,6 +185,10 @@ assert.equal(priorUrls.has("https://example.com/unrelated"), false, "unrelated a
 assert.equal(courtRecordHelpers.isOfficialIndianCourtRecord({ url: "https://main.sci.gov.in/judgments/2026/11/order-123.pdf" }), true, "a direct Supreme Court order PDF must be accepted");
 assert.equal(courtRecordHelpers.isOfficialIndianCourtRecord({ url: "https://www.sci.gov.in/" }), false, "a court homepage must not count as an official case record");
 assert.equal(courtRecordHelpers.isOfficialIndianCourtRecord({ url: "https://www.sci.gov.in/published-cause-list/" }), false, "a generic cause-list landing page must not count as a specific order");
+assert.equal(courtRecordHelpers.isOfficialIndianCourtRecord({ title: "NOTE AS PER CIRCULAR dated 29.11.2025", url: "https://api.sci.gov.in/jonew/cl/2026-10-08/M_J_2.pdf" }), false, "a cause-list circular PDF must not count as an individual court order");
+assert.equal(courtRecordHelpers.isOfficialIndianCourtRecord({ title: "NEW DELHI", url: "https://api.sci.gov.in/jonew/cl/2026-08-20/M_CC_1.pdf" }), false, "an unlabelled cause-list PDF without case or order evidence must be rejected");
+assert.equal(courtRecordHelpers.courtRecordPartyNames("Madras High Court closes plea - The Hindu").size, 0, "publisher branding must never be extracted as party identity");
+assert.equal(courtRecordHelpers.courtRecordPartyNames("Why a woman with low vision had to wait - Legal News - The Indian Express").size, 0, "news publisher suffixes must not be extracted as party identity");
 assert.equal(courtRecordHelpers.isOfficialIndianCourtRecord({ url: "https://mhc.tn.gov.in/judis/madras-do/" }), false, "a daily-orders index must not count as a specific order");
 assert.equal(courtRecordHelpers.isOfficialIndianCourtRecord({ url: "https://thehindu.com/courts/story" }), false, "news publishers must not be treated as official court records");
 const goldStory = { title: "Madras High Court Ramesh Kumar gold loan and pledged jewellery PIL WP(C) 55 of 2025", snippet: "RBI auction regulation petition" };
