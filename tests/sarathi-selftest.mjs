@@ -75,6 +75,18 @@ assert.equal(courtHelpers.isSubstantiveCourtNewsItem({ title: "Supreme Court ord
   "a substantive Supreme Court order must qualify");
 assert.equal(courtHelpers.isSubstantiveCourtNewsItem({ title: "Bomb threat to Bombay High Court and BSE" }), false,
   "a threat mentioning a High Court must not qualify as judicial news");
+const newsCountStart = source.indexOf("function formatHindiNewsCount(");
+const newsCountEnd = source.indexOf("\nfunction formatCurrentNewsSummaryReply", newsCountStart);
+assert.ok(newsCountStart >= 0 && newsCountEnd > newsCountStart, "Hindi news count and note helpers must exist");
+const newsFormatHelpers = new Function(source.slice(newsCountStart, newsCountEnd) + "\nreturn { formatHindiNewsCount, buildNewsDigestNote };")();
+assert.equal(newsFormatHelpers.formatHindiNewsCount(1), "आज 1 अलग, तारीख़-जाँची खबर मिली:", "one story must use singular Hindi grammar");
+assert.equal(newsFormatHelpers.formatHindiNewsCount(3), "आज 3 अलग-अलग, तारीख़-जाँची खबरें मिलीं:", "multiple stories must use plural Hindi grammar");
+assert.equal(newsFormatHelpers.formatHindiNewsCount(5), "आज की 5 अलग-अलग, तारीख़-जाँची खबरें:", "five stories must retain the full-digest heading");
+const combinedNote = newsFormatHelpers.buildNewsDigestNote("अपुष्ट खबरें नहीं जोड़ी गईं।");
+assert.equal((combinedNote.match(/ध्यान दें:/g) || []).length, 1, "digest must show one combined note heading");
+assert.match(combinedNote, /लेख-अंश पर आधारित/);
+assert.match(combinedNote, /अपुष्ट खबरें नहीं जोड़ी गईं/);
+
 const courtOutcomeStart = source.indexOf("function hasUnsupportedCourtDisposition(");
 const courtOutcomeEnd = source.indexOf("\nfunction formatCurrentNewsSummaryReply", courtOutcomeStart);
 assert.ok(courtOutcomeStart >= 0 && courtOutcomeEnd > courtOutcomeStart, "court disposition guard must exist");
