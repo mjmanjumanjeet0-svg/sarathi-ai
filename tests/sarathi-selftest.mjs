@@ -212,7 +212,7 @@ assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "WP(C) 733/2024
 assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "WP(C) 733/2024 Rakesh Verma v. State of Rajasthan Civil Judge appointment", snippet: "low vision judicial appointment" }, rekhaStory), false, "same case number and overlapping subject must not verify a record naming a different party");
 assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "WP(C) 733/2024 Rekha Sharma v. State of Rajasthan Civil Judge appointment", snippet: "low vision judicial appointment" }, rekhaStory), true, "same case number, subject and named party must verify");
 const mismatchDiagnostics = courtRecordHelpers.courtRecordMatchDiagnostics(
-  { title: "WP(C) 733/2024 Rakesh Verma Rajasthan Civil Judge appointment", snippet: "low vision judicial appointment" },
+  { title: "WP(C) 733/2024 Rakesh Verma v. State of Rajasthan Civil Judge appointment", snippet: "low vision judicial appointment" },
   rekhaStory
 );
 assert.equal(mismatchDiagnostics.matched, false, "diagnostics must never turn a party mismatch into a verified match");
