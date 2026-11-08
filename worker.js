@@ -1064,7 +1064,7 @@ function isSpecificCourtNewsQuery(text) {
 
 function isSingleRequestedNewsStory(text) {
   const value = String(text || "");
-  return /(?:\b(?:one|a single)\b|एक)\s*(?:(?:ही|महत्वपूर्ण|ज़रूरी|जरूरी|ताज़ा|ताजा|important|major|latest|recent)\s*){0,3}(?:खबर|समाचार|story|news)(?=$|\\s|[?!.,।])/i.test(value) ||
+  return /(?:\b(?:one|a single)\b|एक)\s*(?:(?:ही|महत्वपूर्ण|ज़रूरी|जरूरी|ताज़ा|ताजा|important|major|latest|recent)\s*){0,3}(?:खबर|समाचार|story|news)(?=$|\s|[?!.,।])/i.test(value) ||
     /(?:खबर|समाचार|story|news)\s*(?:बताओ|बताइए|दो|दें|चाहिए|please)?\s*(?:एक|one)\b/i.test(value);
 }
 
