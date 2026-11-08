@@ -176,7 +176,7 @@ assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "Madras High Co
 const rekhaStory = { title: "Woman with low vision Rekha Sharma awaits judicial appointment", snippet: "Supreme Court case WP(C) 733 of 2024 and Rajasthan Civil Judge appointment" };
 assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "WP(C) 733/2024 Rekha Sharma", snippet: "Rajasthan Civil Judge appointment and low vision" }, rekhaStory), true, "a matching named case record must match a court-news story");
 assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "Supreme Court order on unrelated service matter", snippet: "appointment petition" }, rekhaStory), false, "generic court words must not falsely match an unrelated official record");
-assert.match(source, /Fail closed: a newsroom article without a matching official court[\\s\\S]*?is not published as verified court news/, "court stories without a matching official record must be blocked");
+assert.match(source, /Fail closed: a newsroom article without a matching official court[\s\S]*?is not published as verified court news/, "court stories without a matching official record must be blocked");
 assert.match(source, /Limit only after verification/, "a single-story limit must not discard a later officially verified result");
 
 console.log("\nSarathi Worker self-test: court-news regression checks passed.");
