@@ -308,7 +308,7 @@ function validHttpUrl(value) {
     return false;
   }
 }
-async function searchInternet(query, env, maxResults = null) {
+async function searchInternet(query, env, maxResults = null, searchOptions = {}) {
   const searchQuery = String(query || "").trim().slice(0, 1024);
   if (!searchQuery) return { results: [], warning: "खोज का सवाल खाली है।" };
 
@@ -362,7 +362,7 @@ async function searchInternet(query, env, maxResults = null) {
         "cisce.org", "upsc.gov.in", "ssc.gov.in", "ibps.in"
       ];
     }
-    if (isNewsQuery) {
+    if (isNewsQuery && searchOptions.news !== false) {
       requestBody.category = "news";
       // Search only publishers accepted by filterRelevantSearchResults. This
       // prevents a small general-results pool from being exhausted by unrelated
@@ -384,6 +384,8 @@ async function searchInternet(query, env, maxResults = null) {
       // Localize this single news search to India; publication-date filters remain authoritative.
       requestBody.userLocation = "IN";
     }
+    if (Array.isArray(searchOptions.includeDomains) && searchOptions.includeDomains.length) requestBody.includeDomains = searchOptions.includeDomains;
+    if (searchOptions.news === false) delete requestBody.category;
     const response = await fetch("https://api.exa.ai/search", {
       method: "POST",
       headers: {
@@ -1068,6 +1070,26 @@ function isSingleRequestedNewsStory(text) {
     /(?:खबर|समाचार|story|news)\s*(?:बताओ|बताइए|दो|दें|चाहिए|please)?\s*(?:एक|one)\b/i.test(value);
 }
 
+const OFFICIAL_INDIAN_COURT_DOMAINS = ["sci.gov.in","main.sci.gov.in","ecourts.gov.in","ecommitteesci.gov.in","allahabadhighcourt.in","delhihighcourt.nic.in","hcmadras.tn.nic.in","mhc.tn.gov.in","bombayhighcourt.nic.in","calcuttahighcourt.gov.in","patnahighcourt.gov.in","jharkhandhighcourt.nic.in","highcourtchd.gov.in","mphc.gov.in","rajasthanhighcourt.nic.in","orissahighcourt.nic.in","keralahighcourt.nic.in","hck.gov.in","manipurhighcourt.nic.in","meghalayahighcourt.nic.in","sikkimhighcourt.nic.in","gauhaticourt.nic.in","highcourt.cg.gov.in","highcourt.hp.gov.in","highcourtofuttarakhand.gov.in","highcourtoftripura.nic.in","highcourtofap.gov.in","hcbombayatgoa.nic.in"];
+function canonicalNewsUrl(value) { try { const u = new URL(value); u.hash = ""; u.search = ""; return u.origin.toLowerCase() + u.pathname.toLowerCase().replace(/\/$/, ""); } catch { return ""; } }
+function previouslyUsedAssistantNewsUrls(messages) {
+  const used = new Set();
+  for (const m of (Array.isArray(messages) ? messages : []).slice(0, -1)) {
+    if (m?.role !== "assistant" || typeof m.content !== "string") continue;
+    const urls = m.content.match(/https?:\/\/[^\s<>"\x27]+/gi) || [];
+    for (const value of urls) { const key = canonicalNewsUrl(value.replace(/[.,;:!?।]+$/, "")); if (key) used.add(key); }
+  }
+  return used;
+}
+function isOfficialIndianCourtRecord(item) {
+  try { const host = new URL(item?.url || "").hostname.toLowerCase().replace(/^www\./, ""); return OFFICIAL_INDIAN_COURT_DOMAINS.includes(host) || (host.endsWith(".nic.in") && /court|highcourt|judiciary|ecourts/i.test(host)) || (host.endsWith(".gov.in") && /court|highcourt|judiciary|ecourts|sci/i.test(host)); } catch { return false; }
+}
+function courtRecordMatchesStory(record, story) {
+  const a = cleanText((record?.title || "") + " " + (record?.snippet || "")).toLowerCase();
+  const b = cleanText((story?.title || "") + " " + (story?.snippet || "")).toLowerCase();
+  const terms = [/gold|सोना|स्वर्ण/,/loan|ऋण|कर्ज/,/pledged|जमानत|गिरवी|jewellery|jewelry|आभूषण/,/\brbi\b|reserve bank|भारतीय रिजर्व बैंक/,/auction|नीलामी/,/public interest|\bpil\b|जनहित याचिका/];
+  return terms.filter(re => re.test(a) && re.test(b)).length >= 2;
+}
 function isSubstantiveCourtNewsItem(item) {
   const title = cleanText(item?.title || "").toLocaleLowerCase("hi-IN");
   const snippet = cleanText(item?.snippet || "").toLocaleLowerCase("hi-IN");
@@ -1533,7 +1555,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
       "\nप्रकाशक: " + publisher +
       "\nमूल लिंक: " + items[index].url +
       "\nप्रकाशित: " + formatNewsPublishedAt(items[index].publishedAt) +
-      corroborationText + "\n" + basisText);
+      corroborationText + "\n" + basisText + (items[index]?.officialRecordStatus === "मिला" ? "\nआधिकारिक अदालत रिकॉर्ड: मिला — " + items[index].officialRecordUrl : (items[index]?.officialRecordStatus === "नहीं मिला" ? "\nआधिकारिक अदालत रिकॉर्ड: आधिकारिक पोर्टल की खोज में इस खबर से मेल खाता आदेश/केस रिकॉर्ड नहीं मिला; इसलिए आधिकारिक रिकॉर्ड से पुष्टि उपलब्ध नहीं है।" : "")));
     if (items[index]?.requestedCategory) acceptedCategories.push(items[index].requestedCategory);
   }
   console.warn("News digest validation diagnostics", JSON.stringify({
@@ -2075,6 +2097,9 @@ export default {
                   ? "Bloody Sunday 1905 St Petersburg 9 January 22 January historical academic archive casualty figures Nicholas II absent"
                   : userText + " historical encyclopedia academic university press sources")
               : userText;
+      const courtOfficialSearch = isSpecificCourtNewsQuery(userText)
+        ? await searchInternet("India Supreme Court and High Courts official website latest judgments orders daily orders case status cause list last 48 hours", env, 30, { news: false, includeDomains: OFFICIAL_INDIAN_COURT_DOMAINS })
+        : null;
       const search = await searchInternet(searchQuery, env);
       searchResults = filterRelevantSearchResults(userText, search.results);
       if (isHistoricalQuestion) searchResults = filterHistoricalSources(userText, searchResults);
@@ -2083,16 +2108,25 @@ export default {
         // event headlines and publishers. Exa relevance order is not chronological.
         searchResults = groupNewsByEvent(sortNewsByPublicationTime(filterFreshNewsResults(searchResults)));
         if (isSpecificCourtNewsQuery(userText)) {
-          searchResults = searchResults
-            .filter(isSubstantiveCourtNewsItem)
+          const previouslyUsedUrls = previouslyUsedAssistantNewsUrls(messages);
+          searchResults = searchResults.filter(isSubstantiveCourtNewsItem)
+            .filter(item => !previouslyUsedUrls.has(canonicalNewsUrl(item.url)))
             .map(item => ({ ...item, requestedCategory: "अदालत" }));
           searchResults = dedupeNewsPublishers(searchResults);
+          if (!searchResults.length && previouslyUsedUrls.size) return jsonResponse({ success: true, reply: "पिछले उत्तर में दी गई अदालत की खबर को दोहराने के बजाय मैंने उसे हटा दिया है। पिछले 48 घंटों में कोई दूसरी नई, तारीख़-जाँची और भरोसेमंद अदालत की खबर इस खोज में नहीं मिली; इसलिए मैं नई खबर नहीं बना रहा हूँ।", ...dateTime, webSearch: true, searchAttempted: true, searchWarning: "नई अलग अदालत की खबर उपलब्ध नहीं मिली।", searchUnavailable: true, sources: [] });
           // A focused request for one court story must send one source to the
           // summarizer and validator. Otherwise the model is asked to summarize
           // multiple search results the user never requested, causing
           // missingEntry rejections for the unused results.
           if (isSingleRequestedNewsStory(userText)) searchResults = searchResults.slice(0, 1);
-          if (searchResults.length) searchResults = await enrichNewsArticleEvidence(searchResults);
+          if (searchResults.length) {
+            const officialRecords = (courtOfficialSearch?.results || []).filter(isOfficialIndianCourtRecord);
+            searchResults = searchResults.map(item => {
+              const officialRecord = officialRecords.find(record => courtRecordMatchesStory(record, item));
+              return { ...item, officialRecordStatus: officialRecord ? "मिला" : "नहीं मिला", officialRecordUrl: officialRecord?.url || "" };
+            });
+            searchResults = await enrichNewsArticleEvidence(searchResults);
+          }
         } else if (isFiveCategoryNewsQuery(userText)) {
           // First use the broad India search. If it misses categories, run a
           // bounded, category-specific search only for those gaps; this avoids
