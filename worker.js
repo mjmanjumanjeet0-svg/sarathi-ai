@@ -1213,7 +1213,7 @@ function courtRecordPartyNames(value) {
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<[^>]+>/g, " ")
     // Strip court names before caption parsing so they cannot become party names.
-    .replace(/\\b(?:[A-Z][A-Za-z.'’&-]*\\s+)?(?:High Court|Supreme Court)\\b/gi, " ")
+    .replace(/\b(?:[A-Z][A-Za-z.'’&-]*\s+)?(?:High Court|Supreme Court)\b/gi, " ")
     .replace(/\b(?:photo(?:graph)?\s*(?:credit|by)|image\s*credit|byline|written\s*by|reported\s*by|correspondent|reporter|staff\s*reporter|advocate|senior\s*advocate|counsel|court\s*master|justice|judge)\b[^.\n]{0,180}/gi, " ");
   const names = new Set();
   const namePart = "[A-Z][A-Za-z.'’&-]*(?:\\s+(?!(?:v\\.?|versus|PIL|WP|SLP|WPC|CRL|CIVIL|CASE|PETITION|ORDER|JUDGMENT)\\b)(?:[A-Z][A-Za-z.'’&-]*|of|the|and|&)){1,7}";
