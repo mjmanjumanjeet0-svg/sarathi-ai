@@ -1089,13 +1089,13 @@ function courtRecordMatchesStory(record, story) {
   // Generic words such as "court", "order" and "petition" never count.
   const stop = new Set(["supreme","high","court","india","indian","judgment","judgement","order","orders","case","petition","plea","hearing","latest","news","report","reported","says","said","the","and","for","with","from","that","this","में","का","की","के","और","पर","से","को","एक","यह","था","थी","है","हैं","द्वारा","याचिका","आदेश","न्यायालय","अदालत","सुप्रीम","हाई"]);
   const anchors = value => {
-    const tokens = cleanText(value).toLocaleLowerCase("hi-IN").match(/[a-z][a-z0-9./-]{2,}|[\\u0900-\\u097f]{3,}/g) || [];
-    return new Set(tokens.filter(token => !stop.has(token) && !/^20\\d{2}$/.test(token)));
+    const tokens = cleanText(value).toLocaleLowerCase("hi-IN").match(/[a-z][a-z0-9./-]{2,}|[\u0900-\u097f]{3,}/g) || [];
+    return new Set(tokens.filter(token => !stop.has(token) && !/^20\d{2}$/.test(token)));
   };
   const a = anchors((record?.title || "") + " " + (record?.snippet || ""));
   const b = anchors((story?.title || "") + " " + (story?.snippet || ""));
   const shared = [...a].filter(token => b.has(token));
-  const caseRefs = value => (String(value || "").match(/\\b(?:wp|w\\.?p\\.?|slp|crl|civil|criminal|diary|case)\\s*\\(?[a-z]*\\)?\\s*(?:no\\.?\\s*)?\\d{1,6}\\s*\\/?\\s*20\\d{2}\\b/gi) || []).map(x => x.toLowerCase().replace(/\\s+/g,""));
+  const caseRefs = value => (String(value || "").match(/\b(?:wp|w\.?p\.?|slp|crl|civil|criminal|diary|case)\s*\(?[a-z]*\)?\s*(?:no\.?\s*)?\d{1,6}\s*\/?\s*20\d{2}\b/gi) || []).map(x => x.toLowerCase().replace(/\s+/g,""));
   const recordRefs = caseRefs((record?.title || "") + " " + (record?.snippet || ""));
   const storyRefs = caseRefs((story?.title || "") + " " + (story?.snippet || ""));
   const sharedCaseRef = recordRefs.some(ref => storyRefs.includes(ref));
