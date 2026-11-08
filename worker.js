@@ -1129,13 +1129,13 @@ function isOfficialIndianCourtRecord(item) {
     const snippet = cleanText(item?.snippet || "").toLowerCase();
     // Cause lists, circulars, rosters, notices and index pages are not
     // evidence of an individual judgment, even when delivered as PDFs.
-    if (/(cause\\s*list|daily\\s*list|list\\s*of\\s*cases|circular|roster|listing\\s*notice|court\\s*calendar|सूची|वाद\\s*सूची|परिपत्र|नोटिस)/i.test(title + " " + snippet)) return false;
+    if (/(cause\s*list|daily\s*list|list\s*of\s*cases|circular|roster|listing\s*notice|court\s*calendar|सूची|वाद\s*सूची|परिपत्र|नोटिस)/i.test(title + " " + snippet)) return false;
     const directPdf = path.endsWith(".pdf");
     const pathParts = path.split("/").filter(Boolean);
     const detailSections = new Set(["judgment", "judgments", "order", "orders", "court-order", "court_orders"]);
     const caseSpecificDetail = pathParts.length >= 2 && detailSections.has(pathParts[pathParts.length - 2]) && pathParts[pathParts.length - 1].length >= 4;
-    const caseReference = /\\b(?:wp|w\\.?p\\.?|slp|crl|civil|criminal|diary|case)\\s*\\(?[a-z]*\\)?\\s*(?:no\\.?\\s*)?\\d{1,6}\\s*(?:\\/|of\\s+)\\s*20\\d{2}\\b/i.test(title + " " + snippet);
-    const orderEvidence = /\\b(judg(?:e)?ment|final\\s*order|interim\\s*order|disposed|dismissed|allowed|pronounced|order\\s*dated)\\b/i.test(title + " " + snippet);
+    const caseReference = /\b(?:wp|w\.?p\.?|slp|crl|civil|criminal|diary|case)\s*\(?[a-z]*\)?\s*(?:no\.?\s*)?\d{1,6}\s*(?:\/|of\s+)\s*20\d{2}\b/i.test(title + " " + snippet);
+    const orderEvidence = /\b(judg(?:e)?ment|final\s*order|interim\s*order|disposed|dismissed|allowed|pronounced|order\s*dated)\b/i.test(title + " " + snippet);
     // A PDF must identify a case or an order in its indexed metadata.
     return (directPdf && (caseReference || orderEvidence)) || caseSpecificDetail;
   } catch { return false; }
