@@ -1465,4 +1465,31 @@ await test("media-disabled status is honest and explicit", async () => {
   assert.equal(r.status, 503);
   assert.equal(r.data.zeroCostMode, true);
 });
+
+assert.match(source, /async function searchInternet\\(query, env, maxResults = null, searchOptions = \\{\\}/, "search must support scoped official-domain searches");
+assert.match(source, /searchOptions\\.news === false/, "official record searches must be able to bypass the news-only publisher filter");
+assert.ok(source.indexOf("const courtOfficialSearch = isSpecificCourtNewsQuery") < source.indexOf("const search = await searchInternet(searchQuery, env)"), "official court portals must be searched before newsroom results");
+assert.match(source, /officialRecordStatus: officialRecord \\? "मिला" : "नहीं मिला"/, "court stories must carry an explicit official-record result");
+assert.match(source, /आधिकारिक अदालत रिकॉर्ड: आधिकारिक पोर्टल की खोज में/, "missing official records must be disclosed in the user-facing digest");
+assert.match(source, /previouslyUsedAssistantNewsUrls\\(messages\\)/, "previously surfaced court-news links must be excluded from repeat results");
+assert.match(source, /पिछले उत्तर में दी गई अदालत की खबर को दोहराने के बजाय/, "if no new court story is found, Sarathi must say so instead of repeating one");
+
+const courtHelpersStart = source.indexOf("const OFFICIAL_INDIAN_COURT_DOMAINS =");
+const courtHelpersEnd = source.indexOf("function isSubstantiveCourtNewsItem(item)", courtHelpersStart);
+assert.ok(courtHelpersStart >= 0 && courtHelpersEnd > courtHelpersStart, "court official-record and repeat-filter helpers must exist");
+const courtHelpers = new Function("URL", "cleanText", source.slice(courtHelpersStart, courtHelpersEnd) + "\\nreturn { canonicalNewsUrl, previouslyUsedAssistantNewsUrls, isOfficialIndianCourtRecord, courtRecordMatchesStory };")(URL, value => String(value || "").replace(/\\s+/g, " ").trim());
+assert.equal(courtHelpers.canonicalNewsUrl("https://thehindu.com/story/123?utm_source=test#top"), "https://thehindu.com/story/123", "canonical URL comparison must ignore tracking and fragments");
+const priorUrls = courtHelpers.previouslyUsedAssistantNewsUrls([
+  { role: "assistant", content: "खबर 1 (अदालत): पुरानी खबर\\nमूल लिंक: https://thehindu.com/story/old" },
+  { role: "assistant", content: "सामान्य जानकारी: https://example.com/unrelated" },
+  { role: "user", content: "पिछले 48 घंटों की एक अदालत खबर बताओ" }
+]);
+assert.equal(priorUrls.has("https://thehindu.com/story/old"), true, "previous court-news article links must be remembered during the conversation");
+assert.equal(priorUrls.has("https://example.com/unrelated"), false, "unrelated assistant links must not suppress court-news results");
+assert.equal(courtHelpers.isOfficialIndianCourtRecord({ url: "https://main.sci.gov.in/judgments" }), true, "Supreme Court official domain must be accepted");
+assert.equal(courtHelpers.isOfficialIndianCourtRecord({ url: "https://thehindu.com/courts/story" }), false, "news publishers must not be treated as official court records");
+const goldStory = { title: "Madras High Court gold loan and pledged jewellery PIL", snippet: "RBI auction regulation petition" };
+assert.equal(courtHelpers.courtRecordMatchesStory({ title: "Madras High Court PIL on gold loan and pledged jewellery auction; RBI", snippet: "public interest petition" }, goldStory), true, "matching official court records must share multiple distinctive story anchors");
+assert.equal(courtHelpers.courtRecordMatchesStory({ title: "Madras High Court unrelated service matter", snippet: "appointment case" }, goldStory), false, "unrelated court records must not be attached to a news story");
+
 console.log(`\nSarathi Worker self-test: ${passed}/${passed} passed (mock provider mode; no real API credits used).`);
