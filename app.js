@@ -940,6 +940,80 @@ function detectNewChatCommand(prompt) {
 }
 
 
+function formatCourtSearchDiagnosticsForChat(diagnostics) {
+  const run = diagnostics?.currentRun;
+  if (!run) return "";
+  const yesNo = value => value === true ? "हाँ" : value === false ? "नहीं" : "अज्ञात";
+  const time = value => {
+    if (!value || !Number.isFinite(Date.parse(value))) return "उपलब्ध नहीं";
+    return new Date(value).toLocaleString("hi-IN", {
+      timeZone: "Asia/Kolkata", dateStyle: "medium", timeStyle: "short"
+    }) + " IST";
+  };
+  const official = run.officialSearch || {};
+  const news = run.newsSearch || {};
+  const lines = [
+    "🔎 तकनीकी जाँच — इस बार की नई अदालत-खोज",
+    diagnostics.previousRunNote || "पिछली खोज का लॉग उपलब्ध नहीं है।",
+    "खोज शुरू: " + time(run.startedAt),
+    "खोज समाप्त: " + time(run.finishedAt),
+    "",
+    "आधिकारिक अदालत वेबसाइट खोज:",
+    "• खोज का प्रयास: " + yesNo(official.attempted),
+    "• सेवा: " + (official.provider || "अज्ञात"),
+    "• HTTP स्थिति: " + (official.httpStatus ?? "उपलब्ध नहीं"),
+    "• त्रुटि कोड: " + (official.errorCode || "नहीं"),
+    "• कुल परिणाम: " + (official.rawResultCount ?? "अज्ञात"),
+    "• आधिकारिक डोमेन के रिकॉर्ड: " + (official.officialDomainRecordCount ?? "अज्ञात"),
+    "• जाँचे गए रिकॉर्ड: " + (official.recordsInspected ?? "अज्ञात"),
+    "• चेतावनी: " + (official.warning || "नहीं"),
+    "",
+    "समाचार खोज:",
+    "• खोज का प्रयास: " + yesNo(news.attempted),
+    "• HTTP स्थिति: " + (news.httpStatus ?? "उपलब्ध नहीं"),
+    "• कुल परिणाम: " + (news.rawResultCount ?? "अज्ञात"),
+    "• जाँच के योग्य समाचार: " + (news.relevantCandidateCount ?? "अज्ञात"),
+    "• चेतावनी: " + (news.warning || "नहीं"),
+    "",
+    "आधिकारिक डोमेन जिनके लिए खोज अनुरोध भेजा गया:",
+    Array.isArray(official.domainsSubmitted) && official.domainsSubmitted.length
+      ? official.domainsSubmitted.join(", ")
+      : "कोई डोमेन सूची उपलब्ध नहीं।"
+  ];
+  const candidates = Array.isArray(run.candidateChecks) ? run.candidateChecks : [];
+  lines.push("", "संभावित समाचार और रिकॉर्ड-मिलान:");
+  if (!candidates.length) lines.push("• कोई योग्य समाचार उम्मीदवार नहीं मिला; इसलिए केस-मिलान नहीं किया गया।");
+  candidates.forEach((candidate, index) => {
+    lines.push(
+      "",
+      "समाचार उम्मीदवार " + (index + 1) + ": " + (candidate.newsTitle || "शीर्षक उपलब्ध नहीं"),
+      "• मूल समाचार लिंक: " + (candidate.newsUrl || "उपलब्ध नहीं"),
+      "• समाचार प्रकाशन समय: " + time(candidate.newsPublishedAt),
+      "• पहचाने गए केस नंबर: " + ((candidate.caseNumbers || []).join(", ") || "नहीं मिले"),
+      "• पहचाने गए पक्षकार: " + ((candidate.partyNames || []).join(", ") || "शीर्षक से नहीं निकले"),
+      "• आधिकारिक रिकॉर्ड मिलान: " + (candidate.matchedOfficialRecord ? "मिला — " + candidate.matchedOfficialRecord.title + " (" + candidate.matchedOfficialRecord.url + ")" : "नहीं मिला"),
+      "• अस्वीकृति कारण: " + ((candidate.rejectionReasons || []).map(item => item.reason + " (" + item.recordsAffected + ")").join("; ") || "तुलना योग्य रिकॉर्ड उपलब्ध नहीं")
+    );
+    (candidate.recordComparisons || []).slice(0, 5).forEach((record, recordIndex) => {
+      lines.push("  रिकॉर्ड तुलना " + (recordIndex + 1) + ": " + (record.title || "शीर्षक उपलब्ध नहीं") +
+        " | " + (record.url || "लिंक उपलब्ध नहीं") +
+        " | केस: " + ((record.caseNumbers || []).join(", ") || "नहीं मिला") +
+        " | पक्षकार: " + ((record.partyNames || []).join(", ") || "नहीं निकले") +
+        " | परिणाम: " + (record.matched ? "मेल" : "मेल नहीं") +
+        " | कारण: " + ((record.rejectionReasons || []).join("; ") || "लागू नहीं"));
+    });
+  });
+  const records = Array.isArray(official.recordCandidates) ? official.recordCandidates : [];
+  lines.push("", "आधिकारिक पोर्टल से लौटे रिकॉर्ड (अधिकतम 30):");
+  if (!records.length) lines.push("• कोई आधिकारिक रिकॉर्ड परिणाम नहीं लौटा।");
+  records.slice(0, 15).forEach((record, index) => {
+    lines.push((index + 1) + ". " + (record.title || "शीर्षक उपलब्ध नहीं") + " — " + (record.url || "लिंक उपलब्ध नहीं") +
+      (record.indexedDate ? " | सर्च परिणाम की तारीख: " + time(record.indexedDate) + " (यह आदेश की तारीख होना जरूरी नहीं)" : ""));
+  });
+  lines.push("", "सुरक्षा नियम: आधिकारिक रिकॉर्ड का आवश्यक केस/विषय/पक्षकार मिलान न होने पर खबर प्रकाशित नहीं की जाएगी।");
+  return lines.join("\n");
+}
+
 /* ========================================
    SEND MESSAGE
 ======================================== */
@@ -1205,6 +1279,15 @@ async function sendMessage(text) {
           return (index + 1) + ". " + source.title.replace(/[\[\]]/g, "") + "\n   मूल लिंक: " + source.url + "\n   प्रकाशक: " + (source.publisher || new URL(source.url).hostname) + "\n   प्रकाशित: " + published;
         });
         cleanAnswer = cleanAnswer.trim() + "\n\nमूल समाचार लिंक (खोज से मिले सत्यापित HTTPS स्रोत):\n" + sourceLinks.join("\n\n");
+      }
+    }
+
+    // Structured court-search diagnostics must be rendered in the visible chat;
+    // the browser otherwise ignores extra JSON fields returned by the Worker.
+    if (data.courtSearchDiagnostics?.currentRun) {
+      const courtDetails = formatCourtSearchDiagnosticsForChat(data.courtSearchDiagnostics);
+      if (courtDetails && !cleanAnswer.includes("तकनीकी जाँच — इस बार की नई अदालत-खोज")) {
+        cleanAnswer = cleanAnswer.trim() + "\n\n" + courtDetails;
       }
     }
 
