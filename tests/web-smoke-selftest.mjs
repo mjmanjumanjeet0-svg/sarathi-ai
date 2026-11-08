@@ -7,10 +7,26 @@ const app = await readFile(new URL("app.js", root), "utf8");
 const voice = await readFile(new URL("voice.js", root), "utf8");
 const css = await readFile(new URL("style.css", root), "utf8");
 const worker = await readFile(new URL("worker.js", root), "utf8");
-const relevantFilterStart = worker.indexOf("function filterRelevantSearchResults(query, results) {");
+const relevantFilterStart = worker.indexOf("function filterRelevantSearchResults(query, results, allowGlobalNews = false) {");
 const relevantFilterEnd = worker.indexOf("\n}\n", relevantFilterStart);
 assert.ok(relevantFilterStart >= 0 && relevantFilterEnd > relevantFilterStart, "search relevance filter must exist");
 const filterRelevantSearchResults = new Function(worker.slice(relevantFilterStart, relevantFilterEnd + 3) + "\nreturn filterRelevantSearchResults;")();
+const globalNewsFilterStart = worker.indexOf("function filterRelevantSearchResults(query, results, allowGlobalNews = false) {");
+assert.ok(globalNewsFilterStart >= 0, "global-news relevance mode must exist");
+const worldOnlyResults = [
+  { title: "Major earthquake response announced in Japan", url: "https://www.reuters.com/world/asia-pacific/japan-earthquake-response/", snippet: "Japan announces emergency response after earthquake." },
+  { title: "India cabinet approves rural programme", url: "https://indianexpress.com/article/india/cabinet-rural-programme/", snippet: "The Union Cabinet approved a new programme." }
+];
+assert.equal(filterRelevantSearchResults("देश दुनिया की ताज़ा खबरें", worldOnlyResults).length, 0, "ordinary India-focused news mode must continue excluding unrelated foreign stories");
+assert.equal(filterRelevantSearchResults("देश दुनिया की ताज़ा खबरें", worldOnlyResults, true).length, 2, "global digest mode must retain both international and India news from trusted publishers");
+assert.match(worker, /if \(!searchOptions\.globalNews\) requestBody\.userLocation = "IN";/, "global news search must not be geographically restricted to India");
+assert.match(worker, /Latest major news from India and around the world/, "global digest must explicitly search national and international news");
+const currentNewsStart = worker.indexOf("function isCurrentNewsQuery(text) {");
+const currentNewsEnd = worker.indexOf("\\n}", currentNewsStart);
+assert.ok(currentNewsStart >= 0 && currentNewsEnd > currentNewsStart, "current-news query detector must exist");
+const isCurrentNewsQuery = new Function(worker.slice(currentNewsStart, currentNewsEnd + 3) + "\\nreturn isCurrentNewsQuery;")();
+assert.equal(isCurrentNewsQuery("देश दुनिया की सारी खबरें बताओ"), true, "natural country-and-world news requests must trigger current news search");
+
 const metalResults = [
   { title: "24K gold rate today", url: "https://example.com/gold", snippet: "Gold price" },
   { title: "Silver price today", url: "https://example.com/silver", snippet: "Silver rate" },
