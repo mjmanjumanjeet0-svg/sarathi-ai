@@ -1096,10 +1096,15 @@ function courtRecordMatchesStory(record, story) {
   const b = anchors((story?.title || "") + " " + (story?.snippet || ""));
   const shared = [...a].filter(token => b.has(token));
   const caseRefs = value => (String(value || "").match(/\b(?:wp|w\.?p\.?|slp|crl|civil|criminal|diary|case)\s*\(?[a-z]*\)?\s*(?:no\.?\s*)?\d{1,6}\s*\/?\s*20\d{2}\b/gi) || []).map(x => x.toLowerCase().replace(/\s+/g,""));
-  const recordRefs = caseRefs((record?.title || "") + " " + (record?.snippet || ""));
-  const storyRefs = caseRefs((story?.title || "") + " " + (story?.snippet || ""));
+  const recordText = (record?.title || "") + " " + (record?.snippet || "");
+  const storyText = (story?.title || "") + " " + (story?.snippet || "");
+  const recordRefs = caseRefs(recordText);
+  const storyRefs = caseRefs(storyText);
   const sharedCaseRef = recordRefs.some(ref => storyRefs.includes(ref));
-  return shared.length >= 2 || (shared.length >= 1 && sharedCaseRef);
+  // A couple of overlapping topic words are not enough to identify a case.
+  // Require the same explicit case reference AND at least two distinctive
+  // shared anchors (normally a party/name plus the actual subject).
+  return sharedCaseRef && shared.length >= 2;
 }
 function isSubstantiveCourtNewsItem(item) {
   const title = cleanText(item?.title || "").toLocaleLowerCase("hi-IN");
