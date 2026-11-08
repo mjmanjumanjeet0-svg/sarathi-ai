@@ -1218,7 +1218,7 @@ function courtRecordPartyNames(value) {
   const names = new Set();
   const namePart = "[A-Z][A-Za-z.'’&-]*(?:\\s+(?!(?:v\\.?|versus|PIL|WP|SLP|WPC|CRL|CIVIL|CASE|PETITION|ORDER|JUDGMENT|[Cc]ivil|[Jj]udge|[Aa]ppointment|[Jj]udicial|[Gg]old|[Ll]oan|[Ll]ow|[Vv]ision|[Pp]ledged|[Jj]ewellery|[Ww]oman|[Ww]aits|RBI)\\b)(?:[A-Z][A-Za-z.'’&-]*|of|the|and|&)){1,7}";
   const add = value => {
-    const cleaned = cleanText(value).replace(/^(?:the\s+)?/i, "").replace(/\s+/g, " ").trim();
+    const cleaned = cleanText(value).replace(/^(?:the\s+)?/i, "").replace(/\s+/g, " ").replace(/[.,;:]+$/g, "").trim();
     const words = cleaned.split(" ").filter(Boolean);
     const excluded = /^(?:the hindu|indian express|deccan herald|legal news|supreme court|high court|court master|photo credit|staff reporter)$/i;
     if (words.length >= 2 && words.length <= 9 && !excluded.test(cleaned) &&
