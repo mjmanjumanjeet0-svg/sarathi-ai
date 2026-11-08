@@ -19,7 +19,7 @@ const worldOnlyResults = [
 ];
 assert.equal(filterRelevantSearchResults("देश दुनिया की ताज़ा खबरें", worldOnlyResults, true).length, 2, "global digest mode must retain both international and India news from trusted publishers");
 assert.match(worker, /if \(!searchOptions\.globalNews\) requestBody\.userLocation = "IN";/, "global news search must not be geographically restricted to India");
-assert.match(worker, /Latest major news from India and around the world/, "global digest must explicitly search national and international news");
+assert.match(worker, /All major news published today in India and around the world/, "global digest must explicitly search same-day national and international news");
 const currentNewsStart = worker.indexOf("function isCurrentNewsQuery(text) {");
 const currentNewsEnd = worker.indexOf("\n}", currentNewsStart);
 assert.ok(currentNewsStart >= 0 && currentNewsEnd > currentNewsStart, "current-news query detector must exist");
