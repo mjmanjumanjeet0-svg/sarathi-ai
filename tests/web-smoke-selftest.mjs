@@ -205,7 +205,7 @@ const fiveNewsSources = Array.from({ length: 5 }, (_, index) => ({
     "भारत के खेल की अलग समाचार घटना"
   ][index],
   url: "https://publisher" + (index + 1) + ".example/news-" + (index + 1),
-  publishedAt: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+  publishedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
   snippet: "आज की अलग घटना का विवरण उपलब्ध है।"
 }));
 const fiveNewsDraft = fiveNewsSources.map((_, index) =>
