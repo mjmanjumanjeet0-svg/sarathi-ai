@@ -59,7 +59,7 @@ const courtHelperStart = source.indexOf("function isSpecificCourtNewsQuery(text)
 const courtHelperEnd = source.indexOf("\nfunction classifyRequestedNewsCategory", courtHelperStart);
 assert.ok(courtHelperStart >= 0 && courtHelperEnd > courtHelperStart, "focused court-news query helpers must exist");
 const courtHelpers = new Function("isCurrentNewsQuery", "cleanText",
-  source.slice(courtHelperStart, courtHelperEnd) + "\nreturn { isSpecificCourtNewsQuery, isSubstantiveCourtNewsItem };")(
+  source.slice(courtHelperStart, courtHelperEnd) + "\nreturn { isSpecificCourtNewsQuery, isSingleRequestedNewsStory, isSubstantiveCourtNewsItem };")(
     value => /(?:खबर|समाचार|news|court|कोर्ट|न्यायालय|अदालत)/i.test(String(value || "")),
     value => String(value || "").replace(/\s+/g, " ").trim()
   );
@@ -67,6 +67,10 @@ assert.equal(courtHelpers.isSpecificCourtNewsQuery("पिछले 48 घंट
   "a focused recent Supreme Court query must use the court-only route");
 assert.equal(courtHelpers.isSpecificCourtNewsQuery("पिछले 48 घंटों में भारत की पाँच महत्वपूर्ण खबरें सरकार अदालत विज्ञान खेल अर्थव्यवस्था से बताओ"), false,
   "the five-category digest must keep its existing route");
+assert.equal(courtHelpers.isSingleRequestedNewsStory("पिछले 48 घंटों में भारत के सुप्रीम कोर्ट की एक महत्वपूर्ण खबर बताओ"), true,
+  "a court query explicitly asking for one important story must request only one source");
+assert.equal(courtHelpers.isSingleRequestedNewsStory("पिछले 48 घंटों में भारत के हाई कोर्ट की पाँच खबरें बताओ"), false,
+  "a multi-story court query must retain its multiple results");
 assert.equal(courtHelpers.isSubstantiveCourtNewsItem({ title: "Supreme Court orders release in unlawful detention case" }), true,
   "a substantive Supreme Court order must qualify");
 assert.equal(courtHelpers.isSubstantiveCourtNewsItem({ title: "Bomb threat to Bombay High Court and BSE" }), false,
