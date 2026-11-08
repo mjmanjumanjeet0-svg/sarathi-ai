@@ -1125,20 +1125,25 @@ function isOfficialIndianCourtRecord(item) {
       (host.endsWith(".gov.in") && /court|highcourt|judiciary|ecourts|sci/i.test(host));
     if (!officialHost) return false;
     const path = url.pathname.toLowerCase();
-    // A court homepage, cause-list landing page, daily-order index, or generic
-    // search portal is not itself evidence of a particular judgment/order.
-    // Accept only a document or a case-specific order/judgment detail URL.
+    const title = cleanText(item?.title || "").toLowerCase();
+    const snippet = cleanText(item?.snippet || "").toLowerCase();
+    // Cause lists, circulars, rosters, notices and index pages are not
+    // evidence of an individual judgment, even when delivered as PDFs.
+    if (/(cause\\s*list|daily\\s*list|list\\s*of\\s*cases|circular|roster|listing\\s*notice|court\\s*calendar|सूची|वाद\\s*सूची|परिपत्र|नोटिस)/i.test(title + " " + snippet)) return false;
     const directPdf = path.endsWith(".pdf");
     const pathParts = path.split("/").filter(Boolean);
     const detailSections = new Set(["judgment", "judgments", "order", "orders", "court-order", "court_orders"]);
     const caseSpecificDetail = pathParts.length >= 2 && detailSections.has(pathParts[pathParts.length - 2]) && pathParts[pathParts.length - 1].length >= 4;
-    return directPdf || caseSpecificDetail;
+    const caseReference = /\\b(?:wp|w\\.?p\\.?|slp|crl|civil|criminal|diary|case)\\s*\\(?[a-z]*\\)?\\s*(?:no\\.?\\s*)?\\d{1,6}\\s*(?:\\/|of\\s+)\\s*20\\d{2}\\b/i.test(title + " " + snippet);
+    const orderEvidence = /\\b(judg(?:e)?ment|final\\s*order|interim\\s*order|disposed|dismissed|allowed|pronounced|order\\s*dated)\\b/i.test(title + " " + snippet);
+    // A PDF must identify a case or an order in its indexed metadata.
+    return (directPdf && (caseReference || orderEvidence)) || caseSpecificDetail;
   } catch { return false; }
 }
 function courtRecordPartyNames(value) {
   // Keep only contiguous capitalized phrases; do not join a sentence-start
   // word such as "Woman" to a later personal name across lowercase words.
-  const excluded = new Set(["supreme","high","court","madras","delhi","bombay","calcutta","kerala","rajasthan","civil","criminal","judge","judicial","justice","petition","public","interest","government","state","india"]);
+  const excluded = new Set(["supreme","high","court","madras","delhi","bombay","calcutta","kerala","rajasthan","civil","criminal","judge","judicial","justice","petition","public","interest","government","state","india","the","hindu","indian","express","legal","news","deccan","herald","navbharat","times","today","indianexpress","thehindu"]);
   const phrases = String(value || "").match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g) || [];
   const names = new Set();
   for (const phrase of phrases) {
@@ -2323,7 +2328,46 @@ export default {
               : userText;
       const courtSearchStartedAt = isSpecificCourtNewsQuery(userText) ? new Date().toISOString() : null;
       const courtOfficialSearch = isSpecificCourtNewsQuery(userText)
-        ? await searchInternet("India Supreme Court and High Courts official website latest judgments orders daily orders case status cause list last 48 hours", env, 30, { news: false, includeDomains: OFFICIAL_INDIAN_COURT_DOMAINS })
+        ? await (async () => {
+            // Search separate domain batches so a broad Supreme Court result set
+            // cannot crowd every High Court out of the official-record search.
+            const domainBatches = [
+              OFFICIAL_INDIAN_COURT_DOMAINS.slice(0, 4),
+              OFFICIAL_INDIAN_COURT_DOMAINS.slice(4, 12),
+              OFFICIAL_INDIAN_COURT_DOMAINS.slice(12, 20),
+              OFFICIAL_INDIAN_COURT_DOMAINS.slice(20)
+            ];
+            const searches = await Promise.all(domainBatches.map((domains, index) =>
+              searchInternet(
+                "site-specific Indian court individual judgment final order case record published in the last 48 hours batch " + (index + 1),
+                env, 12, { news: false, includeDomains: domains }
+              )
+            ));
+            const results = [];
+            const seen = new Set();
+            for (const result of searches) for (const item of (result.results || [])) {
+              const key = canonicalNewsUrl(item.url);
+              if (key && !seen.has(key)) { seen.add(key); results.push(item); }
+            }
+            const failed = searches.filter(result => result.errorCode || result.httpStatus && result.httpStatus !== 200);
+            return {
+              attempted: searches.some(result => result.attempted === true),
+              provider: "Exa",
+              httpStatus: searches.every(result => result.httpStatus === 200) ? 200 : (failed[0]?.httpStatus ?? null),
+              errorCode: failed[0]?.errorCode ?? null,
+              warning: searches.length ? failed.length + " of " + searches.length + " court-domain batches failed" : "No court-domain batches ran",
+              rawResultCount: searches.reduce((sum, result) => sum + (result.rawResultCount ?? result.results?.length ?? 0), 0),
+              results,
+              domainBatchDiagnostics: searches.map((result, index) => ({
+                batch: index + 1,
+                domains: domainBatches[index],
+                attempted: result.attempted === true,
+                httpStatus: result.httpStatus ?? null,
+                errorCode: result.errorCode ?? null,
+                resultCount: result.rawResultCount ?? result.results?.length ?? 0
+              }))
+            };
+          })()
         : null;
       const search = await searchInternet(searchQuery, env);
       const courtSearchFinishedAt = isSpecificCourtNewsQuery(userText) ? new Date().toISOString() : null;
