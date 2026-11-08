@@ -20,19 +20,19 @@ const worldOnlyResults = [
 assert.equal(filterRelevantSearchResults("देश दुनिया की ताज़ा खबरें", worldOnlyResults, true).length, 2, "global digest mode must retain both international and India news from trusted publishers");
 assert.match(worker, /if \(!searchOptions\.globalNews\) requestBody\.userLocation = "IN";/, "global news search must not be geographically restricted to India");
 assert.match(worker, /All major news published today in India and around the world/, "global digest must explicitly search same-day national and international news");
-assert.match(worker, /formatCurrentNewsSummaryReply\\(normalizeNewsSummaryRepairText\\(repairText\\.trim\\(\\)\\), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery\\(userText\\), isGlobalNewsQuery\\(userText\\)\\)/, "fallback summary validation must preserve global-news mode");
-assert.match(worker, /if \\(!isGlobalNewsQuery\\(query\\) && !isIndiaFocusedNewsItem\\(item\\)\\) return false;/, "global-news headline fallback must retain international stories");
-assert.match(worker, /const earliestAllowed = getIndiaDayStartTimestamp\\(now\\);/, "news freshness and category selection must use India-local midnight, not a rolling 48-hour window");
+assert.ok(worker.includes("formatCurrentNewsSummaryReply(normalizeNewsSummaryRepairText(repairText.trim()), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText), isGlobalNewsQuery(userText))"), "fallback summary validation must preserve global-news mode");
+assert.ok(worker.includes("if (!title || (!isGlobalNewsQuery(query) && !isIndiaFocusedNewsItem(item))) return false;"), "global-news headline fallback must retain international stories");
+assert.ok(worker.includes("const earliestAllowed = getIndiaDayStartTimestamp(now);"), "news freshness and category selection must use India-local midnight, not a rolling 48-hour window");
 const indiaDayStartStart = worker.indexOf("function getIndiaDayStartTimestamp(now = Date.now()) {");
-const indiaDayStartEnd = worker.indexOf("\\n}\\n", indiaDayStartStart);
+const indiaDayStartEnd = worker.indexOf("\n}\n", indiaDayStartStart);
 assert.ok(indiaDayStartStart >= 0 && indiaDayStartEnd > indiaDayStartStart, "India-local day boundary helper must exist");
-const getIndiaDayStartTimestamp = new Function("INDIA_TIME_ZONE", worker.slice(indiaDayStartStart, indiaDayStartEnd + 3) + "\\nreturn getIndiaDayStartTimestamp;")("Asia/Kolkata");
+const getIndiaDayStartTimestamp = new Function("INDIA_TIME_ZONE", worker.slice(indiaDayStartStart, indiaDayStartEnd + 3) + "\nreturn getIndiaDayStartTimestamp;")("Asia/Kolkata");
 const sampleNow = Date.parse("2026-11-08T18:00:00.000Z");
 assert.equal(new Date(getIndiaDayStartTimestamp(sampleNow)).toISOString(), "2026-11-07T18:30:00.000Z", "India news day must begin at midnight IST");
 const freshFilterStart = worker.indexOf("function filterFreshNewsResults(results, now = Date.now()) {");
-const freshFilterEnd = worker.indexOf("\\n}\\n", freshFilterStart);
+const freshFilterEnd = worker.indexOf("\n}\n", freshFilterStart);
 assert.ok(freshFilterStart >= 0 && freshFilterEnd > freshFilterStart, "same-day news filter must exist");
-const filterFreshNewsResults = new Function("getIndiaDayStartTimestamp", worker.slice(freshFilterStart, freshFilterEnd + 3) + "\\nreturn filterFreshNewsResults;")(getIndiaDayStartTimestamp);
+const filterFreshNewsResults = new Function("getIndiaDayStartTimestamp", worker.slice(freshFilterStart, freshFilterEnd + 3) + "\nreturn filterFreshNewsResults;")(getIndiaDayStartTimestamp);
 const sampleFreshnessNow = Date.parse("2026-11-08T18:00:00.000Z");
 assert.deepEqual(filterFreshNewsResults([
   { id: "today", publishedAt: "2026-11-08T17:00:00.000Z" },
