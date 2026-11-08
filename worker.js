@@ -1114,7 +1114,7 @@ function classifyRequestedNewsCategory(item) {
     ["खेल", /\b(?:sports?|cricket|football|hockey|tennis|badminton|olympics?|paralympics?|athlete|athletics|athletic|tournament|ipl|icc|bcci|doping|anti-doping|wrestling|kabaddi|parvez khan|cas)\b|खेल|क्रिकेट|फुटबॉल|हॉकी|टेनिस|बैडमिंटन|ओलंपिक|खिलाड़ी|टूर्नामेंट|विश्व कप|डोपिंग|एथलेटिक्स|पहलवान|कबड्डी/i],
     ["विज्ञान", /\b(?:science|scientific|research|researchers|isro|nasa|space mission|satellite|launch vehicle|discovery|scientists?|clinical trial|genome|iisc|csir|icmr|dbt|dst|quantum|semiconductor|biotechnology|astronomy|observatory|telescope|vaccine trial|medical research|scientific study)\b|विज्ञान|वैज्ञानिक|अनुसंधान|शोध|इसरो|अंतरिक्ष|उपग्रह|प्रक्षेपण|खोज|वैज्ञानिकों|जीनोम|क्वांटम|सेमीकंडक्टर|जैव प्रौद्योगिकी|खगोलीय|दूरबीन|टीका परीक्षण|चिकित्सा अनुसंधान/i],
     ["अर्थव्यवस्था", /\b(?:economy|economic|gdp|inflation|rbi|reserve bank|stock market|sensex|nifty|rupee|fiscal|trade deficit|exports?|imports?|budget|interest rate|banking|manufacturing|unemployment)\b|अर्थव्यवस्था|आर्थिक|जीडीपी|महंगाई|मुद्रास्फीति|आरबीआई|रिजर्व बैंक|शेयर बाजार|सेंसेक्स|निफ्टी|रुपया|निर्यात|आयात|बजट|ब्याज दर|बैंकिंग|बेरोजगारी/i],
-    ["सरकार", /\b(?:government|cabinet|minister|ministry|parliament|lok sabha|rajya sabha|prime minister|policy|bill|ordinance|scheme|election commission|governor)\b|सरकार|मंत्रिमंडल|कैबिनेट|मंत्री|मंत्रालय|संसद|लोकसभा|राज्यसभा|प्रधानमंत्री|नीति|विधेयक|अध्यादेश|योजना|निर्वाचन आयोग|राज्यपाल/i]
+    ["सरकार", /\b(?:government|govt|cabinet|minister|ministry|parliament|lok sabha|rajya sabha|prime minister|policy|bill|ordinance|scheme|election commission|governor)\b|सरकार|मंत्रिमंडल|कैबिनेट|मंत्री|मंत्रालय|संसद|लोकसभा|राज्यसभा|प्रधानमंत्री|नीति|विधेयक|अध्यादेश|योजना|निर्वाचन आयोग|राज्यपाल/i]
   ];
   // In the strict five-category digest, only the headline may assign a category.
   // A snippet can mention unrelated topics and must never fill a missing category.
@@ -1321,6 +1321,21 @@ function hasKnownContradictedNewsFact(text) {
   return olympics && yearNearAthens;
 }
 
+function hasUnsupportedCourtDisposition(generatedText, sourceEvidence) {
+  const generated = cleanText(generatedText);
+  const source = cleanText(sourceEvidence);
+  // Do not turn a court's procedural disposal/closure into dismissal or rejection.
+  const outcomes = [
+    { generated: /(?:खारिज|अस्वीकार|dismiss(?:ed|es)?|reject(?:ed|s)?)/i, source: /(?:खारिज|अस्वीकार|dismiss(?:ed|es)?|reject(?:ed|s)?)/i },
+    { generated: /(?:बंद|निपटा(?:या|ई|ने)?|समाप्त|disposed|closed|withdrawn)/i, source: /(?:बंद|निपटा(?:या|ई|ने)?|समाप्त|disposed|closed|withdrawn)/i },
+    { generated: /(?:मंजूर|स्वीकार|allowed|granted)/i, source: /(?:मंजूर|स्वीकार|allowed|granted)/i },
+    { generated: /(?:रद्द|quashed|set aside|struck down)/i, source: /(?:रद्द|quashed|set aside|struck down)/i },
+    { generated: /(?:स्थगित|रोक लगाई|stayed|stay order)/i, source: /(?:स्थगित|रोक लगाई|stayed|stay order)/i }
+  ];
+  const isCourtStory = /(?:supreme court|high court|court|tribunal|सुप्रीम कोर्ट|हाई कोर्ट|उच्च न्यायालय|अदालत|न्यायालय)/i.test(source);
+  return isCourtStory && outcomes.some(outcome => outcome.generated.test(generated) && !outcome.source.test(source));
+}
+
 function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false) {
   let items = dedupeNewsResults(results).filter(item => {
     const title = cleanText(item?.title || "");
@@ -1426,7 +1441,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
   const rejectCounts = {
     missingEntry: 0, headlineGrounding: 0, untranslatedEnglishHeadline: 0, categoryMismatch: 0, knownFactConflict: 0, aqi: 0, sentenceCount: 0,
     agniveerDetail: 0, mixedScript: 0, unsupportedNumber: 0,
-    unsupportedCertainty: 0, westAsia: 0, missingEvidence: 0, unsupportedCause: 0
+    unsupportedCertainty: 0, westAsia: 0, missingEvidence: 0, unsupportedCause: 0, unsupportedCourtOutcome: 0
   };
   for (let index = 0; index < items.length; index++) {
     const entry = entries.get(index + 1);
@@ -1454,6 +1469,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
       .map(source => cleanText((source?.title || "") + " " + (source?.snippet || ""))).join(" ");
     const sourceEvidence = cleanText((items[index]?.title || "") + " " + (items[index]?.snippet || "") + " " + (items[index]?.articleEvidence || "") + " " + (items[index]?.publishedAt || "") + " " + relatedEvidence);
     const generatedText = entry.headline + " " + entry.summary;
+    if (hasUnsupportedCourtDisposition(generatedText, sourceEvidence)) { rejectCounts.unsupportedCourtOutcome++; continue; }
     const isAgniveerExtension = /agniveer|अग्निवीर/i.test(sourceEvidence) &&
       /(?:75\s*%|७५\s*प्रतिशत|remaining\s+75|शेष\s+७५)/i.test(sourceEvidence);
     if (isAgniveerExtension && !/(?:75\s*%|७५\s*(?:प्रतिशत|फीसदी)|शेष\s+७५|पचहत्तर\s*(?:प्रतिशत|फीसदी)?)/i.test(generatedText)) { rejectCounts.agniveerDetail++; continue; }
@@ -1525,7 +1541,9 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
   const count = lines.length;
   const prefix = count === 5
     ? "आज की 5 अलग-अलग, तारीख़-जाँची खबरें:"
-    : "आज " + count + " अलग-अलग, तारीख़-जाँची खबरें मिलीं (आपने 5 माँगी थीं):";
+    : requireFiveCategories
+      ? "आज " + count + " अलग-अलग, तारीख़-जाँची खबरें मिलीं (पाँच श्रेणियों में से " + count + " खबरें सत्यापन में सफल हुईं):"
+      : "आज " + count + " अलग-अलग, तारीख़-जाँची खबरें मिलीं:";
   const missingCategories = requireFiveCategories
     ? requiredCategories.filter(category => !acceptedCategories.includes(category))
     : [];
