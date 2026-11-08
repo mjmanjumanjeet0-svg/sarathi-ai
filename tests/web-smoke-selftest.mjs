@@ -88,13 +88,21 @@ const hasKnownContradictedNewsFact = new Function(
   "cleanText",
   worker.slice(knownFactGuardStart, knownFactGuardEnd + 3) + "\nreturn hasKnownContradictedNewsFact;"
 )(value => String(value || "").replace(/\s+/g, " ").trim());
+const newsCountStart = worker.indexOf("function formatHindiNewsCount(");
+const newsCountEnd = worker.indexOf("\nfunction formatCurrentNewsSummaryReply", newsCountStart);
+assert.ok(newsCountStart >= 0 && newsCountEnd > newsCountStart, "Hindi news count and note helpers must exist");
+const newsFormatHelpers = new Function(worker.slice(newsCountStart, newsCountEnd) + "\nreturn { formatHindiNewsCount, buildNewsDigestNote };")();
+
 const formatCurrentNewsSummaryReply = new Function(
+  "formatHindiNewsCount", "buildNewsDigestNote",
   "dedupeNewsResults", "cleanText", "formatNewsPublishedAt",
   "hasMixedScriptToken", "hasUnsupportedNumericClaim", "hasUnsupportedCertaintyClaim",
   "hasUnsupportedNewsHeadlineMix", "hasUntranslatedEnglishHeadline", "hasIncorrectOverallAqiCategory", "isIndiaFocusedNewsItem", "hasKnownContradictedNewsFact", "hasUnsupportedCourtDisposition",
   "classifyRequestedNewsCategory",
   worker.slice(newsFormatterStart, newsFormatterEnd + 3) + "\nreturn formatCurrentNewsSummaryReply;"
 )(
+  newsFormatHelpers.formatHindiNewsCount,
+  newsFormatHelpers.buildNewsDigestNote,
   results => results,
   value => String(value || "").replace(/\s+/g, " ").trim(),
   () => "05 नवंबर 2026 (भारतीय समय)",
