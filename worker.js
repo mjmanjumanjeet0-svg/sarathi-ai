@@ -1085,13 +1085,22 @@ function isOfficialIndianCourtRecord(item) {
   try { const host = new URL(item?.url || "").hostname.toLowerCase().replace(/^www\./, ""); return OFFICIAL_INDIAN_COURT_DOMAINS.includes(host) || (host.endsWith(".nic.in") && /court|highcourt|judiciary|ecourts/i.test(host)) || (host.endsWith(".gov.in") && /court|highcourt|judiciary|ecourts|sci/i.test(host)); } catch { return false; }
 }
 function courtRecordPartyNames(value) {
-  // If both headlines expose a multi-word person/party name, require the
-  // official record and newsroom story to share that identity. Topic overlap
-  // (for example, the same appointment issue) cannot substitute for a party match.
+  // Split capitalized title words around known court/topic terms so a party
+  // name remains detectable even when the headline continues with the case topic.
   const excluded = new Set(["supreme","high","court","madras","delhi","bombay","calcutta","kerala","rajasthan","civil","criminal","judge","judicial","justice","petition","public","interest","government","state","india"]);
-  const matches = String(value || "").match(/\\b[A-Z][a-z]+(?:\\s+[A-Z][a-z]+)+\\b/g) || [];
-  return new Set(matches.map(name => name.trim().replace(/\\s+/g, " ").toLocaleLowerCase("en-IN"))
-    .filter(name => name.split(" ").length >= 2 && !name.split(" ").some(word => excluded.has(word.toLowerCase()))));
+  const words = String(value || "").match(/\\b[A-Z][a-z]+\\b/g) || [];
+  const names = new Set();
+  let run = [];
+  const flush = () => {
+    if (run.length >= 2) names.add(run.join(" ").toLocaleLowerCase("en-IN"));
+    run = [];
+  };
+  for (const word of words) {
+    if (excluded.has(word.toLowerCase())) flush();
+    else run.push(word);
+  }
+  flush();
+  return names;
 }
 function courtRecordMatchesStory(record, story) {
   // Match case-specific names, case numbers and distinctive subject terms.
