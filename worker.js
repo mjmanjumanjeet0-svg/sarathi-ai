@@ -383,7 +383,7 @@ async function searchInternet(query, env, maxResults = null, searchOptions = {})
       requestBody.startPublishedDate = since.toISOString();
       requestBody.endPublishedDate = now.toISOString();
       // Localize this single news search to India; publication-date filters remain authoritative.
-      requestBody.userLocation = "IN";
+      if (!searchOptions.globalNews) requestBody.userLocation = "IN";
     }
     if (Array.isArray(searchOptions.includeDomains) && searchOptions.includeDomains.length) requestBody.includeDomains = searchOptions.includeDomains;
     if (searchOptions.news === false) delete requestBody.category;
@@ -776,7 +776,7 @@ function filterFreshPreciousMetalResults(results, now = Date.now()) {
   });
 }
 
-function filterRelevantSearchResults(query, results) {
+function filterRelevantSearchResults(query, results, allowGlobalNews = false) {
   const q = String(query || "").toLocaleLowerCase("hi-IN");
   const textOf = (item) => `${item.title || ""} ${item.url || ""} ${item.snippet || ""}`.toLocaleLowerCase("hi-IN");
   const list = Array.isArray(results) ? results : [];
@@ -790,7 +790,7 @@ function filterRelevantSearchResults(query, results) {
         const host = new URL(item.url).hostname.toLowerCase().replace(/^www\./, "");
         const title = String(item.title || "");
         const headline = `${title} ${item.snippet || ""}`;
-        if (!isIndiaFocusedNewsItem(item)) return false;
+        if (!allowGlobalNews && !isIndiaFocusedNewsItem(item)) return false;
         // Do not treat astrology, calendar pages, or generic daily live-feed indexes
         // as independent reported articles. They often repeat headlines without
         // providing a distinct, date-stamped story.
@@ -1489,6 +1489,11 @@ function selectNewsForRequestedCategories(results, query) {
   return required.filter(category => selected.has(category)).map(category => selected.get(category));
 }
 
+function isGlobalNewsQuery(text) {
+  const value = String(text || "");
+  return /(?:देश\s*(?:और|एवं|तथा)?\s*दुनिया|भारत\s*(?:और|एवं|तथा)\s*दुनिया|दुनिया\s*भर|राष्ट्रीय\s*(?:और|एवं)\s*अंतरराष्ट्रीय|अंतरराष्ट्रीय\s*खबर|विश्व\s*समाचार|\b(?:world|global|international)\s+news\b|\bindia\s+(?:and|&)\s+world\b)/i.test(value);
+}
+
 function isCurrentNewsQuery(text) {
   return /(?:पिछले|गत|last)\s*48\s*(?:घंटों?|घंटे|hours?).{0,110}(?:खबर|समाचार|न्यूज़|न्यूज|news)|(?:ताज़ा|ताजा|मुख्य|प्रमुख).{0,35}खबर|आज.{0,60}(?:खबर|समाचार)|(?:latest|breaking|current)\s+news|today.?s\s+news|समाचार/i.test(String(text || ""));
 }
@@ -1676,13 +1681,13 @@ function buildNewsDigestNote(shortfall = "") {
   return "ध्यान दें: " + notes.join(" ");
 }
 
-function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false) {
+function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false, allowGlobalNews = false) {
   let items = dedupeNewsResults(results).filter(item => {
     const title = cleanText(item?.title || "");
     const publishedAt = Date.parse(item?.publishedAt || "");
     // Re-check India relevance at the final display boundary so an incidental
     // India mention cannot turn an international story into an India headline.
-    if (!title || !isIndiaFocusedNewsItem(item)) return false;
+    if (!title || (!allowGlobalNews && !isIndiaFocusedNewsItem(item))) return false;
     try {
       const url = new URL(item?.url || "");
       return url.protocol === "https:" && Boolean(url.hostname) && Number.isFinite(publishedAt);
@@ -2413,10 +2418,11 @@ export default {
       const isHistoricalQuestion = isHistoricalResearchQuery(userText);
       const indiaToday = new Intl.DateTimeFormat("en-CA", { timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
       const isOfficialEducationQuestion = /(सिलेबस|पाठ्यक्रम|परीक्षा तिथि|एडमिट कार्ड|प्रवेश पत्र|रिजल्ट|(?:परीक्षा|बोर्ड|विश्वविद्यालय|चुनाव)\s*(?:का|के)?\s*परिणाम|परिणाम\s*(?:घोषित|जारी|देखें|चेक)|आवेदन|फॉर्म|फीस|पात्रता|नियम|छात्रवृत्ति|स्कॉलरशिप|scholarship|fellowship|stipend|official syllabus|exam date|admit card|result|eligibility|application form)/i.test(userText);
+      const globalNewsDigest = isCurrentNewsQuestion && isGlobalNewsQuery(userText) && !isSpecificCourtNewsQuery(userText);
       const searchQuery = isSpecificCourtNewsQuery(userText)
         ? "India Supreme Court and High Court latest judgments orders rulings hearings petitions bail constitutional bench court decisions published in the last 48 hours. Search only substantive judicial proceedings and decisions by the Supreme Court of India or Indian High Courts. Exclude bomb threats, security alerts, incidents at court buildings, unrelated news roundups, opinion, live blogs, and stories that merely mention a court. Return direct article URLs and exact publication timestamps."
         : isCurrentNewsQuestion
-        ? (isFiveCategoryNewsQuery(userText) ? "Latest India news, one distinct reported event in each category: government policy, economy and markets, India court and judiciary news (Supreme Court of India orders/judgments, High Court rulings, constitutional benches, bail and major tribunal decisions published within the last 48 hours; search court coverage deliberately, not just incidental mentions), Indian science research and technology discoveries (ISRO, IISc, CSIR, ICMR, space missions, satellites, clinical research, scientific discoveries), and Indian sports (cricket, football, hockey, badminton, tennis, wrestling, athletics, tournaments and athlete results). Seek at least one distinct recent sports report as well as one result in every other category. Prioritize substantive science and research headlines, not defence weapon tests, AQI/weather reports, school-assembly roundups, opinion pieces, live blogs, or international stories with incidental India mentions. Return recent India-focused articles from established publishers with publication timestamps and direct article URLs." : "Latest national news from India: major reported developments in government, politics, economy, business, courts, science, technology, weather and sports. Prioritize distinct, substantive Indian news events from established publishers; exclude opinion pieces, live blogs, daily roundups and international stories with only incidental India mentions.")
+        ? (isFiveCategoryNewsQuery(userText) ? "Latest India news, one distinct reported event in each category: government policy, economy and markets, India court and judiciary news (Supreme Court of India orders/judgments, High Court rulings, constitutional benches, bail and major tribunal decisions published within the last 48 hours; search court coverage deliberately, not just incidental mentions), Indian science research and technology discoveries (ISRO, IISc, CSIR, ICMR, space missions, satellites, clinical research, scientific discoveries), and Indian sports (cricket, football, hockey, badminton, tennis, wrestling, athletics, tournaments and athlete results). Seek at least one distinct recent sports report as well as one result in every other category. Prioritize substantive science and research headlines, not defence weapon tests, AQI/weather reports, school-assembly roundups, opinion pieces, live blogs, or international stories with incidental India mentions. Return recent India-focused articles from established publishers with publication timestamps and direct article URLs." : (globalNewsDigest ? "Latest major news from India and around the world in the last 48 hours: important national and international developments in government, politics, diplomacy, economy, courts, science, health, technology, climate, education and sports. Include genuinely significant events from different countries, not only stories mentioning India. Prefer direct reporting from established Indian and international publishers; exclude opinion, live blogs, generic roundups, undated pages and duplicate reports. Return direct article URLs and exact publication timestamps." : "Latest national news from India: major reported developments in government, politics, economy, business, courts, science, technology, weather and sports. Prioritize distinct, substantive Indian news events from established publishers; exclude opinion pieces, live blogs, daily roundups and international stories with only incidental India mentions."))
         : isGoldRateQuestion || isSilverRateQuestion
           ? "India city-wise retail rate today 22K 24K gold 999 silver per gram per 10 gram per kilogram source updated time " + indiaToday
           : isDiamondPriceQuestion
@@ -2471,9 +2477,9 @@ export default {
             };
           })()
         : null;
-      const search = await searchInternet(searchQuery, env);
+      const search = await searchInternet(searchQuery, env, null, { globalNews: globalNewsDigest });
       const courtSearchFinishedAt = isSpecificCourtNewsQuery(userText) ? new Date().toISOString() : null;
-      searchResults = filterRelevantSearchResults(userText, search.results);
+      searchResults = filterRelevantSearchResults(userText, search.results, globalNewsDigest);
       if (isHistoricalQuestion) searchResults = filterHistoricalSources(userText, searchResults);
       if (isCurrentNewsQuestion) {
         // Keep the newest same-day report for a repeated event, then deduplicate
@@ -3186,7 +3192,7 @@ export default {
     // The summary parser itself validates every source-summary pair. Avoid a
     // separate brittle heading counter that can reject harmless punctuation.
     let formattedNewsReply = isCurrentNewsReply && !looksLikeRawEnglishArticle
-      ? formatCurrentNewsSummaryReply(normalizeNewsSummaryRepairText(rawReply), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText))
+      ? formatCurrentNewsSummaryReply(normalizeNewsSummaryRepairText(rawReply), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText), isGlobalNewsQuery(userText))
       : "";
 
     // If the first completion used an unexpected layout, make one constrained
