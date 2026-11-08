@@ -1088,7 +1088,7 @@ function courtRecordPartyNames(value) {
   // Keep only contiguous capitalized phrases; do not join a sentence-start
   // word such as "Woman" to a later personal name across lowercase words.
   const excluded = new Set(["supreme","high","court","madras","delhi","bombay","calcutta","kerala","rajasthan","civil","criminal","judge","judicial","justice","petition","public","interest","government","state","india"]);
-  const phrases = String(value || "").match(/\\b[A-Z][a-z]+(?:\\s+[A-Z][a-z]+)*\\b/g) || [];
+  const phrases = String(value || "").match(/\b[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\b/g) || [];
   const names = new Set();
   for (const phrase of phrases) {
     let run = [];
@@ -1096,7 +1096,7 @@ function courtRecordPartyNames(value) {
       if (run.length >= 2) names.add(run.join(" ").toLocaleLowerCase("en-IN"));
       run = [];
     };
-    for (const word of phrase.split(/\\s+/)) {
+    for (const word of phrase.split(/\s+/)) {
       if (excluded.has(word.toLowerCase())) flush();
       else run.push(word);
     }
