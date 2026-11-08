@@ -1085,10 +1085,21 @@ function isOfficialIndianCourtRecord(item) {
   try { const host = new URL(item?.url || "").hostname.toLowerCase().replace(/^www\./, ""); return OFFICIAL_INDIAN_COURT_DOMAINS.includes(host) || (host.endsWith(".nic.in") && /court|highcourt|judiciary|ecourts/i.test(host)) || (host.endsWith(".gov.in") && /court|highcourt|judiciary|ecourts|sci/i.test(host)); } catch { return false; }
 }
 function courtRecordMatchesStory(record, story) {
-  const a = cleanText((record?.title || "") + " " + (record?.snippet || "")).toLowerCase();
-  const b = cleanText((story?.title || "") + " " + (story?.snippet || "")).toLowerCase();
-  const terms = [/gold|सोना|स्वर्ण/,/loan|ऋण|कर्ज/,/pledged|जमानत|गिरवी|jewellery|jewelry|आभूषण/,/\brbi\b|reserve bank|भारतीय रिजर्व बैंक/,/auction|नीलामी/,/public interest|\bpil\b|जनहित याचिका/];
-  return terms.filter(re => re.test(a) && re.test(b)).length >= 2;
+  // Match case-specific names, case numbers and distinctive subject terms.
+  // Generic words such as "court", "order" and "petition" never count.
+  const stop = new Set(["supreme","high","court","india","indian","judgment","judgement","order","orders","case","petition","plea","hearing","latest","news","report","reported","says","said","the","and","for","with","from","that","this","में","का","की","के","और","पर","से","को","एक","यह","था","थी","है","हैं","द्वारा","याचिका","आदेश","न्यायालय","अदालत","सुप्रीम","हाई"]);
+  const anchors = value => {
+    const tokens = cleanText(value).toLocaleLowerCase("hi-IN").match(/[a-z][a-z0-9./-]{2,}|[\\u0900-\\u097f]{3,}/g) || [];
+    return new Set(tokens.filter(token => !stop.has(token) && !/^20\\d{2}$/.test(token)));
+  };
+  const a = anchors((record?.title || "") + " " + (record?.snippet || ""));
+  const b = anchors((story?.title || "") + " " + (story?.snippet || ""));
+  const shared = [...a].filter(token => b.has(token));
+  const caseRefs = value => (String(value || "").match(/\\b(?:wp|w\\.?p\\.?|slp|crl|civil|criminal|diary|case)\\s*\\(?[a-z]*\\)?\\s*(?:no\\.?\\s*)?\\d{1,6}\\s*\\/?\\s*20\\d{2}\\b/gi) || []).map(x => x.toLowerCase().replace(/\\s+/g,""));
+  const recordRefs = caseRefs((record?.title || "") + " " + (record?.snippet || ""));
+  const storyRefs = caseRefs((story?.title || "") + " " + (story?.snippet || ""));
+  const sharedCaseRef = recordRefs.some(ref => storyRefs.includes(ref));
+  return shared.length >= 2 || (shared.length >= 1 && sharedCaseRef);
 }
 function isSubstantiveCourtNewsItem(item) {
   const title = cleanText(item?.title || "").toLocaleLowerCase("hi-IN");
@@ -2114,17 +2125,28 @@ export default {
             .map(item => ({ ...item, requestedCategory: "अदालत" }));
           searchResults = dedupeNewsPublishers(searchResults);
           if (!searchResults.length && previouslyUsedUrls.size) return jsonResponse({ success: true, reply: "पिछले उत्तर में दी गई अदालत की खबर को दोहराने के बजाय मैंने उसे हटा दिया है। पिछले 48 घंटों में कोई दूसरी नई, तारीख़-जाँची और भरोसेमंद अदालत की खबर इस खोज में नहीं मिली; इसलिए मैं नई खबर नहीं बना रहा हूँ।", ...dateTime, webSearch: true, searchAttempted: true, searchWarning: "नई अलग अदालत की खबर उपलब्ध नहीं मिली।", searchUnavailable: true, sources: [] });
-          // A focused request for one court story must send one source to the
-          // summarizer and validator. Otherwise the model is asked to summarize
-          // multiple search results the user never requested, causing
-          // missingEntry rejections for the unused results.
-          if (isSingleRequestedNewsStory(userText)) searchResults = searchResults.slice(0, 1);
           if (searchResults.length) {
             const officialRecords = (courtOfficialSearch?.results || []).filter(isOfficialIndianCourtRecord);
+            // Fail closed: a newsroom article without a matching official court
+            // order/case record is not published as verified court news.
             searchResults = searchResults.map(item => {
               const officialRecord = officialRecords.find(record => courtRecordMatchesStory(record, item));
-              return { ...item, officialRecordStatus: officialRecord ? "मिला" : "नहीं मिला", officialRecordUrl: officialRecord?.url || "" };
-            });
+              return officialRecord
+                ? { ...item, officialRecordStatus: "मिला", officialRecordUrl: officialRecord.url }
+                : null;
+            }).filter(Boolean);
+            if (!searchResults.length) {
+              return jsonResponse({
+                success: true,
+                reply: "पिछले 48 घंटों में मिली समाचार रिपोर्टों को आधिकारिक सुप्रीम कोर्ट/हाई कोर्ट आदेश या केस रिकॉर्ड से भरोसेमंद रूप से मिलान नहीं किया जा सका। इसलिए कोई अदालत की खबर सत्यापित खबर के रूप में नहीं दी जा रही है। यह केवल खोज में रिकॉर्ड न मिलने की स्थिति है; इससे यह साबित नहीं होता कि आदेश मौजूद नहीं है।",
+                ...dateTime, webSearch: true, searchAttempted: true,
+                searchWarning: "कोई मेल खाता आधिकारिक अदालत रिकॉर्ड सत्यापित नहीं हुआ।",
+                searchUnavailable: true, sources: []
+              });
+            }
+            // Limit only after verification, so an unverified first result
+            // cannot hide a later story with a matching official court record.
+            if (isSingleRequestedNewsStory(userText)) searchResults = searchResults.slice(0, 1);
             searchResults = await enrichNewsArticleEvidence(searchResults);
           }
         } else if (isFiveCategoryNewsQuery(userText)) {
