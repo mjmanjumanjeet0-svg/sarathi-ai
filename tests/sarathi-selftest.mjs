@@ -112,9 +112,9 @@ assert.equal(hasUnsupportedCourtDisposition("मद्रास हाई को
 assert.equal(hasUnsupportedCourtDisposition("मद्रास हाई कोर्ट ने याचिका बंद की", "Madras High Court closes plea to regulate gold loans"), false,
   "a summary may describe a closure when the source itself says the plea was closed");
 assert.match(source, /India court and judiciary news.*published today/s,
+  "focused court queries must use a judiciary-specific search query");
 assert.ok(source.includes('timeZone: "Asia/Kolkata"'), "news publication window must use the current India calendar day");
 assert.match(source, /istMidnightUtc/, "news search must start at midnight IST rather than a rolling 48-hour window");
-  "focused court queries must use a judiciary-specific search query");
 
 assert.equal(classifyRequestedNewsCategory({ title: "Home Ministry announces new visa policy" }), "सरकार", "a ministry policy announcement must qualify as government");
 assert.equal(classifyRequestedNewsCategory({ title: "Delhi govt urges citizens to burst only green crackers" }), "सरकार", "govt abbreviations must be classified as government, not left for an unrelated category");
