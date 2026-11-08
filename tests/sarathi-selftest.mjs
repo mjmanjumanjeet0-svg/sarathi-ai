@@ -55,7 +55,7 @@ assert.equal(classifyRequestedNewsCategory({ title: "Joint CSIR-UGC NET December
 assert.equal(classifyRequestedNewsCategory({ title: "IISc team reports a breakthrough in quantum materials research" }), "विज्ञान", "Indian scientific institution and research headlines must qualify as science");
 assert.equal(classifyRequestedNewsCategory({ title: "RBI keeps repo rate unchanged after policy review" }), "अर्थव्यवस्था", "an RBI rate decision must qualify as economy");
 assert.equal(classifyRequestedNewsCategory({ title: "Supreme Court orders release in unlawful detention case" }), "अदालत", "a Supreme Court ruling must qualify as court");
-const courtHelperStart = source.indexOf("function isSpecificCourtNewsQuery(text) {");
+const courtHelperStart = source.indexOf("function isCourtSearchDiagnosticsQuery(text) {");
 const courtHelperEnd = source.indexOf("\nfunction classifyRequestedNewsCategory", courtHelperStart);
 assert.ok(courtHelperStart >= 0 && courtHelperEnd > courtHelperStart, "focused court-news query helpers must exist");
 const courtHelpers = new Function("isCurrentNewsQuery", "cleanText",
