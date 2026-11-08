@@ -1267,8 +1267,18 @@ function courtRecordMatchesStory(record, story) {
   // Require the same explicit case reference, at least two distinctive
   // shared anchors, and at least one shared title anchor. This prevents
   // snippet-only topic overlap from attaching the wrong party's court record.
-  const recordParties = courtRecordPartyNames((record?.title || "") + " " + (record?.snippet || ""));
-  const storyParties = courtRecordPartyNames((story?.title || "") + " " + (story?.snippet || ""));
+  // Parse title and snippet independently. Joining them first can make a
+  // caption's final party greedily absorb capitalized words from the snippet
+  // (for example, "State of Rajasthan" + "Rajasthan Civil Judge...").
+  const collectParties = item => {
+    const parties = new Set();
+    for (const value of [item?.title || "", item?.snippet || ""]) {
+      for (const name of courtRecordPartyNames(value)) parties.add(name);
+    }
+    return parties;
+  };
+  const recordParties = collectParties(record);
+  const storyParties = collectParties(story);
   const hasPartyIdentityEvidence = recordParties.size > 0 && storyParties.size > 0;
   // Require the complete extracted party set to agree. A shared State/authority
   // as respondent must not hide a different petitioner/appellant.
