@@ -254,3 +254,36 @@ assert.ok(!captionParties.has("ashish tripathi") && !captionParties.has("rohan k
   "photo credits, bylines and advocate names must not be treated as parties");
 assert.deepEqual([...courtRecordPartyNames("Photo Credit: Ashish Tripathi. Byline: Rohan Kumar. Justice: Maya Kumari.")], [],
   "article metadata and judicial names without a party caption must not produce party identities");
+
+
+// Same-day global-news regressions: date window, cross-publisher event grouping,
+// and preservation of multiple distinct stories from the same publisher.
+assert.match(source, /आज रात 12 बजे से अभी तक प्रकाशित परिणाम शामिल करो/, "news instructions must use the current India-local calendar day, not a rolling 48-hour window");
+assert.match(source, /केवल भारतीय समय \(Asia\/Kolkata\)/, "same-day news instructions must explicitly use India time");
+assert.doesNotMatch(source.slice(source.indexOf("const newsInstruction ="), source.indexOf("const fiveCategoryNewsInstruction")), /पिछले 48 घंटों में प्रकाशित/, "the old rolling 48-hour instruction must not conflict with the day filter");
+assert.match(source, /Global and general daily digests may contain several distinct stories from one publisher/, "general news must retain separate stories from the same publisher");
+
+const groupStart = source.indexOf("function groupNewsByEvent(results) {");
+const groupEnd = source.indexOf("\nfunction dedupeNewsPublishers", groupStart);
+assert.ok(groupStart >= 0 && groupEnd > groupStart, "event grouping helper must exist");
+const cleanTextForGrouping = value => String(value || "").replace(/<[^>]*>/g, " ").replace(/\\s+/g, " ").trim();
+const groupNewsByEvent = new Function("cleanText", "isSameIndianMarketEvent", "isSameIndianNewsEvent",
+  source.slice(groupStart, groupEnd) + "\nreturn groupNewsByEvent;")(
+    cleanTextForGrouping, () => false, () => false
+  );
+const egyptStories = groupNewsByEvent([
+  { title: "Egypt train collision kills four", url: "https://www.example-one.com/world/egypt-train", publisher: "Example One", publishedAt: "2026-11-08T14:00:00Z", snippet: "A train collision in Egypt." },
+  { title: "Four dead after Egypt train crash", url: "https://www.example-two.com/news/egypt-rail", publisher: "Example Two", publishedAt: "2026-11-08T14:30:00Z", snippet: "Egypt train crash update." }
+]);
+assert.equal(egyptStories.length, 1, "different publisher headlines for the same Egypt train crash must be grouped");
+assert.equal(egyptStories[0].corroboratingSources.length, 1, "the second publisher must be retained as corroborating coverage");
+const amsterdamStories = groupNewsByEvent([
+  { title: "Gaza march draws crowd in Amsterdam", url: "https://www.example-one.com/world/amsterdam-march", publisher: "Example One" },
+  { title: "Amsterdam hosts protest over Gaza", url: "https://www.example-two.com/world/gaza-protest", publisher: "Example Two" }
+]);
+assert.equal(amsterdamStories.length, 1, "different headlines for the same Amsterdam Gaza protest must be grouped");
+const separateStories = groupNewsByEvent([
+  { title: "Egypt train collision kills four", url: "https://www.example-one.com/world/egypt-train" },
+  { title: "Egypt election results announced", url: "https://www.example-two.com/world/egypt-election" }
+]);
+assert.equal(separateStories.length, 2, "unrelated news in the same country must not be merged");
