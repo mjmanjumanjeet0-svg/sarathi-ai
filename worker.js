@@ -1062,7 +1062,16 @@ function isCourtSearchDiagnosticsQuery(text) {
   const asksCourt = /(?:अदालत|न्यायालय|सुप्रीम\s*कोर्ट|हाई\s*कोर्ट|supreme\s+court|high\s+court|court)/i.test(value);
   const asksDiagnostics = /(?:तकनीकी\s*(?:जाँच|जांच|विवरण|रिपोर्ट)|जाँच\s*(?:विवरण|रिपोर्ट|लॉग)|जांच\s*(?:विवरण|रिपोर्ट|लॉग)|diagnostic|audit|execution\s+log|खोज\s*(?:का\s*)?(?:रिकॉर्ड|लॉग|विवरण))/i.test(value);
   const refersToPriorSearch = /(?:पिछली|पिछले|पहले|पूर्व|previous|prior|last)\s*(?:की\s*)?(?:अदालत|न्यायालय|court|खोज|सर्च|search)|(?:पिछली|पिछले|previous|prior)\s*(?:खोज|सर्च|search)/i.test(value);
-  return asksCourt && asksDiagnostics && refersToPriorSearch;
+  const asksForNewSearch = /(?:इस\s*बार|अब|नई\s*(?:इंटरनेट\s*)?(?:खोज|सर्च)|खोज\s*(?:का\s*)?(?:प्रयास|करो|करें|करना)|सर्च\s*(?:करो|करें|करना)|वेबसाइटों?\s*पर\s*खोज|official\s+(?:court\s+)?websites?\s+.*search|search\s+official)/i.test(value);
+  return asksCourt && asksDiagnostics && refersToPriorSearch && !asksForNewSearch;
+}
+
+function isCourtOfficialSearchRequest(text) {
+  const value = String(text || "");
+  const asksCourt = /(?:अदालत|न्यायालय|सुप्रीम\s*कोर्ट|हाई\s*कोर्ट|supreme\s+court|high\s+court|court)/i.test(value);
+  const asksOfficial = /(?:आधिकारिक|official|सरकारी)/i.test(value);
+  const asksSearch = /(?:खोज|सर्च|search|वेबसाइट|website|रिकॉर्ड|record|आदेश|case\s+record)/i.test(value);
+  return asksCourt && asksOfficial && asksSearch;
 }
 
 function buildCourtSearchDiagnosticsUnavailableReply() {
@@ -1081,7 +1090,7 @@ function isSpecificCourtNewsQuery(text) {
   const value = String(text || "");
   const asksCourt = /(?:सुप्रीम\s*कोर्ट|सर्वोच्च\s*न्यायालय|हाई\s*कोर्ट|उच्च\s*न्यायालय|अदालत|न्यायालय|supreme\s+court|high\s+court|court\s+news|judiciary)/i.test(value);
   const asksRecent = /(?:पिछले|गत|last)\s*48\s*(?:घंटों?|घंटे|hours?)/i.test(value) || /(?:ताज़ा|ताजा|latest|recent)/i.test(value);
-  return asksCourt && asksRecent && !isFiveCategoryNewsQuery(value);
+  return asksCourt && (asksRecent || isCourtOfficialSearchRequest(value)) && !isFiveCategoryNewsQuery(value);
 }
 
 function isSingleRequestedNewsStory(text) {
