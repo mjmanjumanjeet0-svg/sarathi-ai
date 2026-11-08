@@ -23,7 +23,7 @@ assert.match(worker, /Latest major news from India and around the world/, "globa
 const currentNewsStart = worker.indexOf("function isCurrentNewsQuery(text) {");
 const currentNewsEnd = worker.indexOf("\n}", currentNewsStart);
 assert.ok(currentNewsStart >= 0 && currentNewsEnd > currentNewsStart, "current-news query detector must exist");
-const isCurrentNewsQuery = new Function(worker.slice(currentNewsStart, currentNewsEnd + 3) + "\nreturn isCurrentNewsQuery;")();
+const isCurrentNewsQuery = new Function("isGlobalNewsQuery", worker.slice(currentNewsStart, currentNewsEnd + 3) + "\nreturn isCurrentNewsQuery;")(value => /(?:देश\\s*(?:और|एवं|तथा)?\\s*दुनिया|भारत\\s*(?:और|एवं|तथा)\\s*दुनिया|\\b(?:world|global|international)\\s+news\\b)/i.test(String(value || "")));
 assert.equal(isCurrentNewsQuery("देश दुनिया की सारी खबरें बताओ"), true, "natural country-and-world news requests must trigger current news search");
 
 const metalResults = [
