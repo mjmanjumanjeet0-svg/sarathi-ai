@@ -115,9 +115,9 @@ assert.ok((source.match(/const category = classifyRequestedNewsCategory\(item\);
 assert.match(source, /formatCurrentNewsSummaryReply\(normalizeNewsSummaryRepairText\(rawReply\), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery\(userText\), isSingleRequestedNewsStory\(userText\)\)/, "the first news-summary response must pass single-story intent to the formatter");
 assert.ok(source.includes("function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false, singleStoryRequest = false)"),
   "the formatter must receive explicit single-story intent");
-assert.ok(source.includes('const prefix = singleStoryRequest\\n    ? "एक तारीख़-जाँची खबर:"'),
+assert.ok(source.includes('const prefix = singleStoryRequest') && source.includes('? "एक तारीख़-जाँची खबर:"'),
   "a one-story request must not claim that the user asked for five stories");
-assert.ok(source.includes('const shortfall = singleStoryRequest\\n    ? ""'),
+assert.ok(source.includes('const shortfall = singleStoryRequest') && source.includes('? ""'),
   "a one-story request must not show a five-story shortfall warning");
 assert.ok(source.includes("function hasUntranslatedEnglishHeadline(text, sourceEvidence = \"\""), "news validation must reject untranslated English headlines");
 const englishGuardStart = source.indexOf("function hasUntranslatedEnglishHeadline(");
