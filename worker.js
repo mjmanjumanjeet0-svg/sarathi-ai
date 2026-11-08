@@ -310,7 +310,7 @@ function validHttpUrl(value) {
 }
 async function searchInternet(query, env, maxResults = null, searchOptions = {}) {
   const searchQuery = String(query || "").trim().slice(0, 1024);
-  if (!searchQuery) return { results: [], warning: "खोज का सवाल खाली है।" };
+  if (!searchQuery) return { results: [], warning: "खोज का सवाल खाली है।", attempted: false, errorCode: "EMPTY_QUERY" };
 
   // Use only the explicitly configured Exa provider. Exa usage may be metered
   // by its account plan; never silently fall back to Cloudflare AI Gateway or
@@ -320,7 +320,8 @@ async function searchInternet(query, env, maxResults = null, searchOptions = {})
       results: [],
       warning: "Exa सर्च की API Key उपलब्ध नहीं है। Cloudflare में EXA_API_KEY Secret की जाँच आवश्यक है।",
       errorCode: "MISSING_API_KEY",
-      retryable: false
+      retryable: false,
+      attempted: false
     };
   }
 
@@ -412,7 +413,8 @@ async function searchInternet(query, env, maxResults = null, searchOptions = {})
         warning,
         errorCode: tag || (response.status === 401 || response.status === 403 ? "INVALID_API_KEY" : response.status === 402 ? "NO_MORE_CREDITS" : response.status === 429 ? "RATE_LIMIT_EXCEEDED" : "HTTP_ERROR"),
         httpStatus: response.status,
-        retryable: response.status === 429 || response.status >= 500
+        retryable: response.status === 429 || response.status >= 500,
+        attempted: true
       };
     }
     const items = Array.isArray(payload?.results) ? payload.results : [];
@@ -433,7 +435,10 @@ async function searchInternet(query, env, maxResults = null, searchOptions = {})
       });
     return {
       results,
-      warning: results.length ? "Exa से वास्तविक वेब परिणाम मिले।" : "Exa खोज में इस सवाल के लिए कोई परिणाम नहीं मिला।"
+      warning: results.length ? "Exa से वास्तविक वेब परिणाम मिले।" : "Exa खोज में इस सवाल के लिए कोई परिणाम नहीं मिला।",
+      attempted: true,
+      httpStatus: response.status,
+      errorCode: null
     };
   } catch (error) {
     const code = String(error?.name || error?.code || "").slice(0, 80);
@@ -444,7 +449,8 @@ async function searchInternet(query, env, maxResults = null, searchOptions = {})
       warning: timedOut ? "Exa सर्च में समय अधिक लगा। थोड़ी देर बाद फिर प्रयास करें।" : "Exa सर्च सेवा से संपर्क नहीं हो सका। नेटवर्क कनेक्शन जाँचकर फिर प्रयास करें।",
       errorCode: code || (timedOut ? "TIMEOUT" : "NETWORK_ERROR"),
       httpStatus: timedOut ? 504 : 502,
-      retryable: true
+      retryable: true,
+      attempted: true
     };
   } finally {
     clearTimeout(timeout);
@@ -1165,6 +1171,96 @@ function courtRecordMatchesStory(record, story) {
   // mismatch even if the case number and subject words happen to overlap.
   return sharedCaseRef && shared.length >= 2 && sharedTitle.length >= 1 &&
     (!hasPartyIdentityEvidence || sharedParty);
+}
+function courtRecordMatchDiagnostics(record, story) {
+  const stop = new Set(["supreme","high","court","india","indian","judgment","judgement","order","orders","case","petition","plea","hearing","latest","news","report","reported","says","said","the","and","for","with","from","that","this","में","का","की","के","और","पर","से","को","एक","यह","था","थी","है","हैं","द्वारा","याचिका","आदेश","न्यायालय","अदालत","सुप्रीम","हाई"]);
+  const anchors = value => {
+    const tokens = cleanText(value).toLocaleLowerCase("hi-IN").match(/[a-z][a-z0-9./-]{2,}|[\\u0900-\\u097f]{3,}/g) || [];
+    return new Set(tokens.filter(token => !stop.has(token) && !/^20\\d{2}$/.test(token)));
+  };
+  const caseRefs = value => (String(value || "").match(/\\b(?:wp|w\\.?p\\.?|slp|crl|civil|criminal|diary|case)\\s*\\(?[a-z]*\\)?\\s*(?:no\\.?\\s*)?\\d{1,6}\\s*(?:\\/|of\\s+)\\s*20\\d{2}\\b/gi) || []).map(x => x.toLowerCase().replace(/\\s+/g,"").replace(/of/,"/"));
+  const recordText = (record?.title || "") + " " + (record?.snippet || "");
+  const storyText = (story?.title || "") + " " + (story?.snippet || "");
+  const recordRefs = caseRefs(recordText), storyRefs = caseRefs(storyText);
+  const sharedCaseRef = recordRefs.some(ref => storyRefs.includes(ref));
+  const recordTitle = anchors(record?.title || ""), storyTitle = anchors(story?.title || "");
+  const sharedTitle = [...recordTitle].filter(token => storyTitle.has(token));
+  const recordAnchors = anchors(recordText), storyAnchors = anchors(storyText);
+  const shared = [...recordAnchors].filter(token => storyAnchors.has(token));
+  const recordParties = [...courtRecordPartyNames(record?.title || "")];
+  const storyParties = [...courtRecordPartyNames(story?.title || "")];
+  const hasPartyEvidence = recordParties.length > 0 && storyParties.length > 0;
+  const sharedParty = recordParties.some(name => storyParties.includes(name));
+  const reasons = [];
+  if (!recordRefs.length || !storyRefs.length) reasons.push("केस नंबर उपलब्ध/पहचान योग्य नहीं");
+  else if (!sharedCaseRef) reasons.push("केस नंबर अलग");
+  if (shared.length < 2) reasons.push("दो विशिष्ट साझा विषय-शब्द नहीं मिले");
+  if (sharedTitle.length < 1) reasons.push("शीर्षक में साझा विशिष्ट शब्द नहीं मिला");
+  if (hasPartyEvidence && !sharedParty) reasons.push("पक्षकारों के नाम अलग");
+  if (!hasPartyEvidence) reasons.push("दोनों शीर्षकों से पक्षकारों के नाम निकालने योग्य नहीं; इसलिए पक्षकार-मिलान निर्णायक नहीं");
+  const matched = sharedCaseRef && shared.length >= 2 && sharedTitle.length >= 1 && (!hasPartyEvidence || sharedParty);
+  return {
+    matched,
+    reasons,
+    sharedCaseNumber: sharedCaseRef,
+    sharedTopicAnchorCount: shared.length,
+    sharedTitleAnchorCount: sharedTitle.length,
+    partyEvidenceAvailable: hasPartyEvidence,
+    partyIdentityMatched: hasPartyEvidence ? sharedParty : null,
+    articleCaseNumbers: storyRefs.slice(0, 5),
+    officialCaseNumbers: recordRefs.slice(0, 5),
+    articlePartyNames: storyParties.slice(0, 5),
+    officialPartyNames: recordParties.slice(0, 5)
+  };
+}
+function buildCourtSearchDiagnostics({ startedAt, finishedAt, officialSearch, newsSearch, newsCandidates, officialRecords }) {
+  const candidates = (Array.isArray(newsCandidates) ? newsCandidates : []).slice(0, 8);
+  const records = (Array.isArray(officialRecords) ? officialRecords : []).slice(0, 30);
+  const candidateChecks = candidates.map(story => {
+    const checks = records.map(record => ({ record, result: courtRecordMatchDiagnostics(record, story) }));
+    const matched = checks.find(check => check.result.matched);
+    const reasonCounts = {};
+    for (const check of checks) for (const reason of check.result.reasons) reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
+    return {
+      newsTitle: cleanText(story.title || "").slice(0, 220),
+      newsUrl: story.url || "",
+      newsPublishedAt: story.publishedAt || null,
+      caseNumbers: [...new Set(checks.flatMap(check => check.result.articleCaseNumbers))].slice(0, 5),
+      partyNames: [...new Set(checks.flatMap(check => check.result.articlePartyNames))].slice(0, 5),
+      matchedOfficialRecord: matched ? { title: cleanText(matched.record.title || "").slice(0, 220), url: matched.record.url } : null,
+      rejectionReasons: Object.entries(reasonCounts).sort((a,b) => b[1]-a[1]).slice(0, 4).map(([reason,count]) => ({ reason, recordsAffected: count }))
+    };
+  });
+  return {
+    previousRunLogAvailable: false,
+    previousRunNote: "पिछली खोज का स्थायी execution log उपलब्ध नहीं था; नीचे केवल इस अनुरोध की नई खोज का विवरण है।",
+    currentRun: {
+      startedAt,
+      finishedAt,
+      timeZone: "UTC timestamps; user-facing dates use Asia/Kolkata",
+      officialSearch: {
+        attempted: officialSearch?.attempted === true,
+        provider: "Exa",
+        domainsSubmitted: OFFICIAL_INDIAN_COURT_DOMAINS,
+        httpStatus: officialSearch?.httpStatus ?? null,
+        errorCode: officialSearch?.errorCode ?? null,
+        warning: officialSearch?.warning || null,
+        rawResultCount: Array.isArray(officialSearch?.results) ? officialSearch.results.length : 0,
+        officialDomainRecordCount: Array.isArray(officialRecords) ? officialRecords.length : 0,
+        recordsInspected: records.length
+      },
+      newsSearch: {
+        attempted: newsSearch?.attempted === true,
+        provider: "Exa",
+        httpStatus: newsSearch?.httpStatus ?? null,
+        errorCode: newsSearch?.errorCode ?? null,
+        warning: newsSearch?.warning || null,
+        rawResultCount: Array.isArray(newsSearch?.results) ? newsSearch.results.length : 0,
+        relevantCandidateCount: Array.isArray(newsCandidates) ? newsCandidates.length : 0
+      },
+      candidateChecks
+    }
+  };
 }
 function isSubstantiveCourtNewsItem(item) {
   const title = cleanText(item?.title || "").toLocaleLowerCase("hi-IN");
@@ -2198,10 +2294,12 @@ export default {
                   ? "Bloody Sunday 1905 St Petersburg 9 January 22 January historical academic archive casualty figures Nicholas II absent"
                   : userText + " historical encyclopedia academic university press sources")
               : userText;
+      const courtSearchStartedAt = isSpecificCourtNewsQuery(userText) ? new Date().toISOString() : null;
       const courtOfficialSearch = isSpecificCourtNewsQuery(userText)
         ? await searchInternet("India Supreme Court and High Courts official website latest judgments orders daily orders case status cause list last 48 hours", env, 30, { news: false, includeDomains: OFFICIAL_INDIAN_COURT_DOMAINS })
         : null;
       const search = await searchInternet(searchQuery, env);
+      const courtSearchFinishedAt = isSpecificCourtNewsQuery(userText) ? new Date().toISOString() : null;
       searchResults = filterRelevantSearchResults(userText, search.results);
       if (isHistoricalQuestion) searchResults = filterHistoricalSources(userText, searchResults);
       if (isCurrentNewsQuestion) {
@@ -2214,9 +2312,34 @@ export default {
             .filter(item => !previouslyUsedUrls.has(canonicalNewsUrl(item.url)))
             .map(item => ({ ...item, requestedCategory: "अदालत" }));
           searchResults = dedupeNewsPublishers(searchResults);
-          if (!searchResults.length && previouslyUsedUrls.size) return jsonResponse({ success: true, reply: "पिछले उत्तर में दी गई अदालत की खबर को दोहराने के बजाय मैंने उसे हटा दिया है। पिछले 48 घंटों में कोई दूसरी नई, तारीख़-जाँची और भरोसेमंद अदालत की खबर इस खोज में नहीं मिली; इसलिए मैं नई खबर नहीं बना रहा हूँ।", ...dateTime, webSearch: true, searchAttempted: true, searchWarning: "नई अलग अदालत की खबर उपलब्ध नहीं मिली।", searchUnavailable: true, sources: [] });
+          const courtNewsCandidates = searchResults.slice();
+          const officialRecords = (courtOfficialSearch?.results || []).filter(isOfficialIndianCourtRecord);
+          const courtDiagnostics = buildCourtSearchDiagnostics({
+            startedAt: courtSearchStartedAt,
+            finishedAt: courtSearchFinishedAt,
+            officialSearch: courtOfficialSearch,
+            newsSearch: search,
+            newsCandidates: courtNewsCandidates,
+            officialRecords
+          });
+          if (!courtNewsCandidates.length) {
+            const reason = courtOfficialSearch?.errorCode
+              ? "आधिकारिक अदालत पोर्टल खोज API त्रुटि के कारण पूरी नहीं हुई।"
+              : !courtOfficialSearch?.attempted
+                ? "आधिकारिक अदालत पोर्टल खोज शुरू नहीं हो सकी।"
+                : "समाचार खोज से तारीख़ और विषय की जाँच के बाद कोई योग्य अदालत समाचार उम्मीदवार नहीं बचा।";
+            return jsonResponse({
+              success: true,
+              reply: "कोई सत्यापित अदालत खबर नहीं दी जा रही है। " + reason + " पिछली खोज का लॉग उपलब्ध नहीं था; इस बार की खोज का तकनीकी विवरण नीचे दिया है।",
+              ...dateTime, webSearch: true, searchAttempted: courtOfficialSearch?.attempted === true || search?.attempted === true,
+              searchWarning: reason,
+              searchUnavailable: true,
+              courtSearchDiagnostics: courtDiagnostics,
+              sources: []
+            });
+          }
+          if (!searchResults.length && previouslyUsedUrls.size) return jsonResponse({ success: true, reply: "पिछले उत्तर में दी गई अदालत की खबर को दोहराने के बजाय मैंने उसे हटा दिया है। पिछले 48 घंटों में कोई दूसरी नई, तारीख़-जाँची और भरोसेमंद अदालत की खबर इस खोज में नहीं मिली; इसलिए मैं नई खबर नहीं बना रहा हूँ।", ...dateTime, webSearch: true, searchAttempted: true, searchWarning: "नई अलग अदालत की खबर उपलब्ध नहीं मिली।", searchUnavailable: true, courtSearchDiagnostics: courtDiagnostics, sources: [] });
           if (searchResults.length) {
-            const officialRecords = (courtOfficialSearch?.results || []).filter(isOfficialIndianCourtRecord);
             // Fail closed: a newsroom article without a matching official court
             // order/case record is not published as verified court news.
             searchResults = searchResults.map(item => {
@@ -2228,10 +2351,12 @@ export default {
             if (!searchResults.length) {
               return jsonResponse({
                 success: true,
-                reply: "पिछले 48 घंटों में मिली समाचार रिपोर्टों को आधिकारिक सुप्रीम कोर्ट/हाई कोर्ट आदेश या केस रिकॉर्ड से भरोसेमंद रूप से मिलान नहीं किया जा सका। इसलिए कोई अदालत की खबर सत्यापित खबर के रूप में नहीं दी जा रही है। यह केवल खोज में रिकॉर्ड न मिलने की स्थिति है; इससे यह साबित नहीं होता कि आदेश मौजूद नहीं है।",
-                ...dateTime, webSearch: true, searchAttempted: true,
-                searchWarning: "कोई मेल खाता आधिकारिक अदालत रिकॉर्ड सत्यापित नहीं हुआ।",
-                searchUnavailable: true, sources: []
+                reply: "पिछले 48 घंटों में मिली समाचार रिपोर्टों का आधिकारिक अदालत रिकॉर्ड से आवश्यक केस/विषय/पक्षकार मिलान नहीं हो सका। इसलिए कोई अदालत की खबर प्रकाशित नहीं की जा रही है। इसका अर्थ यह नहीं कि आदेश मौजूद नहीं है; नीचे इस बार की खोज और अस्वीकृति के तकनीकी कारण दिए हैं।",
+                ...dateTime, webSearch: true, searchAttempted: courtOfficialSearch?.attempted === true || search?.attempted === true,
+                searchWarning: "कोई आधिकारिक रिकॉर्ड निर्धारित मिलान नियमों पर पास नहीं हुआ।",
+                searchUnavailable: true,
+                courtSearchDiagnostics: courtDiagnostics,
+                sources: []
               });
             }
             // Limit only after verification, so an unverified first result
