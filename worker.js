@@ -1495,7 +1495,8 @@ function isGlobalNewsQuery(text) {
 }
 
 function isCurrentNewsQuery(text) {
-  return /(?:पिछले|गत|last)\s*48\s*(?:घंटों?|घंटे|hours?).{0,110}(?:खबर|समाचार|न्यूज़|न्यूज|news)|(?:ताज़ा|ताजा|मुख्य|प्रमुख).{0,35}खबर|आज.{0,60}(?:खबर|समाचार)|(?:latest|breaking|current)\s+news|today.?s\s+news|समाचार|(?:देश\s*(?:और|एवं|तथा)?\s*दुनिया|भारत\s*(?:और|एवं|तथा)\s*दुनिया).{0,50}(?:खबर|समाचार|न्यूज़|न्यूज|news)/i.test(String(text || ""));
+  const value = String(text || "");
+  return isGlobalNewsQuery(value) || /(?:पिछले|गत|last)\s*48\s*(?:घंटों?|घंटे|hours?).{0,110}(?:खबर|समाचार|न्यूज़|न्यूज|news)|(?:ताज़ा|ताजा|मुख्य|प्रमुख).{0,35}खबर|आज.{0,60}(?:खबर|समाचार)|(?:latest|breaking|current)\s+news|today.?s\s+news|समाचार/i.test(value);
 }
 
 function hasUnsupportedNumericClaim(generatedText, sourceEvidence, returnDetails = false) {
