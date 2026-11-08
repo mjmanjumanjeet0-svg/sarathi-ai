@@ -1641,45 +1641,54 @@ function normalizeNewsSummaryRepairText(rawReply) {
   const objectStart = raw.indexOf("{");
   const objectEnd = raw.lastIndexOf("}");
   if (objectStart >= 0 && objectEnd > objectStart) candidates.push(raw.slice(objectStart, objectEnd + 1));
+
+  const textValue = value => {
+    if (typeof value === "string" || typeof value === "number") return String(value);
+    if (Array.isArray(value)) return value.map(textValue).filter(Boolean).join(" ");
+    if (value && typeof value === "object") {
+      if (typeof value.text === "string") return value.text;
+      if (typeof value.content === "string") return value.content;
+      return "";
+    }
+    return "";
+  };
   const findEntries = (value, depth = 0) => {
-    if (depth > 4 || !value || typeof value !== "object") return [];
+    if (depth > 8 || !value || typeof value !== "object") return [];
     if (Array.isArray(value)) {
-      if (value.some(item => item && typeof item === "object" &&
-          (item.headline || item.title || item.शीर्षक || item.summary || item.सारांश || item.सार || item.description || item.summaryHindi))) return value;
+      const entries = value.filter(item => item && typeof item === "object" &&
+        (item.headline || item.title || item.हेडलाइन || item.शीर्षक) &&
+        (item.summary || item.summaryHindi || item.description || item.सार || item.सारांश || item.विवरण));
+      if (entries.length) return entries;
       for (const item of value) {
         const nested = findEntries(item, depth + 1);
         if (nested.length) return nested;
       }
       return [];
     }
-    for (const key of ["stories", "news", "items", "articles", "results", "data", "output", "response"]) {
-      if (value[key] !== undefined) {
-        const nested = findEntries(value[key], depth + 1);
-        if (nested.length) return nested;
-      }
+    for (const child of Object.values(value)) {
+      const nested = findEntries(child, depth + 1);
+      if (nested.length) return nested;
     }
     return [];
   };
-  const asText = value => Array.isArray(value)
-    ? value.map(part => typeof part === "string" ? part : (part?.text || part?.content || "")).filter(Boolean).join(" ")
-    : (typeof value === "string" ? value : (value && typeof value === "object" ? (value.text || value.content || "") : ""));
+
   for (const candidate of candidates) {
     try {
       const entries = findEntries(JSON.parse(candidate));
       if (!entries.length) continue;
       const lines = [];
       entries.slice(0, 5).forEach((entry, index) => {
-        const rawNumber = entry?.number ?? entry?.index ?? entry?.id ?? entry?.क्रमांक ?? entry?.संख्या;
+        const rawNumber = entry.number ?? entry.index ?? entry.id ?? entry.क्रमांक ?? entry.संख्या;
         const normalizedNumber = typeof rawNumber === "string"
           ? rawNumber.replace(/[०-९]/g, digit => String("०१२३४५६७८९".indexOf(digit))).trim()
           : rawNumber;
-        const number = normalizedNumber === undefined || normalizedNumber === null || normalizedNumber === "" ? index + 1 : Number(normalizedNumber);
-        const headline = cleanText(asText(entry?.headline || entry?.title || entry?.हेडलाइन || entry?.शीर्षक || ""));
-        const summary = cleanText(asText(entry?.summary || entry?.summaryHindi || entry?.description || entry?.सार || entry?.सारांश || entry?.विवरण || ""));
-        if (Number.isInteger(number) && number >= 1 && number <= 5 && headline && summary) {
-          const category = cleanText(asText(entry?.category || entry?.श्रेणी || entry?.विषय || ""));
-          lines.push("खबर " + number + (category ? " (" + category + ")" : "") + ": " + headline, "सार: " + summary);
-        }
+        const number = normalizedNumber === undefined || normalizedNumber === null || normalizedNumber === ""
+          ? index + 1 : Number(normalizedNumber);
+        const headline = cleanText(textValue(entry.headline || entry.title || entry.हेडलाइन || entry.शीर्षक || ""));
+        const summary = cleanText(textValue(entry.summary || entry.summaryHindi || entry.description || entry.सार || entry.सारांश || entry.विवरण || ""));
+        if (!Number.isInteger(number) || number < 1 || number > 5 || !headline || !summary) return;
+        const category = cleanText(textValue(entry.category || entry.श्रेणी || entry.विषय || ""));
+        lines.push("खबर " + number + (category ? " (" + category + ")" : "") + ": " + headline, "सार: " + summary);
       });
       if (lines.length) return lines.join("\n");
     } catch {}
