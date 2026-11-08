@@ -173,7 +173,7 @@ assert.match(source, /पिछले उत्तर में दी गई �
 const courtRecordHelpersStart = source.indexOf("const OFFICIAL_INDIAN_COURT_DOMAINS =");
 const courtRecordHelpersEnd = source.indexOf("function isSubstantiveCourtNewsItem(item)", courtRecordHelpersStart);
 assert.ok(courtRecordHelpersStart >= 0 && courtRecordHelpersEnd > courtRecordHelpersStart, "court official-record and repeat-filter helpers must exist");
-const courtRecordHelpers = new Function("URL", "cleanText", source.slice(courtRecordHelpersStart, courtRecordHelpersEnd) + "\nreturn { canonicalNewsUrl, previouslyUsedAssistantNewsUrls, isOfficialIndianCourtRecord, courtRecordMatchesStory };")(URL, value => String(value || "").replace(/\s+/g, " ").trim());
+const courtRecordHelpers = new Function("URL", "cleanText", source.slice(courtRecordHelpersStart, courtRecordHelpersEnd) + "\nreturn { canonicalNewsUrl, previouslyUsedAssistantNewsUrls, isOfficialIndianCourtRecord, courtRecordMatchesStory, courtRecordMatchDiagnostics, buildCourtSearchDiagnostics };")(URL, value => String(value || "").replace(/\s+/g, " ").trim());
 assert.equal(courtRecordHelpers.canonicalNewsUrl("https://thehindu.com/story/123?utm_source=test#top"), "https://thehindu.com/story/123", "canonical URL comparison must ignore tracking and fragments");
 const priorUrls = courtRecordHelpers.previouslyUsedAssistantNewsUrls([
   { role: "assistant", content: "खबर 1 (अदालत): पुरानी खबर\nमूल लिंक: https://thehindu.com/story/old" },
@@ -194,6 +194,30 @@ assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "Rekha Sharma R
 assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "WP(C) 733/2024 unrelated applicant", snippet: "Rajasthan Civil Judge appointment" }, rekhaStory), false, "matching case number and one generic subject anchor without the party identity must not verify a court story");
 assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "WP(C) 733/2024 Rakesh Verma Rajasthan Civil Judge appointment", snippet: "low vision judicial appointment" }, rekhaStory), false, "same case number and overlapping subject must not verify a record naming a different party");
 assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "WP(C) 733/2024 Rekha Sharma Rajasthan Civil Judge appointment", snippet: "low vision judicial appointment" }, rekhaStory), true, "same case number, subject and named party must verify");
+const mismatchDiagnostics = courtRecordHelpers.courtRecordMatchDiagnostics(
+  { title: "WP(C) 733/2024 Rakesh Verma Rajasthan Civil Judge appointment", snippet: "low vision judicial appointment" },
+  rekhaStory
+);
+assert.equal(mismatchDiagnostics.matched, false, "diagnostics must never turn a party mismatch into a verified match");
+assert.equal(mismatchDiagnostics.partyIdentityMatched, false, "diagnostics must expose a named-party mismatch");
+assert.ok(mismatchDiagnostics.reasons.includes("पक्षकारों के नाम अलग"), "diagnostics must explain party-name rejection");
+const courtRunDiagnostics = courtRecordHelpers.buildCourtSearchDiagnostics({
+  startedAt: "2026-11-08T08:00:00.000Z",
+  finishedAt: "2026-11-08T08:00:02.000Z",
+  officialSearch: { attempted: true, httpStatus: 200, results: [{ title: "WP(C) 733/2024 Rakesh Verma", url: "https://main.sci.gov.in/orders/1" }] },
+  newsSearch: { attempted: true, httpStatus: 200, results: [rekhaStory] },
+  newsCandidates: [{ ...rekhaStory, url: "https://thehindu.com/story/1", publishedAt: "2026-11-08T07:30:00Z" }],
+  officialRecords: [{ title: "WP(C) 733/2024 Rakesh Verma Rajasthan Civil Judge appointment", snippet: "low vision judicial appointment", url: "https://main.sci.gov.in/orders/1" }]
+});
+assert.equal(courtRunDiagnostics.previousRunLogAvailable, false, "missing previous-run logs must be stated honestly");
+assert.equal(courtRunDiagnostics.currentRun.officialSearch.attempted, true, "diagnostics must record whether the official search was attempted");
+assert.equal(courtRunDiagnostics.currentRun.officialSearch.rawResultCount, 1, "diagnostics must report official raw result counts");
+assert.equal(courtRunDiagnostics.currentRun.newsSearch.rawResultCount, 1, "diagnostics must report news raw result counts");
+assert.equal(courtRunDiagnostics.currentRun.candidateChecks[0].matchedOfficialRecord, null, "a different party must not be linked as the official record");
+assert.ok(courtRunDiagnostics.currentRun.candidateChecks[0].rejectionReasons.some(x => x.reason === "पक्षकारों के नाम अलग"), "candidate report must include the rejection reason");
+assert.match(source, /attempted: true[\s\S]{0,100}httpStatus: response.status/, "successful web searches must expose their actual attempt and HTTP status");
+assert.match(source, /courtSearchDiagnostics: courtDiagnostics/, "court no-match responses must return structured execution diagnostics");
+
 
 assert.match(source, /Fail closed: a newsroom article without a matching official court[\s\S]*?is not published as verified court news/, "court stories without a matching official record must be blocked");
 assert.match(source, /Limit only after verification/, "a single-story limit must not discard a later officially verified result");
