@@ -499,6 +499,7 @@ async function enrichGoldRateResults(results) {
         .replace(/<script[\s\S]*?<\/script>/gi, " ")
         .replace(/<style[\s\S]*?<\/style>/gi, " ")
         .replace(/<[^>]+>/g, " ")
+    .replace(/\b(?:[A-Z][A-Za-z.'’&-]*\s+)?(?:High Court|Supreme Court)\b/g, " ")
         .replace(/&nbsp;|&#160;/gi, " ")
         .replace(/&#8377;|&#x20b9;/gi, "₹"));
       // Keep the publisher's lead rate statement separate from city rows.
