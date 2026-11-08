@@ -1213,7 +1213,7 @@ function courtRecordPartyNames(value) {
     .replace(/<[^>]+>/g, " ")
     .replace(/\b(?:photo(?:graph)?\s*(?:credit|by)|image\s*credit|byline|written\s*by|reported\s*by|correspondent|reporter|staff\s*reporter|advocate|senior\s*advocate|counsel|court\s*master|justice|judge)\b[^.\n]{0,180}/gi, " ");
   const names = new Set();
-  const namePart = "[A-Z][A-Za-z.'’&-]*(?:\\s+(?:[A-Z][A-Za-z.'’&-]*|of|the|and|&)){1,7}";
+  const namePart = "[A-Z][A-Za-z.'’&-]*(?:\\s+(?:[A-Z][A-Za-z.'’&-]*|of|the|and|&)){1,7}?";
   const add = value => {
     const cleaned = cleanText(value).replace(/^(?:the\s+)?/i, "").replace(/\s+/g, " ").trim();
     const words = cleaned.split(" ").filter(Boolean);
