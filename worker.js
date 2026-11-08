@@ -1084,6 +1084,15 @@ function previouslyUsedAssistantNewsUrls(messages) {
 function isOfficialIndianCourtRecord(item) {
   try { const host = new URL(item?.url || "").hostname.toLowerCase().replace(/^www\./, ""); return OFFICIAL_INDIAN_COURT_DOMAINS.includes(host) || (host.endsWith(".nic.in") && /court|highcourt|judiciary|ecourts/i.test(host)) || (host.endsWith(".gov.in") && /court|highcourt|judiciary|ecourts|sci/i.test(host)); } catch { return false; }
 }
+function courtRecordPartyNames(value) {
+  // If both headlines expose a multi-word person/party name, require the
+  // official record and newsroom story to share that identity. Topic overlap
+  // (for example, the same appointment issue) cannot substitute for a party match.
+  const excluded = new Set(["supreme","high","court","madras","delhi","bombay","calcutta","kerala","rajasthan","civil","criminal","judge","judicial","justice","petition","public","interest","government","state","india"]);
+  const matches = String(value || "").match(/\\b[A-Z][a-z]+(?:\\s+[A-Z][a-z]+)+\\b/g) || [];
+  return new Set(matches.map(name => name.trim().replace(/\\s+/g, " ").toLocaleLowerCase("en-IN"))
+    .filter(name => name.split(" ").length >= 2 && !name.split(" ").some(word => excluded.has(word.toLowerCase()))));
+}
 function courtRecordMatchesStory(record, story) {
   // Match case-specific names, case numbers and distinctive subject terms.
   // Generic words such as "court", "order" and "petition" never count.
@@ -1108,7 +1117,14 @@ function courtRecordMatchesStory(record, story) {
   // Require the same explicit case reference, at least two distinctive
   // shared anchors, and at least one shared title anchor. This prevents
   // snippet-only topic overlap from attaching the wrong party's court record.
-  return sharedCaseRef && shared.length >= 2 && sharedTitle.length >= 1;
+  const recordParties = courtRecordPartyNames(record?.title || "");
+  const storyParties = courtRecordPartyNames(story?.title || "");
+  const hasPartyIdentityEvidence = recordParties.size > 0 && storyParties.size > 0;
+  const sharedParty = [...recordParties].some(name => storyParties.has(name));
+  // When both titles identify a named party, a different party is a hard
+  // mismatch even if the case number and subject words happen to overlap.
+  return sharedCaseRef && shared.length >= 2 && sharedTitle.length >= 1 &&
+    (!hasPartyIdentityEvidence || sharedParty);
 }
 function isSubstantiveCourtNewsItem(item) {
   const title = cleanText(item?.title || "").toLocaleLowerCase("hi-IN");
