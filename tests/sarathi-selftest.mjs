@@ -151,7 +151,7 @@ assert.deepEqual(buildMissingCategoryNewsQueries(fiveCategorySelection,
 assert.match(source, /async function searchInternet\(query, env, maxResults = null, searchOptions = \{\}/, "search must support scoped official-domain searches");
 assert.match(source, /searchOptions\.news === false/, "official record searches must be able to bypass the news-only publisher filter");
 assert.ok(source.indexOf("const courtOfficialSearch = isSpecificCourtNewsQuery") < source.indexOf("const search = await searchInternet(searchQuery, env)"), "official court portals must be searched before newsroom results");
-assert.match(source, /officialRecordStatus: officialRecord \? "मिला" : "नहीं मिला"/, "court stories must carry an explicit official-record result");
+assert.match(source, /officialRecordStatus: "मिला"/, "only stories with a matched official record may enter the verified court-news digest");
 assert.match(source, /आधिकारिक अदालत रिकॉर्ड: आधिकारिक पोर्टल की खोज में/, "missing official records must be disclosed in the user-facing digest");
 assert.match(source, /previouslyUsedAssistantNewsUrls\(messages\)/, "previously surfaced court-news links must be excluded from repeat results");
 assert.match(source, /पिछले उत्तर में दी गई अदालत की खबर को दोहराने के बजाय/, "if no new court story is found, Sarathi must say so instead of repeating one");
