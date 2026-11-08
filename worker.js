@@ -1175,10 +1175,10 @@ function courtRecordMatchesStory(record, story) {
 function courtRecordMatchDiagnostics(record, story) {
   const stop = new Set(["supreme","high","court","india","indian","judgment","judgement","order","orders","case","petition","plea","hearing","latest","news","report","reported","says","said","the","and","for","with","from","that","this","में","का","की","के","और","पर","से","को","एक","यह","था","थी","है","हैं","द्वारा","याचिका","आदेश","न्यायालय","अदालत","सुप्रीम","हाई"]);
   const anchors = value => {
-    const tokens = cleanText(value).toLocaleLowerCase("hi-IN").match(/[a-z][a-z0-9./-]{2,}|[\\u0900-\\u097f]{3,}/g) || [];
-    return new Set(tokens.filter(token => !stop.has(token) && !/^20\\d{2}$/.test(token)));
+    const tokens = cleanText(value).toLocaleLowerCase("hi-IN").match(/[a-z][a-z0-9./-]{2,}|[\u0900-\u097f]{3,}/g) || [];
+    return new Set(tokens.filter(token => !stop.has(token) && !/^20\d{2}$/.test(token)));
   };
-  const caseRefs = value => (String(value || "").match(/\\b(?:wp|w\\.?p\\.?|slp|crl|civil|criminal|diary|case)\\s*\\(?[a-z]*\\)?\\s*(?:no\\.?\\s*)?\\d{1,6}\\s*(?:\\/|of\\s+)\\s*20\\d{2}\\b/gi) || []).map(x => x.toLowerCase().replace(/\\s+/g,"").replace(/of/,"/"));
+  const caseRefs = value => (String(value || "").match(/\b(?:wp|w\.?p\.?|slp|crl|civil|criminal|diary|case)\s*\(?[a-z]*\)?\s*(?:no\.?\s*)?\d{1,6}\s*(?:\/|of\s+)\s*20\d{2}\b/gi) || []).map(x => x.toLowerCase().replace(/\s+/g,"").replace(/of/,"/"));
   const recordText = (record?.title || "") + " " + (record?.snippet || "");
   const storyText = (story?.title || "") + " " + (story?.snippet || "");
   const recordRefs = caseRefs(recordText), storyRefs = caseRefs(storyText);
@@ -1216,19 +1216,29 @@ function courtRecordMatchDiagnostics(record, story) {
 function buildCourtSearchDiagnostics({ startedAt, finishedAt, officialSearch, newsSearch, newsCandidates, officialRecords }) {
   const candidates = (Array.isArray(newsCandidates) ? newsCandidates : []).slice(0, 8);
   const records = (Array.isArray(officialRecords) ? officialRecords : []).slice(0, 30);
+  const extractCaseRefs = value => (String(value || "").match(/\b(?:wp|w\.?p\.?|slp|crl|civil|criminal|diary|case)\s*\(?[a-z]*\)?\s*(?:no\.?\s*)?\d{1,6}\s*(?:\/|of\s+)\s*20\d{2}\b/gi) || []).map(x => x.toLowerCase().replace(/\s+/g,"").replace(/of/,"/"));
   const candidateChecks = candidates.map(story => {
     const checks = records.map(record => ({ record, result: courtRecordMatchDiagnostics(record, story) }));
     const matched = checks.find(check => check.result.matched);
     const reasonCounts = {};
     for (const check of checks) for (const reason of check.result.reasons) reasonCounts[reason] = (reasonCounts[reason] || 0) + 1;
+    if (!records.length) reasonCounts["आधिकारिक डोमेन से कोई रिकॉर्ड परिणाम नहीं मिला"] = 1;
     return {
       newsTitle: cleanText(story.title || "").slice(0, 220),
       newsUrl: story.url || "",
       newsPublishedAt: story.publishedAt || null,
-      caseNumbers: [...new Set(checks.flatMap(check => check.result.articleCaseNumbers))].slice(0, 5),
-      partyNames: [...new Set(checks.flatMap(check => check.result.articlePartyNames))].slice(0, 5),
+      caseNumbers: extractCaseRefs((story.title || "") + " " + (story.snippet || "")).slice(0, 5),
+      partyNames: [...courtRecordPartyNames(story.title || "")].slice(0, 5),
       matchedOfficialRecord: matched ? { title: cleanText(matched.record.title || "").slice(0, 220), url: matched.record.url } : null,
-      rejectionReasons: Object.entries(reasonCounts).sort((a,b) => b[1]-a[1]).slice(0, 4).map(([reason,count]) => ({ reason, recordsAffected: count }))
+      recordComparisons: checks.slice(0, 10).map(check => ({
+        title: cleanText(check.record.title || "").slice(0, 180),
+        url: check.record.url || "",
+        caseNumbers: check.result.officialCaseNumbers,
+        partyNames: check.result.officialPartyNames,
+        matched: check.result.matched,
+        rejectionReasons: check.result.reasons
+      })),
+      rejectionReasons: Object.entries(reasonCounts).sort((a,b) => b[1]-a[1]).slice(0, 6).map(([reason,count]) => ({ reason, recordsAffected: count }))
     };
   });
   return {
@@ -1247,7 +1257,8 @@ function buildCourtSearchDiagnostics({ startedAt, finishedAt, officialSearch, ne
         warning: officialSearch?.warning || null,
         rawResultCount: Array.isArray(officialSearch?.results) ? officialSearch.results.length : 0,
         officialDomainRecordCount: Array.isArray(officialRecords) ? officialRecords.length : 0,
-        recordsInspected: records.length
+        recordsInspected: records.length,
+        recordCandidates: records.map(record => ({ title: cleanText(record.title || "").slice(0, 200), url: record.url || "", indexedDate: record.publishedAt || null }))
       },
       newsSearch: {
         attempted: newsSearch?.attempted === true,
