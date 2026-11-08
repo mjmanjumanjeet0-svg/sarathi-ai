@@ -224,7 +224,7 @@ const courtRunDiagnostics = courtRecordHelpers.buildCourtSearchDiagnostics({
   officialSearch: { attempted: true, httpStatus: 200, results: [{ title: "WP(C) 733/2024 Rakesh Verma v. State of Rajasthan", url: "https://main.sci.gov.in/orders/1" }] },
   newsSearch: { attempted: true, httpStatus: 200, results: [rekhaStory] },
   newsCandidates: [{ ...rekhaStory, url: "https://thehindu.com/story/1", publishedAt: "2026-11-08T07:30:00Z" }],
-  officialRecords: [{ title: "WP(C) 733/2024 Rakesh Verma Rajasthan Civil Judge appointment", snippet: "low vision judicial appointment", url: "https://main.sci.gov.in/orders/1" }]
+  officialRecords: [{ title: "WP(C) 733/2024 Rakesh Verma v. State of Rajasthan Civil Judge appointment", snippet: "low vision judicial appointment", url: "https://main.sci.gov.in/orders/1" }]
 });
 assert.equal(courtRunDiagnostics.previousRunLogAvailable, false, "missing previous-run logs must be stated honestly");
 assert.equal(courtRunDiagnostics.currentRun.officialSearch.attempted, true, "diagnostics must record whether the official search was attempted");
