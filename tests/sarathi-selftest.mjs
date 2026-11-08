@@ -950,7 +950,8 @@ await test("five-news prompt displays only individually validated summaries with
     }, token);
     assert.equal(r.status, 200);
     assert.equal(r.data.sources.length, 4, "the API retains all four source records, while the digest groups duplicate events");
-    assert.match(r.data.reply, /आज 3 अलग-अलग, तारीख़-जाँची खबरें मिलीं \(आपने 5 माँगी थीं\)/);
+    assert.match(r.data.reply, /आज 3 अलग-अलग, तारीख़-जाँची खबरें मिलीं:/);
+    assert.doesNotMatch(r.data.reply, /आपने 5 माँगी थीं/);
     assert.doesNotMatch(r.data.reply, /भरोसेमंद हिंदी सार तैयार नहीं हो सका/);
     const summaries = r.data.reply.split(String.fromCharCode(10)).filter(line => /^सार: /.test(line));
     assert.ok(summaries.length > 0 && summaries.length <= 4, "show only individually validated summaries, never claim five");
