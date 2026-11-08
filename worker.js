@@ -1206,21 +1206,20 @@ function isOfficialIndianCourtRecord(item) {
   } catch { return false; }
 }
 function courtRecordPartyNames(value) {
-  // Names are accepted only when the source explicitly labels their legal role
-  // or places them in a case-caption pattern. Never infer parties from arbitrary
-  // capitalized phrases: those include reporters, photographers, advocates and judges.
-  const text = String(value || "").replace(/<script[\\s\\S]*?<\\/script>/gi, " ")
-    .replace(/<style[\\s\\S]*?<\\/style>/gi, " ")
+  // Accept parties only from explicit case-caption or labeled-role evidence.
+  // Arbitrary capitalized phrases include reporters, photographers, advocates and judges.
+  const text = String(value || "").replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
     .replace(/<[^>]+>/g, " ")
-    .replace(/\\b(?:photo(?:graph)?\\s*(?:credit|by)|image\\s*credit|byline|written\\s*by|reported\\s*by|correspondent|reporter|staff\\s*reporter|advocate|senior\\s*advocate|counsel|court\\s*master|justice|judge)\\b[^.\\n]{0,180}/gi, " ");
+    .replace(/\b(?:photo(?:graph)?\s*(?:credit|by)|image\s*credit|byline|written\s*by|reported\s*by|correspondent|reporter|staff\s*reporter|advocate|senior\s*advocate|counsel|court\s*master|justice|judge)\b[^.\n]{0,180}/gi, " ");
   const names = new Set();
   const namePart = "[A-Z][A-Za-z.'’&-]*(?:\\s+(?:[A-Z][A-Za-z.'’&-]*|of|the|and|&)){1,7}";
   const add = value => {
-    const cleaned = cleanText(value).replace(/^(?:the\\s+)?/i, "").replace(/\\s+/g, " ").trim();
+    const cleaned = cleanText(value).replace(/^(?:the\s+)?/i, "").replace(/\s+/g, " ").trim();
     const words = cleaned.split(" ").filter(Boolean);
     const excluded = /^(?:the hindu|indian express|deccan herald|legal news|supreme court|high court|court master|photo credit|staff reporter)$/i;
     if (words.length >= 2 && words.length <= 9 && !excluded.test(cleaned) &&
-        !/\\b(?:photo|credit|reporter|correspondent|advocate|counsel|court master|justice|judge)\\b/i.test(cleaned)) {
+        !/\b(?:photo|credit|reporter|correspondent|advocate|counsel|court master|justice|judge)\b/i.test(cleaned)) {
       names.add(cleaned.toLocaleLowerCase("en-IN"));
     }
   };
@@ -1230,12 +1229,12 @@ function courtRecordPartyNames(value) {
     add(match[2]);
   }
   const rolePatterns = [
-    /\\b(?:petitioner|appellant|applicant|plaintiff|complainant)\\s*(?:no\\.?\\s*\\d+\\s*)?[:：-]\\s*([^.;\\n]{4,100})/gi,
-    /\\b(?:respondent|defendant|opposite\\s+party)\\s*(?:no\\.?\\s*\\d+\\s*)?[:：-]\\s*([^.;\\n]{4,100})/gi
+    /\b(?:petitioner|appellant|applicant|plaintiff|complainant)\s*(?:no\.?\s*\d+\s*)?[:：-]\s*([^.;\n]{4,100})/gi,
+    /\b(?:respondent|defendant|opposite\s+party)\s*(?:no\.?\s*\d+\s*)?[:：-]\s*([^.;\n]{4,100})/gi
   ];
   for (const pattern of rolePatterns) {
     for (const match of text.matchAll(pattern)) {
-      const candidate = match[1].split(/\\b(?:through|represented\\s+by|counsel|advocate|versus|v\\.)\\b/i)[0];
+      const candidate = match[1].split(/\b(?:through|represented\s+by|counsel|advocate|versus|v\.)\b/i)[0];
       add(candidate);
     }
   }
