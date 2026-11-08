@@ -1327,7 +1327,7 @@ function hasUnsupportedCourtDisposition(generatedText, sourceEvidence) {
   // Do not turn a court's procedural disposal/closure into dismissal or rejection.
   const outcomes = [
     { generated: /(?:खारिज|अस्वीकार|dismiss(?:ed|es)?|reject(?:ed|s)?)/i, source: /(?:खारिज|अस्वीकार|dismiss(?:ed|es)?|reject(?:ed|s)?)/i },
-    { generated: /(?:बंद|निपटा(?:या|ई|ने)?|समाप्त|disposed|closed|withdrawn)/i, source: /(?:बंद|निपटा(?:या|ई|ने)?|समाप्त|disposed|closed|withdrawn)/i },
+    { generated: /(?:बंद|निपटा(?:या|ई|ने)?|समाप्त|dispos(?:ed|es)?|clos(?:e|es|ed)|withdrawn)/i, source: /(?:बंद|निपटा(?:या|ई|ने)?|समाप्त|dispos(?:ed|es)?|clos(?:e|es|ed)|withdrawn)/i },
     { generated: /(?:मंजूर|स्वीकार|allowed|granted)/i, source: /(?:मंजूर|स्वीकार|allowed|granted)/i },
     { generated: /(?:रद्द|quashed|set aside|struck down)/i, source: /(?:रद्द|quashed|set aside|struck down)/i },
     { generated: /(?:स्थगित|रोक लगाई|stayed|stay order)/i, source: /(?:स्थगित|रोक लगाई|stayed|stay order)/i }
