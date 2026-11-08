@@ -170,8 +170,8 @@ assert.equal(priorUrls.has("https://thehindu.com/story/old"), true, "previous co
 assert.equal(priorUrls.has("https://example.com/unrelated"), false, "unrelated assistant links must not suppress court-news results");
 assert.equal(courtRecordHelpers.isOfficialIndianCourtRecord({ url: "https://main.sci.gov.in/judgments" }), true, "Supreme Court official domain must be accepted");
 assert.equal(courtRecordHelpers.isOfficialIndianCourtRecord({ url: "https://thehindu.com/courts/story" }), false, "news publishers must not be treated as official court records");
-const goldStory = { title: "Madras High Court gold loan and pledged jewellery PIL", snippet: "RBI auction regulation petition" };
-assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "Madras High Court PIL on gold loan and pledged jewellery auction; RBI", snippet: "public interest petition" }, goldStory), true, "matching official court records must share multiple distinctive story anchors");
+const goldStory = { title: "Madras High Court gold loan and pledged jewellery PIL WP(C) 55 of 2025", snippet: "RBI auction regulation petition" };
+assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "Madras High Court PIL on gold loan and pledged jewellery auction WP(C) 55/2025; RBI", snippet: "public interest petition" }, goldStory), true, "matching official court records must share multiple distinctive story anchors and the same case reference");
 assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "Madras High Court unrelated service matter", snippet: "appointment case" }, goldStory), false, "unrelated court records must not be attached to a news story");
 const rekhaStory = { title: "Woman with low vision Rekha Sharma awaits judicial appointment", snippet: "Supreme Court case WP(C) 733 of 2024 and Rajasthan Civil Judge appointment" };
 assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "WP(C) 733/2024 Rekha Sharma", snippet: "Rajasthan Civil Judge appointment and low vision" }, rekhaStory), true, "a matching named case record must match a court-news story");
