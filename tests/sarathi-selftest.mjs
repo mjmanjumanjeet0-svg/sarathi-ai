@@ -209,7 +209,7 @@ assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "WP(C) 733/2024
 assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "Supreme Court order on unrelated service matter", snippet: "appointment petition" }, rekhaStory), false, "generic court words must not falsely match an unrelated official record");
 assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "Rekha Sharma Rajasthan Civil Judge appointment", snippet: "low vision judicial appointment" }, rekhaStory), false, "matching names and subject without the same explicit case number must not verify a court story");
 assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "WP(C) 733/2024 unrelated applicant", snippet: "Rajasthan Civil Judge appointment" }, rekhaStory), false, "matching case number and one generic subject anchor without the party identity must not verify a court story");
-assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "WP(C) 733/2024 Rakesh Verma Rajasthan Civil Judge appointment", snippet: "low vision judicial appointment" }, rekhaStory), false, "same case number and overlapping subject must not verify a record naming a different party");
+assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "WP(C) 733/2024 Rakesh Verma v. State of Rajasthan Civil Judge appointment", snippet: "low vision judicial appointment" }, rekhaStory), false, "same case number and overlapping subject must not verify a record naming a different party");
 assert.equal(courtRecordHelpers.courtRecordMatchesStory({ title: "WP(C) 733/2024 Rekha Sharma v. State of Rajasthan Civil Judge appointment", snippet: "low vision judicial appointment" }, rekhaStory), true, "same case number, subject and named party must verify");
 const mismatchDiagnostics = courtRecordHelpers.courtRecordMatchDiagnostics(
   { title: "WP(C) 733/2024 Rakesh Verma Rajasthan Civil Judge appointment", snippet: "low vision judicial appointment" },
@@ -221,7 +221,7 @@ assert.ok(mismatchDiagnostics.reasons.includes("पक्षकारों क�
 const courtRunDiagnostics = courtRecordHelpers.buildCourtSearchDiagnostics({
   startedAt: "2026-11-08T08:00:00.000Z",
   finishedAt: "2026-11-08T08:00:02.000Z",
-  officialSearch: { attempted: true, httpStatus: 200, results: [{ title: "WP(C) 733/2024 Rakesh Verma", url: "https://main.sci.gov.in/orders/1" }] },
+  officialSearch: { attempted: true, httpStatus: 200, results: [{ title: "WP(C) 733/2024 Rakesh Verma v. State of Rajasthan", url: "https://main.sci.gov.in/orders/1" }] },
   newsSearch: { attempted: true, httpStatus: 200, results: [rekhaStory] },
   newsCandidates: [{ ...rekhaStory, url: "https://thehindu.com/story/1", publishedAt: "2026-11-08T07:30:00Z" }],
   officialRecords: [{ title: "WP(C) 733/2024 Rakesh Verma Rajasthan Civil Judge appointment", snippet: "low vision judicial appointment", url: "https://main.sci.gov.in/orders/1" }]
