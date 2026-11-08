@@ -1075,7 +1075,7 @@ function canonicalNewsUrl(value) { try { const u = new URL(value); u.hash = ""; 
 function previouslyUsedAssistantNewsUrls(messages) {
   const used = new Set();
   for (const m of (Array.isArray(messages) ? messages : []).slice(0, -1)) {
-    if (m?.role !== "assistant" || typeof m.content !== "string") continue;
+    if (m?.role !== "assistant" || typeof m.content !== "string" || !["खबर","अदालत","न्यायालय","court"].some(term => m.content.toLowerCase().includes(term))) continue;
     const urls = m.content.match(/https?:\/\/[^\s<>"\x27]+/gi) || [];
     for (const value of urls) { const key = canonicalNewsUrl(value.replace(/[.,;:!?।]+$/, "")); if (key) used.add(key); }
   }
