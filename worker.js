@@ -1120,7 +1120,7 @@ function filterFreshPreciousMetalResults(results, now = Date.now()) {
   });
 }
 
-function filterRelevantSearchResults(query, results, allowGlobalNews = false) {
+function filterRelevantSearchResults(query, results, allowGlobalNews = false, requestedScope = "India") {
   const q = String(query || "").toLocaleLowerCase("hi-IN");
   const textOf = (item) => `${item.title || ""} ${item.url || ""} ${item.snippet || ""}`.toLocaleLowerCase("hi-IN");
   const list = Array.isArray(results) ? results : [];
@@ -1134,7 +1134,11 @@ function filterRelevantSearchResults(query, results, allowGlobalNews = false) {
         const host = new URL(item.url).hostname.toLowerCase().replace(/^www\./, "");
         const title = String(item.title || "");
         const headline = `${title} ${item.snippet || ""}`;
-        if (!allowGlobalNews && !isIndiaFocusedNewsItem(item)) return false;
+        // Local requests (Bihar/Patna/Siwan, etc.) must be judged by their
+        // requested place, not by the broader India-headline heuristic. That
+        // heuristic incorrectly discarded local RSS stories before the exact
+        // geography filter and same-day date check could run.
+        if (!allowGlobalNews && requestedScope === "India" && !isIndiaFocusedNewsItem(item)) return false;
         // Do not treat astrology, calendar pages, or generic daily live-feed indexes
         // as independent reported articles. They often repeat headlines without
         // providing a distinct, date-stamped story.
@@ -2981,7 +2985,7 @@ export default {
         : null;
       const search = await searchInternet(searchQuery, env, null, { globalNews: globalNewsDigest, geographicScope: requestedNewsScope || "India" });
       const courtSearchFinishedAt = isSpecificCourtNewsQuery(userText) ? new Date().toISOString() : null;
-      searchResults = filterRelevantSearchResults(userText, search.results, globalNewsDigest);
+      searchResults = filterRelevantSearchResults(userText, search.results, globalNewsDigest, requestedNewsScope || "India");
       if (isHistoricalQuestion) searchResults = filterHistoricalSources(userText, searchResults);
       if (isCurrentNewsQuestion) {
         // Publisher RSS already carries the publisher-supplied pubDate. Keep every
