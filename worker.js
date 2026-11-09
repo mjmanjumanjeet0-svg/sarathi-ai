@@ -895,6 +895,26 @@ function isNewsResultPageTitleMismatch(item) {
   let n=0; for(const x of a)if(b.has(x))n++;
   return n<2 && n/Math.min(a.size,b.size)<0.35;
 }
+function hasHeadlineSummaryTopicConflict(headline, summary, sourceTitle) {
+  const topics = [
+    { name: "fire", re: /(?:आग|अग्नि|जलकर|दमकल|fire|blaze|burnt|burning|firefighters?)/i },
+    { name: "pollution", re: /(?:प्रदूषण|धुंध|धुआं|धुआँ|वायु गुणवत्ता|air pollution|smog|haze|air quality|AQI)/i },
+    { name: "markets", re: /(?:शेयर बाजार|शेयरों|सेंसेक्स|निफ्टी|stocks?|stock market|sensex|nifty|trading)/i },
+    { name: "sports", re: /(?:क्रिकेट|फुटबॉल|हॉकी|टेनिस|मैच|सीरीज|श्रृंखला|खिलाड़ी|cricket|football|hockey|tennis|match|series|player|tournament)/i },
+    { name: "courts", re: /(?:सुप्रीम कोर्ट|हाई कोर्ट|अदालत|न्यायालय|याचिका|फैसला|आदेश|court|tribunal|petition|verdict|judgment|ruling)/i },
+    { name: "government", re: /(?:प्रधानमंत्री|मुख्यमंत्री|राष्ट्रपति|चुनाव|सरकार|मंत्री|संसद|prime minister|president|election|government|minister|parliament)/i },
+    { name: "conflict", re: /(?:युद्ध|हमला|हवाई हमला|मिसाइल|सेना|संघर्ष|war|attack|airstrike|missile|military|troops|conflict)/i }
+  ];
+  const headlineTopics = topics.filter(topic => topic.re.test(String(headline || "")));
+  const summaryTopics = topics.filter(topic => topic.re.test(String(summary || "")));
+  if (!headlineTopics.length || !summaryTopics.length) return false;
+  const title = String(sourceTitle || "");
+  const headlineNames = new Set(headlineTopics.map(topic => topic.name));
+  return summaryTopics.some(topic =>
+    !headlineNames.has(topic.name) && !topic.re.test(title)
+  );
+}
+
 function hasUnsupportedNewsSummaryTopic(generatedText, sourceEvidence) {
   const g=String(generatedText||""), s=String(sourceEvidence||"");
   const groups=[
@@ -2264,6 +2284,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     const generatedText = entry.headline + " " + entry.summary;
     if (isNewsResultPageTitleMismatch(items[index])) { rejectCounts.headlineGrounding++; continue; }
     if (hasUnsupportedNewsSummaryTopic(entry.summary, sourceEvidence)) { rejectCounts.missingEvidence++; continue; }
+    if (hasHeadlineSummaryTopicConflict(entry.headline, entry.summary, items[index]?.title || "")) { rejectCounts.missingEvidence++; continue; }
     if (hasUnsupportedCourtDisposition(generatedText, sourceEvidence)) { rejectCounts.unsupportedCourtOutcome++; continue; }
     const isAgniveerExtension = /agniveer|अग्निवीर/i.test(sourceEvidence) &&
       /(?:75\s*%|७५\s*प्रतिशत|remaining\s+75|शेष\s+७५)/i.test(sourceEvidence);
