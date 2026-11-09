@@ -374,13 +374,22 @@ async function searchPublisherRssFallback() {
       clearTimeout(timeout);
     }
   }));
+  // Interleave feeds instead of concatenating them. A long national feed must
+  // not consume the first enrichment window before world/science/sports feeds
+  // are considered, especially when Exa is unavailable.
   const seen = new Set();
-  const results = settled.flatMap(item => item.items).filter(item => {
-    const key = item.url.split("#")[0].replace(/\/$/, "").toLowerCase();
-    if (seen.has(key)) return false;
-    seen.add(key);
-    return true;
-  });
+  const results = [];
+  const maxItemsPerFeed = Math.max(0, ...settled.map(feed => feed.items.length));
+  for (let itemIndex = 0; itemIndex < maxItemsPerFeed; itemIndex++) {
+    for (const feed of settled) {
+      const item = feed.items[itemIndex];
+      if (!item) continue;
+      const key = item.url.split("#")[0].replace(/\/$/, "").toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      results.push(item);
+    }
+  }
   return {
     results: results.slice(0, 75),
     provider: "Publisher RSS",
@@ -816,8 +825,8 @@ function extractNewsPublishedDateFromHtml(html, now = Date.now()) {
   return valid.length ? new Date(valid[0]).toISOString() : "";
 }
 
-async function enrichNewsArticleEvidence(results) {
-  const candidates = (Array.isArray(results) ? results : []).slice(0, 12);
+async function enrichNewsArticleEvidence(results, maxCandidates = 12) {
+  const candidates = (Array.isArray(results) ? results : []).slice(0, Math.max(1, Math.min(24, maxCandidates)));
   return await Promise.all(candidates.map(async item => {
     if (!item || typeof item.url !== "string" || !/^https:\/\//i.test(item.url)) return item;
     const controller = new AbortController();
@@ -2778,7 +2787,7 @@ export default {
       if (isCurrentNewsQuestion) {
         // Recover publisher datePublished metadata BEFORE strict freshness filtering.
         // Exa can return URLs without publishedDate; filtering first loses them.
-        searchResults = await enrichNewsArticleEvidence(searchResults.slice(0, 12));
+        searchResults = await enrichNewsArticleEvidence(searchResults.slice(0, globalNewsDigest ? 20 : 12), globalNewsDigest ? 20 : 12);
         // Keep the newest same-day report for a repeated event, then deduplicate
         // event headlines and publishers. Exa relevance order is not chronological.
         searchResults = groupNewsByEvent(sortNewsByPublicationTime(filterFreshNewsResults(searchResults)));
