@@ -308,6 +308,83 @@ function validHttpUrl(value) {
     return false;
   }
 }
+async function searchFreeNewsFallback(searchOptions = {}) {
+  // GDELT DOC is a public news-index fallback; it needs no API key and does
+  // not create a second metered search-provider account.
+  const now = new Date();
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit"
+  }).formatToParts(now);
+  const date = Object.fromEntries(parts.map(part => [part.type, part.value]));
+  const istStartUtc = Date.UTC(Number(date.year), Number(date.month) - 1, Number(date.day)) - 330 * 60 * 1000;
+  const stamp = value => {
+    const d = new Date(value);
+    return d.getUTCFullYear().toString() +
+      String(d.getUTCMonth() + 1).padStart(2, "0") +
+      String(d.getUTCDate()).padStart(2, "0") +
+      String(d.getUTCHours()).padStart(2, "0") +
+      String(d.getUTCMinutes()).padStart(2, "0") +
+      String(d.getUTCSeconds()).padStart(2, "0");
+  };
+  const params = new URLSearchParams({
+    query: searchOptions.globalNews ? "(India OR world OR international)" : "India",
+    mode: "ArtList",
+    format: "json",
+    maxrecords: "75",
+    sort: "DateDesc",
+    startdatetime: stamp(istStartUtc),
+    enddatetime: stamp(now)
+  });
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
+  try {
+    const response = await fetch("https://api.gdeltproject.org/api/v2/doc/doc?" + params.toString(), {
+      headers: { "Accept": "application/json" },
+      signal: controller.signal
+    });
+    if (!response.ok) return { results: [], provider: "GDELT", httpStatus: response.status, errorCode: "GDELT_HTTP_" + response.status };
+    const payload = await response.json();
+    const articles = Array.isArray(payload?.articles) ? payload.articles : [];
+    const seen = new Set();
+    const results = articles.map(article => {
+      const url = String(article?.url || "");
+      if (!validHttpUrl(url)) return null;
+      let publisher = String(article?.domain || "");
+      try { publisher = new URL(url).hostname.replace(/^www\./i, ""); } catch {}
+      const key = url.split("#")[0].replace(/\/$/, "").toLowerCase();
+      if (seen.has(key)) return null;
+      seen.add(key);
+      return {
+        title: cleanText(article?.title || "").slice(0, 300),
+        url,
+        snippet: "",
+        publisher,
+        // GDELT's seendate is an indexing/observation time, NOT the publisher's
+        // publication time. Keep it separate; original-page metadata must pass
+        // the same strict India-calendar-day filter before any story is shown.
+        indexedAt: String(article?.seendate || "")
+      };
+    }).filter(item => item && item.title).slice(0, 75);
+    return {
+      results,
+      rawResultCount: articles.length,
+      provider: "GDELT",
+      httpStatus: response.status,
+      errorCode: null,
+      warning: results.length ? "Exa unavailable; public GDELT news index used as fallback." : "GDELT returned no article candidates."
+    };
+  } catch (error) {
+    return {
+      results: [],
+      provider: "GDELT",
+      httpStatus: error?.name === "AbortError" ? 504 : 502,
+      errorCode: error?.name === "AbortError" ? "GDELT_TIMEOUT" : "GDELT_NETWORK_ERROR"
+    };
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 async function searchInternet(query, env, maxResults = null, searchOptions = {}) {
   const searchQuery = String(query || "").trim().slice(0, 1024);
   if (!searchQuery) return { results: [], warning: "खोज का सवाल खाली है।", attempted: false, errorCode: "EMPTY_QUERY" };
@@ -409,6 +486,21 @@ async function searchInternet(query, env, maxResults = null, searchOptions = {})
       const tag = String(payload?.tag || "").slice(0, 80);
       const detail = String(payload?.error || "").slice(0, 180);
       console.error("Exa search failed", response.status, tag, detail);
+      // If Exa has exhausted its account credits, keep current-news search
+      // available through the public GDELT index. All publisher-date,
+      // trusted-source, duplicate-event and summary validators still run later.
+      if (response.status === 402 && isNewsQuery && searchOptions.news !== false) {
+        const fallback = await searchFreeNewsFallback(searchOptions);
+        if (fallback.results?.length) {
+          return {
+            ...fallback,
+            primaryProvider: "Exa",
+            primaryHttpStatus: 402,
+            attempted: true,
+            retryable: false
+          };
+        }
+      }
       let warning = "Exa सर्च सेवा ने HTTP " + response.status + " लौटाया।";
       if (response.status === 401 || response.status === 403) warning = "Exa API Key स्वीकार नहीं हुई। Cloudflare Secret का नाम EXA_API_KEY और उसकी वैधता जाँचें।";
       else if (response.status === 402) warning = "Exa खाते के क्रेडिट या प्लान की उपलब्ध सीमा पूरी हो गई है। कोई दूसरा सर्च प्रदाता अपने-आप चालू नहीं होगा। Exa के उपयोग पर आपके खाते के प्लान के अनुसार शुल्क लग सकता है।";
@@ -2710,7 +2802,9 @@ export default {
             providerStatus: search.httpStatus ?? null,
             searchErrorCode: search.errorCode ?? null,
             searchDiagnostics: {
-              provider: "Exa",
+              provider: search.provider || "Exa",
+              primaryProvider: search.primaryProvider || "Exa",
+              primaryHttpStatus: search.primaryHttpStatus ?? search.httpStatus ?? null,
               attempted: search.attempted === true,
               httpStatus: search.httpStatus ?? null,
               errorCode: search.errorCode ?? null,
