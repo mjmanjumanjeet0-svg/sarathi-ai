@@ -627,6 +627,11 @@ assert.ok(worker.includes("fallbackFeedDiagnostics: fallback.feedDiagnostics || 
 assert.ok(worker.includes('fallbackProvider: fallback.provider || "GDELT"'), "fallback provider diagnostics must identify RSS sources when used");
 assert.ok(worker.includes("feedPublishedAt: new Date(timestamp).toISOString()"), "RSS publication timestamps must be retained as publisher-provided evidence");
 assert.ok(worker.includes("maxItemsPerFeed") && worker.includes("for (const feed of settled)"), "RSS fallback must round-robin feeds to preserve international and specialist coverage");
+assert.ok(worker.includes("https://feeds.bbci.co.uk/news/world/rss.xml") && worker.includes("https://feeds.bbci.co.uk/news/world/asia/rss.xml"), "RSS fallback must include BBC international feeds");
+assert.ok(worker.includes('publisher === "bbc.co.uk"') && worker.includes("bbc\\\\.co\\\\.uk"), "BBC UK articles must pass trusted publisher validation");
+assert.ok(worker.includes("function selectDiverseGlobalNewsResults") && worker.includes("(counts.get(publisher) || 0) >= 2"), "global news must cap each publisher at two stories");
+assert.ok(worker.includes("globalCoverageMissing") && worker.includes("globalPublishers.size < 2"), "global digest must fail closed without an international-feed story and two independent publishers");
+
 
 assert.ok(worker.includes('response.status === 402 && isNewsQuery && searchOptions.news !== false'), "GDELT fallback must be limited to Exa credit exhaustion on news queries");
 assert.ok(worker.includes('fetch("https://api.gdeltproject.org/api/v2/doc/doc?'), "GDELT fallback must use its public DOC API");
