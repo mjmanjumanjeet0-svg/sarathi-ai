@@ -43,14 +43,15 @@ assert.deepEqual(filterFreshNewsResults([
 ], sampleFreshnessNow).map(item => item.id), ["today"], "only articles published today in India may pass the news freshness filter");
 
 const geoScopeStart = worker.indexOf("function getRequestedNewsGeographicScope(text) {");
-const geoScopeEnd = worker.indexOf("\\n}", geoScopeStart);
+const geoScopeEnd = worker.indexOf("\n}", geoScopeStart);
 assert.ok(geoScopeStart >= 0 && geoScopeEnd > geoScopeStart, "news geographic-scope detector must exist");
 const scopeHelpersStart = worker.indexOf("function isWorldOnlyNewsQuery(text) {");
-const scopeHelpersEnd = worker.indexOf("\\n}", worker.indexOf("function buildFiveCategoryNewsSearchQuery(scope) {")) + 2;
+const scopeHelpersEnd = worker.indexOf("\n}", worker.indexOf("function buildFiveCategoryNewsSearchQuery(scope) {")) + 2;
 const scopeHelpers = worker.slice(scopeHelpersStart, scopeHelpersEnd);
-const scopeFunctions = new Function("isGlobalNewsQuery", scopeHelpers + "\\nreturn { getRequestedNewsGeographicScope, buildFiveCategoryNewsSearchQuery };")(value => /भारत.*दुनिया|world news/i.test(String(value || "")));
+const scopeFunctions = new Function("isGlobalNewsQuery", scopeHelpers + "\nreturn { getRequestedNewsGeographicScope, buildFiveCategoryNewsSearchQuery };")(value => /भारत.*दुनिया|world news/i.test(String(value || "")));
 const getRequestedNewsGeographicScope = scopeFunctions.getRequestedNewsGeographicScope;
-assert.equal(getRequestedNewsGeographicScope("बिहार की आज की खबरें बताओ"), "बिहार", "Bihar request must stay Bihar-focused even if India is mentioned too");
+assert.equal(getRequestedNewsGeographicScope("बिहार की आज की खबरें बताओ"), "बिहार", "Bihar request must stay Bihar-focused");
+assert.equal(getRequestedNewsGeographicScope("बिहार भारत की आज की खबरें बताओ"), "बिहार", "named state must take priority over generic India wording");
 assert.equal(getRequestedNewsGeographicScope("पटना में आज क्या खबर है"), "पटना", "Patna request must stay Patna-focused");
 assert.equal(getRequestedNewsGeographicScope("आज भारत की खबरें"), "India", "India request must stay India-focused");
 assert.equal(getRequestedNewsGeographicScope("आज दुनिया की खबरें बताओ"), "world", "world-only request must not become an India-and-world digest");
