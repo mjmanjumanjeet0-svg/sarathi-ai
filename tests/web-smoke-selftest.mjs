@@ -168,7 +168,7 @@ const formatCurrentNewsSummaryReply = new Function(
   "formatHindiNewsCount", "buildNewsDigestNote",
   "dedupeNewsResults", "cleanText", "formatNewsPublishedAt",
   "hasMixedScriptToken", "hasUnsupportedNumericClaim", "hasUnsupportedCertaintyClaim",
-  "hasUnsupportedNewsHeadlineMix", "hasUntranslatedEnglishHeadline", "hasIncorrectOverallAqiCategory", "isIndiaFocusedNewsItem", "hasKnownContradictedNewsFact", "hasUnsupportedCourtDisposition",
+  "hasUnsupportedNewsHeadlineMix", "hasUntranslatedEnglishHeadline", "hasIncorrectOverallAqiCategory", "isIndiaFocusedNewsItem", "isNewsItemWithinRequestedScope", "hasKnownContradictedNewsFact", "hasUnsupportedCourtDisposition",
   "classifyRequestedNewsCategory", "getIndiaDayStartTimestamp",
   worker.slice(newsFormatterStart, newsFormatterEnd + 3) + "\nreturn formatCurrentNewsSummaryReply;"
 )(
@@ -184,6 +184,7 @@ const formatCurrentNewsSummaryReply = new Function(
   new Function(worker.slice(worker.indexOf("function hasUntranslatedEnglishHeadline("), worker.indexOf("\n}\n", worker.indexOf("function hasUntranslatedEnglishHeadline(")) + 3) + "\nreturn hasUntranslatedEnglishHeadline;")(),
   new Function(worker.slice(worker.indexOf("function hasIncorrectOverallAqiCategory("), worker.indexOf("\n}\n", worker.indexOf("function hasIncorrectOverallAqiCategory(")) + 3) + "\nreturn hasIncorrectOverallAqiCategory;")(),
   isIndiaFocusedNewsItem,
+  scopeFilterFns.isNewsItemWithinRequestedScope,
   hasKnownContradictedNewsFact,
   () => false,
   classifyRequestedNewsCategory,
