@@ -619,6 +619,13 @@ console.log("WEB SMOKE SELF-TEST: " + requiredIds.length + " required IDs, dupli
 // Free fallback regression checks: Exa HTTP 402 must not end all current-news
 // searches when the public GDELT news index is reachable.
 assert.ok(worker.includes("async function searchFreeNewsFallback(searchOptions = {})"), "public GDELT fallback helper must exist");
+assert.ok(worker.includes("async function searchPublisherRssFallback()"), "publisher RSS fallback helper must exist");
+assert.ok(worker.includes("indianexpress.com/section/india/feed/") && worker.includes("thehindu.com/news/national/feeder/default.rss"), "RSS fallback must include established Indian publisher feeds");
+assert.ok(worker.includes("pib.gov.in/RssMain.aspx"), "RSS fallback must include official PIB releases");
+assert.ok(worker.includes("fallbackFeedDiagnostics: fallback.feedDiagnostics || []"), "RSS feed-level diagnostics must be exposed");
+assert.ok(worker.includes('fallbackProvider: fallback.provider || "GDELT"'), "fallback provider diagnostics must identify RSS sources when used");
+assert.ok(worker.includes("feedPublishedAt: new Date(timestamp).toISOString()"), "RSS publication timestamps must be retained as publisher-provided evidence");
+
 assert.ok(worker.includes('response.status === 402 && isNewsQuery && searchOptions.news !== false'), "GDELT fallback must be limited to Exa credit exhaustion on news queries");
 assert.ok(worker.includes('fetch("https://api.gdeltproject.org/api/v2/doc/doc?'), "GDELT fallback must use its public DOC API");
 assert.ok(worker.includes('primaryProvider: "Exa"') && worker.includes('primaryHttpStatus: 402'), "fallback diagnostics must preserve the primary Exa failure");
