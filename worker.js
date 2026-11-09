@@ -1802,7 +1802,10 @@ function selectDiverseGlobalNewsResults(results, limit = 8) {
   };
   // A global digest must contain an explicitly international-feed story;
   // an overseas company mention in an India-only story is not enough.
+  // Reserve room for both sides of an India-and-world roundup. World
+  // coverage alone is not a balanced digest when every selected item is overseas.
   candidates.filter(item => item.coverage === "world").forEach(add);
+  candidates.filter(item => item.coverage === "india").forEach(add);
   candidates.forEach(add);
   return selected.sort((a, b) => Date.parse(b.publishedAt || "") - Date.parse(a.publishedAt || "")).slice(0, limit);
 }
@@ -2933,8 +2936,9 @@ export default {
           catch { return String(item.publisher || "").toLowerCase(); }
         }).filter(Boolean));
         const globalCoverageMissing = globalNewsDigest && !searchResults.some(item => item.coverage === "world");
+        const globalIndiaCoverageMissing = globalNewsDigest && !searchResults.some(item => item.coverage === "india");
         const insufficientNewsCoverage = globalNewsDigest
-          ? (globalPublishers.size < 2 || globalCoverageMissing)
+          ? (globalPublishers.size < 2 || globalCoverageMissing || globalIndiaCoverageMissing)
           : (searchResults.length > 0 && searchResults.length < 2);
         if (!isSpecificCourtNewsQuery(userText) && insufficientNewsCoverage) {
           const todayLabel = new Intl.DateTimeFormat("hi-IN", {
@@ -2942,7 +2946,7 @@ export default {
           }).format(new Date());
           return jsonResponse({
             success: true,
-            reply: todayLabel + " के लिए केवल एक स्वतंत्र समाचार स्रोत मिला; पाँच अलग खबरों और बहु-स्रोत पुष्टि की माँग पूरी नहीं हुई। इसलिए इसे पक्की खबर की सूची में शामिल नहीं कर रहा हूँ।\n\nउपलब्ध स्रोत: " + (searchResults[0].publisher || "प्रकाशक उपलब्ध नहीं") + "\nमूल लिंक: " + searchResults[0].url + "\nप्रकाशित: " + formatNewsPublishedAt(searchResults[0].publishedAt) + "\n\nदो या अधिक स्वतंत्र प्रकाशकों से पुष्टि मिलने पर ही खबर का सार दूँगा।",
+            reply: todayLabel + " के लिए भारत और दुनिया—दोनों की खबरों का संतुलित कवरेज तथा कम-से-कम दो स्वतंत्र प्रकाशक नहीं मिले। इसलिए अधूरी सूची को पूरी वैश्विक खबर-सारांश की तरह पेश नहीं कर रहा हूँ। उपलब्ध खबरें कम हो सकती हैं; अपुष्ट या एकतरफा खबरें जोड़कर संख्या पूरी नहीं की जाएगी।",
             ...dateTime,
             webSearch: true,
             searchAttempted: true,
