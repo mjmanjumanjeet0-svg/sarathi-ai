@@ -614,3 +614,14 @@ assert.equal(extractNewsPublishedDateFromHtml(htmlModifiedOnly, Date.parse("2026
 assert.match(worker, /searchResults = await enrichNewsArticleEvidence\(searchResults\.slice\(0, 12\)\);[\s\S]{0,500}filterFreshNewsResults\(searchResults\)/, "publisher date enrichment must happen before the strict same-day filter");
 
 console.log("WEB SMOKE SELF-TEST: " + requiredIds.length + " required IDs, duplicate-ID check, local scripts, voice wiring and core styles passed");
+
+
+// Free fallback regression checks: Exa HTTP 402 must not end all current-news
+// searches when the public GDELT news index is reachable.
+assert.ok(worker.includes("async function searchFreeNewsFallback(searchOptions = {})"), "public GDELT fallback helper must exist");
+assert.ok(worker.includes('response.status === 402 && isNewsQuery && searchOptions.news !== false'), "GDELT fallback must be limited to Exa credit exhaustion on news queries");
+assert.ok(worker.includes('fetch("https://api.gdeltproject.org/api/v2/doc/doc?"), "GDELT fallback must use its public DOC API");
+assert.ok(worker.includes('primaryProvider: "Exa"') && worker.includes('primaryHttpStatus: 402'), "fallback diagnostics must preserve the primary Exa failure");
+assert.ok(worker.includes("indexedAt: String(article?.seendate || \"\""), "GDELT observation time must be kept separate from publisher publication time");
+assert.ok(worker.includes("searchResults = await enrichNewsArticleEvidence(searchResults.slice(0, 12));"), "GDELT candidates must still pass original publisher date enrichment");
+assert.ok(worker.includes("filterFreshNewsResults(searchResults)"), "GDELT candidates must still pass the strict India-day publication filter");
