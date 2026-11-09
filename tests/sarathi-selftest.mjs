@@ -311,7 +311,10 @@ const getGdeltNewsQuery = new Function(source.slice(gdeltQueryStart, gdeltQueryE
 assert.match(getGdeltNewsQuery("Bihar"), /Bihar.*Patna.*Siwan/, "Bihar fallback must search Bihar locations, not India-wide news");
 assert.equal(getGdeltNewsQuery("Patna"), "Patna", "Patna fallback must be locally scoped");
 assert.match(getGdeltNewsQuery("world"), /NOT India/, "world-only fallback must exclude India-only stories");
-assert.match(source, /const combined = \[\];[\\s\\S]{0,260}if \(gdeltItems\[i\]\) combined\.push[\\s\\S]{0,120}if \(rssItems\[i\]\) combined\.push/, "GDELT and RSS candidates must be interleaved");
+const interleaveStart = source.indexOf("const combined = [];");
+const gdeltInterleave = source.indexOf("if (gdeltItems[i]) combined.push(gdeltItems[i]);", interleaveStart);
+const rssInterleave = source.indexOf("if (rssItems[i]) combined.push(rssItems[i]);", interleaveStart);
+assert.ok(interleaveStart >= 0 && gdeltInterleave > interleaveStart && rssInterleave > gdeltInterleave && rssInterleave - interleaveStart < 500, "GDELT and RSS candidates must be interleaved");
 assert.match(source, /geographicScope: requestedNewsScope/, "the requested geography must reach the fallback provider");
 assert.match(source, /अंतरराष्ट्रीय कवरेज नहीं मिली/, "global coverage warning must identify missing international coverage");
 assert.match(source, /भारत-केंद्रित कवरेज नहीं मिली/, "global coverage warning must identify missing India coverage");
