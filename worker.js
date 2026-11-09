@@ -329,17 +329,21 @@ async function searchPublisherRssFallback() {
   // Publisher-operated RSS feeds provide an independent free fallback.
   // Original-page date enrichment and the strict India-day filter still apply.
   const feeds = [
-    { url: "https://indianexpress.com/section/india/feed/", publisher: "indianexpress.com" },
-    { url: "https://indianexpress.com/section/world/feed/", publisher: "indianexpress.com" },
-    { url: "https://indianexpress.com/section/business/feed/", publisher: "indianexpress.com" },
-    { url: "https://indianexpress.com/section/technology/science/feed/", publisher: "indianexpress.com" },
-    { url: "https://indianexpress.com/section/sports/feed/", publisher: "indianexpress.com" },
-    { url: "https://www.thehindu.com/news/national/feeder/default.rss", publisher: "thehindu.com" },
-    { url: "https://www.thehindu.com/news/international/feeder/default.rss", publisher: "thehindu.com" },
-    { url: "https://www.thehindu.com/business/feeder/default.rss", publisher: "thehindu.com" },
-    { url: "https://www.thehindu.com/sci-tech/feeder/default.rss", publisher: "thehindu.com" },
-    { url: "https://www.thehindu.com/sport/feeder/default.rss", publisher: "thehindu.com" },
-    { url: "https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=1", publisher: "pib.gov.in" }
+    { url: "https://indianexpress.com/section/india/feed/", publisher: "indianexpress.com", coverage: "india" },
+    { url: "https://indianexpress.com/section/world/feed/", publisher: "indianexpress.com", coverage: "world" },
+    { url: "https://indianexpress.com/section/business/feed/", publisher: "indianexpress.com", coverage: "india" },
+    { url: "https://indianexpress.com/section/technology/science/feed/", publisher: "indianexpress.com", coverage: "india" },
+    { url: "https://indianexpress.com/section/sports/feed/", publisher: "indianexpress.com", coverage: "india" },
+    { url: "https://www.thehindu.com/news/national/feeder/default.rss", publisher: "thehindu.com", coverage: "india" },
+    { url: "https://www.thehindu.com/news/international/feeder/default.rss", publisher: "thehindu.com", coverage: "world" },
+    { url: "https://www.thehindu.com/business/feeder/default.rss", publisher: "thehindu.com", coverage: "india" },
+    { url: "https://www.thehindu.com/sci-tech/feeder/default.rss", publisher: "thehindu.com", coverage: "india" },
+    { url: "https://www.thehindu.com/sport/feeder/default.rss", publisher: "thehindu.com", coverage: "india" },
+    { url: "https://feeds.bbci.co.uk/news/world/rss.xml", publisher: "bbc.co.uk", coverage: "world" },
+    { url: "https://feeds.bbci.co.uk/news/world/asia/rss.xml", publisher: "bbc.co.uk", coverage: "world" },
+    { url: "https://feeds.bbci.co.uk/news/business/rss.xml", publisher: "bbc.co.uk", coverage: "world" },
+    { url: "https://feeds.bbci.co.uk/news/technology/rss.xml", publisher: "bbc.co.uk", coverage: "world" },
+    { url: "https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=1", publisher: "pib.gov.in", coverage: "india" }
   ];
   const settled = await Promise.all(feeds.map(async feed => {
     const controller = new AbortController();
@@ -364,8 +368,10 @@ async function searchPublisherRssFallback() {
         try { publisher = new URL(url).hostname.toLowerCase().replace(/^www\./, ""); } catch {}
         if (!(publisher === "indianexpress.com" || publisher.endsWith(".indianexpress.com") ||
               publisher === "thehindu.com" || publisher.endsWith(".thehindu.com") ||
-              publisher === "pib.gov.in" || publisher.endsWith(".pib.gov.in"))) return null;
-        return { title, url, publisher, publishedAt: new Date(timestamp).toISOString(), feedPublishedAt: new Date(timestamp).toISOString(), snippet: decodeNewsXmlText(rssTagValue(block, ["description", "summary"])).slice(0, 900) };
+              publisher === "pib.gov.in" || publisher.endsWith(".pib.gov.in") ||
+              publisher === "bbc.co.uk" || publisher.endsWith(".bbc.co.uk") ||
+              publisher === "bbc.com" || publisher.endsWith(".bbc.com"))) return null;
+        return { title, url, publisher, coverage: feed.coverage || "india", publishedAt: new Date(timestamp).toISOString(), feedPublishedAt: new Date(timestamp).toISOString(), snippet: decodeNewsXmlText(rssTagValue(block, ["description", "summary"])).slice(0, 900) };
       }).filter(Boolean);
       return { publisher: feed.publisher, status: response.status, error: null, items };
     } catch (error) {
@@ -1777,6 +1783,30 @@ function selectNewsForRequestedCategories(results, query) {
   return required.filter(category => selected.has(category)).map(category => selected.get(category));
 }
 
+function selectDiverseGlobalNewsResults(results, limit = 8) {
+  const candidates = Array.isArray(results) ? results : [];
+  const publisherFor = item => {
+    try { return new URL(item.url).hostname.toLowerCase().replace(/^www\\./, ""); }
+    catch { return String(item.publisher || "").toLowerCase(); }
+  };
+  const selected = [];
+  const counts = new Map();
+  const usedUrls = new Set();
+  const add = item => {
+    const publisher = publisherFor(item);
+    const url = canonicalNewsUrl(item.url);
+    if (!publisher || !url || usedUrls.has(url) || (counts.get(publisher) || 0) >= 2) return;
+    selected.push(item);
+    usedUrls.add(url);
+    counts.set(publisher, (counts.get(publisher) || 0) + 1);
+  };
+  // A global digest must contain an explicitly international-feed story;
+  // an overseas company mention in an India-only story is not enough.
+  candidates.filter(item => item.coverage === "world").forEach(add);
+  candidates.forEach(add);
+  return selected.sort((a, b) => Date.parse(b.publishedAt || "") - Date.parse(a.publishedAt || "")).slice(0, limit);
+}
+
 function isGlobalNewsQuery(text) {
   const value = String(text || "");
   return /(?:देश\s*(?:और|एवं|तथा)?\s*दुनिया|भारत\s*(?:और|एवं|तथा)\s*दुनिया|दुनिया\s*भर|राष्ट्रीय\s*(?:और|एवं)\s*अंतरराष्ट्रीय|अंतरराष्ट्रीय\s*खबर|विश्व\s*समाचार|\b(?:world|global|international)\s+news\b|\bindia\s+(?:and|&)\s+world\b)/i.test(value);
@@ -2888,14 +2918,25 @@ export default {
           searchResults = selectNewsForRequestedCategories(categoryCandidates, userText);
           if (searchResults.length) searchResults = await enrichNewsArticleEvidence(searchResults);
         } else {
-          // Global and general daily digests may contain several distinct stories
-          // from one publisher. Event grouping above removes repeated coverage;
-          // do not discard unrelated stories merely because the publisher repeats.
-          searchResults = searchResults.slice(0, 8);
+          // Global digests require publisher diversity and at least one item
+          // from a feed explicitly covering international news. Do not let a
+          // single newsroom occupy the whole India-and-world roundup.
+          searchResults = globalNewsDigest
+            ? selectDiverseGlobalNewsResults(searchResults, 8)
+            : searchResults.slice(0, 8);
         }
-        // A single result is sufficient for a focused one-story court request;
-        // the five-category digest keeps its stricter multi-source threshold.
-        if (!isSpecificCourtNewsQuery(userText) && searchResults.length > 0 && searchResults.length < 2) {
+        // A global digest must include an international-feed story and at
+        // least two independent publishers. Other digests retain the existing
+        // minimum of two distinct news items.
+        const globalPublishers = new Set(searchResults.map(item => {
+          try { return new URL(item.url).hostname.toLowerCase().replace(/^www\\./, ""); }
+          catch { return String(item.publisher || "").toLowerCase(); }
+        }).filter(Boolean));
+        const globalCoverageMissing = globalNewsDigest && !searchResults.some(item => item.coverage === "world");
+        const insufficientNewsCoverage = globalNewsDigest
+          ? (globalPublishers.size < 2 || globalCoverageMissing)
+          : (searchResults.length > 0 && searchResults.length < 2);
+        if (!isSpecificCourtNewsQuery(userText) && insufficientNewsCoverage) {
           const todayLabel = new Intl.DateTimeFormat("hi-IN", {
             timeZone: INDIA_TIME_ZONE, day: "numeric", month: "long", year: "numeric"
           }).format(new Date());
