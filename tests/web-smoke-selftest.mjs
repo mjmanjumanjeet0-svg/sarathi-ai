@@ -664,7 +664,7 @@ const htmlPublished = '<meta property="article:published_time" content="2026-11-
 assert.equal(extractNewsPublishedDateFromHtml(htmlPublished, Date.parse("2026-11-09T05:38:00+05:30")), "2026-11-08T19:38:00.000Z", "published date must be recovered from original publisher metadata");
 const htmlModifiedOnly = '<meta property="article:modified_time" content="2026-11-09T05:00:00+05:30">';
 assert.equal(extractNewsPublishedDateFromHtml(htmlModifiedOnly, Date.parse("2026-11-09T05:38:00+05:30")), "", "modified date alone must not qualify an old article as newly published");
-assert.match(worker, /searchResults = await enrichNewsArticleEvidence\(searchResults\.slice\(0, globalNewsDigest \? 20 : 12\), globalNewsDigest \? 20 : 12\);[\s\S]{0,500}filterFreshNewsResults\(searchResults\)/, "global news must enrich a wider balanced candidate pool before the strict same-day filter");
+assert.ok(worker.includes("const datedFeedResults = searchResults.filter(item =>") && worker.includes("const undatedCandidates = searchResults.filter(item =>"), "all dated publisher RSS candidates must be retained while only undated candidates are enriched before the strict same-day filter");
 assert.ok(worker.includes("Interleave feeds instead of concatenating them"), "RSS fallback must interleave publisher feeds so national items cannot crowd out world coverage");
 
 console.log("WEB SMOKE SELF-TEST: " + requiredIds.length + " required IDs, duplicate-ID check, local scripts, voice wiring and core styles passed");
