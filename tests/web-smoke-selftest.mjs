@@ -43,13 +43,22 @@ assert.deepEqual(filterFreshNewsResults([
 ], sampleFreshnessNow).map(item => item.id), ["today"], "only articles published today in India may pass the news freshness filter");
 
 const geoScopeStart = worker.indexOf("function getRequestedNewsGeographicScope(text) {");
-const geoScopeEnd = worker.indexOf("\n}", geoScopeStart);
+const geoScopeEnd = worker.indexOf("\\n}", geoScopeStart);
 assert.ok(geoScopeStart >= 0 && geoScopeEnd > geoScopeStart, "news geographic-scope detector must exist");
-const getRequestedNewsGeographicScope = new Function("isGlobalNewsQuery", worker.slice(geoScopeStart, geoScopeEnd + 2) + "\nreturn getRequestedNewsGeographicScope;")(value => /भारत.*दुनिया|world news/i.test(String(value || "")));
-assert.equal(getRequestedNewsGeographicScope("बिहार की आज की खबरें बताओ"), "बिहार", "Bihar request must stay Bihar-focused");
+const scopeHelpersStart = worker.indexOf("function isWorldOnlyNewsQuery(text) {");
+const scopeHelpersEnd = worker.indexOf("\\n}", worker.indexOf("function buildFiveCategoryNewsSearchQuery(scope) {")) + 2;
+const scopeHelpers = worker.slice(scopeHelpersStart, scopeHelpersEnd);
+const scopeFunctions = new Function("isGlobalNewsQuery", scopeHelpers + "\\nreturn { getRequestedNewsGeographicScope, buildFiveCategoryNewsSearchQuery };")(value => /भारत.*दुनिया|world news/i.test(String(value || "")));
+const getRequestedNewsGeographicScope = scopeFunctions.getRequestedNewsGeographicScope;
+assert.equal(getRequestedNewsGeographicScope("बिहार की आज की खबरें बताओ"), "बिहार", "Bihar request must stay Bihar-focused even if India is mentioned too");
 assert.equal(getRequestedNewsGeographicScope("पटना में आज क्या खबर है"), "पटना", "Patna request must stay Patna-focused");
 assert.equal(getRequestedNewsGeographicScope("आज भारत की खबरें"), "India", "India request must stay India-focused");
+assert.equal(getRequestedNewsGeographicScope("आज दुनिया की खबरें बताओ"), "world", "world-only request must not become an India-and-world digest");
 assert.equal(getRequestedNewsGeographicScope("भारत और दुनिया की खबरें"), "India and world", "explicit India-and-world request must include both scopes");
+const buildFiveCategoryNewsSearchQuery = scopeFunctions.buildFiveCategoryNewsSearchQuery;
+assert.match(buildFiveCategoryNewsSearchQuery("बिहार"), /बिहार only/i, "five-category Bihar query must remain Bihar-only");
+assert.match(buildFiveCategoryNewsSearchQuery("world"), /excluding India-only stories/i, "five-category world query must exclude India-only stories");
+assert.match(buildFiveCategoryNewsSearchQuery("India and world"), /both Indian and international reporting/i, "five-category India-and-world query must request both scopes");
 
 const currentNewsStart = worker.indexOf("function isCurrentNewsQuery(text) {");
 const currentNewsEnd = worker.indexOf("\n}", currentNewsStart);
