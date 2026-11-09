@@ -318,5 +318,8 @@ assert.ok(interleaveStart >= 0 && gdeltInterleave > interleaveStart && rssInterl
 assert.match(source, /geographicScope: requestedNewsScope/, "the requested geography must reach the fallback provider");
 assert.match(source, /publishedAt: item\.feedPublishedAt \|\| pagePublishedAt \|\| item\.publishedAt/, "publisher RSS publication dates must not be overwritten by stale page metadata");
 assert.match(source, /publicationDateSource: item\.feedPublishedAt \? "publisher_rss_pubdate"/, "news diagnostics must identify publisher RSS as the publication-date source");
+assert.match(source, /const datedFeedResults = searchResults\.filter\(item =>[\\s\\S]{0,180}item\?\.feedPublishedAt/, "all publisher-RSS dated candidates must be retained before HTML enrichment");
+assert.match(source, /const undatedCandidates = searchResults\.filter\(item =>[\\s\\S]{0,220}\.slice\(0, globalNewsDigest \? 8 : 6\)/, "only a bounded number of undated candidates should require slow page enrichment");
+assert.match(source, /\.filter\(item => !\(item\?\.feedPublishedAt && Number\.isFinite\(Date\.parse\(item\.feedPublishedAt\)\)\)\)/, "publisher-RSS dated articles must bypass redundant HTML fetches");
 assert.match(source, /अंतरराष्ट्रीय कवरेज नहीं मिली/, "global coverage warning must identify missing international coverage");
 assert.match(source, /भारत-केंद्रित कवरेज नहीं मिली/, "global coverage warning must identify missing India coverage");
