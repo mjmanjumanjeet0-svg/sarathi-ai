@@ -139,6 +139,18 @@ const classifyRequestedNewsCategory = new Function(
   "cleanText",
   worker.slice(categoryClassifierStart, categoryClassifierEnd + 3) + "\nreturn classifyRequestedNewsCategory;"
 )(value => String(value || "").replace(/\s+/g, " ").trim());
+
+const sourceGroundingStart = worker.indexOf("function extractNewsPageTitle(html) {");
+const sourceGroundingEnd = worker.indexOf("\nfunction isHistoricalResearchQuery", sourceGroundingStart);
+assert.ok(sourceGroundingStart >= 0 && sourceGroundingEnd > sourceGroundingStart, "article page title and summary topic validators must exist");
+const sourceGroundingFns = new Function("cleanText", worker.slice(sourceGroundingStart, sourceGroundingEnd) + "\nreturn { extractNewsPageTitle, isNewsResultPageTitleMismatch, hasUnsupportedNewsSummaryTopic };")(value => String(value || "").replace(/\s+/g," ").trim());
+assert.equal(sourceGroundingFns.extractNewsPageTitle('<meta property="og:title" content="Major fire breaks out in Mumbai&#39;s Dongri">'), "Major fire breaks out in Mumbai's Dongri");
+assert.equal(sourceGroundingFns.isNewsResultPageTitleMismatch({title:"Post-Diwali air pollution hits severe levels",pageTitle:"Major fire breaks out in Mumbai's Dongri"}),true);
+assert.equal(sourceGroundingFns.isNewsResultPageTitleMismatch({title:"Major fire breaks out in Mumbai's Dongri",pageTitle:"Major fire breaks out in Mumbai's Dongri | The Hindu"}),false);
+assert.equal(sourceGroundingFns.hasUnsupportedNewsSummaryTopic("दिल्ली में वायु प्रदूषण और धुंध बढ़ी","Major fire breaks out in Mumbai's Dongri. Firefighters doused the blaze."),true);
+assert.equal(sourceGroundingFns.hasUnsupportedNewsSummaryTopic("मुंबई के डोंगरी में आग लगी","Major fire breaks out in Mumbai's Dongri. Firefighters doused the blaze."),false);
+assert.equal(sourceGroundingFns.hasUnsupportedNewsSummaryTopic("CEO की पत्नी से जुड़ा अफेयर","Nvidia investigates CEO over suspected Chinese spy links"),true);
+
 const newsFormatterStart = worker.indexOf("function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false, allowGlobalNews = false, requestedScope = \"India\") {");
 const newsFormatterEnd = worker.indexOf("\n}\n", newsFormatterStart);
 assert.ok(newsFormatterStart >= 0 && newsFormatterEnd > newsFormatterStart, "daily-news formatter must exist");
@@ -169,7 +181,7 @@ const formatCurrentNewsSummaryReply = new Function(
   "dedupeNewsResults", "cleanText", "formatNewsPublishedAt",
   "hasMixedScriptToken", "hasUnsupportedNumericClaim", "hasUnsupportedCertaintyClaim",
   "hasUnsupportedNewsHeadlineMix", "hasUntranslatedEnglishHeadline", "hasIncorrectOverallAqiCategory", "isIndiaFocusedNewsItem", "isNewsItemWithinRequestedScope", "hasKnownContradictedNewsFact", "hasUnsupportedCourtDisposition",
-  "classifyRequestedNewsCategory", "getIndiaDayStartTimestamp",
+  "classifyRequestedNewsCategory", "getIndiaDayStartTimestamp", "isNewsResultPageTitleMismatch", "hasUnsupportedNewsSummaryTopic",
   worker.slice(newsFormatterStart, newsFormatterEnd + 3) + "\nreturn formatCurrentNewsSummaryReply;"
 )(
   newsFormatHelpers.formatHindiNewsCount,
@@ -188,7 +200,9 @@ const formatCurrentNewsSummaryReply = new Function(
   hasKnownContradictedNewsFact,
   () => false,
   classifyRequestedNewsCategory,
-  getIndiaDayStartTimestamp
+  getIndiaDayStartTimestamp,
+  sourceGroundingFns.isNewsResultPageTitleMismatch,
+  sourceGroundingFns.hasUnsupportedNewsSummaryTopic
 );
 const groupNewsStart = worker.indexOf("function groupNewsByEvent(results) {");
 const groupNewsEnd = worker.indexOf("\n}\n", groupNewsStart);
