@@ -611,7 +611,8 @@ const htmlPublished = '<meta property="article:published_time" content="2026-11-
 assert.equal(extractNewsPublishedDateFromHtml(htmlPublished, Date.parse("2026-11-09T05:38:00+05:30")), "2026-11-08T19:38:00.000Z", "published date must be recovered from original publisher metadata");
 const htmlModifiedOnly = '<meta property="article:modified_time" content="2026-11-09T05:00:00+05:30">';
 assert.equal(extractNewsPublishedDateFromHtml(htmlModifiedOnly, Date.parse("2026-11-09T05:38:00+05:30")), "", "modified date alone must not qualify an old article as newly published");
-assert.match(worker, /searchResults = await enrichNewsArticleEvidence\(searchResults\.slice\(0, 12\)\);[\s\S]{0,500}filterFreshNewsResults\(searchResults\)/, "publisher date enrichment must happen before the strict same-day filter");
+assert.match(worker, /searchResults = await enrichNewsArticleEvidence\(searchResults\.slice\(0, globalNewsDigest \? 20 : 12\), globalNewsDigest \? 20 : 12\);[\s\S]{0,500}filterFreshNewsResults\(searchResults\)/, "global news must enrich a wider balanced candidate pool before the strict same-day filter");
+assert.ok(worker.includes("Interleave feeds instead of concatenating them"), "RSS fallback must interleave publisher feeds so national items cannot crowd out world coverage");
 
 console.log("WEB SMOKE SELF-TEST: " + requiredIds.length + " required IDs, duplicate-ID check, local scripts, voice wiring and core styles passed");
 
@@ -625,6 +626,7 @@ assert.ok(worker.includes("pib.gov.in/RssMain.aspx"), "RSS fallback must include
 assert.ok(worker.includes("fallbackFeedDiagnostics: fallback.feedDiagnostics || []"), "RSS feed-level diagnostics must be exposed");
 assert.ok(worker.includes('fallbackProvider: fallback.provider || "GDELT"'), "fallback provider diagnostics must identify RSS sources when used");
 assert.ok(worker.includes("feedPublishedAt: new Date(timestamp).toISOString()"), "RSS publication timestamps must be retained as publisher-provided evidence");
+assert.ok(worker.includes("maxItemsPerFeed") && worker.includes("for (const feed of settled)"), "RSS fallback must round-robin feeds to preserve international and specialist coverage");
 
 assert.ok(worker.includes('response.status === 402 && isNewsQuery && searchOptions.news !== false'), "GDELT fallback must be limited to Exa credit exhaustion on news queries");
 assert.ok(worker.includes('fetch("https://api.gdeltproject.org/api/v2/doc/doc?'), "GDELT fallback must use its public DOC API");
