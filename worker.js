@@ -616,9 +616,10 @@ async function searchInternet(query, env, maxResults = null, searchOptions = {})
           primaryProvider: "Exa",
           primaryHttpStatus: 402,
           fallbackAttempted: true,
-          fallbackProvider: "GDELT",
+          fallbackProvider: fallback.provider || "GDELT",
           fallbackHttpStatus: fallback.httpStatus ?? null,
-          fallbackErrorCode: fallback.errorCode ?? (fallback.results?.length ? null : "GDELT_NO_CANDIDATES"),
+          fallbackErrorCode: fallback.errorCode ?? (fallback.results?.length ? null : "NO_FALLBACK_CANDIDATES"),
+          fallbackFeedDiagnostics: fallback.feedDiagnostics || [],
           attempted: true,
           retryable: false
         };
