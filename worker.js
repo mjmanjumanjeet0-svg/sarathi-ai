@@ -1829,7 +1829,7 @@ function getRequestedNewsGeographicScope(text) {
     "Nepal","नेपाल","Pakistan","पाकिस्तान","China","चीन","America","अमेरिका","United States",
     "Russia","रूस","Japan","जापान","Bangladesh","बांग्लादेश","Sri Lanka","श्रीलंका"
   ];
-  const found = places.find(place => new RegExp("(^|[^\\p{L}\\p{N}])" + place.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\function isCurrentNewsQuery(text) {") + "([^\\p{L}\\p{N}]|$)", "iu").test(value));
+  const found = places.find(place => new RegExp("(^|[^\\p{L}\\p{N}])" + place + "([^\\p{L}\\p{N}]|$)", "iu").test(value));
   return found || "";
 }
 
