@@ -254,6 +254,21 @@ assert.match(source, /courtSearchDiagnostics: courtDiagnostics/, "court no-match
 assert.match(source, /Fail closed: a newsroom article without a matching official court[\s\S]*?is not published as verified court news/, "court stories without a matching official record must be blocked");
 assert.match(source, /Limit only after verification/, "a single-story limit must not discard a later officially verified result");
 
+// Local news must reach the exact-place and freshness filters even when its
+// headline does not contain a broad India signal (for example, a district-only
+// Bihar story). India-wide requests retain the stricter India relevance gate.
+const relevantFilterStart = source.indexOf("function filterRelevantSearchResults(query, results, allowGlobalNews = false, requestedScope = \"India\") {");
+const relevantFilterEnd = source.indexOf("\\n}\\n", relevantFilterStart);
+assert.ok(relevantFilterStart >= 0 && relevantFilterEnd > relevantFilterStart, "news relevance filter must accept requested geographic scope");
+const localAwareRelevantFilter = new Function("URL", "isIndiaFocusedNewsItem", source.slice(relevantFilterStart, relevantFilterEnd + 3) + "\\nreturn filterRelevantSearchResults;")(
+  URL, item => /india|भारतीय|भारत/i.test(String(item.title || "") + " " + String(item.snippet || ""))
+);
+const biharLocalStory = { title: "Siwan district school receives new science laboratory", url: "https://indianexpress.com/article/cities/patna/siwan-school-lab-123/", snippet: "A local development in Siwan district." };
+assert.equal(localAwareRelevantFilter("बिहार की आज की खबरें बताओ", [biharLocalStory], false, "Bihar").length, 1,
+  "Bihar-local stories must not be discarded by the broader India-headline heuristic");
+assert.equal(localAwareRelevantFilter("भारत की आज की खबरें बताओ", [biharLocalStory], false, "India").length, 0,
+  "India-wide requests must retain the stricter India relevance heuristic");
+
 console.log("\nSarathi Worker self-test: court-news regression checks passed.");
 
 const partyParserStart = source.indexOf("function courtRecordPartyNames(value) {");
