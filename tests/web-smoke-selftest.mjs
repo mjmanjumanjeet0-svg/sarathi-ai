@@ -622,6 +622,8 @@ assert.ok(worker.includes("async function searchFreeNewsFallback(searchOptions =
 assert.ok(worker.includes('response.status === 402 && isNewsQuery && searchOptions.news !== false'), "GDELT fallback must be limited to Exa credit exhaustion on news queries");
 assert.ok(worker.includes('fetch("https://api.gdeltproject.org/api/v2/doc/doc?'), "GDELT fallback must use its public DOC API");
 assert.ok(worker.includes('primaryProvider: "Exa"') && worker.includes('primaryHttpStatus: 402'), "fallback diagnostics must preserve the primary Exa failure");
+assert.ok(worker.includes("fallbackAttempted: true") && worker.includes("fallbackHttpStatus: fallback.httpStatus ?? null"), "GDELT attempt status must be returned even when no articles are found");
+assert.ok(worker.includes("वैकल्पिक खोज") && worker.includes("fallbackErrorCode: search.fallbackErrorCode ?? null"), "empty news diagnostics must disclose the GDELT attempt and failure code");
 assert.ok(worker.includes("indexedAt: String(article?.seendate || \"\""), "GDELT observation time must be kept separate from publisher publication time");
 assert.ok(worker.includes("searchResults = await enrichNewsArticleEvidence(searchResults.slice(0, 12));"), "GDELT candidates must still pass original publisher date enrichment");
 assert.ok(worker.includes("filterFreshNewsResults(searchResults)"), "GDELT candidates must still pass the strict India-day publication filter");
