@@ -620,7 +620,7 @@ console.log("WEB SMOKE SELF-TEST: " + requiredIds.length + " required IDs, dupli
 // searches when the public GDELT news index is reachable.
 assert.ok(worker.includes("async function searchFreeNewsFallback(searchOptions = {})"), "public GDELT fallback helper must exist");
 assert.ok(worker.includes('response.status === 402 && isNewsQuery && searchOptions.news !== false'), "GDELT fallback must be limited to Exa credit exhaustion on news queries");
-assert.ok(worker.includes('fetch("https://api.gdeltproject.org/api/v2/doc/doc?"), "GDELT fallback must use its public DOC API");
+assert.ok(worker.includes('fetch("https://api.gdeltproject.org/api/v2/doc/doc?'), "GDELT fallback must use its public DOC API");
 assert.ok(worker.includes('primaryProvider: "Exa"') && worker.includes('primaryHttpStatus: 402'), "fallback diagnostics must preserve the primary Exa failure");
 assert.ok(worker.includes("indexedAt: String(article?.seendate || \"\""), "GDELT observation time must be kept separate from publisher publication time");
 assert.ok(worker.includes("searchResults = await enrichNewsArticleEvidence(searchResults.slice(0, 12));"), "GDELT candidates must still pass original publisher date enrichment");
