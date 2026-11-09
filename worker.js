@@ -406,6 +406,19 @@ async function searchPublisherRssFallback() {
   };
 }
 
+function getGdeltNewsQuery(scope) {
+  const localQueries = {
+    "Bihar": "(Bihar OR Patna OR Siwan OR Gopalganj OR Muzaffarpur OR Darbhanga OR Gaya OR Bhagalpur)",
+    "Patna": "Patna",
+    "Siwan": "Siwan",
+    "Gopalganj": "Gopalganj"
+  };
+  if (localQueries[scope]) return localQueries[scope];
+  if (scope === "world") return "(world OR international OR overseas) NOT India";
+  if (scope === "India and world") return "(India OR world OR international)";
+  return "India";
+}
+
 async function searchGdeltNewsFallback(searchOptions = {}) {
   // GDELT DOC is a public news-index fallback; it needs no API key and does
   // not create a second metered search-provider account.
@@ -425,7 +438,7 @@ async function searchGdeltNewsFallback(searchOptions = {}) {
       String(d.getUTCSeconds()).padStart(2, "0");
   };
   const params = new URLSearchParams({
-    query: searchOptions.globalNews ? "(India OR world OR international)" : "India",
+    query: getGdeltNewsQuery(searchOptions.geographicScope || (searchOptions.globalNews ? "India and world" : "India")),
     mode: "ArtList",
     format: "json",
     maxrecords: "75",
@@ -491,7 +504,16 @@ async function searchFreeNewsFallback(searchOptions = {}) {
     searchGdeltNewsFallback(searchOptions),
     searchPublisherRssFallback()
   ]);
-  const combined = [...(gdelt.results || []), ...(rss.results || [])];
+  // Interleave GDELT and publisher RSS. GDELT often returns many indexed
+  // candidates whose original pages cannot be fetched; putting all of them
+  // first can crowd dated publisher-feed items out of the enrichment window.
+  const gdeltItems = gdelt.results || [];
+  const rssItems = rss.results || [];
+  const combined = [];
+  for (let i = 0; i < Math.max(gdeltItems.length, rssItems.length); i++) {
+    if (gdeltItems[i]) combined.push(gdeltItems[i]);
+    if (rssItems[i]) combined.push(rssItems[i]);
+  }
   const seen = new Set();
   const results = combined.filter(item => {
     const key = String(item.url || "").split("#")[0].replace(/\/$/, "").toLowerCase();
@@ -2952,7 +2974,7 @@ export default {
             };
           })()
         : null;
-      const search = await searchInternet(searchQuery, env, null, { globalNews: globalNewsDigest });
+      const search = await searchInternet(searchQuery, env, null, { globalNews: globalNewsDigest, geographicScope: requestedNewsScope || "India" });
       const courtSearchFinishedAt = isSpecificCourtNewsQuery(userText) ? new Date().toISOString() : null;
       searchResults = filterRelevantSearchResults(userText, search.results, globalNewsDigest);
       if (isHistoricalQuestion) searchResults = filterHistoricalSources(userText, searchResults);
@@ -3091,11 +3113,21 @@ export default {
           }).format(new Date());
           return jsonResponse({
             success: true,
-            reply: todayLabel + " के लिए भारत और दुनिया—दोनों की खबरों का संतुलित कवरेज तथा कम-से-कम दो स्वतंत्र प्रकाशक नहीं मिले। इसलिए अधूरी सूची को पूरी वैश्विक खबर-सारांश की तरह पेश नहीं कर रहा हूँ। उपलब्ध खबरें कम हो सकती हैं; अपुष्ट या एकतरफा खबरें जोड़कर संख्या पूरी नहीं की जाएगी।",
+            reply: todayLabel + " के लिए भारत और दुनिया—दोनों की खबरों का संतुलित कवरेज उपलब्ध नहीं हुआ। " +
+              (globalCoverageMissing ? "अंतरराष्ट्रीय कवरेज कम है। " : "") +
+              (globalIndiaCoverageMissing ? "भारत-केंद्रित कवरेज कम है। " : "") +
+              (globalPublishers.size < 2 ? "स्वतंत्र प्रकाशक केवल " + globalPublishers.size + " मिले। " : "कम-से-कम दो स्वतंत्र प्रकाशक मिले। ") +
+              "इसलिए अधूरी सूची को पूरी वैश्विक खबर-सारांश की तरह पेश नहीं कर रहा हूँ। उपलब्ध स्रोत नीचे केवल आंशिक परिणाम हैं।",
             ...dateTime,
             webSearch: true,
             searchAttempted: true,
-            searchWarning: "केवल एक स्वतंत्र प्रकाशक मिला; बहु-स्रोत पुष्टि उपलब्ध नहीं है।",
+            searchWarning: globalCoverageMissing && globalIndiaCoverageMissing
+              ? "भारत और अंतरराष्ट्रीय—दोनों श्रेणियों की कवरेज नहीं मिली।"
+              : globalCoverageMissing
+                ? "अंतरराष्ट्रीय कवरेज नहीं मिली।"
+                : globalIndiaCoverageMissing
+                  ? "भारत-केंद्रित कवरेज नहीं मिली।"
+                  : "कम-से-कम दो स्वतंत्र प्रकाशक नहीं मिले (मिले: " + globalPublishers.size + ")।",
             searchUnavailable: true,
             sources: searchResults.map(item => ({
               title: item.title,
