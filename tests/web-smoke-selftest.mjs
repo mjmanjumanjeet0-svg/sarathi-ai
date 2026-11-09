@@ -143,11 +143,13 @@ const classifyRequestedNewsCategory = new Function(
 const sourceGroundingStart = worker.indexOf("function extractNewsPageTitle(html) {");
 const sourceGroundingEnd = worker.indexOf("\nfunction isHistoricalResearchQuery", sourceGroundingStart);
 assert.ok(sourceGroundingStart >= 0 && sourceGroundingEnd > sourceGroundingStart, "article page title and summary topic validators must exist");
-const sourceGroundingFns = new Function("cleanText", worker.slice(sourceGroundingStart, sourceGroundingEnd) + "\nreturn { extractNewsPageTitle, isNewsResultPageTitleMismatch, hasUnsupportedNewsSummaryTopic };")(value => String(value || "").replace(/\s+/g," ").trim());
+const sourceGroundingFns = new Function("cleanText", worker.slice(sourceGroundingStart, sourceGroundingEnd) + "\nreturn { extractNewsPageTitle, isNewsResultPageTitleMismatch, hasUnsupportedNewsSummaryTopic, hasHeadlineSummaryTopicConflict };")(value => String(value || "").replace(/\s+/g," ").trim());
 assert.equal(sourceGroundingFns.extractNewsPageTitle('<meta property="og:title" content="Major fire breaks out in Mumbai&#39;s Dongri">'), "Major fire breaks out in Mumbai's Dongri");
 assert.equal(sourceGroundingFns.isNewsResultPageTitleMismatch({title:"Post-Diwali air pollution hits severe levels",pageTitle:"Major fire breaks out in Mumbai's Dongri"}),true);
 assert.equal(sourceGroundingFns.isNewsResultPageTitleMismatch({title:"Major fire breaks out in Mumbai's Dongri",pageTitle:"Major fire breaks out in Mumbai's Dongri | The Hindu"}),false);
 assert.equal(sourceGroundingFns.hasUnsupportedNewsSummaryTopic("दिल्ली में वायु प्रदूषण और धुंध बढ़ी","Major fire breaks out in Mumbai's Dongri. Firefighters doused the blaze."),true);
+assert.equal(sourceGroundingFns.hasHeadlineSummaryTopicConflict("मुंबई में भीषण आग की खबर", "दिल्ली में वायु प्रदूषण बढ़ने की खबर है।", "Mumbai fire: blaze breaks out in Dongri"), true, "a pollution summary must not be attached to a fire headline and source link");
+assert.equal(sourceGroundingFns.hasHeadlineSummaryTopicConflict("दिल्ली में वायु गुणवत्ता खराब", "प्रदूषण और धुंध से लोगों को परेशानी हुई।", "Delhi air quality worsens amid smog"), false, "matching pollution headline and summary must pass");
 assert.equal(sourceGroundingFns.hasUnsupportedNewsSummaryTopic("मुंबई के डोंगरी में आग लगी","Major fire breaks out in Mumbai's Dongri. Firefighters doused the blaze."),false);
 assert.equal(sourceGroundingFns.hasUnsupportedNewsSummaryTopic("CEO की पत्नी से जुड़ा अफेयर","Nvidia investigates CEO over suspected Chinese spy links"),true);
 
@@ -181,7 +183,7 @@ const formatCurrentNewsSummaryReply = new Function(
   "dedupeNewsResults", "cleanText", "formatNewsPublishedAt",
   "hasMixedScriptToken", "hasUnsupportedNumericClaim", "hasUnsupportedCertaintyClaim",
   "hasUnsupportedNewsHeadlineMix", "hasUntranslatedEnglishHeadline", "hasIncorrectOverallAqiCategory", "isIndiaFocusedNewsItem", "isNewsItemWithinRequestedScope", "hasKnownContradictedNewsFact", "hasUnsupportedCourtDisposition",
-  "classifyRequestedNewsCategory", "getIndiaDayStartTimestamp", "isNewsResultPageTitleMismatch", "hasUnsupportedNewsSummaryTopic",
+  "classifyRequestedNewsCategory", "getIndiaDayStartTimestamp", "isNewsResultPageTitleMismatch", "hasUnsupportedNewsSummaryTopic", "hasHeadlineSummaryTopicConflict",
   worker.slice(newsFormatterStart, newsFormatterEnd + 3) + "\nreturn formatCurrentNewsSummaryReply;"
 )(
   newsFormatHelpers.formatHindiNewsCount,
@@ -202,7 +204,8 @@ const formatCurrentNewsSummaryReply = new Function(
   classifyRequestedNewsCategory,
   getIndiaDayStartTimestamp,
   sourceGroundingFns.isNewsResultPageTitleMismatch,
-  sourceGroundingFns.hasUnsupportedNewsSummaryTopic
+  sourceGroundingFns.hasUnsupportedNewsSummaryTopic,
+  sourceGroundingFns.hasHeadlineSummaryTopicConflict
 );
 const groupNewsStart = worker.indexOf("function groupNewsByEvent(results) {");
 const groupNewsEnd = worker.indexOf("\n}\n", groupNewsStart);
