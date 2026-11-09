@@ -441,6 +441,7 @@ async function searchInternet(query, env, maxResults = null, searchOptions = {})
       });
     return {
       results,
+      rawResultCount: items.length,
       warning: results.length ? "Exa से वास्तविक वेब परिणाम मिले।" : "Exa खोज में इस सवाल के लिए कोई परिणाम नहीं मिला।",
       attempted: true,
       httpStatus: response.status,
@@ -582,8 +583,26 @@ async function enrichGoldRateResults(results) {
   }));
 }
 
+function extractNewsPublishedDateFromHtml(html, now = Date.now()) {
+  const source = String(html || "").slice(0, 900000);
+  const candidates = [];
+  for (const tagMatch of source.matchAll(/<meta\b[^>]*>/gi)) {
+    const attrs = {};
+    for (const match of tagMatch[0].matchAll(/([a-zA-Z:-]+)\s*=\s*(["'])(.*?)\2/g)) attrs[match[1].toLowerCase()] = match[3].trim();
+    const key = String(attrs.property || attrs.name || attrs.itemprop || "").toLowerCase();
+    const value = attrs.content || attrs.value || "";
+    if (value && /^(?:article:published_time|datepublished|parsely-pub-date|dc.date.issued|date|publishdate|pubdate)$/i.test(key)) candidates.push(value);
+  }
+  // Never use dateModified: a refreshed old article is not newly published.
+  for (const match of source.matchAll(/["']datePublished["']\s*:\s*["']([^"']+)["']/gi)) candidates.push(match[1]);
+  const valid = candidates.map(value => Date.parse(value))
+    .filter(timestamp => Number.isFinite(timestamp) && timestamp <= now + 5 * 60 * 1000)
+    .sort((a, b) => a - b);
+  return valid.length ? new Date(valid[0]).toISOString() : "";
+}
+
 async function enrichNewsArticleEvidence(results) {
-  const candidates = (Array.isArray(results) ? results : []).slice(0, 5);
+  const candidates = (Array.isArray(results) ? results : []).slice(0, 12);
   return await Promise.all(candidates.map(async item => {
     if (!item || typeof item.url !== "string" || !/^https:\/\//i.test(item.url)) return item;
     const controller = new AbortController();
@@ -596,6 +615,7 @@ async function enrichNewsArticleEvidence(results) {
       });
       if (!response.ok || !/^(text\/html|application\/xhtml\+xml)/i.test(response.headers.get("content-type") || "")) return item;
       const html = (await response.text()).slice(0, 900000);
+      const pagePublishedAt = extractNewsPublishedDateFromHtml(html);
       const articleMatch = html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i);
       let body = articleMatch ? articleMatch[1] : "";
       body = body
@@ -610,7 +630,12 @@ async function enrichNewsArticleEvidence(results) {
         html.match(/<meta\b[^>]*content=["']([^"']{30,})["'][^>]*(?:name|property)=["'](?:description|og:description)["'][^>]*>/i);
       const description = meta ? cleanText(meta[1]).slice(0, 900) : "";
       const evidence = cleanText((body || description).slice(0, 5200));
-      return evidence.length >= 180 ? { ...item, articleEvidence: evidence } : (description ? { ...item, articleEvidence: description } : item);
+      return {
+        ...item,
+        publishedAt: item.publishedAt || pagePublishedAt || "",
+        pagePublishedAt: pagePublishedAt || item.pagePublishedAt || "",
+        ...(evidence.length >= 180 ? { articleEvidence: evidence } : description ? { articleEvidence: description } : {})
+      };
     } catch {
       return item;
     } finally {
@@ -618,7 +643,6 @@ async function enrichNewsArticleEvidence(results) {
     }
   }));
 }
-
 function isHistoricalResearchQuery(query) {
   return /(खूनी रविवार|bloody sunday|रूसी क्रांति|रूस की क्रांति|1905 की क्रांति|रूसी इतिहास|ऐतिहासिक घटना|ऐतिहासिक महत्व|russian revolution|1905 revolution)/i.test(String(query || ""));
 }
@@ -2537,6 +2561,9 @@ export default {
       searchResults = filterRelevantSearchResults(userText, search.results, globalNewsDigest);
       if (isHistoricalQuestion) searchResults = filterHistoricalSources(userText, searchResults);
       if (isCurrentNewsQuestion) {
+        // Recover publisher datePublished metadata BEFORE strict freshness filtering.
+        // Exa can return URLs without publishedDate; filtering first loses them.
+        searchResults = await enrichNewsArticleEvidence(searchResults.slice(0, 12));
         // Keep the newest same-day report for a repeated event, then deduplicate
         // event headlines and publishers. Exa relevance order is not chronological.
         searchResults = groupNewsByEvent(sortNewsByPublicationTime(filterFreshNewsResults(searchResults)));
@@ -2670,12 +2697,27 @@ export default {
           }).format(new Date());
           return jsonResponse({
             success: true,
-            reply: todayLabel + " के लिए आज ही प्रकाशित और तारीख-जाँचे गए भरोसेमंद समाचार परिणाम नहीं मिले। इसलिए मैं कल या उससे पुरानी खबरों को आज की खबर बताकर नहीं दिखाऊँगा। कृपया कुछ देर बाद फिर खोजें।",
+            reply: todayLabel + " के लिए आज ही प्रकाशित और तारीख-जाँचे गए भरोसेमंद समाचार परिणाम नहीं मिले। " +
+              "तकनीकी स्थिति: Exa HTTP " + (search.httpStatus ?? "उपलब्ध नहीं") +
+              ", कच्चे परिणाम " + (search.rawResultCount ?? search.results?.length ?? 0) +
+              ", तारीख़-जाँच के बाद योग्य परिणाम " + searchResults.length +
+              "। बिना तारीख़ की पुष्टि वाले लेख शामिल नहीं किए गए।",
             ...dateTime,
             webSearch: true,
-            searchAttempted: true,
+            searchAttempted: search.attempted === true,
             searchWarning: "आज की तारीख के अनुरूप कोई सत्यापित खोज परिणाम नहीं मिला।",
             searchUnavailable: true,
+            providerStatus: search.httpStatus ?? null,
+            searchErrorCode: search.errorCode ?? null,
+            searchDiagnostics: {
+              provider: "Exa",
+              attempted: search.attempted === true,
+              httpStatus: search.httpStatus ?? null,
+              errorCode: search.errorCode ?? null,
+              rawResultCount: search.rawResultCount ?? search.results?.length ?? 0,
+              acceptedAfterDateFilter: searchResults.length,
+              currentIndiaDate: new Intl.DateTimeFormat("en-CA", { timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date())
+            },
             sources: []
           });
         }
