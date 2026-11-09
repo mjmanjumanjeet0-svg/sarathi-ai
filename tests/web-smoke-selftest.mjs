@@ -7,11 +7,11 @@ const app = await readFile(new URL("app.js", root), "utf8");
 const voice = await readFile(new URL("voice.js", root), "utf8");
 const css = await readFile(new URL("style.css", root), "utf8");
 const worker = await readFile(new URL("worker.js", root), "utf8");
-const relevantFilterStart = worker.indexOf("function filterRelevantSearchResults(query, results, allowGlobalNews = false) {");
+const relevantFilterStart = worker.indexOf("function filterRelevantSearchResults(query, results, allowGlobalNews = false, requestedScope = "India") {");
 const relevantFilterEnd = worker.indexOf("\n}\n", relevantFilterStart);
 assert.ok(relevantFilterStart >= 0 && relevantFilterEnd > relevantFilterStart, "search relevance filter must exist");
 const filterRelevantSearchResults = new Function(worker.slice(relevantFilterStart, relevantFilterEnd + 3) + "\nreturn filterRelevantSearchResults;")();
-const globalNewsFilterStart = worker.indexOf("function filterRelevantSearchResults(query, results, allowGlobalNews = false) {");
+const globalNewsFilterStart = worker.indexOf("function filterRelevantSearchResults(query, results, allowGlobalNews = false, requestedScope = "India") {");
 assert.ok(globalNewsFilterStart >= 0, "global-news relevance mode must exist");
 const worldOnlyResults = [
   { title: "Major earthquake response announced in Japan", url: "https://www.reuters.com/world/asia-pacific/japan-earthquake-response/", snippet: "Japan announces emergency response after earthquake." },
