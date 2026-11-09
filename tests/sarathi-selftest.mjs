@@ -316,5 +316,7 @@ const gdeltInterleave = source.indexOf("if (gdeltItems[i]) combined.push(gdeltIt
 const rssInterleave = source.indexOf("if (rssItems[i]) combined.push(rssItems[i]);", interleaveStart);
 assert.ok(interleaveStart >= 0 && gdeltInterleave > interleaveStart && rssInterleave > gdeltInterleave && rssInterleave - interleaveStart < 500, "GDELT and RSS candidates must be interleaved");
 assert.match(source, /geographicScope: requestedNewsScope/, "the requested geography must reach the fallback provider");
+assert.match(source, /publishedAt: item\.feedPublishedAt \|\| pagePublishedAt \|\| item\.publishedAt/, "publisher RSS publication dates must not be overwritten by stale page metadata");
+assert.match(source, /publicationDateSource: item\.feedPublishedAt \? "publisher_rss_pubdate"/, "news diagnostics must identify publisher RSS as the publication-date source");
 assert.match(source, /अंतरराष्ट्रीय कवरेज नहीं मिली/, "global coverage warning must identify missing international coverage");
 assert.match(source, /भारत-केंद्रित कवरेज नहीं मिली/, "global coverage warning must identify missing India coverage");
