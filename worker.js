@@ -1818,8 +1818,8 @@ function isGlobalNewsQuery(text) {
 
 function isWorldOnlyNewsQuery(text) {
   const value = String(text || "");
-  const explicitlyIndia = /भारत|इंडिया|\\bindia\\b|भारतीय|देश की खबर|देश के समाचार/i.test(value);
-  return !explicitlyIndia && /दुनिया|विश्व|अंतरराष्ट्रीय|\\bworld\\b|\\bglobal\\b|\\binternational\\b/i.test(value);
+  const explicitlyIndia = /भारत|इंडिया|\bindia\b|भारतीय|देश की खबर|देश के समाचार/i.test(value);
+  return !explicitlyIndia && /दुनिया|विश्व|अंतरराष्ट्रीय|\bworld\b|\bglobal\b|\binternational\b/i.test(value);
 }
 
 function getRequestedNewsGeographicScope(text) {
@@ -1835,9 +1835,9 @@ function getRequestedNewsGeographicScope(text) {
     "Nepal","नेपाल","Pakistan","पाकिस्तान","China","चीन","America","अमेरिका","United States",
     "Russia","रूस","Japan","जापान","Bangladesh","बांग्लादेश","Sri Lanka","श्रीलंका"
   ];
-  const found = places.find(place => new RegExp("(^|[^\\\\p{L}\\\\p{N}])" + place + "([^\\\\p{L}\\\\p{N}]|$)", "iu").test(value));
+  const found = places.find(place => new RegExp("(^|[^\\p{L}\\p{N}])" + place + "([^\\p{L}\\p{N}]|$)", "iu").test(value));
   if (found) return found;
-  if (/(भारत|इंडिया|\\bindia\\b|भारतीय|देश की खबर|देश के समाचार)/i.test(value)) return "India";
+  if (/(भारत|इंडिया|\bindia\b|भारतीय|देश की खबर|देश के समाचार)/i.test(value)) return "India";
   return "";
 }
 
