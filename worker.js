@@ -847,7 +847,7 @@ async function enrichNewsArticleEvidence(results) {
       const evidence = cleanText((body || description).slice(0, 5200));
       return {
         ...item,
-        publishedAt: item.publishedAt || pagePublishedAt || "",
+        publishedAt: pagePublishedAt || item.publishedAt || "",
         pagePublishedAt: pagePublishedAt || item.pagePublishedAt || "",
         ...(evidence.length >= 180 ? { articleEvidence: evidence } : description ? { articleEvidence: description } : {})
       };
