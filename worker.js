@@ -845,6 +845,7 @@ async function enrichNewsArticleEvidence(results, maxCandidates = 12) {
       });
       if (!response.ok || !/^(text\/html|application\/xhtml\+xml)/i.test(response.headers.get("content-type") || "")) return item;
       const html = (await response.text()).slice(0, 900000);
+      const pageTitle = extractNewsPageTitle(html);
       const pagePublishedAt = extractNewsPublishedDateFromHtml(html);
       const articleMatch = html.match(/<article\b[^>]*>([\s\S]*?)<\/article>/i);
       let body = articleMatch ? articleMatch[1] : "";
@@ -864,6 +865,7 @@ async function enrichNewsArticleEvidence(results, maxCandidates = 12) {
         ...item,
         publishedAt: pagePublishedAt || item.publishedAt || "",
         pagePublishedAt: pagePublishedAt || item.pagePublishedAt || "",
+        ...(pageTitle ? { pageTitle } : {}),
         ...(evidence.length >= 180 ? { articleEvidence: evidence } : description ? { articleEvidence: description } : {})
       };
     } catch {
@@ -873,6 +875,41 @@ async function enrichNewsArticleEvidence(results, maxCandidates = 12) {
     }
   }));
 }
+
+function extractNewsPageTitle(html) {
+  const source = String(html || "").slice(0, 180000);
+  for (const pattern of [
+    /<meta\b[^>]*(?:property|name)=["'](?:og:title|twitter:title)["'][^>]*content=["']([^"']{8,240})["'][^>]*>/i,
+    /<meta\b[^>]*content=["']([^"']{8,240})["'][^>]*(?:property|name)=["'](?:og:title|twitter:title)["'][^>]*>/i,
+    /<title\b[^>]*>([\s\S]{8,240}?)<\/title>/i
+  ]) { const m=source.match(pattern); if(m?.[1]) return cleanText(m[1].replace(/&amp;/gi,"&").replace(/&#39;|&apos;/gi,"'").replace(/&quot;/gi,'"')).slice(0,240); }
+  return "";
+}
+function newsTitleTokens(value) {
+  const stop=new Set(["the","and","for","from","with","after","over","into","amid","says","said","has","have","was","were","are","is","in","on","at","to","of","a","an","as","by","news","latest","update"]);
+  return new Set(cleanText(value||"").toLowerCase().replace(/[^a-z0-9]+/g," ").split(/\s+/).filter(x=>x.length>=3&&!stop.has(x)));
+}
+function isNewsResultPageTitleMismatch(item) {
+  const p=cleanText(item?.pageTitle||""), t=cleanText(item?.title||""); if(!p||!t)return false;
+  const a=newsTitleTokens(t), b=newsTitleTokens(p); if(!a.size||!b.size)return false;
+  let n=0; for(const x of a)if(b.has(x))n++;
+  return n<2 && n/Math.min(a.size,b.size)<0.35;
+}
+function hasUnsupportedNewsSummaryTopic(generatedText, sourceEvidence) {
+  const g=String(generatedText||""), s=String(sourceEvidence||"");
+  const groups=[
+    [/(?:आग|अग्नि|जलकर|दमकल|fire|blaze|burnt|burning|firefighters?)/i,/(?:आग|अग्नि|जलकर|दमकल|fire|blaze|burnt|burning|firefighters?)/i],
+    [/(?:प्रदूषण|धुंध|धुआं|धुआँ|वायु गुणवत्ता|air pollution|smog|haze|air quality|AQI)/i,/(?:प्रदूषण|धुंध|धुआं|धुआँ|वायु गुणवत्ता|air pollution|smog|haze|air quality|AQI)/i],
+    [/(?:शेयर बाजार|शेयरों|सेंसेक्स|निफ्टी|stocks?|stock market|sensex|nifty|trading)/i,/(?:शेयर बाजार|शेयरों|सेंसेक्स|निफ्टी|stocks?|stock market|sensex|nifty|trading)/i],
+    [/(?:क्रिकेट|फुटबॉल|हॉकी|टेनिस|मैच|सीरीज|श्रृंखला|खिलाड़ी|cricket|football|hockey|tennis|match|series|player|tournament)/i,/(?:क्रिकेट|फुटबॉल|हॉकी|टेनिस|मैच|सीरीज|श्रृंखला|खिलाड़ी|cricket|football|hockey|tennis|match|series|player|tournament)/i],
+    [/(?:सुप्रीम कोर्ट|हाई कोर्ट|अदालत|न्यायालय|याचिका|फैसला|आदेश|court|tribunal|petition|verdict|judgment|ruling)/i,/(?:सुप्रीम कोर्ट|हाई कोर्ट|अदालत|न्यायालय|याचिका|फैसला|आदेश|court|tribunal|petition|verdict|judgment|ruling)/i],
+    [/(?:प्रधानमंत्री|मुख्यमंत्री|राष्ट्रपति|चुनाव|सरकार|मंत्री|संसद|prime minister|president|election|government|minister|parliament)/i,/(?:प्रधानमंत्री|मुख्यमंत्री|राष्ट्रपति|चुनाव|सरकार|मंत्री|संसद|prime minister|president|election|government|minister|parliament)/i],
+    [/(?:युद्ध|हमला|हवाई हमला|मिसाइल|सेना|संघर्ष|war|attack|airstrike|missile|military|troops|conflict)/i,/(?:युद्ध|हमला|हवाई हमला|मिसाइल|सेना|संघर्ष|war|attack|airstrike|missile|military|troops|conflict)/i],
+    [/(?:पत्नी|पति|प्रेम संबंध|प्रेमिका|प्रेमी|अफेयर|wife|husband|affair|girlfriend|boyfriend)/i,/(?:पत्नी|पति|प्रेम संबंध|प्रेमिका|प्रेमी|अफेयर|wife|husband|affair|girlfriend|boyfriend)/i]
+  ];
+  return groups.some(([a,b])=>a.test(g)&&!b.test(s));
+}
+
 function isHistoricalResearchQuery(query) {
   return /(खूनी रविवार|bloody sunday|रूसी क्रांति|रूस की क्रांति|1905 की क्रांति|रूसी इतिहास|ऐतिहासिक घटना|ऐतिहासिक महत्व|russian revolution|1905 revolution)/i.test(String(query || ""));
 }
@@ -2096,7 +2133,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     const publishedAt = Date.parse(item?.publishedAt || "");
     const now = Date.now();
     // Enforce today's India-local calendar date again at the final display boundary.
-    if (!title || !Number.isFinite(publishedAt) ||
+    if (!title || isNewsResultPageTitleMismatch(item) || !Number.isFinite(publishedAt) ||
         publishedAt < getIndiaDayStartTimestamp(now) || publishedAt > now + 5 * 60 * 1000 ||
         (!allowGlobalNews && !isNewsItemWithinRequestedScope(item, requestedScope))) return false;
     try {
@@ -2225,6 +2262,8 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
       .map(source => cleanText((source?.title || "") + " " + (source?.snippet || ""))).join(" ");
     const sourceEvidence = cleanText((items[index]?.title || "") + " " + (items[index]?.snippet || "") + " " + (items[index]?.articleEvidence || "") + " " + (items[index]?.publishedAt || "") + " " + relatedEvidence);
     const generatedText = entry.headline + " " + entry.summary;
+    if (isNewsResultPageTitleMismatch(items[index])) { rejectCounts.headlineGrounding++; continue; }
+    if (hasUnsupportedNewsSummaryTopic(generatedText, sourceEvidence)) { rejectCounts.missingEvidence++; continue; }
     if (hasUnsupportedCourtDisposition(generatedText, sourceEvidence)) { rejectCounts.unsupportedCourtOutcome++; continue; }
     const isAgniveerExtension = /agniveer|अग्निवीर/i.test(sourceEvidence) &&
       /(?:75\s*%|७५\s*प्रतिशत|remaining\s+75|शेष\s+७५)/i.test(sourceEvidence);
