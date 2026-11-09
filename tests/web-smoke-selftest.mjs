@@ -692,5 +692,5 @@ assert.ok(worker.includes('primaryProvider: "Exa"') && worker.includes('primaryH
 assert.ok(worker.includes("fallbackAttempted: true") && worker.includes("fallbackHttpStatus: fallback.httpStatus ?? null"), "GDELT attempt status must be returned even when no articles are found");
 assert.ok(worker.includes("वैकल्पिक खोज") && worker.includes("fallbackErrorCode: search.fallbackErrorCode ?? null"), "empty news diagnostics must disclose the GDELT attempt and failure code");
 assert.ok(worker.includes("indexedAt: String(article?.seendate || \"\""), "GDELT observation time must be kept separate from publisher publication time");
-assert.ok(worker.includes("searchResults = await enrichNewsArticleEvidence(searchResults.slice(0, globalNewsDigest ? 20 : 12), globalNewsDigest ? 20 : 12);"), "GDELT candidates must still pass original publisher date enrichment with a wider pool for global digests");
+assert.ok(worker.includes("const undatedCandidates = searchResults.filter(item =>") && worker.includes("const enrichedCandidates = await enrichNewsArticleEvidence("), "undated GDELT/Exa candidates must still pass bounded original publisher date enrichment");
 assert.ok(worker.includes("filterFreshNewsResults(searchResults)"), "GDELT candidates must still pass the strict India-day publication filter");
