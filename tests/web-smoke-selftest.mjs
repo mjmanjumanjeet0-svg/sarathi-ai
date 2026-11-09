@@ -630,7 +630,7 @@ assert.ok(worker.includes("maxItemsPerFeed") && worker.includes("for (const feed
 assert.ok(worker.includes("https://feeds.bbci.co.uk/news/world/rss.xml") && worker.includes("https://feeds.bbci.co.uk/news/world/asia/rss.xml"), "RSS fallback must include BBC international feeds");
 assert.ok(worker.includes('publisher === "bbc.co.uk"') && worker.includes("bbc" + String.fromCharCode(92) + ".co" + String.fromCharCode(92) + ".uk"), "BBC UK articles must pass trusted publisher validation");
 assert.ok(worker.includes("function selectDiverseGlobalNewsResults") && worker.includes("(counts.get(publisher) || 0) >= 2"), "global news must cap each publisher at two stories");
-assert.ok(worker.includes("globalCoverageMissing") && worker.includes("globalPublishers.size < 2"), "global digest must fail closed without an international-feed story and two independent publishers");
+assert.ok(worker.includes("globalCoverageMissing") && worker.includes("globalIndiaCoverageMissing") && worker.includes("globalPublishers.size < 2"), "global digest must fail closed unless it has both India and world feed coverage plus two independent publishers");
 
 
 assert.ok(worker.includes('response.status === 402 && isNewsQuery && searchOptions.news !== false'), "GDELT fallback must be limited to Exa credit exhaustion on news queries");
