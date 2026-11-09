@@ -308,7 +308,90 @@ function validHttpUrl(value) {
     return false;
   }
 }
-async function searchFreeNewsFallback(searchOptions = {}) {
+function decodeNewsXmlText(value) {
+  return String(value || "")
+    .replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, "$1")
+    .replace(/&amp;/gi, "&").replace(/&quot;/gi, '"')
+    .replace(/&#39;|&apos;/gi, "'").replace(/&lt;/gi, "<")
+    .replace(/&gt;/gi, ">").replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)))
+    .replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+}
+function rssTagValue(block, tagNames) {
+  for (const rawTag of tagNames) {
+    const tag = rawTag.replace(/[^a-z0-9:_-]/gi, "");
+    const match = block.match(new RegExp("<" + tag + "(?:\\s[^>]*)?>([\\s\\S]*?)</" + tag + "\\s*>", "i"));
+    if (match) return match[1];
+  }
+  return "";
+}
+async function searchPublisherRssFallback() {
+  // Publisher-operated RSS feeds provide an independent free fallback.
+  // Original-page date enrichment and the strict India-day filter still apply.
+  const feeds = [
+    { url: "https://indianexpress.com/section/india/feed/", publisher: "indianexpress.com" },
+    { url: "https://indianexpress.com/section/world/feed/", publisher: "indianexpress.com" },
+    { url: "https://indianexpress.com/section/business/feed/", publisher: "indianexpress.com" },
+    { url: "https://indianexpress.com/section/technology/science/feed/", publisher: "indianexpress.com" },
+    { url: "https://indianexpress.com/section/sports/feed/", publisher: "indianexpress.com" },
+    { url: "https://www.thehindu.com/news/national/feeder/default.rss", publisher: "thehindu.com" },
+    { url: "https://www.thehindu.com/news/international/feeder/default.rss", publisher: "thehindu.com" },
+    { url: "https://www.thehindu.com/business/feeder/default.rss", publisher: "thehindu.com" },
+    { url: "https://www.thehindu.com/sci-tech/feeder/default.rss", publisher: "thehindu.com" },
+    { url: "https://www.thehindu.com/sport/feeder/default.rss", publisher: "thehindu.com" },
+    { url: "https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=1", publisher: "pib.gov.in" }
+  ];
+  const settled = await Promise.all(feeds.map(async feed => {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 6500);
+    try {
+      const response = await fetch(feed.url, {
+        headers: { "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml;q=0.9, */*;q=0.5" },
+        signal: controller.signal
+      });
+      if (!response.ok) return { publisher: feed.publisher, status: response.status, error: "RSS_HTTP_" + response.status, items: [] };
+      const xml = (await response.text()).slice(0, 1200000);
+      const blocks = [...xml.matchAll(/<(item|entry)\b[^>]*>([\s\S]*?)<\/\1>/gi)].map(match => match[2]);
+      const items = blocks.map(block => {
+        const title = decodeNewsXmlText(rssTagValue(block, ["title"])).slice(0, 300);
+        let url = decodeNewsXmlText(rssTagValue(block, ["link", "guid"]));
+        const atomLink = block.match(/<link\b[^>]*href=["']([^"']+)["'][^>]*\/?\s*>/i);
+        if ((!url || !/^https?:/i.test(url)) && atomLink) url = decodeNewsXmlText(atomLink[1]);
+        const dateText = decodeNewsXmlText(rssTagValue(block, ["pubDate", "published", "dc:date", "date"]));
+        const timestamp = Date.parse(dateText);
+        if (!title || !validHttpUrl(url) || !Number.isFinite(timestamp)) return null;
+        let publisher = feed.publisher;
+        try { publisher = new URL(url).hostname.toLowerCase().replace(/^www\./, ""); } catch {}
+        if (!(publisher === "indianexpress.com" || publisher.endsWith(".indianexpress.com") ||
+              publisher === "thehindu.com" || publisher.endsWith(".thehindu.com") ||
+              publisher === "pib.gov.in" || publisher.endsWith(".pib.gov.in"))) return null;
+        return { title, url, publisher, publishedAt: new Date(timestamp).toISOString(), feedPublishedAt: new Date(timestamp).toISOString(), snippet: decodeNewsXmlText(rssTagValue(block, ["description", "summary"])).slice(0, 900) };
+      }).filter(Boolean);
+      return { publisher: feed.publisher, status: response.status, error: null, items };
+    } catch (error) {
+      return { publisher: feed.publisher, status: error?.name === "AbortError" ? 504 : 502, error: error?.name === "AbortError" ? "RSS_TIMEOUT" : "RSS_NETWORK_ERROR", items: [] };
+    } finally {
+      clearTimeout(timeout);
+    }
+  }));
+  const seen = new Set();
+  const results = settled.flatMap(item => item.items).filter(item => {
+    const key = item.url.split("#")[0].replace(/\/$/, "").toLowerCase();
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+  return {
+    results: results.slice(0, 75),
+    provider: "Publisher RSS",
+    httpStatus: results.length ? 200 : (settled.some(item => item.status === 200) ? 200 : 504),
+    errorCode: results.length ? null : "RSS_NO_VALID_ITEMS",
+    rawResultCount: results.length,
+    feedDiagnostics: settled.map(({ publisher, status, error, items }) => ({ publisher, httpStatus: status, errorCode: error, resultCount: items.length }))
+  };
+}
+
+async function searchGdeltNewsFallback(searchOptions = {}) {
   // GDELT DOC is a public news-index fallback; it needs no API key and does
   // not create a second metered search-provider account.
   const now = new Date();
@@ -383,6 +466,38 @@ async function searchFreeNewsFallback(searchOptions = {}) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+
+async function searchFreeNewsFallback(searchOptions = {}) {
+  // Run GDELT and publisher-operated RSS in parallel so a slow index cannot
+  // prevent independent publisher feeds from returning usable headlines.
+  const [gdelt, rss] = await Promise.all([
+    searchGdeltNewsFallback(searchOptions),
+    searchPublisherRssFallback()
+  ]);
+  const combined = [...(gdelt.results || []), ...(rss.results || [])];
+  const seen = new Set();
+  const results = combined.filter(item => {
+    const key = String(item.url || "").split("#")[0].replace(/\/$/, "").toLowerCase();
+    if (!key || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 75);
+  return {
+    results,
+    provider: "GDELT + Publisher RSS",
+    httpStatus: results.length ? 200 : (rss.httpStatus || gdelt.httpStatus || 504),
+    errorCode: results.length ? null : (rss.errorCode || gdelt.errorCode || "NO_FALLBACK_RESULTS"),
+    rawResultCount: results.length,
+    gdeltHttpStatus: gdelt.httpStatus ?? null,
+    gdeltErrorCode: gdelt.errorCode ?? null,
+    gdeltRawResultCount: gdelt.rawResultCount ?? 0,
+    rssHttpStatus: rss.httpStatus ?? null,
+    rssErrorCode: rss.errorCode ?? null,
+    rssRawResultCount: rss.rawResultCount ?? 0,
+    feedDiagnostics: rss.feedDiagnostics || []
+  };
 }
 
 async function searchInternet(query, env, maxResults = null, searchOptions = {}) {
