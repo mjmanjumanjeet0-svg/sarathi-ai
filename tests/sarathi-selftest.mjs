@@ -300,3 +300,18 @@ const separateStories = groupNewsByEvent([
   { title: "Egypt election results announced", url: "https://www.example-two.com/world/egypt-election" }
 ]);
 assert.equal(separateStories.length, 2, "unrelated news in the same country must not be merged");
+
+
+// News fallback must search the requested geography and interleave publisher RSS
+// with GDELT so a large un-enrichable index batch cannot crowd it out.
+const gdeltQueryStart = source.indexOf("function getGdeltNewsQuery(scope) {");
+const gdeltQueryEnd = source.indexOf("\\nasync function searchGdeltNewsFallback", gdeltQueryStart);
+assert.ok(gdeltQueryStart >= 0 && gdeltQueryEnd > gdeltQueryStart, "GDELT query helper must exist");
+const getGdeltNewsQuery = new Function(source.slice(gdeltQueryStart, gdeltQueryEnd) + "\\nreturn getGdeltNewsQuery;")();
+assert.match(getGdeltNewsQuery("Bihar"), /Bihar.*Patna.*Siwan/, "Bihar fallback must search Bihar locations, not India-wide news");
+assert.equal(getGdeltNewsQuery("Patna"), "Patna", "Patna fallback must be locally scoped");
+assert.match(getGdeltNewsQuery("world"), /NOT India/, "world-only fallback must exclude India-only stories");
+assert.match(source, /const combined = \[\];[\\s\\S]{0,260}if \(gdeltItems\[i\]\) combined\.push[\\s\\S]{0,120}if \(rssItems\[i\]\) combined\.push/, "GDELT and RSS candidates must be interleaved");
+assert.match(source, /geographicScope: requestedNewsScope/, "the requested geography must reach the fallback provider");
+assert.match(source, /अंतरराष्ट्रीय कवरेज नहीं मिली/, "global coverage warning must identify missing international coverage");
+assert.match(source, /भारत-केंद्रित कवरेज नहीं मिली/, "global coverage warning must identify missing India coverage");
