@@ -261,7 +261,7 @@ assert.deepEqual([...courtRecordPartyNames("Photo Credit: Ashish Tripathi. Bylin
 assert.match(source, /आज रात 12 बजे से अभी तक प्रकाशित परिणाम शामिल करो/, "news instructions must use the current India-local calendar day, not a rolling 48-hour window");
 assert.match(source, /केवल भारतीय समय \(Asia\/Kolkata\)/, "same-day news instructions must explicitly use India time");
 assert.doesNotMatch(source.slice(source.indexOf("const newsInstruction ="), source.indexOf("const fiveCategoryNewsInstruction")), /पिछले 48 घंटों में प्रकाशित/, "the old rolling 48-hour instruction must not conflict with the day filter");
-assert.match(source, /searchResults = searchResults\.slice\(0, 8\)/, "general news must retain separate stories from the same publisher");
+assert.match(source, /searchResults = globalNewsDigest[\s\S]{0,140}selectDiverseGlobalNewsResults\(searchResults, 8\)[\s\S]{0,100}:\s*searchResults\.slice\(0, 8\)/, "global news must use publisher diversity while general news retains separate stories");
 
 const groupStart = source.indexOf("function groupNewsByEvent(results) {");
 const groupEnd = source.indexOf("\nfunction dedupeNewsPublishers", groupStart);
