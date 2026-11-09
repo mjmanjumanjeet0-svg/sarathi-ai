@@ -102,9 +102,9 @@ assert.match(combinedNote, /लेख-अंश पर आधारित/);
 assert.match(combinedNote, /अपुष्ट खबरें नहीं जोड़ी गईं/);
 
 const headlineSummaryStart = source.indexOf("function hasHeadlineSummaryTopicConflict(");
-const headlineSummaryEnd = source.indexOf("\\nfunction hasUnsupportedNewsSummaryTopic", headlineSummaryStart);
+const headlineSummaryEnd = source.indexOf("\nfunction hasUnsupportedNewsSummaryTopic", headlineSummaryStart);
 assert.ok(headlineSummaryStart >= 0 && headlineSummaryEnd > headlineSummaryStart, "headline-summary topic consistency guard must exist");
-const hasHeadlineSummaryTopicConflict = new Function(source.slice(headlineSummaryStart, headlineSummaryEnd) + "\\nreturn hasHeadlineSummaryTopicConflict;")();
+const hasHeadlineSummaryTopicConflict = new Function(source.slice(headlineSummaryStart, headlineSummaryEnd) + "\nreturn hasHeadlineSummaryTopicConflict;")();
 assert.equal(hasHeadlineSummaryTopicConflict("मुंबई में भीषण आग की खबर", "दिल्ली में वायु प्रदूषण बढ़ने की खबर है।", "Mumbai fire: blaze breaks out in Dongri"), true,
   "a pollution summary must not be attached to a fire headline and source link");
 assert.equal(hasHeadlineSummaryTopicConflict("दिल्ली में वायु गुणवत्ता खराब", "प्रदूषण और धुंध से लोगों को परेशानी हुई।", "Delhi air quality worsens amid smog"), false,
