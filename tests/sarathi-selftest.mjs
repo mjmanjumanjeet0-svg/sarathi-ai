@@ -258,9 +258,9 @@ assert.match(source, /Limit only after verification/, "a single-story limit must
 // headline does not contain a broad India signal (for example, a district-only
 // Bihar story). India-wide requests retain the stricter India relevance gate.
 const relevantFilterStart = source.indexOf("function filterRelevantSearchResults(query, results, allowGlobalNews = false, requestedScope = \"India\") {");
-const relevantFilterEnd = source.indexOf("\\n}\\n", relevantFilterStart);
+const relevantFilterEnd = source.indexOf("\n}\n", relevantFilterStart);
 assert.ok(relevantFilterStart >= 0 && relevantFilterEnd > relevantFilterStart, "news relevance filter must accept requested geographic scope");
-const localAwareRelevantFilter = new Function("URL", "isIndiaFocusedNewsItem", source.slice(relevantFilterStart, relevantFilterEnd + 3) + "\\nreturn filterRelevantSearchResults;")(
+const localAwareRelevantFilter = new Function("URL", "isIndiaFocusedNewsItem", source.slice(relevantFilterStart, relevantFilterEnd + 3) + "\nreturn filterRelevantSearchResults;")(
   URL, item => /india|भारतीय|भारत/i.test(String(item.title || "") + " " + String(item.snippet || ""))
 );
 const biharLocalStory = { title: "Siwan district school receives new science laboratory", url: "https://indianexpress.com/article/cities/patna/siwan-school-lab-123/", snippet: "A local development in Siwan district." };
