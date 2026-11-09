@@ -41,6 +41,16 @@ assert.deepEqual(filterFreshNewsResults([
   { id: "future", publishedAt: "2026-11-08T19:00:00.000Z" },
   { id: "undated" }
 ], sampleFreshnessNow).map(item => item.id), ["today"], "only articles published today in India may pass the news freshness filter");
+
+const geoScopeStart = worker.indexOf("function getRequestedNewsGeographicScope(text) {");
+const geoScopeEnd = worker.indexOf("\\n}", geoScopeStart);
+assert.ok(geoScopeStart >= 0 && geoScopeEnd > geoScopeStart, "news geographic-scope detector must exist");
+const getRequestedNewsGeographicScope = new Function("isGlobalNewsQuery", worker.slice(geoScopeStart, geoScopeEnd + 2) + "\\nreturn getRequestedNewsGeographicScope;")(value => /भारत.*दुनिया|world news/i.test(String(value || "")));
+assert.equal(getRequestedNewsGeographicScope("बिहार की आज की खबरें बताओ"), "बिहार", "Bihar request must stay Bihar-focused");
+assert.equal(getRequestedNewsGeographicScope("पटना में आज क्या खबर है"), "पटना", "Patna request must stay Patna-focused");
+assert.equal(getRequestedNewsGeographicScope("आज भारत की खबरें"), "India", "India request must stay India-focused");
+assert.equal(getRequestedNewsGeographicScope("भारत और दुनिया की खबरें"), "India and world", "explicit India-and-world request must include both scopes");
+
 const currentNewsStart = worker.indexOf("function isCurrentNewsQuery(text) {");
 const currentNewsEnd = worker.indexOf("\n}", currentNewsStart);
 assert.ok(currentNewsStart >= 0 && currentNewsEnd > currentNewsStart, "current-news query detector must exist");
