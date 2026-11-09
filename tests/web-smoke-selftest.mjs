@@ -601,4 +601,16 @@ assert.ok(worker.includes('zeroCostMode: true'), "disabled media APIs must clear
 assert.ok(worker.includes('"/api/media/image"') && worker.includes('"/api/media/understand"'), "media API routes must be explicit and auditable");
 assert.ok(worker.includes("if (!env.EXA_API_KEY)"), "web search must report a missing configured Exa key rather than silently assuming search is available");
 
+
+// Search APIs may omit publishedDate while the original publisher exposes it.
+const dateExtractorStart = worker.indexOf("function extractNewsPublishedDateFromHtml(html, now = Date.now()) {");
+const dateExtractorEnd = worker.indexOf("\n}\n", dateExtractorStart);
+assert.ok(dateExtractorStart >= 0 && dateExtractorEnd > dateExtractorStart, "publisher publication-date extractor must exist");
+const extractNewsPublishedDateFromHtml = new Function(worker.slice(dateExtractorStart, dateExtractorEnd + 3) + "\nreturn extractNewsPublishedDateFromHtml;")();
+const htmlPublished = '<meta property="article:published_time" content="2026-11-09T01:08:00+05:30"><meta property="article:modified_time" content="2026-11-09T05:00:00+05:30">';
+assert.equal(extractNewsPublishedDateFromHtml(htmlPublished, Date.parse("2026-11-09T05:38:00+05:30")), "2026-11-08T19:38:00.000Z", "published date must be recovered from original publisher metadata");
+const htmlModifiedOnly = '<meta property="article:modified_time" content="2026-11-09T05:00:00+05:30">';
+assert.equal(extractNewsPublishedDateFromHtml(htmlModifiedOnly, Date.parse("2026-11-09T05:38:00+05:30")), "", "modified date alone must not qualify an old article as newly published");
+assert.match(worker, /searchResults = await enrichNewsArticleEvidence\(searchResults\.slice\(0, 12\)\);[\s\S]{0,500}filterFreshNewsResults\(searchResults\)/, "publisher date enrichment must happen before the strict same-day filter");
+
 console.log("WEB SMOKE SELF-TEST: " + requiredIds.length + " required IDs, duplicate-ID check, local scripts, voice wiring and core styles passed");
