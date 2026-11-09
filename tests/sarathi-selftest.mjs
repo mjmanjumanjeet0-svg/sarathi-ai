@@ -101,6 +101,17 @@ assert.equal((combinedNote.match(/ध्यान दें:/g) || []).length, 1
 assert.match(combinedNote, /लेख-अंश पर आधारित/);
 assert.match(combinedNote, /अपुष्ट खबरें नहीं जोड़ी गईं/);
 
+const headlineSummaryStart = source.indexOf("function hasHeadlineSummaryTopicConflict(");
+const headlineSummaryEnd = source.indexOf("\\nfunction hasUnsupportedNewsSummaryTopic", headlineSummaryStart);
+assert.ok(headlineSummaryStart >= 0 && headlineSummaryEnd > headlineSummaryStart, "headline-summary topic consistency guard must exist");
+const hasHeadlineSummaryTopicConflict = new Function(source.slice(headlineSummaryStart, headlineSummaryEnd) + "\\nreturn hasHeadlineSummaryTopicConflict;")();
+assert.equal(hasHeadlineSummaryTopicConflict("मुंबई में भीषण आग की खबर", "दिल्ली में वायु प्रदूषण बढ़ने की खबर है।", "Mumbai fire: blaze breaks out in Dongri"), true,
+  "a pollution summary must not be attached to a fire headline and source link");
+assert.equal(hasHeadlineSummaryTopicConflict("दिल्ली में वायु गुणवत्ता खराब", "प्रदूषण और धुंध से लोगों को परेशानी हुई।", "Delhi air quality worsens amid smog"), false,
+  "a summary on the same topic as its headline must remain valid");
+assert.equal(hasHeadlineSummaryTopicConflict("शेयर बाजार में गिरावट", "निफ्टी और सेंसेक्स में गिरावट दर्ज हुई।", "Indian stock market falls"), false,
+  "valid market summaries must not be rejected");
+
 const courtOutcomeStart = source.indexOf("function hasUnsupportedCourtDisposition(");
 const courtOutcomeEnd = source.indexOf("\nfunction formatCurrentNewsSummaryReply", courtOutcomeStart);
 assert.ok(courtOutcomeStart >= 0 && courtOutcomeEnd > courtOutcomeStart, "court disposition guard must exist");
