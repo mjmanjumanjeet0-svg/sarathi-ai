@@ -491,15 +491,22 @@ async function searchInternet(query, env, maxResults = null, searchOptions = {})
       // trusted-source, duplicate-event and summary validators still run later.
       if (response.status === 402 && isNewsQuery && searchOptions.news !== false) {
         const fallback = await searchFreeNewsFallback(searchOptions);
-        if (fallback.results?.length) {
-          return {
-            ...fallback,
-            primaryProvider: "Exa",
-            primaryHttpStatus: 402,
-            attempted: true,
-            retryable: false
-          };
-        }
+        // Return the fallback attempt even when it yields zero candidates.
+        // Otherwise the caller reports only Exa HTTP 402 and hides whether GDELT
+        // was reached, what HTTP status it returned, and whether it found articles.
+        return {
+          ...fallback,
+          provider: fallback.provider || "GDELT",
+          rawResultCount: fallback.rawResultCount ?? fallback.results?.length ?? 0,
+          primaryProvider: "Exa",
+          primaryHttpStatus: 402,
+          fallbackAttempted: true,
+          fallbackProvider: "GDELT",
+          fallbackHttpStatus: fallback.httpStatus ?? null,
+          fallbackErrorCode: fallback.errorCode ?? (fallback.results?.length ? null : "GDELT_NO_CANDIDATES"),
+          attempted: true,
+          retryable: false
+        };
       }
       let warning = "Exa सर्च सेवा ने HTTP " + response.status + " लौटाया।";
       if (response.status === 401 || response.status === 403) warning = "Exa API Key स्वीकार नहीं हुई। Cloudflare Secret का नाम EXA_API_KEY और उसकी वैधता जाँचें।";
@@ -2790,8 +2797,9 @@ export default {
           return jsonResponse({
             success: true,
             reply: todayLabel + " के लिए आज ही प्रकाशित और तारीख-जाँचे गए भरोसेमंद समाचार परिणाम नहीं मिले। " +
-              "तकनीकी स्थिति: Exa HTTP " + (search.httpStatus ?? "उपलब्ध नहीं") +
-              ", कच्चे परिणाम " + (search.rawResultCount ?? search.results?.length ?? 0) +
+              "तकनीकी स्थिति: मुख्य खोज Exa HTTP " + (search.primaryHttpStatus ?? search.httpStatus ?? "उपलब्ध नहीं") +
+              (search.fallbackAttempted ? "; वैकल्पिक खोज " + (search.fallbackProvider || "GDELT") + " HTTP " + (search.fallbackHttpStatus ?? "उपलब्ध नहीं") + " (" + (search.fallbackErrorCode || "कोई त्रुटि कोड नहीं") + ")" : "") +
+              ", प्रदाता से मिले कच्चे परिणाम " + (search.rawResultCount ?? search.results?.length ?? 0) +
               ", तारीख़-जाँच के बाद योग्य परिणाम " + searchResults.length +
               "। बिना तारीख़ की पुष्टि वाले लेख शामिल नहीं किए गए।",
             ...dateTime,
@@ -2805,6 +2813,10 @@ export default {
               provider: search.provider || "Exa",
               primaryProvider: search.primaryProvider || "Exa",
               primaryHttpStatus: search.primaryHttpStatus ?? search.httpStatus ?? null,
+              fallbackAttempted: search.fallbackAttempted === true,
+              fallbackProvider: search.fallbackProvider ?? null,
+              fallbackHttpStatus: search.fallbackHttpStatus ?? null,
+              fallbackErrorCode: search.fallbackErrorCode ?? null,
               attempted: search.attempted === true,
               httpStatus: search.httpStatus ?? null,
               errorCode: search.errorCode ?? null,
