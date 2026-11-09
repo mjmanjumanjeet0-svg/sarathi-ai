@@ -60,6 +60,21 @@ const buildFiveCategoryNewsSearchQuery = scopeFunctions.buildFiveCategoryNewsSea
 assert.match(buildFiveCategoryNewsSearchQuery("बिहार"), /बिहार only/i, "five-category Bihar query must remain Bihar-only");
 assert.match(buildFiveCategoryNewsSearchQuery("world"), /excluding India-only stories/i, "five-category world query must exclude India-only stories");
 assert.match(buildFiveCategoryNewsSearchQuery("India and world"), /both Indian and international reporting/i, "five-category India-and-world query must request both scopes");
+const scopeFilterStart = worker.indexOf("function getNewsScopeEvidence(item) {");
+const scopeFilterEnd = worker.indexOf("\nfunction isCurrentNewsQuery", scopeFilterStart);
+assert.ok(scopeFilterStart >= 0 && scopeFilterEnd > scopeFilterStart, "requested geography result filter must exist");
+const scopeFilterSource = worker.slice(scopeFilterStart, scopeFilterEnd);
+const scopeFilterFns = new Function("cleanText", "isIndiaFocusedNewsItem", scopeFilterSource + "\nreturn { isNewsItemWithinRequestedScope, isWorldNewsItem };")(
+  value => String(value || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim(),
+  item => /भारत|india|बिहार|bihar|पटना|patna|sensex|nifty/i.test(String(item?.title || "") + " " + String(item?.snippet || ""))
+);
+const isNewsItemWithinRequestedScope = scopeFilterFns.isNewsItemWithinRequestedScope;
+assert.equal(isNewsItemWithinRequestedScope({ title: "Patna metro project update", snippet: "Bihar government reviews work" }, "Bihar"), true);
+assert.equal(isNewsItemWithinRequestedScope({ title: "India celebrates Diwali", snippet: "Nationwide festivities" }, "Bihar"), false);
+assert.equal(isNewsItemWithinRequestedScope({ title: "Stock markets decline in early trade", snippet: "Indian stocks and Sensex fall" }, "Patna"), false);
+assert.equal(isNewsItemWithinRequestedScope({ title: "One killed in Indonesia helicopter crash", coverage: "world" }, "world"), true);
+assert.equal(isNewsItemWithinRequestedScope({ title: "Stock markets decline in early trade", snippet: "Indian stocks and Sensex fall" }, "world"), false);
+assert.equal(isNewsItemWithinRequestedScope({ title: "India celebrates Diwali" }, "India"), true);
 
 const currentNewsStart = worker.indexOf("function isCurrentNewsQuery(text) {");
 const currentNewsEnd = worker.indexOf("\n}", currentNewsStart);
