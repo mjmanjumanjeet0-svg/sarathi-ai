@@ -1816,10 +1816,16 @@ function isGlobalNewsQuery(text) {
 }
 
 
+function isWorldOnlyNewsQuery(text) {
+  const value = String(text || "");
+  const explicitlyIndia = /भारत|इंडिया|\\bindia\\b|भारतीय|देश की खबर|देश के समाचार/i.test(value);
+  return !explicitlyIndia && /दुनिया|विश्व|अंतरराष्ट्रीय|\\bworld\\b|\\bglobal\\b|\\binternational\\b/i.test(value);
+}
+
 function getRequestedNewsGeographicScope(text) {
   const value = String(text || "");
   if (isGlobalNewsQuery(value)) return "India and world";
-  if (/(भारत|इंडिया|india|भारतीय|देश की खबर|देश के समाचार)/i.test(value)) return "India";
+  if (isWorldOnlyNewsQuery(value)) return "world";
   const places = [
     "Bihar","बिहार","Patna","पटना","Siwan","सिवान","Gopalganj","गोपालगंज","Chapra","छपरा",
     "Muzaffarpur","मुजफ्फरपुर","Darbhanga","दरभंगा","Gaya","गया","Bhagalpur","भागलपुर",
@@ -1829,8 +1835,23 @@ function getRequestedNewsGeographicScope(text) {
     "Nepal","नेपाल","Pakistan","पाकिस्तान","China","चीन","America","अमेरिका","United States",
     "Russia","रूस","Japan","जापान","Bangladesh","बांग्लादेश","Sri Lanka","श्रीलंका"
   ];
-  const found = places.find(place => new RegExp("(^|[^\\p{L}\\p{N}])" + place + "([^\\p{L}\\p{N}]|$)", "iu").test(value));
-  return found || "";
+  const found = places.find(place => new RegExp("(^|[^\\\\p{L}\\\\p{N}])" + place + "([^\\\\p{L}\\\\p{N}]|$)", "iu").test(value));
+  if (found) return found;
+  if (/(भारत|इंडिया|\\bindia\\b|भारतीय|देश की खबर|देश के समाचार)/i.test(value)) return "India";
+  return "";
+}
+
+function buildFiveCategoryNewsSearchQuery(scope) {
+  const target = scope || "India";
+  const geography = target === "India and world"
+    ? "India and countries around the world, with both Indian and international reporting"
+    : target === "world"
+      ? "countries around the world, excluding India-only stories and incidental India mentions"
+      : target === "India"
+        ? "India, excluding international stories with only incidental India mentions"
+        : target + " only, excluding unrelated India-wide and international stories";
+  return "Latest news published today specifically about " + geography +
+    ". Find one distinct, substantive, date-verified reported event in each requested category: government and public policy; economy and business; courts and major legal decisions; science, health and technology; sports. Do not force a category if no qualifying report exists. Use established publishers, direct article URLs and exact publication timestamps. Exclude opinion, live blogs, generic roundups, duplicate events, undated pages and stories outside the requested geography.";
 }
 
 function isCurrentNewsQuery(text) {
@@ -2777,7 +2798,7 @@ export default {
       const searchQuery = isSpecificCourtNewsQuery(userText)
         ? "India Supreme Court and High Court latest judgments orders rulings hearings petitions bail constitutional bench court decisions published today (India local date). Search only substantive judicial proceedings and decisions by the Supreme Court of India or Indian High Courts. Exclude bomb threats, security alerts, incidents at court buildings, unrelated news roundups, opinion, live blogs, and stories that merely mention a court. Return direct article URLs and exact publication timestamps."
         : isCurrentNewsQuestion
-        ? (isFiveCategoryNewsQuery(userText) ? "Latest India news, one distinct reported event in each category: government policy, economy and markets, India court and judiciary news (Supreme Court of India orders/judgments, High Court rulings, constitutional benches, bail and major tribunal decisions published today (India local date); search court coverage deliberately, not just incidental mentions), Indian science research and technology discoveries (ISRO, IISc, CSIR, ICMR, space missions, satellites, clinical research, scientific discoveries), and Indian sports (cricket, football, hockey, badminton, tennis, wrestling, athletics, tournaments and athlete results). Seek at least one distinct recent sports report as well as one result in every other category. Prioritize substantive science and research headlines, not defence weapon tests, AQI/weather reports, school-assembly roundups, opinion pieces, live blogs, or international stories with incidental India mentions. Return articles published today in India from established publishers with publication timestamps and direct article URLs." : (globalNewsDigest ? "All major news published today in India and around the world: important national and international developments in government, politics, diplomacy, economy, courts, science, health, technology, climate, education and sports. Include genuinely significant events from different countries, not only stories mentioning India. Prefer direct reporting from established Indian and international publishers; exclude opinion, live blogs, generic roundups, undated pages and duplicate reports. Return direct article URLs and exact publication timestamps." : (requestedNewsScope && requestedNewsScope !== "India" ? "All major news published today specifically in " + requestedNewsScope + ": important local and regional developments in government, politics, economy, courts, science, health, education, transport, weather and sports. Focus only on events materially concerning " + requestedNewsScope + "; exclude unrelated India-wide or international stories. Return direct article URLs and exact publication timestamps." : "All major news published today in India: major reported developments in government, politics, economy, business, courts, science, technology, weather and sports. Prioritize distinct, substantive Indian news events from established publishers; exclude opinion pieces, live blogs, daily roundups and international stories with only incidental India mentions.")))
+        ? (isFiveCategoryNewsQuery(userText) ? buildFiveCategoryNewsSearchQuery(requestedNewsScope) : (globalNewsDigest ? "All major news published today in India and around the world: important national and international developments in government, politics, diplomacy, economy, courts, science, health, technology, climate, education and sports. Include genuinely significant events from different countries, not only stories mentioning India. Prefer direct reporting from established Indian and international publishers; exclude opinion, live blogs, generic roundups, undated pages and duplicate reports. Return direct article URLs and exact publication timestamps." : (requestedNewsScope && requestedNewsScope !== "India" ? "All major news published today specifically in " + requestedNewsScope + ": important local and regional developments in government, politics, economy, courts, science, health, education, transport, weather and sports. Focus only on events materially concerning " + requestedNewsScope + "; exclude unrelated India-wide or international stories. Return direct article URLs and exact publication timestamps." : "All major news published today in India: major reported developments in government, politics, economy, business, courts, science, technology, weather and sports. Prioritize distinct, substantive Indian news events from established publishers; exclude opinion pieces, live blogs, daily roundups and international stories with only incidental India mentions.")))
         : isGoldRateQuestion || isSilverRateQuestion
           ? "India city-wise retail rate today 22K 24K gold 999 silver per gram per 10 gram per kilogram source updated time " + indiaToday
           : isDiamondPriceQuestion
