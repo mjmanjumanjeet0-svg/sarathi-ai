@@ -854,7 +854,9 @@ function extractNewsPublishedDateFromHtml(html, now = Date.now()) {
 }
 
 async function enrichNewsArticleEvidence(results, maxCandidates = 12) {
-  const candidates = (Array.isArray(results) ? results : []).slice(0, Math.max(1, Math.min(24, maxCandidates)));
+  const candidates = (Array.isArray(results) ? results : [])
+    .filter(item => !(item?.feedPublishedAt && Number.isFinite(Date.parse(item.feedPublishedAt))))
+    .slice(0, Math.max(1, Math.min(24, maxCandidates)));
   return await Promise.all(candidates.map(async item => {
     if (!item || typeof item.url !== "string" || !/^https:\/\//i.test(item.url)) return item;
     const controller = new AbortController();
@@ -2982,9 +2984,31 @@ export default {
       searchResults = filterRelevantSearchResults(userText, search.results, globalNewsDigest);
       if (isHistoricalQuestion) searchResults = filterHistoricalSources(userText, searchResults);
       if (isCurrentNewsQuestion) {
-        // Recover publisher datePublished metadata BEFORE strict freshness filtering.
-        // Exa can return URLs without publishedDate; filtering first loses them.
-        searchResults = await enrichNewsArticleEvidence(searchResults.slice(0, globalNewsDigest ? 20 : 12), globalNewsDigest ? 20 : 12);
+        // Publisher RSS already carries the publisher-supplied pubDate. Keep every
+        // dated RSS candidate in the freshness pool; do not let a 12-page HTML
+        // enrichment cap silently discard later RSS feeds (especially Bihar/Patna
+        // and national feeds when GDELT candidates appear first).
+        const datedFeedResults = searchResults.filter(item =>
+          item?.feedPublishedAt && Number.isFinite(Date.parse(item.feedPublishedAt))
+        );
+        const datedFeedUrls = new Set(datedFeedResults.map(item => canonicalNewsUrl(item.url)).filter(Boolean));
+        // Exa/GDELT candidates without publisher RSS dates still need page metadata.
+        // Limit network enrichment to a small bounded pool to avoid request timeouts.
+        const undatedCandidates = searchResults.filter(item =>
+          !datedFeedUrls.has(canonicalNewsUrl(item.url)) && !item?.feedPublishedAt
+        ).slice(0, globalNewsDigest ? 8 : 6);
+        const enrichedCandidates = await enrichNewsArticleEvidence(
+          undatedCandidates,
+          globalNewsDigest ? 8 : 6
+        );
+        const mergedNewsCandidates = [...datedFeedResults, ...enrichedCandidates];
+        const mergedSeenUrls = new Set();
+        searchResults = mergedNewsCandidates.filter(item => {
+          const key = canonicalNewsUrl(item.url);
+          if (!key || mergedSeenUrls.has(key)) return false;
+          mergedSeenUrls.add(key);
+          return true;
+        });
         // Keep the newest same-day report for a repeated event, then deduplicate
         // event headlines and publishers. Exa relevance order is not chronological.
         searchResults = groupNewsByEvent(sortNewsByPublicationTime(filterFreshNewsResults(searchResults)));
