@@ -1865,26 +1865,26 @@ function isNewsItemWithinRequestedScope(item, scope) {
   if (!evidence) return false;
   if (scope === "India") return isIndiaFocusedNewsItem(item);
   if (scope === "world") {
-    if (item?.coverage === "world") return true;
     if (isIndiaFocusedNewsItem(item)) return false;
-    return /\\b(?:united states|u\\.s\\.|uk|united kingdom|france|germany|ukraine|russia|china|japan|indonesia|paraguay|iran|israel|pakistan|nepal|bangladesh|sri lanka|australia|canada|brazil|mexico|south korea|north korea|taiwan|european union|africa)\\b|अमेरिका|ब्रिटेन|फ्रांस|जर्मनी|यूक्रेन|रूस|चीन|जापान|इंडोनेशिया|पराग्वे|ईरान|इजराइल|पाकिस्तान|नेपाल|बांग्लादेश|श्रीलंका|ऑस्ट्रेलिया|कनाडा|ब्राजील|यूरोपीय संघ/i.test(evidence);
+    if (item?.coverage === "world") return true;
+    return /\b(?:united states|u\.s\.|uk|united kingdom|france|germany|ukraine|russia|china|japan|indonesia|paraguay|iran|israel|pakistan|nepal|bangladesh|sri lanka|australia|canada|brazil|mexico|south korea|north korea|taiwan|european union|africa)\b|अमेरिका|ब्रिटेन|फ्रांस|जर्मनी|यूक्रेन|रूस|चीन|जापान|इंडोनेशिया|पराग्वे|ईरान|इजराइल|पाकिस्तान|नेपाल|बांग्लादेश|श्रीलंका|ऑस्ट्रेलिया|कनाडा|ब्राजील|यूरोपीय संघ/i.test(evidence);
   }
   const localAliases = {
-    "Bihar": /बिहार|\\bbihar\\b|पटना|\\bpatna\\b|सिवान|\\bsiwan\\b|गोपालगंज|\\bgopalganj\\b|छपरा|\\bchapra\\b|मुजफ्फरपुर|\\bmuzaffarpur\\b|दरभंगा|\\bdarbhanga\\b|गया|\\bgaya\\b|भागलपुर|\\bbhagalpur\\b|पूर्णिया|\\bpurnia\\b|आरा|\\bara\\b|बेगूसराय|\\bbegusarai\\b|मोतिहारी|\\bmotihari\\b|बेतिया|\\bbettiah\\b/,
-    "Patna": /पटना|\\bpatna\\b/,
-    "Siwan": /सिवान|\\bsiwan\\b/,
-    "Gopalganj": /गोपालगंज|\\bgopalganj\\b/,
-    "Delhi": /दिल्ली|\\bdelhi\\b|नई दिल्ली|\\bnew delhi\\b/,
-    "Mumbai": /मुंबई|\\bmumbai\\b/,
-    "Kolkata": /कोलकाता|\\bkolkata\\b/,
-    "Chennai": /चेन्नई|\\bchennai\\b/,
-    "Bengaluru": /बेंगलुरु|बंगलौर|\\bbengaluru\\b|\\bbangalore\\b/,
-    "Uttar Pradesh": /उत्तर प्रदेश|\\buttar pradesh\\b|लखनऊ|\\blucknow\\b|वाराणसी|\\bvaranasi\\b|नोएडा|\\bnoida\\b|गोरखपुर|\\bgorakhpur\\b|कानपुर|\\bkanpur\\b|आगरा|\\bagra\\b/,
-    "Jharkhand": /झारखंड|\\bjharkhand\\b|रांची|\\branchi\\b/,
-    "Rajasthan": /राजस्थान|\\brajasthan\\b|जयपुर|\\bjaipur\\b/,
-    "Madhya Pradesh": /मध्य प्रदेश|\\bmadhya pradesh\\b|भोपाल|\\bbhopal\\b|इंदौर|\\bindore\\b/,
-    "Maharashtra": /महाराष्ट्र|\\bmaharashtra\\b|मुंबई|\\bmumbai\\b|पुणे|\\bpune\\b|नागपुर|\\bnagpur\\b/,
-    "West Bengal": /पश्चिम बंगाल|\\bwest bengal\\b|कोलकाता|\\bkolkata\\b/
+    "Bihar": /बिहार|\bbihar\b|पटना|\bpatna\b|सिवान|\bsiwan\b|गोपालगंज|\bgopalganj\b|छपरा|\bchapra\b|मुजफ्फरपुर|\bmuzaffarpur\b|दरभंगा|\bdarbhanga\b|गया|\bgaya\b|भागलपुर|\bbhagalpur\b|पूर्णिया|\bpurnia\b|आरा|\bara\b|बेगूसराय|\bbegusarai\b|मोतिहारी|\bmotihari\b|बेतिया|\bbettiah\b/,
+    "Patna": /पटना|\bpatna\b/,
+    "Siwan": /सिवान|\bsiwan\b/,
+    "Gopalganj": /गोपालगंज|\bgopalganj\b/,
+    "Delhi": /दिल्ली|\bdelhi\b|नई दिल्ली|\bnew delhi\b/,
+    "Mumbai": /मुंबई|\bmumbai\b/,
+    "Kolkata": /कोलकाता|\bkolkata\b/,
+    "Chennai": /चेन्नई|\bchennai\b/,
+    "Bengaluru": /बेंगलुरु|बंगलौर|\bbengaluru\b|\bbangalore\b/,
+    "Uttar Pradesh": /उत्तर प्रदेश|\buttar pradesh\b|लखनऊ|\blucknow\b|वाराणसी|\bvaranasi\b|नोएडा|\bnoida\b|गोरखपुर|\bgorakhpur\b|कानपुर|\bkanpur\b|आगरा|\bagra\b/,
+    "Jharkhand": /झारखंड|\bjharkhand\b|रांची|\branchi\b/,
+    "Rajasthan": /राजस्थान|\brajasthan\b|जयपुर|\bjaipur\b/,
+    "Madhya Pradesh": /मध्य प्रदेश|\bmadhya pradesh\b|भोपाल|\bbhopal\b|इंदौर|\bindore\b/,
+    "Maharashtra": /महाराष्ट्र|\bmaharashtra\b|मुंबई|\bmumbai\b|पुणे|\bpune\b|नागपुर|\bnagpur\b/,
+    "West Bengal": /पश्चिम बंगाल|\bwest bengal\b|कोलकाता|\bkolkata\b/
   };
   const pattern = localAliases[scope];
   return Boolean(pattern && pattern.test(evidence));
