@@ -2263,7 +2263,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     const sourceEvidence = cleanText((items[index]?.title || "") + " " + (items[index]?.snippet || "") + " " + (items[index]?.articleEvidence || "") + " " + (items[index]?.publishedAt || "") + " " + relatedEvidence);
     const generatedText = entry.headline + " " + entry.summary;
     if (isNewsResultPageTitleMismatch(items[index])) { rejectCounts.headlineGrounding++; continue; }
-    if (hasUnsupportedNewsSummaryTopic(generatedText, sourceEvidence)) { rejectCounts.missingEvidence++; continue; }
+    if (hasUnsupportedNewsSummaryTopic(entry.summary, sourceEvidence)) { rejectCounts.missingEvidence++; continue; }
     if (hasUnsupportedCourtDisposition(generatedText, sourceEvidence)) { rejectCounts.unsupportedCourtOutcome++; continue; }
     const isAgniveerExtension = /agniveer|अग्निवीर/i.test(sourceEvidence) &&
       /(?:75\s*%|७५\s*प्रतिशत|remaining\s+75|शेष\s+७५)/i.test(sourceEvidence);
