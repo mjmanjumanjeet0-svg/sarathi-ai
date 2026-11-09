@@ -885,8 +885,11 @@ async function enrichNewsArticleEvidence(results, maxCandidates = 12) {
       const evidence = cleanText((body || description).slice(0, 5200));
       return {
         ...item,
-        publishedAt: pagePublishedAt || item.publishedAt || "",
+        // Publisher RSS pubDate is publisher-supplied publication evidence; never let
+        // stale page metadata (for example a reused template date) overwrite it.
+        publishedAt: item.feedPublishedAt || pagePublishedAt || item.publishedAt || "",
         pagePublishedAt: pagePublishedAt || item.pagePublishedAt || "",
+        publicationDateSource: item.feedPublishedAt ? "publisher_rss_pubdate" : pagePublishedAt ? "publisher_page_metadata" : item.publishedAt ? "search_provider_date" : "missing",
         ...(pageTitle ? { pageTitle } : {}),
         ...(evidence.length >= 180 ? { articleEvidence: evidence } : description ? { articleEvidence: description } : {})
       };
