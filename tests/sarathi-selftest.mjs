@@ -8,6 +8,25 @@ const appSource = await readFile(new URL("../app.js", import.meta.url), "utf8");
 // Groq reasoning controls are model-specific: GPT-OSS rejects reasoning_format.
 assert.match(source, /model\.startsWith\("openai\/gpt-oss-"\)[\s\S]*include_reasoning: false[\s\S]*reasoning_format: "hidden"/, "GPT-OSS must use include_reasoning=false while non-GPT-OSS reasoning models use reasoning_format=hidden");
 assert.match(source, /reasoning_effort: reasoningEffort/, "reasoning effort must remain enabled when requested");
+ 
+// Navadurga deterministic-answer regression tests.
+const navadurgaBlockStart = source.indexOf("// Answer the standard Navadurga sequence locally with canonical Hindi spellings.");
+const navadurgaBlockEnd = source.indexOf("const systemPrompt = `", navadurgaBlockStart);
+assert.ok(navadurgaBlockStart >= 0 && navadurgaBlockEnd > navadurgaBlockStart,
+  "deterministic Navadurga answer and contextual follow-up handlers must exist");
+const navadurgaBlock = source.slice(navadurgaBlockStart, navadurgaBlockEnd);
+for (const goddess of ["शैलपुत्री", "ब्रह्मचारिणी", "चंद्रघंटा", "कूष्माण्डा", "स्कंदमाता", "कात्यायनी", "कालरात्रि", "महागौरी", "सिद्धिदात्री"]) {
+  assert.ok(navadurgaBlock.includes(goddess), `Navadurga sequence must include canonical name: ${goddess}`);
+}
+assert.match(navadurgaBlock, /सातवें दिन माँ कालरात्रि की पूजा की जाती है/,
+  "the seventh Navadurga day must be Kalaratri");
+assert.match(navadurgaBlock, /previousAssistantMessage[\s\S]*?role === "assistant"[\s\S]*?शैलपुत्री[\s\S]*?ब्रह्मचारिणी[\s\S]*?कालरात्रि/,
+  "ordinal follow-up must be grounded in the previous assistant Navadurga list");
+assert.match(navadurgaBlock, /asksFirstNavadurga[\s\S]*?previousAssistantMessage && asksFirstNavadurga/,
+  "first-goddess follow-up must require both Navadurga context and an ordinal follow-up");
+assert.match(navadurgaBlock, /पहली देवी माँ शैलपुत्री हैं/,
+  "the first-goddess follow-up must resolve to Maa Shailputri");
+
 assert.ok(appSource.includes('replyText.includes("खबर 1:")') && appSource.includes('replyText.includes("प्रकाशक:")') && appSource.includes('replyText.includes("प्रकाशित:")'), "inline Hindi news summaries must not render a duplicate source panel");
 const busyFallbackStart = appSource.indexOf("if ((data.providerBusy === true || data.newsSummaryUnverified === true) &&");
 const busyFallbackEnd = appSource.indexOf("\n    }", busyFallbackStart);
