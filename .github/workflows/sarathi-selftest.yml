@@ -14,6 +14,7 @@ on:
   workflow_dispatch:
 jobs:
   worker-self-test:
+    # Exercise deterministic response guards on every relevant PR update.
     runs-on: ubuntu-latest
     # Keep a finite bound so regression tests cannot hang indefinitely.
     timeout-minutes: 10
