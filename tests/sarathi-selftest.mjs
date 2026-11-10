@@ -338,3 +338,13 @@ assert.ok(source.includes("const undatedCandidates = searchResults.filter(item =
 assert.match(source, /\.filter\(item => !\(item\?\.feedPublishedAt && Number\.isFinite\(Date\.parse\(item\.feedPublishedAt\)\)\)\)/, "publisher-RSS dated articles must bypass redundant HTML fetches");
 assert.match(source, /अंतरराष्ट्रीय कवरेज नहीं मिली/, "global coverage warning must identify missing international coverage");
 assert.match(source, /भारत-केंद्रित कवरेज नहीं मिली/, "global coverage warning must identify missing India coverage");
+
+// Conversation-quality prompt regressions: keep contextual follow-ups and
+// consistent AI boundaries, age-appropriate earning, research honesty and
+// concise mental-health guidance in the shared chat system prompt.
+assert.ok(source.includes("छोटे और अधूरे follow-up का संदर्भ"), "short follow-ups must be resolved from recent conversation context");
+assert.ok(source.includes("उपयोगकर्ता \"क्या मैं कमा सकता हूँ?\" पूछे") && source.includes("सीधे सुरक्षित और व्यावहारिक कमाई के विकल्प बताओ"), "the earning -> money follow-up must be handled without a redundant clarification");
+assert.ok(source.includes("अंग्रेज़ी में अचानक मना मत करो") && source.includes("दोस्ताना AI साथी"), "love and friendship answers must remain consistent and preserve AI boundaries");
+assert.ok(source.includes("शोध में मदद") && source.includes("खोज वास्तव में न हुई हो तो स्रोत देखने का दावा मत करो"), "research capability must be described honestly");
+assert.ok(source.includes("2–4 सरल, व्यावहारिक कदम") && source.includes("लंबी दस-बिंदु सूची"), "mental-health answers must be concise and empathetic");
+assert.ok(source.includes("क्रमांक दोहराकर") && source.includes("छोटे सवाल का जवाब 1–3 वाक्यों में"), "response length and repeated numbering must be controlled");
