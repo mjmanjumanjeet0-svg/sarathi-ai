@@ -3347,6 +3347,21 @@ export default {
       });
     }
 
+    // Give a deterministic, verified answer for the common Navadurga Maa Kalaratri
+    // iconography question. A prompt-only rule was ignored by the model in live testing.
+    const kalaratriIconographyQuestion = /कालरात्रि/i.test(userText) &&
+      /(?:चार|4)\s*(?:हाथ|भुजा)|(?:हाथ|भुजा)\s*(?:चार|4)/i.test(userText) &&
+      /(?:वाहन|सवारी|हाथों?\s*में|भुजाओं?\s*में|आयुध)/i.test(userText);
+    if (kalaratriIconographyQuestion) {
+      return jsonResponse({
+        success: true,
+        reply: "माँ कालरात्रि के सामान्य प्रचलित नवदुर्गा स्वरूप में चार भुजाएँ होती हैं। दाहिने हाथ अभय और वरद मुद्रा में होते हैं, जबकि बाएँ हाथों में तलवार और लोहे का काँटा (अंकुश) दिखाया जाता है। उनका वाहन गधा है। अलग-अलग क्षेत्रीय चित्रणों में कुछ भिन्नता हो सकती है।",
+        ...dateTime,
+        webSearch: false,
+        sources: []
+      });
+    }
+
     const systemPrompt = `
 तुम सारथी AI हो, एक सक्षम, स्पष्ट और भरोसेमंद बहुभाषी सहायक।
 पहचान और निर्माता:
