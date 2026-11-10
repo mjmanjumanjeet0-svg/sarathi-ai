@@ -682,6 +682,10 @@ assert.ok(worker.includes("async function searchFreeNewsFallback(searchOptions =
 assert.ok(worker.includes("async function searchPublisherRssFallback()"), "publisher RSS fallback helper must exist");
 assert.ok(worker.includes("indianexpress.com/section/india/feed/") && worker.includes("thehindu.com/news/national/feeder/default.rss"), "RSS fallback must include established Indian publisher feeds");
 assert.ok(worker.includes("pib.gov.in/RssMain.aspx"), "RSS fallback must include official PIB releases");
+assert.ok(worker.includes("api.livehindustan.com/feeds/rss/bihar/rssfeed.xml") && worker.includes("api.livehindustan.com/feeds/rss/bihar/patna/rssfeed.xml") && worker.includes("api.livehindustan.com/feeds/rss/bihar/siwan/rssfeed.xml"), "RSS fallback must include documented Bihar, Patna and Siwan feeds from Live Hindustan");
+assert.ok(worker.includes("prabhatkhabar.com/state/feed") && worker.includes("prabhatkhabar.com/feed/"), "RSS fallback must include Prabhat Khabar state and latest-story feeds");
+assert.ok(worker.includes("bhaskar.com/rss-feed/1061/"), "RSS fallback must include the published Dainik Bhaskar RSS feed");
+assert.ok(worker.includes('publisher === "livehindustan.com"') && worker.includes('publisher === "prabhatkhabar.com"') && worker.includes('publisher === "bhaskar.com"'), "regional RSS publisher hosts must pass the RSS source validation");
 assert.ok(worker.includes("fallbackFeedDiagnostics: fallback.feedDiagnostics || []"), "RSS feed-level diagnostics must be exposed");
 assert.ok(worker.includes('fallbackProvider: fallback.provider || "GDELT"'), "fallback provider diagnostics must identify RSS sources when used");
 assert.ok(worker.includes("feedPublishedAt: new Date(timestamp).toISOString()"), "RSS publication timestamps must be retained as publisher-provided evidence");
