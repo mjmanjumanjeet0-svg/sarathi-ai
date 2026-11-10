@@ -226,8 +226,8 @@ function solveBasicArithmetic(text) {
 
 function isSarathiCreatorQuestion(text) {
   const q = String(text || "").toLocaleLowerCase("hi-IN").trim();
-  const target = /सारथी(?:\s*AI)?|इस\s+ऐप|यह\s+ऐप|तुम्हें|तुमको|आपको|(?:this\s+app|sarathi(?:\s*ai)?|\byou\b)/i;
-  const creator = /(?:किसने|कौन|कवन|केकरा|who|creator|maker).{0,45}(?:बनाया|बनाई|बनवाया|बनवल|बनवले|बनइले|तैयार|डेवलप|क्रिएट|made|created|built|developed)|(?:बनाया|बनाई|बनवाया|बनवल|बनवले|बनइले|made|created|built|developed).{0,45}(?:किसने|कौन|कवन|केकरा|who|creator|maker)/i;
+  const target = /सारथी(?:\s*AI)?|इस\s+ऐप|यह\s+ऐप|तुम्हें|तुमको|आपको|(?:तुम्हारा|तुम्हारी|आपका|आपकी)\s+(?:निर्माता|creator|maker)|(?:this\s+app|sarathi(?:\s*ai)?|\byou\b)/i;
+  const creator = /(?:किसने|कौन|कवन|केकरा|who|creator|maker|निर्माता).{0,45}(?:बनाया|बनाई|बनवाया|बनवल|बनवले|बनइले|तैयार|डेवलप|क्रिएट|made|created|built|developed)|(?:बनाया|बनाई|बनवाया|बनवल|बनवले|बनइले|तैयार|डेवलप|क्रिएट|made|created|built|developed).{0,45}(?:किसने|कौन|कवन|केकरा|who|creator|maker|निर्माता)|(?:निर्माता|creator|maker).{0,30}(?:कौन|who)|(?:कौन|who).{0,30}(?:निर्माता|creator|maker)/i;
   return target.test(q) && creator.test(q);
 }
 
