@@ -48,6 +48,32 @@ for (const question of ["आज का दिन अच्छा बनाने
   assert.equal(isDateQuestion(question), false, "non-calendar question must not be treated as a date request: " + question);
 }
 
+const isIndiaCapitalQuestion = (() => {
+  const start = source.indexOf("function isIndiaCapitalQuestion(");
+  const end = source.indexOf("\\nfunction isDateQuestion(", start);
+  if (!(start >= 0 && end > start)) throw new Error("isIndiaCapitalQuestion must exist in the Worker");
+  return new Function(source.slice(start, end) + "\\nreturn isIndiaCapitalQuestion;")();
+})();
+for (const question of [
+  "भारत की राजधानी क्या है?",
+  "भारत की राजधानी कहाँ है?",
+  "भारत की राजधानी बताओ",
+  "राजधानी भारत की क्या है?",
+  "What is the capital of India?",
+  "Where is the capital of India?"
+]) {
+  assert.equal(isIndiaCapitalQuestion(question), true, "direct capital question must be recognized: " + question);
+}
+for (const question of [
+  "भारत की राजधानी का मौसम कैसा है?",
+  "भारत की राजधानी से जुड़ी खबरें बताओ",
+  "भारत की राजधानी का इतिहास बताओ",
+  "आज भारत की राजधानी में क्या हुआ?"
+]) {
+  assert.equal(isIndiaCapitalQuestion(question), false, "related but different question must not be answered with only the capital: " + question);
+}
+
+
 // Maa Kalaratri iconography regression tests.
 const kalaratriBlockStart = source.indexOf("// Give a deterministic, verified answer for the common Navadurga Maa Kalaratri");
 const kalaratriBlockEnd = source.indexOf("// Answer the standard Navadurga sequence locally", kalaratriBlockStart);
