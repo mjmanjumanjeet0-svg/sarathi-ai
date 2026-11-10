@@ -228,7 +228,7 @@ function isDateQuestion(text) {
   const q = String(text || "").toLocaleLowerCase("hi-IN").trim();
   // Match only direct date/day questions. Do not treat phrases such as
   // "आज का दिन अच्छा बनाने के लिए..." as requests for the calendar date.
-  return /^(?:आज\s+की\s+तारीख(?:\s+(?:क्या\s+है|बताओ|बताइए))?|आज\s+कौन.?सा\s+दिन(?:\s+है)?|आज\s+का\s+दिन\s+(?:कौन.?सा\s+है|क्या\s+है)|आज\s+(?:की\s+)?डेट\s+(?:क्या\s+है|बताओ|बताइए)|आज\s+तारीख\s+(?:क्या\s+है|बताओ|बताइए)|वर्तमान\s+तारीख\s+(?:क्या\s+है|बताओ|बताइए)|current\s+date|today.?s\s+date|what\s+day\s+is\s+it\s+today)\s*[?।.!]*$/i.test(q);
+  return /^(?:आज\s+की\s+तारीख(?:\s+(?:क्या\s+है|बताओ|बताइए))?|आज\s+कौन.?सा\s+दिन(?:\s+है)?|आज\s+का\s+दिन\s+(?:कौन.?सा\s+है|क्या\s+है)|आज\s+(?:की\s+)?डेट\s+(?:क्या\s+है|बताओ|बताइए)|आज\s+तारीख\s+(?:क्या\s+है|बताओ|बताइए)|वर्तमान\s+तारीख\s+(?:क्या\s+है|बताओ|बताइए)|current\s+date|today.?s\s+date|what\s+is\s+today.?s\s+date|what\s+day\s+is\s+it\s+today)\s*[?।.!]*$/i.test(q);
 }
 
 function explicitlyRequestsWebSearch(text) {
