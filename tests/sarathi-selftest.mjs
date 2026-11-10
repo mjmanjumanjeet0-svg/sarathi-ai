@@ -9,6 +9,45 @@ const appSource = await readFile(new URL("../app.js", import.meta.url), "utf8");
 assert.match(source, /model\.startsWith\("openai\/gpt-oss-"\)[\s\S]*include_reasoning: false[\s\S]*reasoning_format: "hidden"/, "GPT-OSS must use include_reasoning=false while non-GPT-OSS reasoning models use reasoning_format=hidden");
 assert.match(source, /reasoning_effort: reasoningEffort/, "reasoning effort must remain enabled when requested");
  
+// Deterministic arithmetic, discount and India-date regression tests.
+function extractWorkerFunction(name, nextName) {
+  const start = source.indexOf("function " + name + "(");
+  const end = source.indexOf("\nfunction " + nextName + "(", start);
+  if (!(start >= 0 && end > start)) throw new Error(name + " must exist in the Worker");
+  return new Function(source.slice(start, end) + "\nreturn " + name + ";")();
+}
+const solveDiscountQuestion = extractWorkerFunction("solveDiscountQuestion", "solveBasicArithmetic");
+const solveBasicArithmetic = extractWorkerFunction("solveBasicArithmetic", "isDateQuestion");
+const isDateQuestion = (() => {
+  const start = source.indexOf("function isDateQuestion(");
+  const end = source.indexOf("\nfunction explicitlyRequestsWebSearch(", start);
+  if (!(start >= 0 && end > start)) throw new Error("isDateQuestion must exist in the Worker");
+  return new Function(source.slice(start, end) + "\nreturn isDateQuestion;")();
+})();
+
+const discountAnswer = solveDiscountQuestion("₹800 की वस्तु पर 25% छूट कितनी होगी?");
+assert.match(discountAnswer || "", /मूल कीमत: ₹800/, "discount answer must preserve the original price");
+assert.match(discountAnswer || "", /छूट: 25% = ₹200/, "25 percent discount on 800 must be 200");
+assert.match(discountAnswer || "", /अंतिम कीमत: ₹600/, "discounted price must be 600");
+assert.equal(solveDiscountQuestion("₹800 पर 125% छूट"), null, "discount percentages above 100 must be rejected");
+assert.equal(solveDiscountQuestion("आज मौसम कैसा है?"), null, "non-discount questions must not trigger discount calculation");
+
+assert.deepEqual(solveBasicArithmetic("2 + 3 × 4"), { expression: "2+3*4", result: "14" },
+  "multiplication must take precedence over addition");
+assert.deepEqual(solveBasicArithmetic("10 ÷ 2 + 3"), { expression: "10/2+3", result: "8" },
+  "division and addition must follow standard operator precedence");
+assert.deepEqual(solveBasicArithmetic("12.5 × 2"), { expression: "12.5*2", result: "25" },
+  "decimal arithmetic must be supported");
+assert.equal(solveBasicArithmetic("10 ÷ 0"), null, "division by zero must be rejected");
+assert.equal(solveBasicArithmetic("भारत की राजधानी क्या है?"), null, "ordinary factual questions must not be parsed as arithmetic");
+
+for (const question of ["आज की तारीख क्या है?", "आज कौन-सा दिन है?", "वर्तमान तारीख बताइए", "What is today's date?"]) {
+  assert.equal(isDateQuestion(question), true, "direct date/day question must be recognized: " + question);
+}
+for (const question of ["आज का दिन अच्छा बनाने के लिए क्या करूँ?", "आज मैं क्या पढ़ूँ?", "कल का मौसम कैसा रहेगा?"]) {
+  assert.equal(isDateQuestion(question), false, "non-calendar question must not be treated as a date request: " + question);
+}
+
 // Maa Kalaratri iconography regression tests.
 const kalaratriBlockStart = source.indexOf("// Give a deterministic, verified answer for the common Navadurga Maa Kalaratri");
 const kalaratriBlockEnd = source.indexOf("// Answer the standard Navadurga sequence locally", kalaratriBlockStart);
