@@ -67,7 +67,10 @@ for (const question of [
   "ताजमहल किसने बनाया?",
   "कुतुब मीनार किसने बनाई?",
   "Who built the Eiffel Tower?",
-  "यह पुल किसने बनाया?"
+  "यह पुल किसने बनाया?",
+  "तुम्हारा घर किसने बनाया?",
+  "आपका स्कूल किसने बनाया?",
+  "किसी कंपनी का निर्माता कौन है?"
 ]) {
   assert.equal(isSarathiCreatorQuestion(question), false, "unrelated creator question must not trigger Sarathi identity answer: " + question);
 }
