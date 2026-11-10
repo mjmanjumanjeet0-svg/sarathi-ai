@@ -351,7 +351,16 @@ async function searchPublisherRssFallback() {
     { url: "https://api.livehindustan.com/feeds/rss/bihar/gopalganj/rssfeed.xml", publisher: "livehindustan.com", coverage: "india" },
     { url: "https://www.prabhatkhabar.com/state/feed", publisher: "prabhatkhabar.com", coverage: "india" },
     { url: "https://www.prabhatkhabar.com/feed/", publisher: "prabhatkhabar.com", coverage: "india" },
-    { url: "https://www.bhaskar.com/rss-feed/1061/", publisher: "bhaskar.com", coverage: "india" }
+    { url: "https://www.bhaskar.com/rss-feed/1061/", publisher: "bhaskar.com", coverage: "india" },
+    // Amar Ujala publishes official Bihar and city feeds; add independent regional coverage.
+    { url: "https://www.amarujala.com/rss/bihar.xml", publisher: "amarujala.com", coverage: "india" },
+    { url: "https://www.amarujala.com/rss/patna.xml", publisher: "amarujala.com", coverage: "india" },
+    { url: "https://www.amarujala.com/rss/muzaffarpur.xml", publisher: "amarujala.com", coverage: "india" },
+    { url: "https://www.amarujala.com/rss/darbhanga.xml", publisher: "amarujala.com", coverage: "india" },
+    { url: "https://www.amarujala.com/rss/purnea.xml", publisher: "amarujala.com", coverage: "india" },
+    { url: "https://www.amarujala.com/rss/bhagalpur.xml", publisher: "amarujala.com", coverage: "india" },
+    { url: "https://www.amarujala.com/rss/gaya.xml", publisher: "amarujala.com", coverage: "india" },
+    { url: "https://www.amarujala.com/rss/saran.xml", publisher: "amarujala.com", coverage: "india" }
   ];
   const settled = await Promise.all(feeds.map(async feed => {
     const controller = new AbortController();
@@ -381,7 +390,8 @@ async function searchPublisherRssFallback() {
               publisher === "bbc.com" || publisher.endsWith(".bbc.com") ||
               publisher === "livehindustan.com" || publisher.endsWith(".livehindustan.com") ||
               publisher === "prabhatkhabar.com" || publisher.endsWith(".prabhatkhabar.com") ||
-              publisher === "bhaskar.com" || publisher.endsWith(".bhaskar.com"))) return null;
+              publisher === "bhaskar.com" || publisher.endsWith(".bhaskar.com") ||
+               publisher === "amarujala.com" || publisher.endsWith(".amarujala.com"))) return null;
         return { title, url, publisher, coverage: feed.coverage || "india", publishedAt: new Date(timestamp).toISOString(), feedPublishedAt: new Date(timestamp).toISOString(), snippet: decodeNewsXmlText(rssTagValue(block, ["description", "summary"])).slice(0, 900) };
       }).filter(Boolean);
       return { publisher: feed.publisher, status: response.status, error: null, items };
@@ -616,7 +626,7 @@ async function searchInternet(query, env, maxResults = null, searchOptions = {})
         "pti.in", "aninews.in", "business-standard.com", "economictimes.indiatimes.com",
         "financialexpress.com", "moneycontrol.com", "cnbctv18.com", "deccanherald.com",
         "tribuneindia.com", "telegraphindia.com", "pib.gov.in", "ddnews.gov.in",
-        "newsonair.gov.in", "scroll.in", "theweek.in", "thequint.com", "livehindustan.com", "prabhatkhabar.com", "bhaskar.com", "etvbharat.com"
+        "newsonair.gov.in", "scroll.in", "theweek.in", "thequint.com", "livehindustan.com", "prabhatkhabar.com", "bhaskar.com", "etvbharat.com", "amarujala.com"
       ];
       const now = new Date();
       // News digest is limited to the current calendar day in India (IST),
@@ -1139,7 +1149,7 @@ function filterRelevantSearchResults(query, results, allowGlobalNews = false, re
   // Match natural Hindi wording such as "भारत की 5 ताज़ा और महत्वपूर्ण खबरें".
   // Otherwise the India-specific relevance filter is skipped.
   if (/(?:पिछले|गत|last)\s*48\s*(?:घंटों?|घंटे|hours?).{0,110}(?:खबर|समाचार|न्यूज़|न्यूज|news)|(?:ताज़ा|ताजा|प्रमुख|मुख्य|latest|breaking|current|today).{0,90}(?:खबर|समाचार|न्यूज़|न्यूज|news)|(?:खबर|समाचार|न्यूज़|न्यूज|news).{0,60}(?:आज|ताज़ा|ताजा|latest|भारत की)|(?:आज की खबर|आज की न्यूज़|आज की न्यूज|today.?s news|current news|breaking news)/i.test(q)) {
-    const trustedNewsHost = /(^|\.)(indianexpress\.com|thehindu\.com|ndtv\.com|hindustantimes\.com|bbc\.com|bbc\.co\.uk|reuters\.com|apnews\.com|news18\.com|aajtak\.in|abplive\.com|amarujala\.com|jagran\.com|zeenews\.india\.com|indiatoday\.in|theprint\.in|livemint\.com|timesofindia\.indiatimes\.com|pti\.in|aninews\.in|business-standard\.com|economictimes\.indiatimes\.com|financialexpress\.com|moneycontrol\.com|cnbctv18\.com|deccanherald\.com|tribuneindia\.com|telegraphindia\.com|pib\.gov\.in|ddnews\.gov\.in|newsonair\.gov\.in|scroll\.in|theweek\.in|thequint\.com|livehindustan\.com|prabhatkhabar\.com|bhaskar\.com|etvbharat\.com)$/;
+    const trustedNewsHost = /(^|\.)(indianexpress\.com|thehindu\.com|ndtv\.com|hindustantimes\.com|bbc\.com|bbc\.co\.uk|reuters\.com|apnews\.com|news18\.com|aajtak\.in|abplive\.com|amarujala\.com|jagran\.com|zeenews\.india\.com|indiatoday\.in|theprint\.in|livemint\.com|timesofindia\.indiatimes\.com|pti\.in|aninews\.in|business-standard\.com|economictimes\.indiatimes\.com|financialexpress\.com|moneycontrol\.com|cnbctv18\.com|deccanherald\.com|tribuneindia\.com|telegraphindia\.com|pib\.gov\.in|ddnews\.gov\.in|newsonair\.gov\.in|scroll\.in|theweek\.in|thequint\.com|livehindustan\.com|prabhatkhabar\.com|bhaskar\.com|etvbharat\.com|amarujala\.com)$/;
     return list.filter(item => {
       try {
         const host = new URL(item.url).hostname.toLowerCase().replace(/^www\./, "");
