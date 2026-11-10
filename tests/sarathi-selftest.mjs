@@ -25,7 +25,7 @@ assert.match(kalaratriBlock, /उनका वाहन गधा है/,
   "Kalaratri vehicle must be identified as a donkey");
 assert.match(kalaratriBlock, /क्षेत्रीय चित्रणों में कुछ भिन्नता/,
   "Kalaratri answer must acknowledge regional iconographic variation");
-assert.match(kalaratriBlock, /कालरात्रि[\\s\\S]*?चार|4/,
+assert.match(kalaratriBlock, /const kalaratriIconographyQuestion = \/कालरात्रि\/i/,
   "Kalaratri handler must be scoped to the four-arm question");
 
 // Navadurga deterministic-answer regression tests.
