@@ -343,7 +343,15 @@ async function searchPublisherRssFallback() {
     { url: "https://feeds.bbci.co.uk/news/world/asia/rss.xml", publisher: "bbc.co.uk", coverage: "world" },
     { url: "https://feeds.bbci.co.uk/news/business/rss.xml", publisher: "bbc.co.uk", coverage: "world" },
     { url: "https://feeds.bbci.co.uk/news/technology/rss.xml", publisher: "bbc.co.uk", coverage: "world" },
-    { url: "https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=1", publisher: "pib.gov.in", coverage: "india" }
+    { url: "https://pib.gov.in/RssMain.aspx?ModId=6&Lang=1&Regid=1", publisher: "pib.gov.in", coverage: "india" },
+    // Regional Hindi publishers: use their documented Bihar and city RSS feeds.
+    { url: "https://api.livehindustan.com/feeds/rss/bihar/rssfeed.xml", publisher: "livehindustan.com", coverage: "india" },
+    { url: "https://api.livehindustan.com/feeds/rss/bihar/patna/rssfeed.xml", publisher: "livehindustan.com", coverage: "india" },
+    { url: "https://api.livehindustan.com/feeds/rss/bihar/siwan/rssfeed.xml", publisher: "livehindustan.com", coverage: "india" },
+    { url: "https://api.livehindustan.com/feeds/rss/bihar/gopalganj/rssfeed.xml", publisher: "livehindustan.com", coverage: "india" },
+    { url: "https://www.prabhatkhabar.com/state/feed", publisher: "prabhatkhabar.com", coverage: "india" },
+    { url: "https://www.prabhatkhabar.com/feed/", publisher: "prabhatkhabar.com", coverage: "india" },
+    { url: "https://www.bhaskar.com/rss-feed/1061/", publisher: "bhaskar.com", coverage: "india" }
   ];
   const settled = await Promise.all(feeds.map(async feed => {
     const controller = new AbortController();
@@ -370,7 +378,10 @@ async function searchPublisherRssFallback() {
               publisher === "thehindu.com" || publisher.endsWith(".thehindu.com") ||
               publisher === "pib.gov.in" || publisher.endsWith(".pib.gov.in") ||
               publisher === "bbc.co.uk" || publisher.endsWith(".bbc.co.uk") ||
-              publisher === "bbc.com" || publisher.endsWith(".bbc.com"))) return null;
+              publisher === "bbc.com" || publisher.endsWith(".bbc.com") ||
+              publisher === "livehindustan.com" || publisher.endsWith(".livehindustan.com") ||
+              publisher === "prabhatkhabar.com" || publisher.endsWith(".prabhatkhabar.com") ||
+              publisher === "bhaskar.com" || publisher.endsWith(".bhaskar.com"))) return null;
         return { title, url, publisher, coverage: feed.coverage || "india", publishedAt: new Date(timestamp).toISOString(), feedPublishedAt: new Date(timestamp).toISOString(), snippet: decodeNewsXmlText(rssTagValue(block, ["description", "summary"])).slice(0, 900) };
       }).filter(Boolean);
       return { publisher: feed.publisher, status: response.status, error: null, items };
