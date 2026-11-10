@@ -15,6 +15,7 @@ on:
 jobs:
   worker-self-test:
     runs-on: ubuntu-latest
+    # Keep a finite bound so regression tests cannot hang indefinitely.
     timeout-minutes: 10
     steps:
       - name: Checkout
