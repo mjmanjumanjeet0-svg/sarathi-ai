@@ -70,11 +70,21 @@ const scopeFilterFns = new Function("cleanText", "isIndiaFocusedNewsItem", scope
 );
 const isNewsItemWithinRequestedScope = scopeFilterFns.isNewsItemWithinRequestedScope;
 assert.equal(isNewsItemWithinRequestedScope({ title: "Patna metro project update", snippet: "Bihar government reviews work" }, "Bihar"), true);
-assert.equal(isNewsItemWithinRequestedScope({ title: "India celebrates Diwali", snippet: "Nationwide festivities" }, "Bihar"), false);
+assert.equal(isNewsItemWithinRequestedScope({ title: "Patna metro project update", snippet: "Bihar government reviews work" }, "बिहार"), true,
+  "Hindi Bihar scope returned by the query detector must retain Bihar-local stories");
+assert.equal(isNewsItemWithinRequestedScope({ title: "Patna metro project update", snippet: "Bihar government reviews work" }, "पटना"), true,
+  "Hindi Patna scope must retain Patna stories");
+assert.equal(isNewsItemWithinRequestedScope({ title: "India celebrates Diwali", snippet: "Nationwide festivities" }, "बिहार"), false);
 assert.equal(isNewsItemWithinRequestedScope({ title: "Stock markets decline in early trade", snippet: "Indian stocks and Sensex fall" }, "Patna"), false);
 assert.equal(isNewsItemWithinRequestedScope({ title: "One killed in Indonesia helicopter crash", coverage: "world" }, "world"), true);
 assert.equal(isNewsItemWithinRequestedScope({ title: "Stock markets decline in early trade", snippet: "Indian stocks and Sensex fall" }, "world"), false);
 assert.equal(isNewsItemWithinRequestedScope({ title: "India celebrates Diwali" }, "India"), true);
+const gdeltQueryStart = worker.indexOf("function getGdeltNewsQuery(scope) {");
+const gdeltQueryEnd = worker.indexOf("\n}", gdeltQueryStart);
+assert.ok(gdeltQueryStart >= 0 && gdeltQueryEnd > gdeltQueryStart, "GDELT local query helper must exist");
+const getGdeltNewsQuery = new Function(worker.slice(gdeltQueryStart, gdeltQueryEnd + 3) + "\nreturn getGdeltNewsQuery;")();
+assert.match(getGdeltNewsQuery("बिहार"), /Bihar OR Patna OR Siwan/, "Hindi Bihar scope must run a Bihar-specific GDELT query");
+assert.equal(getGdeltNewsQuery("पटना"), "Patna", "Hindi Patna scope must run a Patna-specific GDELT query");
 
 const currentNewsStart = worker.indexOf("function isCurrentNewsQuery(text) {");
 const currentNewsEnd = worker.indexOf("\n}", currentNewsStart);
