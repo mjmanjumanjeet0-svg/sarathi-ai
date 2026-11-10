@@ -48,6 +48,30 @@ for (const question of ["आज का दिन अच्छा बनाने
   assert.equal(isDateQuestion(question), false, "non-calendar question must not be treated as a date request: " + question);
 }
 
+const isSarathiCreatorQuestion = (() => {
+  const start = source.indexOf("function isSarathiCreatorQuestion(");
+  const end = source.indexOf("\nfunction isIndiaCapitalQuestion(", start);
+  if (!(start >= 0 && end > start)) throw new Error("isSarathiCreatorQuestion must exist in the Worker");
+  return new Function(source.slice(start, end) + "\nreturn isSarathiCreatorQuestion;")();
+})();
+for (const question of [
+  "सारथी AI किसने बनाया?",
+  "इस ऐप को किसने बनाया?",
+  "तुम्हें किसने बनाया?",
+  "Who made Sarathi AI?",
+  "Who created you?"
+]) {
+  assert.equal(isSarathiCreatorQuestion(question), true, "Sarathi creator question must be recognized: " + question);
+}
+for (const question of [
+  "ताजमहल किसने बनाया?",
+  "कुतुब मीनार किसने बनाई?",
+  "Who built the Eiffel Tower?",
+  "यह पुल किसने बनाया?"
+]) {
+  assert.equal(isSarathiCreatorQuestion(question), false, "unrelated creator question must not trigger Sarathi identity answer: " + question);
+}
+
 const isIndiaCapitalQuestion = (() => {
   const start = source.indexOf("function isIndiaCapitalQuestion(");
   const end = source.indexOf("\nfunction isDateQuestion(", start);
