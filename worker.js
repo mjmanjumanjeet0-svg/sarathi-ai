@@ -3362,6 +3362,38 @@ export default {
       });
     }
 
+    // Answer the standard Navadurga sequence locally with canonical Hindi spellings.
+    // This prevents repeated spelling drift in a stable, well-known list.
+    const asksNavadurgaSequence = /नवरात्रि|नवदुर्गा/i.test(userText) &&
+      /(?:नौ|9)\s*(?:दिन|स्वरूप|रूप|देवी)|(?:स्वरूप|रूप|देवी).{0,25}(?:क्रम|नाम)/i.test(userText);
+    if (asksNavadurgaSequence) {
+      return jsonResponse({
+        success: true,
+        reply: "नवरात्रि के नौ दिनों में माँ दुर्गा के नौ स्वरूप क्रम से ये हैं:\n1. शैलपुत्री\n2. ब्रह्मचारिणी\n3. चंद्रघंटा\n4. कूष्माण्डा\n5. स्कंदमाता\n6. कात्यायनी\n7. कालरात्रि\n8. महागौरी\n9. सिद्धिदात्री\n\nसातवें दिन माँ कालरात्रि की पूजा की जाती है।",
+        ...dateTime,
+        webSearch: false,
+        sources: []
+      });
+    }
+
+    // Resolve short ordinal follow-ups from the immediately preceding Navadurga list.
+    // "एक नंबर माँ" means the first goddess in that list, not a generic phrase.
+    const previousAssistantMessage = [...messages].reverse().find((message, index) =>
+      message?.role === "assistant" &&
+      /शैलपुत्री[\s\S]{0,700}ब्रह्मचारिणी[\s\S]{0,700}कालरात्रि/i.test(String(message.content || ""))
+    );
+    const asksFirstNavadurga = /(?:एक|पहले|1|पहली)\s*(?:नंबर|नं\.?|क्रमांक)?\s*(?:वाली?\s*)?(?:माँ|माता|देवी)?|(?:माँ|माता|देवी)\s*(?:नंबर|नं\.?|क्रमांक)\s*(?:एक|1)/i.test(userText) &&
+      /(?:के बारे में|की जानकारी|बताओ|बताइए|समझाओ|कौन)/i.test(userText);
+    if (previousAssistantMessage && asksFirstNavadurga) {
+      return jsonResponse({
+        success: true,
+        reply: "नवरात्रि की पहली देवी माँ शैलपुत्री हैं। वे पर्वतराज हिमालय की पुत्री मानी जाती हैं। उनका नाम 'शैल' यानी पर्वत और 'पुत्री' यानी बेटी से बना है। उनका वाहन वृषभ (बैल) है और वे दाहिने हाथ में त्रिशूल तथा बाएँ हाथ में कमल धारण करती हैं।",
+        ...dateTime,
+        webSearch: false,
+        sources: []
+      });
+    }
+
     const systemPrompt = `
 तुम सारथी AI हो, एक सक्षम, स्पष्ट और भरोसेमंद बहुभाषी सहायक।
 पहचान और निर्माता:
