@@ -50,9 +50,9 @@ for (const question of ["आज का दिन अच्छा बनाने
 
 const isIndiaCapitalQuestion = (() => {
   const start = source.indexOf("function isIndiaCapitalQuestion(");
-  const end = source.indexOf("\\nfunction isDateQuestion(", start);
+  const end = source.indexOf("\nfunction isDateQuestion(", start);
   if (!(start >= 0 && end > start)) throw new Error("isIndiaCapitalQuestion must exist in the Worker");
-  return new Function(source.slice(start, end) + "\\nreturn isIndiaCapitalQuestion;")();
+  return new Function(source.slice(start, end) + "\nreturn isIndiaCapitalQuestion;")();
 })();
 for (const question of [
   "भारत की राजधानी क्या है?",
