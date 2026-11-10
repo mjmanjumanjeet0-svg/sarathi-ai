@@ -9,6 +9,25 @@ const appSource = await readFile(new URL("../app.js", import.meta.url), "utf8");
 assert.match(source, /model\.startsWith\("openai\/gpt-oss-"\)[\s\S]*include_reasoning: false[\s\S]*reasoning_format: "hidden"/, "GPT-OSS must use include_reasoning=false while non-GPT-OSS reasoning models use reasoning_format=hidden");
 assert.match(source, /reasoning_effort: reasoningEffort/, "reasoning effort must remain enabled when requested");
  
+// Maa Kalaratri iconography regression tests.
+const kalaratriBlockStart = source.indexOf("// Give a deterministic, verified answer for the common Navadurga Maa Kalaratri");
+const kalaratriBlockEnd = source.indexOf("// Answer the standard Navadurga sequence locally", kalaratriBlockStart);
+assert.ok(kalaratriBlockStart >= 0 && kalaratriBlockEnd > kalaratriBlockStart,
+  "deterministic Kalaratri iconography handler must exist");
+const kalaratriBlock = source.slice(kalaratriBlockStart, kalaratriBlockEnd);
+assert.match(kalaratriBlock, /चार भुजाएँ होती हैं/,
+  "Kalaratri answer must state that she has four arms");
+assert.match(kalaratriBlock, /दाहिने हाथ अभय और वरद मुद्रा में होते हैं/,
+  "Kalaratri right hands must be identified as abhaya and varada mudras");
+assert.match(kalaratriBlock, /बाएँ हाथों में तलवार और लोहे का काँटा \(अंकुश\)/,
+  "Kalaratri left hands must be identified as sword and iron hook");
+assert.match(kalaratriBlock, /उनका वाहन गधा है/,
+  "Kalaratri vehicle must be identified as a donkey");
+assert.match(kalaratriBlock, /क्षेत्रीय चित्रणों में कुछ भिन्नता/,
+  "Kalaratri answer must acknowledge regional iconographic variation");
+assert.match(kalaratriBlock, /कालरात्रि[\\s\\S]*?चार|4/,
+  "Kalaratri handler must be scoped to the four-arm question");
+
 // Navadurga deterministic-answer regression tests.
 const navadurgaBlockStart = source.indexOf("// Answer the standard Navadurga sequence locally with canonical Hindi spellings.");
 const navadurgaBlockEnd = source.indexOf("const systemPrompt = `", navadurgaBlockStart);
