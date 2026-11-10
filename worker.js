@@ -224,6 +224,13 @@ function solveBasicArithmetic(text) {
 }
 
 
+function isSarathiCreatorQuestion(text) {
+  const q = String(text || "").toLocaleLowerCase("hi-IN").trim();
+  const target = /सारथी(?:\s*AI)?|इस\s+ऐप|यह\s+ऐप|तुम्हें|तुमको|आपको|(?:this\s+app|sarathi(?:\s*ai)?|\byou\b)/i;
+  const creator = /(?:किसने|कौन|कवन|केकरा|who|creator|maker).{0,45}(?:बनाया|बनाई|बनवाया|बनवल|बनवले|बनइले|तैयार|डेवलप|क्रिएट|made|created|built|developed)|(?:बनाया|बनाई|बनवाया|बनवल|बनवले|बनइले|made|created|built|developed).{0,45}(?:किसने|कौन|कवन|केकरा|who|creator|maker)/i;
+  return target.test(q) && creator.test(q);
+}
+
 function isIndiaCapitalQuestion(text) {
   const q = String(text || "").toLocaleLowerCase("hi-IN").trim()
     .replace(/[؟?!.।]+$/g, "")
@@ -2796,7 +2803,7 @@ export default {
  
     // Answer maker/creator questions deterministically so fallback models cannot
     // misidentify Sarathi as Gemini or attribute the app to another company.
-    const asksWhoMadeSarathi = /(?:किसने|कौन|कवन|केकरा)\s*.{0,32}(?:बनाया|बनाई|बनवाया|बनवल|बनवले|बनइले|तैयार|डेवलप|क्रिएट)|(?:तुम्हें|तुमको|आपको|इस\s+ऐप\s+को|ऐप\s+किसने|सारथी\s+को).{0,35}(?:किसने|कौन|कवन|केकरा).{0,20}(?:बनाया|बनवल|बनवले|बनइले)?|(?:who\s+(?:made|created|built|developed)|creator\s+of|maker\s+of).{0,35}(?:you|this\s+app|sarathi)?/i.test(userText);
+    const asksWhoMadeSarathi = isSarathiCreatorQuestion(userText);
     if (asksWhoMadeSarathi) {
       return jsonResponse({
         success: true,
