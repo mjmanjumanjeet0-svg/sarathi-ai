@@ -700,3 +700,7 @@ assert.ok(worker.includes("वैकल्पिक खोज") && worker.includ
 assert.ok(worker.includes("indexedAt: String(article?.seendate || \"\""), "GDELT observation time must be kept separate from publisher publication time");
 assert.ok(worker.includes("const undatedCandidates = searchResults.filter(item =>") && worker.includes("const enrichedCandidates = await enrichNewsArticleEvidence("), "undated GDELT/Exa candidates must still pass bounded original publisher date enrichment");
 assert.ok(worker.includes("filterFreshNewsResults(searchResults)"), "GDELT candidates must still pass the strict India-day publication filter");
+
+assert.match(worker, /livehindustan\\.com|prabhatkhabar\\.com|bhaskar\\.com|etvbharat\\.com/, "regional Indian news publishers must be allowed by the trusted-news filter");
+assert.match(worker, /livehindustan\.com.*prabhatkhabar\.com.*bhaskar\.com.*etvbharat\.com/, "regional publishers must be included in the search-domain allowlist");
+assert.match(worker, /मैं इंसान की तरह प्यार महसूस नहीं करती/, "emotional replies should use warm, natural wording without claiming human feelings");
