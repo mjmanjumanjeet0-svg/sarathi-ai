@@ -224,6 +224,16 @@ function solveBasicArithmetic(text) {
 }
 
 
+function isIndiaCapitalQuestion(text) {
+  const q = String(text || "").toLocaleLowerCase("hi-IN").trim()
+    .replace(/[؟?!.।]+$/g, "")
+    .replace(/\\s+/g, " ");
+  return /^(?:भारत|इंडिया)\\s+की\\s+राजधानी(?:\\s+(?:क्या\\s+है|कहाँ\\s+है|कौन\\s+सी\\s+है|बताओ|बताइए))?$/.test(q)
+    || /^राजधानी\\s+(?:भारत|इंडिया)\\s+की(?:\\s+(?:क्या\\s+है|कहाँ\\s+है|बताओ|बताइए))?$/.test(q)
+    || /^(?:what\\s+is|where\\s+is)\\s+(?:the\\s+)?capital\\s+of\\s+india$/.test(q)
+    || /^india'?s\\s+capital(?:\\s+is\\s+what)?$/.test(q);
+}
+
 function isDateQuestion(text) {
   const q = String(text || "").toLocaleLowerCase("hi-IN").trim();
   // Match only direct date/day questions. Do not treat phrases such as
@@ -2843,7 +2853,7 @@ export default {
     }
 
     // Stable, unambiguous general knowledge should not depend on Groq availability.
-    if (/(भारत|इंडिया|india).{0,35}(राजधानी|capital)|(राजधानी|capital).{0,35}(भारत|इंडिया|india)/i.test(userText)) {
+    if (isIndiaCapitalQuestion(userText)) {
       return jsonResponse({
         success: true,
         reply: "भारत की राजधानी नई दिल्ली है।",
