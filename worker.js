@@ -227,11 +227,11 @@ function solveBasicArithmetic(text) {
 function isIndiaCapitalQuestion(text) {
   const q = String(text || "").toLocaleLowerCase("hi-IN").trim()
     .replace(/[؟?!.।]+$/g, "")
-    .replace(/\\s+/g, " ");
-  return /^(?:भारत|इंडिया)\\s+की\\s+राजधानी(?:\\s+(?:क्या\\s+है|कहाँ\\s+है|कौन\\s+सी\\s+है|बताओ|बताइए))?$/.test(q)
-    || /^राजधानी\\s+(?:भारत|इंडिया)\\s+की(?:\\s+(?:क्या\\s+है|कहाँ\\s+है|बताओ|बताइए))?$/.test(q)
-    || /^(?:what\\s+is|where\\s+is)\\s+(?:the\\s+)?capital\\s+of\\s+india$/.test(q)
-    || /^india'?s\\s+capital(?:\\s+is\\s+what)?$/.test(q);
+    .replace(/\s+/g, " ");
+  return /^(?:भारत|इंडिया)\s+की\s+राजधानी(?:\s+(?:क्या\s+है|कहाँ\s+है|कौन\s+सी\s+है|बताओ|बताइए))?$/.test(q)
+    || /^राजधानी\s+(?:भारत|इंडिया)\s+की(?:\s+(?:क्या\s+है|कहाँ\s+है|बताओ|बताइए))?$/.test(q)
+    || /^(?:what\s+is|where\s+is)\s+(?:the\s+)?capital\s+of\s+india$/.test(q)
+    || /^india'?s\s+capital(?:\s+is\s+what)?$/.test(q);
 }
 
 function isDateQuestion(text) {
