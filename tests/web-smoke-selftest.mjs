@@ -22,8 +22,8 @@ assert.match(worker, /if \(!searchOptions\.globalNews\) requestBody\.userLocatio
 assert.match(worker, /All major news published today in India and around the world/, "global digest must explicitly search same-day national and international news");
 assert.ok(worker.includes("formatCurrentNewsSummaryReply(normalizeNewsSummaryRepairText(repairText.trim()), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText), isGlobalNewsQuery(userText), requestedNewsScope || \"India\", isSingleRequestedNewsStory(userText), userText)"), "fallback summary validation must preserve global-news mode, requested geography and freshness window");
 assert.ok(worker.includes("(!isGlobalNewsQuery(query) && !isIndiaFocusedNewsItem(item))"), "global-news headline fallback must retain international stories");
-assert.ok(worker.includes("publishedAt < getIndiaDayStartTimestamp(now)"), "both final news display paths must reject articles from earlier India-local dates");
-assert.ok(worker.includes("const earliestAllowed = getIndiaDayStartTimestamp(now);"), "news freshness and category selection must use India-local midnight, not a rolling 48-hour window");
+assert.ok(worker.includes("publishedAt < getNewsFreshnessStartTimestamp(newsQuery, now)") && worker.includes("publishedAt < getNewsFreshnessStartTimestamp(query, now)"), "both final news display paths must apply the requested freshness window");
+assert.ok(worker.includes("const earliestAllowed = getNewsFreshnessStartTimestamp(query, now);") && worker.includes("const earliestAllowed = getNewsFreshnessStartTimestamp(newsQuery, now);"), "category selection and summary validation must share the requested freshness window");
 const indiaDayStartStart = worker.indexOf("function getIndiaDayStartTimestamp(now = Date.now()) {");
 const indiaDayStartEnd = worker.indexOf("\n}\n", indiaDayStartStart);
 assert.ok(indiaDayStartStart >= 0 && indiaDayStartEnd > indiaDayStartStart, "India-local day boundary helper must exist");
