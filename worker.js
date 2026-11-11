@@ -2181,7 +2181,9 @@ function normalizeNewsSummaryRepairText(rawReply) {
       const entries = findEntries(JSON.parse(candidate));
       if (!entries.length) continue;
       const lines = [];
-      entries.slice(0, 5).forEach((entry, index) => {
+      const selectedEntries = entries.slice(0, 5);
+      let invalidEntry = false;
+      selectedEntries.forEach((entry, index) => {
         const rawNumber = entry.number ?? entry.index ?? entry.id ?? entry.क्रमांक ?? entry.संख्या;
         const normalizedNumber = typeof rawNumber === "string"
           ? rawNumber.replace(/[०-९]/g, digit => String("०१२३४५६७८९".indexOf(digit))).trim()
@@ -2190,11 +2192,16 @@ function normalizeNewsSummaryRepairText(rawReply) {
           ? index + 1 : Number(normalizedNumber);
         const headline = cleanText(textValue(entry.headline || entry.title || entry.हेडलाइन || entry.शीर्षक || ""));
         const summary = cleanText(textValue(entry.summary || entry.summaryHindi || entry.description || entry.सार || entry.सारांश || entry.विवरण || ""));
-        if (!Number.isInteger(number) || number < 1 || number > 5 || !headline || !summary) return;
+        // A malformed or out-of-order story invalidates this JSON candidate.
+        // Never silently skip an entry and let later summaries shift onto other sources.
+        if (!Number.isInteger(number) || number !== index + 1 || number > 5 || !headline || !summary) {
+          invalidEntry = true;
+          return;
+        }
         const category = cleanText(textValue(entry.category || entry.श्रेणी || entry.विषय || ""));
         lines.push("खबर " + number + (category ? " (" + category + ")" : "") + ": " + headline, "सार: " + summary);
       });
-      if (lines.length) return lines.join("\n");
+      if (!invalidEntry && lines.length === selectedEntries.length && lines.length) return lines.join("\n");
     } catch {}
   }
   return raw;
