@@ -1503,20 +1503,32 @@ function isLast48HoursNewsQuery(query) {
   return /(?:पिछले|गत|last)\s*48\s*(?:घंटों?|घंटे|hours?)/i.test(String(query || ""));
 }
 
+function isYesterdayNewsQuery(query) {
+  const text = String(query || "").trim();
+  return /(?:^|[\s,])(?:कल|yesterday)(?:[\s,]|$)/i.test(text) &&
+    /(?:खबर|समाचार|न्यूज़|न्यूज|news)/i.test(text) &&
+    !isLast48HoursNewsQuery(text);
+}
+
 function getNewsFreshnessStartTimestamp(query, now = Date.now()) {
-  return isLast48HoursNewsQuery(query) ? now - 48 * 60 * 60 * 1000 : getIndiaDayStartTimestamp(now);
+  const todayStart = getIndiaDayStartTimestamp(now);
+  if (isLast48HoursNewsQuery(query)) return now - 48 * 60 * 60 * 1000;
+  if (isYesterdayNewsQuery(query)) return todayStart - 24 * 60 * 60 * 1000;
+  return todayStart;
 }
 
 function filterFreshNewsResults(results, now = Date.now(), query = "") {
   const earliestAllowed = getNewsFreshnessStartTimestamp(query, now);
+  const yesterdayOnly = isYesterdayNewsQuery(query);
+  const todayStart = getIndiaDayStartTimestamp(now);
   return (Array.isArray(results) ? results : []).filter(item => {
     const publishedAt = item && typeof item.publishedAt === "string" ? item.publishedAt.trim() : "";
     if (!publishedAt) return false;
     const timestamp = Date.parse(publishedAt);
-    return Number.isFinite(timestamp) && timestamp <= now && timestamp >= earliestAllowed;
+    const beforeEnd = yesterdayOnly ? timestamp < todayStart : timestamp <= now;
+    return Number.isFinite(timestamp) && beforeEnd && timestamp >= earliestAllowed;
   });
 }
-
 function sortNewsByPublicationTime(results) {
   return (Array.isArray(results) ? [...results] : []).sort((a, b) => {
     const aTime = Date.parse(a?.publishedAt || "");
