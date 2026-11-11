@@ -163,6 +163,11 @@ assert.equal(sourceGroundingFns.hasHeadlineSummaryTopicConflict("दिल्ल
 assert.equal(sourceGroundingFns.hasUnsupportedNewsSummaryTopic("मुंबई के डोंगरी में आग लगी","Major fire breaks out in Mumbai's Dongri. Firefighters doused the blaze."),false);
 assert.equal(sourceGroundingFns.hasUnsupportedNewsSummaryTopic("CEO की पत्नी से जुड़ा अफेयर","Nvidia investigates CEO over suspected Chinese spy links"),true);
 
+
+const digestTitleStart = worker.indexOf("function isMultiTopicNewsDigestTitle(title) {");
+const digestTitleEnd = worker.indexOf("\nfunction isIndiaFocusedNewsItem", digestTitleStart);
+assert.ok(digestTitleStart >= 0 && digestTitleEnd > digestTitleStart, "multi-topic digest title helper must exist");
+const isMultiTopicNewsDigestTitle = new Function("cleanText", worker.slice(digestTitleStart, digestTitleEnd) + "\nreturn isMultiTopicNewsDigestTitle;")(value => String(value || "").replace(/\s+/g, " ").trim());
 const newsFormatterStart = worker.indexOf("function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false, allowGlobalNews = false, requestedScope = \"India\", singleStoryRequest = false) {");
 const newsFormatterEnd = worker.indexOf("\n}\n", newsFormatterStart);
 assert.ok(newsFormatterStart >= 0 && newsFormatterEnd > newsFormatterStart, "daily-news formatter must exist");
@@ -193,7 +198,7 @@ const formatCurrentNewsSummaryReply = new Function(
   "dedupeNewsResults", "cleanText", "formatNewsPublishedAt",
   "hasMixedScriptToken", "hasUnsupportedNumericClaim", "hasUnsupportedCertaintyClaim",
   "hasUnsupportedNewsHeadlineMix", "hasUntranslatedEnglishHeadline", "hasIncorrectOverallAqiCategory", "isIndiaFocusedNewsItem", "isNewsItemWithinRequestedScope", "hasKnownContradictedNewsFact", "hasUnsupportedCourtDisposition",
-  "classifyRequestedNewsCategory", "getIndiaDayStartTimestamp", "isNewsResultPageTitleMismatch", "hasUnsupportedNewsSummaryTopic", "hasHeadlineSummaryTopicConflict",
+  "classifyRequestedNewsCategory", "getIndiaDayStartTimestamp", "isNewsResultPageTitleMismatch", "hasUnsupportedNewsSummaryTopic", "hasHeadlineSummaryTopicConflict", "isMultiTopicNewsDigestTitle",
   worker.slice(newsFormatterStart, newsFormatterEnd + 3) + "\nreturn formatCurrentNewsSummaryReply;"
 )(
   newsFormatHelpers.formatHindiNewsCount,
@@ -215,7 +220,8 @@ const formatCurrentNewsSummaryReply = new Function(
   getIndiaDayStartTimestamp,
   sourceGroundingFns.isNewsResultPageTitleMismatch,
   sourceGroundingFns.hasUnsupportedNewsSummaryTopic,
-  sourceGroundingFns.hasHeadlineSummaryTopicConflict
+  sourceGroundingFns.hasHeadlineSummaryTopicConflict,
+  isMultiTopicNewsDigestTitle
 );
 const groupNewsStart = worker.indexOf("function groupNewsByEvent(results) {");
 const groupNewsEnd = worker.indexOf("\n}\n", groupNewsStart);
