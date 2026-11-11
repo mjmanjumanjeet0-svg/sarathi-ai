@@ -512,6 +512,11 @@ const separateStories = groupNewsByEvent([
   { title: "Egypt election results announced", url: "https://www.example-two.com/world/egypt-election" }
 ]);
 assert.equal(separateStories.length, 2, "unrelated news in the same country must not be merged");
+const recurringRailStories = groupNewsByEvent([
+  { title: "Egypt train collision kills four", url: "https://www.example-one.com/world/egypt-train", publisher: "Example One", publishedAt: "2026-11-01T14:00:00Z" },
+  { title: "Four dead after Egypt train crash", url: "https://www.example-two.com/news/egypt-rail", publisher: "Example Two", publishedAt: "2026-11-06T14:00:00Z" }
+]);
+assert.equal(recurringRailStories.length, 2, "similar recurring event headlines more than 72 hours apart must remain separate");
 
 
 // News fallback must search the requested geography and interleave publisher RSS
