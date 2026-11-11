@@ -337,7 +337,7 @@ function decodeNewsXmlText(value) {
 function rssTagValue(block, tagNames) {
   for (const rawTag of tagNames) {
     const tag = rawTag.replace(/[^a-z0-9:_-]/gi, "");
-    const match = block.match(new RegExp("<" + tag + "(?:\s[^>]*)?>([\s\\S]*?)</" + tag + "\s*>", "i"));
+    const match = block.match(new RegExp("<" + tag + "(?:\\s[^>]*)?>([\\s\\S]*?)</" + tag + "\\s*>", "i"));
     if (match) return match[1];
   }
   return "";
@@ -781,7 +781,7 @@ async function enrichGoldRateResults(results) {
       const dateValues = [];
       for (const tag of metaTags) {
         const attr = name => {
-          const match = tag.match(new RegExp("(?:^|\s)" + name + "\s*=\s*([\"'])(.*?)\\1", "i"));
+          const match = tag.match(new RegExp("(?:^|\\s)" + name + "\\s*=\\s*([\"'])(.*?)\\1", "i"));
           return match ? match[2].trim() : "";
         };
         const key = (attr("property") || attr("name") || attr("itemprop")).toLowerCase();
@@ -851,7 +851,7 @@ async function enrichGoldRateResults(results) {
       if (!contexts.length) return item;
       const combined = [item.title || "", item.snippet || "", ...contexts].join(" | ");
       const rateFor = (karat) => {
-        const re = new RegExp("(?:\b" + karat + "\s*(?:K|karat|carat)|" + karat + "\s*कैरेट)[^₹]{0,120}(?:₹|Rs\\.?|INR)\s*([0-9,]+(?:\\.[0-9]+)?)", "i");
+        const re = new RegExp("(?:\\b" + karat + "\\s*(?:K|karat|carat)|" + karat + "\\s*कैरेट)[^₹]{0,120}(?:₹|Rs\\.?|INR)\\s*([0-9,]+(?:\\.[0-9]+)?)", "i");
         const m = combined.match(re);
         return m ? Number(m[1].replace(/,/g, "")) : null;
       };
@@ -1112,10 +1112,15 @@ function buildBloodySundayVerifiedReply(results) {
 }
 
 function isMultiTopicNewsDigestTitle(title) {
-  const value = cleanText(title || "");
-  // Roundups mix unrelated events under one page title and cannot serve as
-  // independently reported evidence for a single story or category.
-  return /(?:\bnews\s+this\s+week\b|\bthis\s+week(?:'s)?\s+news\b|\bweekly\s+news(?:\s+(?:roundup|wrap|digest))?\b|\bweek(?:ly)?\s+in\s+review\b|\bnews\s+(?:roundup|digest|wrap[- ]?up)\b|\b(?:evening|morning|daily)\s+news\s+brief\b|\bdaily\s+roundup\b|\btop\s+headlines\b|साप्ताहिक\s+समाचार|सप्ताह\s+की\s+(?:प्रमुख\s+)?खबरें|हफ्ते\s+की\s+खबरें)/i.test(value);
+  const value = cleanText(title || "").toLocaleLowerCase("en");
+  const roundupMarkers = [
+    "news this week", "this week's news", "weekly news", "weekly roundup",
+    "weekly wrap", "weekly digest", "week in review", "news roundup",
+    "news digest", "news wrap-up", "evening news brief", "morning news brief",
+    "daily news brief", "daily roundup", "top headlines",
+    "साप्ताहिक समाचार", "सप्ताह की खबरें", "सप्ताह की प्रमुख खबरें", "हफ्ते की खबरें"
+  ];
+  return roundupMarkers.some(marker => value.includes(marker));
 }
 
 function isIndiaFocusedNewsItem(item) {
@@ -1644,7 +1649,7 @@ function courtRecordPartyNames(value) {
     .replace(/\b(?:[A-Z][A-Za-z.'’&-]*\s+)?(?:High Court|Supreme Court)\b/gi, " ")
     .replace(/\b(?:photo(?:graph)?\s*(?:credit|by)|image\s*credit|byline|written\s*by|reported\s*by|correspondent|reporter|staff\s*reporter|advocate|senior\s*advocate|counsel|court\s*master|justice|judge)\b[^.\n]{0,180}/gi, " ");
   const names = new Set();
-  const namePart = "[A-Z][A-Za-z.'’&-]*(?:\s+(?!(?:v\\.?|versus|PIL|WP|SLP|WPC|CRL|CIVIL|CASE|PETITION|ORDER|JUDGMENT|[Cc]ivil|[Jj]udge|[Aa]ppointment|[Jj]udicial|[Gg]old|[Ll]oan|[Ll]ow|[Vv]ision|[Pp]ledged|[Jj]ewellery|[Ww]oman|[Ww]aits|RBI)\b)(?:[A-Z][A-Za-z.'’&-]*|of|the|and|&)){1,7}";
+  const namePart = "[A-Z][A-Za-z.'’&-]*(?:\\s+(?!(?:v\\.?|versus|PIL|WP|SLP|WPC|CRL|CIVIL|CASE|PETITION|ORDER|JUDGMENT|[Cc]ivil|[Jj]udge|[Aa]ppointment|[Jj]udicial|[Gg]old|[Ll]oan|[Ll]ow|[Vv]ision|[Pp]ledged|[Jj]ewellery|[Ww]oman|[Ww]aits|RBI)\\b)(?:[A-Z][A-Za-z.'’&-]*|of|the|and|&)){1,7}";
   const add = value => {
     const cleaned = cleanText(value).replace(/^(?:the\s+)?/i, "").replace(/\s+/g, " ").replace(/[.,;:]+$/g, "").trim();
     const words = cleaned.split(" ").filter(Boolean);
@@ -1654,7 +1659,7 @@ function courtRecordPartyNames(value) {
       names.add(cleaned.toLocaleLowerCase("en-IN"));
     }
   };
-  const caption = new RegExp("(" + namePart + ")\s+(?:v\\.?|versus)\s+(" + namePart + ")", "g");
+  const caption = new RegExp("(" + namePart + ")\\s+(?:v\\.?|versus)\\s+(" + namePart + ")", "g");
   for (const match of text.matchAll(caption)) {
     add(match[1]);
     add(match[2]);
@@ -1901,8 +1906,8 @@ function selectNewsForRequestedCategories(results, query) {
     const sameCabinetDay = [...selected.values()].some(previous => {
       const previousText = cleanText((previous.title || "") + " " + (previous.snippet || ""));
       const currentText = cleanText((item.title || "") + " " + (item.snippet || ""));
-      const bothCabinet = /कैबिनेट|मंत्रिमंडल|\bcabinet\b/i.test(previousText) &&
-        /कैबिनेट|मंत्रिमंडल|\bcabinet\b/i.test(currentText);
+      const bothCabinet = /कैबिनेट|मंत्रिमंडल|\\bcabinet\\b/i.test(previousText) &&
+        /कैबिनेट|मंत्रिमंडल|\\bcabinet\\b/i.test(currentText);
       const previousDay = String(previous.publishedAt || "").slice(0, 10);
       const currentDay = String(item.publishedAt || "").slice(0, 10);
       return bothCabinet && previousDay && previousDay === currentDay;
@@ -2562,7 +2567,7 @@ function buildCompactNewsSourceContext(results, requireFiveCategories = false) {
 function buildProviderBusySearchFallback(results, query, reason = "AI सेवा इस समय व्यस्त है, इसलिए खोज परिणामों का हिंदी सार तैयार नहीं हो सका।") {
   const items = (Array.isArray(results) ? results : []).slice(0, 8);
   if (!items.length) return "";
-  const isBullion = /(सोने|सोना|gold|चांदी|चाँदी|silver|bullion|22\s*k|24\s*k)/i.test(String(query || ""));
+  const isBullion = /(सोने|सोना|gold|चांदी|चाँदी|silver|bullion|22\\s*k|24\\s*k)/i.test(String(query || ""));
   if (isBullion) {
     const cities = [
       { label: "दिल्ली", re: /दिल्ली|\bdelhi\b|new delhi/i },
@@ -2588,13 +2593,13 @@ function buildProviderBusySearchFallback(results, query, reason = "AI सेव�
           const find = (label, unit) => {
             const re = new RegExp("(?:"
               + label
-              + ")[^₹]{0,180}(?:₹|Rs\\.?|INR)\s*([0-9][0-9,]*(?:\\.[0-9]+)?)\s*(" + unit + ")", "i");
+              + ")[^₹]{0,180}(?:₹|Rs\\.?|INR)\\s*([0-9][0-9,]*(?:\\.[0-9]+)?)\\s*(" + unit + ")", "i");
             const match = row.match(re);
             return match ? { value: match[1], unit: match[2] } : null;
           };
-          const gold24 = find("(?:24\s*(?:K|karat|carat)|24\s*कैरेट)", "(?:per\s*10\s*g(?:m|rams?)?|10\s*g(?:m|rams?)|\\/\s*10\s*g(?:m|rams?)?)");
-          const gold22 = find("(?:22\s*(?:K|karat|carat)|22\s*कैरेट)", "(?:per\s*10\s*g(?:m|rams?)?|10\s*g(?:m|rams?)|\\/\s*10\s*g)");
-          const silver = find("(?:999\s*(?:fine\s*)?silver|silver\s*999(?:\s*fine)?|999\s*शुद्धता\s*(?:की\s*)?चाँदी)", "(?:per\s*1\s*kg|per\s*kg|1\s*kg|\\/\s*1\s*kg|\\/\s*kg)");
+          const gold24 = find("(?:24\\s*(?:K|karat|carat)|24\\s*कैरेट)", "(?:per\\s*10\\s*g(?:m|rams?)?|10\\s*g(?:m|rams?)|\\/\\s*10\\s*g(?:m|rams?)?)");
+          const gold22 = find("(?:22\\s*(?:K|karat|carat)|22\\s*कैरेट)", "(?:per\\s*10\\s*g(?:m|rams?)?|10\\s*g(?:m|rams?)|\\/\\s*10\\s*g)");
+          const silver = find("(?:999\\s*(?:fine\\s*)?silver|silver\\s*999(?:\\s*fine)?|999\\s*शुद्धता\\s*(?:की\\s*)?चाँदी)", "(?:per\\s*1\\s*kg|per\\s*kg|1\\s*kg|\\/\\s*1\\s*kg|\\/\\s*kg)");
           if (gold24) rates.push("24 कैरेट सोना: ₹" + gold24.value + " प्रति 10 ग्राम");
           if (gold22) rates.push("22 कैरेट सोना: ₹" + gold22.value + " प्रति 10 ग्राम");
           if (silver) rates.push("999 चाँदी: ₹" + silver.value + " प्रति किलोग्राम");
