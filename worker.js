@@ -2209,7 +2209,7 @@ function normalizeNewsSummaryRepairText(rawReply) {
         const category = cleanText(textValue(entry.category || entry.श्रेणी || entry.विषय || ""));
         lines.push("खबर " + number + (category ? " (" + category + ")" : "") + ": " + headline, "सार: " + summary);
       });
-      if (!invalidEntry && lines.length === selectedEntries.length && lines.length) return lines.join("\n");
+      if (!invalidEntry && lines.length === selectedEntries.length * 2 && lines.length) return lines.join("\n");
     } catch {}
   }
   return raw;
