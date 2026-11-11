@@ -1111,17 +1111,21 @@ function buildBloodySundayVerifiedReply(results) {
     sourceNote;
 }
 
+function isMultiTopicNewsDigestTitle(title) {
+  const value = cleanText(title || "");
+  // Roundups mix unrelated events under one page title and cannot serve as
+  // independently reported evidence for a single story or category.
+  return /(?:\\bnews\\s+this\\s+week\\b|\\bthis\\s+week(?:'s)?\\s+news\\b|\\bweekly\\s+news(?:\\s+(?:roundup|wrap|digest))?\\b|\\bweek(?:ly)?\\s+in\\s+review\\b|\\bnews\\s+(?:roundup|digest|wrap[- ]?up)\\b|\\b(?:evening|morning|daily)\\s+news\\s+brief\\b|\\bdaily\\s+roundup\\b|\\btop\\s+headlines\\b|साप्ताहिक\\s+समाचार|सप्ताह\\s+की\\s+(?:प्रमुख\\s+)?खबरें|हफ्ते\\s+की\\s+खबरें)/i.test(value);
+}
+
 function isIndiaFocusedNewsItem(item) {
   const title = cleanText(item?.title || "");
   const snippet = cleanText(item?.snippet || "");
   const headline = title.toLocaleLowerCase("hi-IN");
   const evidence = snippet.toLocaleLowerCase("hi-IN");
 
-  // Exclude multi-topic publisher digests: they can mix one Indian item with
-  // unrelated international stories under a single article title.
-  if (/(?:evening news brief|morning news brief|daily news brief|news roundup|daily roundup|top headlines)/i.test(title)) {
-    return false;
-  }
+  // Reject broad roundups before their mixed article snippets can be treated as one story.
+  if (isMultiTopicNewsDigestTitle(title)) return false;
 
   // Require an India-specific headline signal whenever possible. A foreign
   // story must not pass just because its body mentions Indian fans or readers.
@@ -2250,13 +2254,13 @@ function buildNewsDigestNote(shortfall = "") {
   return "ध्यान दें: " + notes.join(" ");
 }
 
-function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false, allowGlobalNews = false, requestedScope = "India") {
+function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false, allowGlobalNews = false, requestedScope = "India", singleStoryRequest = false) {
   let items = dedupeNewsResults(results).filter(item => {
     const title = cleanText(item?.title || "");
     const publishedAt = Date.parse(item?.publishedAt || "");
     const now = Date.now();
     // Enforce today's India-local calendar date again at the final display boundary.
-    if (!title || isNewsResultPageTitleMismatch(item) || !Number.isFinite(publishedAt) ||
+    if (!title || isMultiTopicNewsDigestTitle(title) || isNewsResultPageTitleMismatch(item) || !Number.isFinite(publishedAt) ||
         publishedAt < getIndiaDayStartTimestamp(now) || publishedAt > now + 5 * 60 * 1000 ||
         (!allowGlobalNews && !isNewsItemWithinRequestedScope(item, requestedScope))) return false;
     try {
@@ -2458,13 +2462,15 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
   // Show only individually validated stories; never pad with unsupported items.
   if (!lines.length) return "";
   const count = lines.length;
-  const prefix = requireFiveCategories && count < 5
-    ? "आज " + count + (count === 1 ? " अलग, तारीख़-जाँची खबर मिली" : " अलग-अलग, तारीख़-जाँची खबरें मिलीं") + " (पाँच श्रेणियों में से " + count + " खबरें सत्यापन में सफल हुईं):"
-    : formatHindiNewsCount(count);
+  const prefix = singleStoryRequest
+    ? "एक तारीख़-जाँची खबर:"
+    : requireFiveCategories && count < 5
+      ? "आज " + count + (count === 1 ? " अलग, तारीख़-जाँची खबर मिली" : " अलग-अलग, तारीख़-जाँची खबरें मिलीं") + " (पाँच श्रेणियों में से " + count + " खबरें सत्यापन में सफल हुईं):"
+      : formatHindiNewsCount(count);
   const missingCategories = requireFiveCategories
     ? requiredCategories.filter(category => !acceptedCategories.includes(category))
     : [];
-  const shortfall = count < 5
+  const shortfall = !singleStoryRequest && count < 5
     ? (requireFiveCategories
         ? "इन श्रेणियों की खबर स्रोत-जाँच में सफल नहीं हुई: " + (missingCategories.join(", ") || "कुछ श्रेणियाँ") + "। केवल सत्यापित खबरें दिखाई गई हैं; अपुष्ट खबर नहीं जोड़ी गई।"
         : "पर्याप्त स्वतंत्र और पुष्ट खबरें नहीं मिलीं, इसलिए अपुष्ट खबरें नहीं जोड़ी गईं।")
@@ -3934,7 +3940,7 @@ export default {
     // The summary parser itself validates every source-summary pair. Avoid a
     // separate brittle heading counter that can reject harmless punctuation.
     let formattedNewsReply = isCurrentNewsReply && !looksLikeRawEnglishArticle
-      ? formatCurrentNewsSummaryReply(normalizeNewsSummaryRepairText(rawReply), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText), isGlobalNewsQuery(userText), requestedNewsScope || "India")
+      ? formatCurrentNewsSummaryReply(normalizeNewsSummaryRepairText(rawReply), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText), isGlobalNewsQuery(userText), requestedNewsScope || "India", isSingleRequestedNewsStory(userText))
       : "";
 
     // If the first completion used an unexpected layout, make one constrained
@@ -3955,7 +3961,7 @@ export default {
             ? repairContent.map(part => typeof part === "string" ? part : (part?.text || part?.content || "")).join("")
             : repairContent;
           return typeof repairText === "string" && repairText.trim()
-            ? formatCurrentNewsSummaryReply(normalizeNewsSummaryRepairText(repairText.trim()), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText), isGlobalNewsQuery(userText), requestedNewsScope || "India")
+            ? formatCurrentNewsSummaryReply(normalizeNewsSummaryRepairText(repairText.trim()), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText), isGlobalNewsQuery(userText), requestedNewsScope || "India", isSingleRequestedNewsStory(userText))
             : "";
         };
         let repairResponse;
