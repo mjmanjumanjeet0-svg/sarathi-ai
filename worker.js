@@ -2312,7 +2312,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     const now = Date.now();
     // Enforce today's India-local calendar date again at the final display boundary.
     if (!title || isMultiTopicNewsDigestTitle(title) || isNewsResultPageTitleMismatch(item) || !Number.isFinite(publishedAt) ||
-        publishedAt < getNewsFreshnessStartTimestamp(newsQuery, now) || publishedAt > now + 5 * 60 * 1000 ||
+        publishedAt < getNewsFreshnessStartTimestamp(newsQuery, now) || publishedAt > now ||
         (!allowGlobalNews && !isNewsItemWithinRequestedScope(item, requestedScope))) return false;
     try {
       const url = new URL(item?.url || "");
@@ -2327,7 +2327,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     const latestByCategory = new Map();
     const now = Date.now();
     const earliestAllowed = getNewsFreshnessStartTimestamp(newsQuery, now);
-    const latestAllowed = now + 5 * 60 * 1000;
+    const latestAllowed = now;
     for (const item of items) {
       const category = classifyRequestedNewsCategory(item);
       const publishedAt = Date.parse(item?.publishedAt || "");
@@ -2536,7 +2536,7 @@ function buildCurrentNewsHeadlineReply(results, query = "") {
     const publishedAt = Date.parse(item?.publishedAt || "");
     const now = Date.now();
     if (!title || !Number.isFinite(publishedAt) ||
-        publishedAt < getNewsFreshnessStartTimestamp(query, now) || publishedAt > now + 5 * 60 * 1000 ||
+        publishedAt < getNewsFreshnessStartTimestamp(query, now) || publishedAt > now ||
         (!isGlobalNewsQuery(query) && !isIndiaFocusedNewsItem(item))) return false;
     try {
       const url = new URL(item?.url || "");
