@@ -2465,7 +2465,17 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     const isAgniveerExtension = /agniveer|अग्निवीर/i.test(sourceEvidence) &&
       /(?:75\s*%|७५\s*प्रतिशत|remaining\s+75|शेष\s+७५)/i.test(sourceEvidence);
     if (isAgniveerExtension && !/(?:75\s*%|७५\s*(?:प्रतिशत|फीसदी)|शेष\s+७५|पचहत्तर\s*(?:प्रतिशत|फीसदी)?)/i.test(generatedText)) { rejectCounts.agniveerDetail++; continue; }
-    if (hasMixedScriptToken(generatedText)) { rejectCounts.mixedScript++; continue; }
+    if (hasMixedScriptToken(generatedText)) {
+      rejectCounts.mixedScript++;
+      rejectedStoryDetails.push({
+        reason: "mixedScript",
+        category: items[index]?.requestedCategory || null,
+        sourceTitle: cleanText(items[index]?.title || "").slice(0, 180),
+        headline: cleanText(entry.headline).slice(0, 180),
+        summary: cleanText(entry.summary).slice(0, 260)
+      });
+      continue;
+    }
     const unsupportedNumericTokens = hasUnsupportedNumericClaim(generatedText, sourceEvidence, true);
     if (unsupportedNumericTokens.length) {
       rejectCounts.unsupportedNumber++;
