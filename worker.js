@@ -2069,12 +2069,12 @@ function isCurrentNewsQuery(text) {
 }
 
 function hasUnsupportedNumericClaim(generatedText, sourceEvidence, returnDetails = false) {
-  const hindiNumbers = {"शून्य":"0","दो":"2","तीन":"3","चार":"4","पाँच":"5","पांच":"5","छह":"6","छः":"6","सात":"7","आठ":"8","नौ":"9","दस":"10","ग्यारह":"11","बारह":"12","पंद्रह":"15","बीस":"20","पच्चीस":"25","तीस":"30","चालीस":"40","पचास":"50","साठ":"60","सत्तर":"70","पचहत्तर":"75","अस्सी":"80","नब्बे":"90","सौ":"100","हजार":"1000","लाख":"100000","करोड़":"10000000"};
-  const englishNumbers = {"zero":"0","two":"2","three":"3","four":"4","five":"5","six":"6","seven":"7","eight":"8","nine":"9","ten":"10","eleven":"11","twelve":"12","fifteen":"15","twenty":"20","thirty":"30","forty":"40","fifty":"50","sixty":"60","seventy":"70","seventy-five":"75","eighty":"80","ninety":"90","hundred":"100","thousand":"1000","lakh":"100000","crore":"10000000"};
+  const hindiNumbers = {"शून्य":"0","दो":"2","तीन":"3","चार":"4","पाँच":"5","पांच":"5","छह":"6","छः":"6","सात":"7","आठ":"8","नौ":"9","दस":"10","ग्यारह":"11","बारह":"12","तेरह":"13","चौदह":"14","पंद्रह":"15","सोलह":"16","सत्रह":"17","अठारह":"18","उन्नीस":"19","बीस":"20","इक्कीस":"21","बाईस":"22","तेईस":"23","चौबीस":"24","पच्चीस":"25","तीस":"30","चालीस":"40","पचास":"50","साठ":"60","सत्तर":"70","पचहत्तर":"75","अस्सी":"80","नब्बे":"90","सौ":"100","हजार":"1000","लाख":"100000","करोड़":"10000000"};
+  const englishNumbers = {"zero":"0","two":"2","three":"3","four":"4","five":"5","six":"6","seven":"7","eight":"8","nine":"9","ten":"10","eleven":"11","twelve":"12","thirteen":"13","fourteen":"14","fifteen":"15","sixteen":"16","seventeen":"17","eighteen":"18","nineteen":"19","twenty":"20","twenty-one":"21","twenty-two":"22","twenty-three":"23","twenty-four":"24","thirty":"30","forty":"40","fifty":"50","sixty":"60","seventy":"70","seventy-five":"75","eighty":"80","ninety":"90","hundred":"100","thousand":"1000","lakh":"100000","crore":"10000000"};
   const normalize = value => String(value || "")
     .replace(/[०-९]/g, digit => String("०१२३४५६७८९".indexOf(digit)))
-    .replace(/\b(seventy-five|zero|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|fifteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|lakh|crore)\b/gi, word => englishNumbers[word.toLowerCase()] || word)
-    .replace(/(?<![\p{L}\p{M}])(?:शून्य|दो|तीन|चार|पाँच|पांच|छह|छः|सात|आठ|नौ|दस|ग्यारह|बारह|पंद्रह|बीस|पच्चीस|तीस|चालीस|पचास|साठ|सत्तर|पचहत्तर|अस्सी|नब्बे|सौ|हजार|लाख|करोड़)(?![\p{L}\p{M}])/gu, word => hindiNumbers[word] || word);
+    .replace(/\b(twenty-four|twenty-three|twenty-two|twenty-one|seventy-five|zero|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|lakh|crore)\b/gi, word => englishNumbers[word.toLowerCase()] || word)
+    .replace(/(?<![\p{L}\p{M}])(?:शून्य|दो|तीन|चार|पाँच|पांच|छह|छः|सात|आठ|नौ|दस|ग्यारह|बारह|तेरह|चौदह|पंद्रह|सोलह|सत्रह|अठारह|उन्नीस|बीस|इक्कीस|बाईस|तेईस|चौबीस|पच्चीस|तीस|चालीस|पचास|साठ|सत्तर|पचहत्तर|अस्सी|नब्बे|सौ|हजार|लाख|करोड़)(?![\p{L}\p{M}])/gu, word => hindiNumbers[word] || word);
   // Treat thousands separators consistently: 14,500 and 14500 are the same value.
   const numericTokens = value => normalize(value)
     .replace(/(?<=\d),(?=\d{3}(?:\D|$))/g, "")
