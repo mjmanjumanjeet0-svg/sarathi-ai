@@ -168,7 +168,7 @@ const digestTitleStart = worker.indexOf("function isMultiTopicNewsDigestTitle(ti
 const digestTitleEnd = worker.indexOf("\nfunction isIndiaFocusedNewsItem", digestTitleStart);
 assert.ok(digestTitleStart >= 0 && digestTitleEnd > digestTitleStart, "multi-topic digest title helper must exist");
 const isMultiTopicNewsDigestTitle = new Function("cleanText", worker.slice(digestTitleStart, digestTitleEnd) + "\nreturn isMultiTopicNewsDigestTitle;")(value => String(value || "").replace(/\s+/g, " ").trim());
-const newsFormatterStart = worker.indexOf("function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false, allowGlobalNews = false, requestedScope = \"India\", singleStoryRequest = false, newsQuery = "") {");
+const newsFormatterStart = worker.indexOf("function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false, allowGlobalNews = false, requestedScope = \"India\", singleStoryRequest = false, newsQuery = \"\") {");
 const newsFormatterEnd = worker.indexOf("\n}\n", newsFormatterStart);
 assert.ok(newsFormatterStart >= 0 && newsFormatterEnd > newsFormatterStart, "daily-news formatter must exist");
 const untranslatedHeadlineStart = worker.indexOf("function hasUntranslatedEnglishHeadline(text, sourceEvidence = \"\") {");
