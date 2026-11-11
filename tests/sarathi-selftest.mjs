@@ -290,6 +290,19 @@ assert.equal(classifyRequestedNewsCategory({ title: "Delhi govt urges citizens t
 assert.equal(classifyRequestedNewsCategory({ title: "PM Modi asks new NITI Aayog team to craft ideas to improve lives of India’s poorest" }), "सरकार", "NITI Aayog policy direction must be classified as government, not economy");
 assert.match(source, /courts and major legal decisions/, "five-category search must deliberately seek recent court coverage");
 assert.equal(classifyRequestedNewsCategory({ title: "Indian athlete Parvez Khan faces doping ban" }), "खेल", "an athlete doping story must qualify as sports");
+const digestHelperStart = source.indexOf("function isMultiTopicNewsDigestTitle(title) {");
+const digestHelperEnd = source.indexOf("\nfunction isIndiaFocusedNewsItem", digestHelperStart);
+assert.ok(digestHelperStart >= 0 && digestHelperEnd > digestHelperStart, "multi-topic news digest filter must exist");
+const isMultiTopicNewsDigestTitle = new Function("cleanText",
+  source.slice(digestHelperStart, digestHelperEnd) + "\nreturn isMultiTopicNewsDigestTitle;")(
+    cleanTextForCategoryTest
+  );
+assert.equal(isMultiTopicNewsDigestTitle("News This Week (Nov 2-6): Trump's Midterm Setback, Delhi's Toxic Air, Ramayana's Big Debut & More"), true,
+  "weekly multi-topic publisher roundups must be rejected as single-story sources");
+assert.equal(isMultiTopicNewsDigestTitle("Weekly News Roundup: Government, markets and sport"), true,
+  "weekly news roundup pages must not be used as independently reported articles");
+assert.equal(isMultiTopicNewsDigestTitle("Supreme Court orders release in unlawful detention case"), false,
+  "a specific reported court article must remain eligible");
 assert.equal(classifyRequestedNewsCategory({ title: "Daily roundup of national headlines", snippet: "Sports officials and athletes discuss the latest tournament" }), "", "incidental sports terms in a snippet must not fill the sports category");
 
 const selectStart = source.indexOf("function selectNewsForRequestedCategories(results, query) {");

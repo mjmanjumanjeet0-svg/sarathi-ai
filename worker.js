@@ -1111,17 +1111,24 @@ function buildBloodySundayVerifiedReply(results) {
     sourceNote;
 }
 
+function isMultiTopicNewsDigestTitle(title) {
+  const value = cleanText(title || "");
+  // A weekly roundup is not an independently reported story. It may mention
+  // several unrelated events in its body, causing the summary model to attach
+  // a fact from one event to the wrong headline. Reject these source pages
+  // before category selection and evidence enrichment.
+  return /(?:\bnews\s+this\s+week\b|\bthis\s+week(?:'s)?\s+news\b|\bweekly\s+news(?:\s+(?:roundup|wrap|digest))?\b|\bweek(?:ly)?\s+in\s+review\b|\bnews\s+(?:roundup|digest|wrap[- ]?up)\b|\b(?:evening|morning|daily)\s+news\s+brief\b|\bdaily\s+roundup\b|\btop\s+headlines\b|साप्ताहिक\s+समाचार|सप्ताह\s+की\s+(?:प्रमुख\s+)?खबरें|हफ्ते\s+की\s+खबरें)/i.test(value);
+}
+
 function isIndiaFocusedNewsItem(item) {
   const title = cleanText(item?.title || "");
   const snippet = cleanText(item?.snippet || "");
   const headline = title.toLocaleLowerCase("hi-IN");
   const evidence = snippet.toLocaleLowerCase("hi-IN");
 
-  // Exclude multi-topic publisher digests: they can mix one Indian item with
-  // unrelated international stories under a single article title.
-  if (/(?:evening news brief|morning news brief|daily news brief|news roundup|daily roundup|top headlines)/i.test(title)) {
-    return false;
-  }
+  // Exclude multi-topic publisher digests: they can mix unrelated events
+  // under a single article title.
+  if (isMultiTopicNewsDigestTitle(title)) return false;
 
   // Require an India-specific headline signal whenever possible. A foreign
   // story must not pass just because its body mentions Indian fans or readers.
