@@ -2159,15 +2159,23 @@ function normalizeNewsSummaryRepairText(rawReply) {
   const findEntries = (value, depth = 0) => {
     if (depth > 8 || !value || typeof value !== "object") return [];
     if (Array.isArray(value)) {
+      // Keep every story-shaped entry, including one with a missing summary,
+      // so validation cannot silently filter it out and shift later stories.
       const entries = value.filter(item => item && typeof item === "object" &&
-        (item.headline || item.title || item.हेडलाइन || item.शीर्षक) &&
-        (item.summary || item.summaryHindi || item.description || item.सार || item.सारांश || item.विवरण));
+        (item.headline || item.title || item.हेडलाइन || item.शीर्षक));
       if (entries.length) return entries;
       for (const item of value) {
         const nested = findEntries(item, depth + 1);
         if (nested.length) return nested;
       }
       return [];
+    }
+    // Prefer common response envelopes explicitly before traversing other fields.
+    for (const key of ["stories", "data", "result", "output", "response"]) {
+      if (value[key] && typeof value[key] === "object") {
+        const nested = findEntries(value[key], depth + 1);
+        if (nested.length) return nested;
+      }
     }
     for (const child of Object.values(value)) {
       const nested = findEntries(child, depth + 1);
