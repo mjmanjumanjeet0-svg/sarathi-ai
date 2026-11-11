@@ -1349,6 +1349,12 @@ function groupNewsByEvent(results) {
     const titleTokens = tokensFor(item.title);
     if (!titleTokens.size) continue;
     const duplicateIndex = groups.findIndex(group => {
+      // A recurring topic is not necessarily the same event. Keep reports
+      // more than 72 hours apart separate even when their headlines share anchors.
+      const currentPublishedAt = Date.parse(item?.publishedAt || "");
+      const previousPublishedAt = Date.parse(group?.publishedAt || "");
+      if (Number.isFinite(currentPublishedAt) && Number.isFinite(previousPublishedAt) &&
+          Math.abs(currentPublishedAt - previousPublishedAt) > 72 * 60 * 60 * 1000) return false;
       if (isSameIndianMarketEvent(item, group) || isSameIndianNewsEvent(item, group)) return true;
       const previousTokens = tokensFor(group.title);
       let shared = 0;
