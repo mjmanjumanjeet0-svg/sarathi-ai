@@ -53,7 +53,7 @@ for (const question of ["आज का दिन अच्छा बनाने
 const digestTitleStart = source.indexOf("function isMultiTopicNewsDigestTitle(title) {");
 const digestTitleEnd = source.indexOf("\nfunction isIndiaFocusedNewsItem", digestTitleStart);
 assert.ok(digestTitleStart >= 0 && digestTitleEnd > digestTitleStart, "multi-topic news roundup filter must exist");
-const isMultiTopicNewsDigestTitle = new Function("cleanText", source.slice(digestTitleStart, digestTitleEnd) + "\nreturn isMultiTopicNewsDigestTitle;")(cleanTextForCategoryTest);
+const isMultiTopicNewsDigestTitle = new Function("cleanText", source.slice(digestTitleStart, digestTitleEnd) + "\nreturn isMultiTopicNewsDigestTitle;")(value => String(value || "").replace(/\\s+/g, " ").trim());
 for (const title of [
   "News This Week (Nov 2-6): Government, markets and sport",
   "Weekly News Roundup: Government, markets and sport",
