@@ -247,7 +247,11 @@ const formatCurrentNewsSummaryReply = new Function(
   () => false,
   classifyRequestedNewsCategory,
   getIndiaDayStartTimestamp,
-  (query, now) => freshnessFunctions.isLast48HoursNewsQuery(query) ? now - 48 * 60 * 60 * 1000 : getIndiaDayStartTimestamp(now),
+  (query, now) => freshnessFunctions.isLast48HoursNewsQuery(query)
+    ? now - 48 * 60 * 60 * 1000
+    : freshnessFunctions.isYesterdayNewsQuery(query)
+      ? getIndiaDayStartTimestamp(now) - 24 * 60 * 60 * 1000
+      : getIndiaDayStartTimestamp(now),
   filterFreshNewsResults,
   sourceGroundingFns.isNewsResultPageTitleMismatch,
   sourceGroundingFns.hasUnsupportedNewsSummaryTopic,
@@ -336,6 +340,15 @@ const wrappedJsonHindiDigits = normalizeNewsSummaryRepairText(JSON.stringify({
 assert.equal([...formatCurrentNewsSummaryReply(wrappedJsonHindiDigits, fiveNewsSources, true, true).matchAll(/खबर [1-5](?: \([^)]*\))?:/g)].length, 5, "Hindi Devanagari story numbers must normalize and preserve all five checked stories");
 assert.match(worker, /response_format:\s*\{\s*type:\s*"json_object"\s*\}/, "compact news requests must enable Groq JSON mode");
 assert.match(completeFiveNewsReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "five-category request must return all five stories only when all five summaries pass");
+const todayOnlySources = fiveNewsSources.map(item => ({
+  ...item,
+  publishedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString()
+}));
+assert.equal(
+  formatCurrentNewsSummaryReply(fiveNewsDraft, todayOnlySources, true, false, false, "India", false, "कल की खबरें"),
+  "",
+  "final news formatting must reject today's articles when the user explicitly asks for yesterday's news"
+);
 
 const olympicsNewsSource = {
   requestedCategory: "खेल",
