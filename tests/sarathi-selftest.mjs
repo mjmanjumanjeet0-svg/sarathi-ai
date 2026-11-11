@@ -48,6 +48,32 @@ for (const question of ["आज का दिन अच्छा बनाने
   assert.equal(isDateQuestion(question), false, "non-calendar question must not be treated as a date request: " + question);
 }
 
+// News JSON repair must preserve exact story-to-source ordering.
+const normalizeNewsSummaryRepairText = (() => {
+  const start = source.indexOf("function normalizeNewsSummaryRepairText(");
+  const end = source.indexOf("\nfunction hasKnownContradictedNewsFact(", start);
+  if (!(start >= 0 && end > start)) throw new Error("normalizeNewsSummaryRepairText must exist in the Worker");
+  return new Function("cleanText", source.slice(start, end) + "\nreturn normalizeNewsSummaryRepairText;",)(value => String(value ?? "").replace(/\\s+/g, " ").trim());
+})();
+const validNewsJson = JSON.stringify({ stories: [
+  { number: 1, category: "सरकार", headline: "सरकार ने नई नीति बताई", summary: "स्रोत में नीति का उल्लेख है। विवरण भी दिया गया है।" },
+  { number: 2, category: "विज्ञान", headline: "वैज्ञानिकों ने अध्ययन जारी किया", summary: "अध्ययन का उल्लेख है। शोधकर्ता निष्कर्ष बता रहे हैं।" }
+] });
+assert.match(normalizeNewsSummaryRepairText(validNewsJson), /खबर 1 \\(सरकार\\):/);
+assert.match(normalizeNewsSummaryRepairText(validNewsJson), /खबर 2 \\(विज्ञान\\):/);
+const malformedNewsJson = JSON.stringify({ stories: [
+  { number: 1, headline: "पहली खबर", summary: "पहला सार। दूसरा वाक्य।" },
+  { number: 3, headline: "तीसरी खबर", summary: "तीसरा सार। दूसरा वाक्य।" }
+] });
+assert.equal(normalizeNewsSummaryRepairText(malformedNewsJson), malformedNewsJson,
+  "out-of-order JSON story must not be silently skipped and remap later summaries to other sources");
+const missingNewsSummaryJson = JSON.stringify({ stories: [
+  { number: 1, headline: "पहली खबर", summary: "पहला सार। दूसरा वाक्य।" },
+  { number: 2, headline: "दूसरी खबर", summary: "" }
+] });
+assert.equal(normalizeNewsSummaryRepairText(missingNewsSummaryJson), missingNewsSummaryJson,
+  "incomplete JSON story must invalidate the candidate rather than return a partial digest");
+
 const isSarathiCreatorQuestion = (() => {
   const start = source.indexOf("function isSarathiCreatorQuestion(");
   const end = source.indexOf("\nfunction isIndiaCapitalQuestion(", start);
