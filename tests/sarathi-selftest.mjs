@@ -302,6 +302,12 @@ assert.equal(hasHeadlineSummaryTopicConflict("दिल्ली में व�
   "a summary on the same topic as its headline must remain valid");
 assert.equal(hasHeadlineSummaryTopicConflict("शेयर बाजार में गिरावट", "निफ्टी और सेंसेक्स में गिरावट दर्ज हुई।", "Indian stock market falls"), false,
   "valid market summaries must not be rejected");
+assert.equal(hasHeadlineSummaryTopicConflict("इसरो ने नया उपग्रह मिशन घोषित किया", "अस्पतालों में नई चिकित्सा सुविधा शुरू हुई।", "ISRO announces new satellite mission"), true,
+  "a health summary must not be attached to a science headline");
+assert.equal(hasHeadlineSummaryTopicConflict("रेलवे ने नई ट्रेन सेवा शुरू की", "नई शिक्षा नीति पर चर्चा हुई।", "Railways launches new train service"), true,
+  "an education summary must not be attached to a transport headline");
+assert.equal(hasHeadlineSummaryTopicConflict("सरकार ने महंगाई पर कदम उठाया", "मुद्रास्फीति पर नई आर्थिक नीति घोषित हुई।", "Government announces inflation measures"), false,
+  "related economy wording must remain valid when grounded in the source title");
 
 const courtOutcomeStart = source.indexOf("function hasUnsupportedCourtDisposition(");
 const courtOutcomeEnd = source.indexOf("\nfunction formatCurrentNewsSummaryReply", courtOutcomeStart);
