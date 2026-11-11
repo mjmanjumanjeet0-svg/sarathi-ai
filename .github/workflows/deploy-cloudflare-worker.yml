@@ -69,3 +69,25 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy
+
+      - name: Verify deployed Worker health
+        run: |
+          node --input-type=module <<'NODE'
+          const url = "https://sarathi-ai.mjmanjumanjeet0.workers.dev/";
+          const response = await fetch(url, { signal: AbortSignal.timeout(20000) });
+          const body = await response.json();
+          const requiredEndpoints = ["/api/login", "/api/chat"];
+          const endpoints = body.endpoints || {};
+          const missing = requiredEndpoints.filter(path => !Object.values(endpoints).includes(path));
+          if (!response.ok || body.status !== "running" ||
+              body.service !== "Sarathi AI Worker" || body.zeroCostMode !== true || missing.length) {
+            throw new Error("Post-deploy Worker health verification failed (HTTP " + response.status +
+              ", status=" + body.status + ", zeroCostMode=" + body.zeroCostMode +
+              ", missingEndpoints=" + missing.join(",") + ")");
+          }
+          console.log("POST-DEPLOY WORKER HEALTH: PASS");
+          console.log("Service:", body.service);
+          console.log("Status:", body.status);
+          console.log("Zero-cost mode:", body.zeroCostMode);
+          console.log("Required endpoints:", requiredEndpoints.join(", "));
+          NODE
