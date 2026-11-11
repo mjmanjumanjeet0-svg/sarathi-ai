@@ -344,6 +344,8 @@ assert.match(source, /filterFreshNewsResults\(searchResults, Date\.now\(\), user
   "initial freshness filtering must receive the user's time window");
 assert.match(source, /getNewsFreshnessStartTimestamp\(newsQuery, now\)/,
   "final summary validation must apply the requested freshness window");
+assert.match(source, /!filterFreshNewsResults\(\[item\], now, newsQuery\)\.length/,
+  "final news formatting must reapply the full query-specific freshness window, including yesterday-only upper bound");
 
 assert.equal(classifyRequestedNewsCategory({ title: "Home Ministry announces new visa policy" }), "सरकार", "a ministry policy announcement must qualify as government");
 assert.equal(classifyRequestedNewsCategory({ title: "Delhi govt urges citizens to burst only green crackers" }), "सरकार", "govt abbreviations must be classified as government, not left for an unrelated category");
