@@ -160,7 +160,7 @@ const classifyRequestedNewsCategory = new Function(
 const sourceGroundingStart = worker.indexOf("function extractNewsPageTitle(html) {");
 const sourceGroundingEnd = worker.indexOf("\nfunction isHistoricalResearchQuery", sourceGroundingStart);
 assert.ok(sourceGroundingStart >= 0 && sourceGroundingEnd > sourceGroundingStart, "article page title and summary topic validators must exist");
-const sourceGroundingFns = new Function("cleanText", worker.slice(sourceGroundingStart, sourceGroundingEnd) + "\nreturn { extractNewsPageTitle, isNewsResultPageTitleMismatch, hasUnsupportedNewsSummaryTopic, hasHeadlineSummaryTopicConflict };")(value => String(value || "").replace(/\s+/g," ").trim());
+const sourceGroundingFns = new Function("cleanText", worker.slice(sourceGroundingStart, sourceGroundingEnd) + "\nreturn { extractNewsPageTitle, isNewsResultPageTitleMismatch, hasUnsupportedNewsSummaryTopic, hasHeadlineSummaryTopicConflict, hasUnsupportedNewsLocationClaim };")(value => String(value || "").replace(/\s+/g," ").trim());
 assert.equal(sourceGroundingFns.extractNewsPageTitle('<meta property="og:title" content="Major fire breaks out in Mumbai&#39;s Dongri">'), "Major fire breaks out in Mumbai's Dongri");
 assert.equal(sourceGroundingFns.isNewsResultPageTitleMismatch({title:"Post-Diwali air pollution hits severe levels",pageTitle:"Major fire breaks out in Mumbai's Dongri"}),true);
 assert.equal(sourceGroundingFns.isNewsResultPageTitleMismatch({title:"Major fire breaks out in Mumbai's Dongri",pageTitle:"Major fire breaks out in Mumbai's Dongri | The Hindu"}),false);
@@ -205,7 +205,7 @@ const formatCurrentNewsSummaryReply = new Function(
   "dedupeNewsResults", "cleanText", "formatNewsPublishedAt",
   "hasMixedScriptToken", "hasUnsupportedNumericClaim", "hasUnsupportedCertaintyClaim",
   "hasUnsupportedNewsHeadlineMix", "hasUntranslatedEnglishHeadline", "hasIncorrectOverallAqiCategory", "isIndiaFocusedNewsItem", "isNewsItemWithinRequestedScope", "hasKnownContradictedNewsFact", "hasUnsupportedCourtDisposition",
-  "classifyRequestedNewsCategory", "getIndiaDayStartTimestamp", "getNewsFreshnessStartTimestamp", "isNewsResultPageTitleMismatch", "hasUnsupportedNewsSummaryTopic", "hasHeadlineSummaryTopicConflict", "isMultiTopicNewsDigestTitle",
+  "classifyRequestedNewsCategory", "getIndiaDayStartTimestamp", "getNewsFreshnessStartTimestamp", "isNewsResultPageTitleMismatch", "hasUnsupportedNewsSummaryTopic", "hasHeadlineSummaryTopicConflict", "hasUnsupportedNewsLocationClaim", "isMultiTopicNewsDigestTitle",
   worker.slice(newsFormatterStart, newsFormatterEnd + 3) + "\nreturn formatCurrentNewsSummaryReply;"
 )(
   newsFormatHelpers.formatHindiNewsCount,
@@ -229,6 +229,7 @@ const formatCurrentNewsSummaryReply = new Function(
   sourceGroundingFns.isNewsResultPageTitleMismatch,
   sourceGroundingFns.hasUnsupportedNewsSummaryTopic,
   sourceGroundingFns.hasHeadlineSummaryTopicConflict,
+  sourceGroundingFns.hasUnsupportedNewsLocationClaim,
   isMultiTopicNewsDigestTitle
 );
 const groupNewsStart = worker.indexOf("function groupNewsByEvent(results) {");
