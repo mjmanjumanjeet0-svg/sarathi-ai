@@ -976,7 +976,13 @@ function hasHeadlineSummaryTopicConflict(headline, summary, sourceTitle) {
     { name: "sports", re: /(?:क्रिकेट|फुटबॉल|हॉकी|टेनिस|मैच|सीरीज|श्रृंखला|खिलाड़ी|cricket|football|hockey|tennis|match|series|player|tournament)/i },
     { name: "courts", re: /(?:सुप्रीम कोर्ट|हाई कोर्ट|अदालत|न्यायालय|याचिका|फैसला|आदेश|court|tribunal|petition|verdict|judgment|ruling)/i },
     { name: "government", re: /(?:प्रधानमंत्री|मुख्यमंत्री|राष्ट्रपति|चुनाव|सरकार|मंत्री|संसद|prime minister|president|election|government|minister|parliament)/i },
-    { name: "conflict", re: /(?:युद्ध|हमला|हवाई हमला|मिसाइल|सेना|संघर्ष|war|attack|airstrike|missile|military|troops|conflict)/i }
+    { name: "conflict", re: /(?:युद्ध|हमला|हवाई हमला|मिसाइल|सेना|संघर्ष|war|attack|airstrike|missile|military|troops|conflict)/i },
+    { name: "science", re: /(?:विज्ञान|वैज्ञानिक|अंतरिक्ष|उपग्रह|मिशन|रॉकेट|प्रक्षेपण|science|scientific|space|satellite|mission|rocket|launch)/i },
+    { name: "education", re: /(?:शिक्षा|विश्वविद्यालय|विश्वविद्यालयों|स्कूल|कॉलेज|परीक्षा|पाठ्यक्रम|education|university|universities|school|college|exam|curriculum)/i },
+    { name: "health", re: /(?:स्वास्थ्य|अस्पताल|डॉक्टर|चिकित्सा|बीमारी|टीका|दवा|health|hospital|doctor|medical|disease|vaccine|medicine)/i },
+    { name: "transport", re: /(?:रेलवे|ट्रेन|मेट्रो|हवाई अड्डा|उड़ान|सड़क|हाईवे|railway|train|metro|airport|flight|road|highway)/i },
+    { name: "economy", re: /(?:अर्थव्यवस्था|महंगाई|मुद्रास्फीति|बेरोजगारी|जीडीपी|बजट|कर|economy|inflation|unemployment|GDP|budget|tax)/i },
+    { name: "weather", re: /(?:मौसम|बारिश|वर्षा|बाढ़|तूफान|चक्रवात|लू|heatwave|weather|rainfall|flood|storm|cyclone)/i } 
   ];
   const headlineTopics = topics.filter(topic => topic.re.test(String(headline || "")));
   const summaryTopics = topics.filter(topic => topic.re.test(String(summary || "")));
@@ -998,6 +1004,12 @@ function hasUnsupportedNewsSummaryTopic(generatedText, sourceEvidence) {
     [/(?:सुप्रीम कोर्ट|हाई कोर्ट|अदालत|न्यायालय|याचिका|फैसला|आदेश|court|tribunal|petition|verdict|judgment|ruling)/i,/(?:सुप्रीम कोर्ट|हाई कोर्ट|अदालत|न्यायालय|याचिका|फैसला|आदेश|court|tribunal|petition|verdict|judgment|ruling)/i],
     [/(?:प्रधानमंत्री|मुख्यमंत्री|राष्ट्रपति|चुनाव|सरकार|मंत्री|संसद|prime minister|president|election|government|minister|parliament)/i,/(?:प्रधानमंत्री|मुख्यमंत्री|राष्ट्रपति|चुनाव|सरकार|मंत्री|संसद|prime minister|president|election|government|minister|parliament)/i],
     [/(?:युद्ध|हमला|हवाई हमला|मिसाइल|सेना|संघर्ष|war|attack|airstrike|missile|military|troops|conflict)/i,/(?:युद्ध|हमला|हवाई हमला|मिसाइल|सेना|संघर्ष|war|attack|airstrike|missile|military|troops|conflict)/i],
+    [/(?:विज्ञान|वैज्ञानिक|अंतरिक्ष|उपग्रह|मिशन|रॉकेट|प्रक्षेपण|science|scientific|space|satellite|mission|rocket|launch)/i,/(?:विज्ञान|वैज्ञानिक|अंतरिक्ष|उपग्रह|मिशन|रॉकेट|प्रक्षेपण|science|scientific|space|satellite|mission|rocket|launch)/i],
+    [/(?:शिक्षा|विश्वविद्यालय|स्कूल|कॉलेज|परीक्षा|पाठ्यक्रम|education|university|school|college|exam|curriculum)/i,/(?:शिक्षा|विश्वविद्यालय|स्कूल|कॉलेज|परीक्षा|पाठ्यक्रम|education|university|school|college|exam|curriculum)/i],
+    [/(?:स्वास्थ्य|अस्पताल|डॉक्टर|चिकित्सा|बीमारी|टीका|दवा|health|hospital|doctor|medical|disease|vaccine|medicine)/i,/(?:स्वास्थ्य|अस्पताल|डॉक्टर|चिकित्सा|बीमारी|टीका|दवा|health|hospital|doctor|medical|disease|vaccine|medicine)/i],
+    [/(?:रेलवे|ट्रेन|मेट्रो|हवाई अड्डा|उड़ान|सड़क|हाईवे|railway|train|metro|airport|flight|road|highway)/i,/(?:रेलवे|ट्रेन|मेट्रो|हवाई अड्डा|उड़ान|सड़क|हाईवे|railway|train|metro|airport|flight|road|highway)/i],
+    [/(?:अर्थव्यवस्था|महंगाई|मुद्रास्फीति|बेरोजगारी|जीडीपी|बजट|कर|economy|inflation|unemployment|GDP|budget|tax)/i,/(?:अर्थव्यवस्था|महंगाई|मुद्रास्फीति|बेरोजगारी|जीडीपी|बजट|कर|economy|inflation|unemployment|GDP|budget|tax)/i],
+    [/(?:मौसम|बारिश|वर्षा|बाढ़|तूफान|चक्रवात|लू|heatwave|weather|rainfall|flood|storm|cyclone)/i,/(?:मौसम|बारिश|वर्षा|बाढ़|तूफान|चक्रवात|लू|heatwave|weather|rainfall|flood|storm|cyclone)/i],
     [/(?:पत्नी|पति|प्रेम संबंध|प्रेमिका|प्रेमी|अफेयर|wife|husband|affair|girlfriend|boyfriend)/i,/(?:पत्नी|पति|प्रेम संबंध|प्रेमिका|प्रेमी|अफेयर|wife|husband|affair|girlfriend|boyfriend)/i]
   ];
   return groups.some(([a,b])=>a.test(g)&&!b.test(s));
