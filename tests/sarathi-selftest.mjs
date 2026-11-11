@@ -59,8 +59,8 @@ const validNewsJson = JSON.stringify({ stories: [
   { number: 1, category: "सरकार", headline: "सरकार ने नई नीति बताई", summary: "स्रोत में नीति का उल्लेख है। विवरण भी दिया गया है।" },
   { number: 2, category: "विज्ञान", headline: "वैज्ञानिकों ने अध्ययन जारी किया", summary: "अध्ययन का उल्लेख है। शोधकर्ता निष्कर्ष बता रहे हैं।" }
 ] });
-assert.match(normalizeNewsSummaryRepairText(validNewsJson), /खबर 1 \\(सरकार\\):/);
-assert.match(normalizeNewsSummaryRepairText(validNewsJson), /खबर 2 \\(विज्ञान\\):/);
+assert.match(normalizeNewsSummaryRepairText(validNewsJson), /खबर 1 \(सरकार\):/);
+assert.match(normalizeNewsSummaryRepairText(validNewsJson), /खबर 2 \(विज्ञान\):/);
 const malformedNewsJson = JSON.stringify({ stories: [
   { number: 1, headline: "पहली खबर", summary: "पहला सार। दूसरा वाक्य।" },
   { number: 3, headline: "तीसरी खबर", summary: "तीसरा सार। दूसरा वाक्य।" }
