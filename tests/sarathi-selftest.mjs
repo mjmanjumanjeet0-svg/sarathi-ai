@@ -219,6 +219,10 @@ assert.equal(hasUnsupportedNumericClaim("यह एक महत्वपूर�
 assert.equal(hasUnsupportedNumericClaim("This is one important decision.", "Supreme Court decision"), false, "the common English article one must not be mistaken for a numeric claim");
 assert.equal(hasUnsupportedNumericClaim("नौकरी के नए अवसरों पर चर्चा हुई।", "रोजगार के अवसरों पर चर्चा हुई।"), false, "the prefix नौ inside नौकरी must not be mistaken for numeric nine");
 assert.equal(hasUnsupportedNumericClaim("नौ लोगों ने याचिका दायर की।", "लोगों ने याचिका दायर की।"), true, "standalone unsupported Hindi nine must still be rejected");
+assert.equal(hasUnsupportedNumericClaim("चौदह लोगों ने याचिका दायर की।", "लोगों ने याचिका दायर की।"), true, "standalone unsupported Hindi fourteen must be rejected");
+assert.equal(hasUnsupportedNumericClaim("Fourteen people filed a petition.", "People filed a petition."), true, "standalone unsupported English fourteen must be rejected");
+assert.equal(hasUnsupportedNumericClaim("चौदह लोगों ने याचिका दायर की।", "14 लोगों ने याचिका दायर की।"), false, "Hindi number words must match source Arabic numerals");
+assert.equal(hasUnsupportedNumericClaim("Fourteen people filed a petition.", "14 people filed a petition."), false, "English number words must match source Arabic numerals");
 
 assert.match(source, /स्रोत में न दिया कारण.*जिम्मेदार व्यक्ति/, "news prompt must forbid invented causes and responsibility");
 assert.match(source, /प्रवेश की पुरानी तारीख.*आगे के प्रवास के लिए वीज़ा/, "immigration news summaries must distinguish past entry date from current visa requirement");
