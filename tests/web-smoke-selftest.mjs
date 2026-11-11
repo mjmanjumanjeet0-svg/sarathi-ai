@@ -381,7 +381,7 @@ const incompleteFiveNewsReply = formatCurrentNewsSummaryReply(incompleteFiveNews
 assert.equal([...incompleteFiveNewsReply.matchAll(/खबर (\d+)(?: \([^)]*\))?:/g)].length, 4, "a story without a valid summary must be omitted while other verified stories remain");
 const initialsNewsDraft = fiveNewsDraft.replace(
   "सार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।",
-  "सार: ISRO के अध्यक्ष वी. नारायणन ने बताया। उपग्रह पूरी तरह स्वस्थ है।"
+  "सार: सरकार के अध्यक्ष वी. नारायणन ने बताया। सरकारी योजना पूरी तरह तैयार है।"
 );
 const initialsNewsReply = formatCurrentNewsSummaryReply(initialsNewsDraft, fiveNewsSources, true);
 assert.equal([...initialsNewsReply.matchAll(/खबर (\d+)(?: \([^)]*\))?:/g)].length, 5, "initials such as V. must not be counted as extra sentence endings");
