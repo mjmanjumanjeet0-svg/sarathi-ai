@@ -45,7 +45,7 @@ const freshFilterStart = worker.indexOf('function filterFreshNewsResults(results
 const freshFilterEnd = worker.indexOf("\n}\n", freshFilterStart);
 assert.ok(freshnessHelpersStart >= 0 && freshFilterStart > freshnessHelpersStart && freshFilterEnd > freshFilterStart, "news freshness helpers must exist");
 const freshnessHelpers = worker.slice(freshnessHelpersStart, freshFilterEnd + 3);
-const freshnessFunctions = new Function("getIndiaDayStartTimestamp", freshnessHelpers + "\nreturn { isLast48HoursNewsQuery, filterFreshNewsResults };")(getIndiaDayStartTimestamp);
+const freshnessFunctions = new Function("getIndiaDayStartTimestamp", freshnessHelpers + "\nreturn { isLast48HoursNewsQuery, isYesterdayNewsQuery, filterFreshNewsResults };")(getIndiaDayStartTimestamp);
 const filterFreshNewsResults = freshnessFunctions.filterFreshNewsResults;
 const sampleFreshnessNow = Date.parse("2026-11-08T18:00:00.000Z");
 const sampleNews = [
@@ -56,6 +56,10 @@ const sampleNews = [
   { id: "undated" }
 ];
 assert.deepEqual(filterFreshNewsResults(sampleNews, sampleFreshnessNow).map(item => item.id), ["today"], "ordinary today-news requests must remain India-day scoped");
+assert.deepEqual(filterFreshNewsResults(sampleNews, sampleFreshnessNow, "कल की खबरें").map(item => item.id), ["yesterday"], "yesterday-news requests must include only the previous India-local calendar day");
+assert.equal(freshnessFunctions.isYesterdayNewsQuery("भारत की कल की ताज़ा खबरें"), true, "Hindi yesterday-news phrasing must be recognized");
+assert.equal(freshnessFunctions.isYesterdayNewsQuery("yesterday news in India"), true, "English yesterday-news phrasing must be recognized");
+assert.equal(freshnessFunctions.isYesterdayNewsQuery("कल मौसम कैसा रहेगा"), false, "non-news queries must not enter yesterday-news mode");
 assert.deepEqual(filterFreshNewsResults(sampleNews, sampleFreshnessNow, "पिछले 48 घंटों की खबरें").map(item => item.id), ["today", "yesterday"], "explicit rolling 48-hour requests must include yesterday while rejecting older, future and undated items");
 assert.deepEqual(filterFreshNewsResults([
   { id: "one-minute-future", publishedAt: new Date(sampleFreshnessNow + 60 * 1000).toISOString() },
