@@ -479,9 +479,13 @@ assert.deepEqual([...courtRecordPartyNames("Photo Credit: Ashish Tripathi. Bylin
 
 // Same-day global-news regressions: date window, cross-publisher event grouping,
 // and preservation of multiple distinct stories from the same publisher.
-assert.match(source, /आज रात 12 बजे से अभी तक प्रकाशित परिणाम शामिल करो/, "news instructions must use the current India-local calendar day, not a rolling 48-hour window");
+assert.match(source, /isLast48HoursNewsQuery\(query\) \? "पिछले 48 घंटों में अभी तक प्रकाशित परिणाम शामिल करो/,
+  "news instructions must explicitly state the rolling window when requested");
+assert.match(source, /आज की खबरों में केवल भारतीय समय \(Asia\/Kolkata\) के अनुसार आज रात 12 बजे से अभी तक प्रकाशित परिणाम शामिल करो/,
+  "ordinary news requests must remain limited to today's India-local date");
 assert.match(source, /केवल भारतीय समय \(Asia\/Kolkata\)/, "same-day news instructions must explicitly use India time");
-assert.doesNotMatch(source.slice(source.indexOf("const newsInstruction ="), source.indexOf("const fiveCategoryNewsInstruction")), /पिछले 48 घंटों में प्रकाशित/, "the old rolling 48-hour instruction must not conflict with the day filter");
+assert.match(source, /requestBody\.startPublishedDate = new Date\(now\.getTime\(\) - 48 \* 60 \* 60 \* 1000\)\.toISOString\(\)/,
+  "Exa must receive an exact rolling 48-hour start date for explicit requests");
 assert.match(source, /searchResults = globalNewsDigest[\s\S]{0,140}selectDiverseGlobalNewsResults\(searchResults, 8\)[\s\S]{0,100}:\s*searchResults\.slice\(0, 8\)/, "global news must use publisher diversity while general news retains separate stories");
 
 const groupStart = source.indexOf("function groupNewsByEvent(results) {");
