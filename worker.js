@@ -2324,7 +2324,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     const now = Date.now();
     // Enforce today's India-local calendar date again at the final display boundary.
     if (!title || isMultiTopicNewsDigestTitle(title) || isNewsResultPageTitleMismatch(item) || !Number.isFinite(publishedAt) ||
-        publishedAt < getNewsFreshnessStartTimestamp(newsQuery, now) || publishedAt > now ||
+        !filterFreshNewsResults([item], now, newsQuery).length ||
         (!allowGlobalNews && !isNewsItemWithinRequestedScope(item, requestedScope))) return false;
     try {
       const url = new URL(item?.url || "");
