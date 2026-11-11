@@ -53,7 +53,7 @@ const normalizeNewsSummaryRepairText = (() => {
   const start = source.indexOf("function normalizeNewsSummaryRepairText(");
   const end = source.indexOf("\nfunction hasKnownContradictedNewsFact(", start);
   if (!(start >= 0 && end > start)) throw new Error("normalizeNewsSummaryRepairText must exist in the Worker");
-  return new Function("cleanText", source.slice(start, end) + "\nreturn normalizeNewsSummaryRepairText;",)(value => String(value ?? "").replace(/\\s+/g, " ").trim());
+  return new Function("cleanText", source.slice(start, end) + "\nreturn normalizeNewsSummaryRepairText;",)(value => String(value ?? "").trim());
 })();
 const validNewsJson = JSON.stringify({ stories: [
   { number: 1, category: "सरकार", headline: "सरकार ने नई नीति बताई", summary: "स्रोत में नीति का उल्लेख है। विवरण भी दिया गया है।" },
