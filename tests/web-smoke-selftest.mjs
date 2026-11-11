@@ -30,17 +30,24 @@ assert.ok(indiaDayStartStart >= 0 && indiaDayStartEnd > indiaDayStartStart, "Ind
 const getIndiaDayStartTimestamp = new Function("INDIA_TIME_ZONE", worker.slice(indiaDayStartStart, indiaDayStartEnd + 3) + "\nreturn getIndiaDayStartTimestamp;")("Asia/Kolkata");
 const sampleNow = Date.parse("2026-11-08T18:00:00.000Z");
 assert.equal(new Date(getIndiaDayStartTimestamp(sampleNow)).toISOString(), "2026-11-07T18:30:00.000Z", "India news day must begin at midnight IST");
-const freshFilterStart = worker.indexOf("function filterFreshNewsResults(results, now = Date.now()) {");
+const freshnessHelpersStart = worker.indexOf("function isLast48HoursNewsQuery(query) {");
+const freshFilterStart = worker.indexOf('function filterFreshNewsResults(results, now = Date.now(), query = "") {');
 const freshFilterEnd = worker.indexOf("\n}\n", freshFilterStart);
-assert.ok(freshFilterStart >= 0 && freshFilterEnd > freshFilterStart, "same-day news filter must exist");
-const filterFreshNewsResults = new Function("getIndiaDayStartTimestamp", worker.slice(freshFilterStart, freshFilterEnd + 3) + "\nreturn filterFreshNewsResults;")(getIndiaDayStartTimestamp);
+assert.ok(freshnessHelpersStart >= 0 && freshFilterStart > freshnessHelpersStart && freshFilterEnd > freshFilterStart, "news freshness helpers must exist");
+const freshnessHelpers = worker.slice(freshnessHelpersStart, freshFilterEnd + 3);
+const freshnessFunctions = new Function("getIndiaDayStartTimestamp", freshnessHelpers + "\nreturn { isLast48HoursNewsQuery, filterFreshNewsResults };")(getIndiaDayStartTimestamp);
+const filterFreshNewsResults = freshnessFunctions.filterFreshNewsResults;
 const sampleFreshnessNow = Date.parse("2026-11-08T18:00:00.000Z");
-assert.deepEqual(filterFreshNewsResults([
+const sampleNews = [
   { id: "today", publishedAt: "2026-11-08T17:00:00.000Z" },
   { id: "yesterday", publishedAt: "2026-11-07T17:00:00.000Z" },
+  { id: "older", publishedAt: "2026-11-06T17:00:00.000Z" },
   { id: "future", publishedAt: "2026-11-08T19:00:00.000Z" },
   { id: "undated" }
-], sampleFreshnessNow).map(item => item.id), ["today"], "only articles published today in India may pass the news freshness filter");
+];
+assert.deepEqual(filterFreshNewsResults(sampleNews, sampleFreshnessNow).map(item => item.id), ["today"], "ordinary today-news requests must remain India-day scoped");
+assert.deepEqual(filterFreshNewsResults(sampleNews, sampleFreshnessNow, "पिछले 48 घंटों की खबरें").map(item => item.id), ["today", "yesterday"], "explicit rolling 48-hour requests must include yesterday while rejecting older, future and undated items");
+assert.equal(freshnessFunctions.isLast48HoursNewsQuery("news from the last 48 hours"), true, "English rolling 48-hour requests must be recognized");
 
 const geoScopeStart = worker.indexOf("function getRequestedNewsGeographicScope(text) {");
 const geoScopeEnd = worker.indexOf("\n}", geoScopeStart);
