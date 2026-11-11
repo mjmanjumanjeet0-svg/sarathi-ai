@@ -70,13 +70,13 @@ assert.match(source, /if \(isMultiTopicNewsDigestTitle\(title\)\) return false/,
   "India-wide headline filtering must reject multi-topic roundups");
 
 // Single-story requests must use singular wording and must not show a five-story shortfall.
-assert.match(source, /function formatCurrentNewsSummaryReply\(rawReply, results, requireTwoSentences = false, requireFiveCategories = false, allowGlobalNews = false, requestedScope = "India", singleStoryRequest = false\)/,
+assert.match(source, /function formatCurrentNewsSummaryReply\(rawReply, results, requireTwoSentences = false, requireFiveCategories = false, allowGlobalNews = false, requestedScope = "India", singleStoryRequest = false, newsQuery = ""\)/,
   "the news formatter must accept explicit single-story intent");
 assert.match(source, /const prefix = singleStoryRequest[\s\S]{0,100}\? "एक तारीख़-जाँची खबर:"/,
   "single-story requests must use singular wording");
 assert.match(source, /const shortfall = !singleStoryRequest && count < 5/,
   "single-story requests must not display a five-story shortfall");
-assert.equal((source.match(/isGlobalNewsQuery\(userText\), requestedNewsScope \|\| "India", isSingleRequestedNewsStory\(userText\)\)/g) || []).length, 2,
+assert.equal((source.match(/isGlobalNewsQuery\(userText\), requestedNewsScope \|\| "India", isSingleRequestedNewsStory\(userText\), userText\)/g) || []).length, 2,
   "both first-pass and repair summaries must receive single-story intent");
 
 // News JSON repair must preserve exact story-to-source ordering.
@@ -314,7 +314,13 @@ assert.match(source, /function buildFiveCategoryNewsSearchQuery\(scope\)[\s\S]*c
 assert.match(source, /isFiveCategoryNewsQuery\(userText\) \? buildFiveCategoryNewsSearchQuery\(requestedNewsScope\)/,
   "five-category search must receive the requested geographic scope");
 assert.ok(source.includes('timeZone: "Asia/Kolkata"'), "news publication window must use the current India calendar day");
-assert.match(source, /istMidnightUtc/, "news search must start at midnight IST rather than a rolling 48-hour window");
+assert.match(source, /function isLast48HoursNewsQuery\(query\)/, "explicit rolling 48-hour requests must be detected");
+assert.match(source, /return isLast48HoursNewsQuery\(query\) \? now - 48 \* 60 \* 60 \* 1000 : getIndiaDayStartTimestamp\(now\)/,
+  "rolling 48-hour requests must use an exact 48-hour lower bound while other news stays India-day scoped");
+assert.match(source, /filterFreshNewsResults\(searchResults, Date\.now\(\), userText\)/,
+  "initial freshness filtering must receive the user's time window");
+assert.match(source, /getNewsFreshnessStartTimestamp\(newsQuery, now\)/,
+  "final summary validation must apply the requested freshness window");
 
 assert.equal(classifyRequestedNewsCategory({ title: "Home Ministry announces new visa policy" }), "सरकार", "a ministry policy announcement must qualify as government");
 assert.equal(classifyRequestedNewsCategory({ title: "Delhi govt urges citizens to burst only green crackers" }), "सरकार", "govt abbreviations must be classified as government, not left for an unrelated category");
