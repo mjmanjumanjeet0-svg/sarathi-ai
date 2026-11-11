@@ -48,6 +48,37 @@ for (const question of ["आज का दिन अच्छा बनाने
   assert.equal(isDateQuestion(question), false, "non-calendar question must not be treated as a date request: " + question);
 }
 
+
+// News roundup pages must not be treated as independently verified stories.
+const digestTitleStart = source.indexOf("function isMultiTopicNewsDigestTitle(title) {");
+const digestTitleEnd = source.indexOf("\nfunction isIndiaFocusedNewsItem", digestTitleStart);
+assert.ok(digestTitleStart >= 0 && digestTitleEnd > digestTitleStart, "multi-topic news roundup filter must exist");
+const isMultiTopicNewsDigestTitle = new Function("cleanText", source.slice(digestTitleStart, digestTitleEnd) + "\nreturn isMultiTopicNewsDigestTitle;")(cleanTextForCategoryTest);
+for (const title of [
+  "News This Week (Nov 2-6): Government, markets and sport",
+  "Weekly News Roundup: Government, markets and sport",
+  "Top Headlines: Several unrelated developments",
+  "सप्ताह की प्रमुख खबरें: राजनीति, बाजार और खेल"
+]) {
+  assert.equal(isMultiTopicNewsDigestTitle(title), true, "multi-topic roundup must be rejected: " + title);
+}
+assert.equal(isMultiTopicNewsDigestTitle("Supreme Court issues important judgment in bail case"), false,
+  "a single reported event must not be rejected as a roundup");
+assert.match(source, /!title \|\| isMultiTopicNewsDigestTitle\(title\) \|\| isNewsResultPageTitleMismatch\(item\)/,
+  "roundup pages must also be rejected at the final verified-news display boundary");
+assert.match(source, /if \(isMultiTopicNewsDigestTitle\(title\)\) return false/,
+  "India-wide headline filtering must reject multi-topic roundups");
+
+// Single-story requests must use singular wording and must not show a five-story shortfall.
+assert.match(source, /function formatCurrentNewsSummaryReply\(rawReply, results, requireTwoSentences = false, requireFiveCategories = false, allowGlobalNews = false, requestedScope = "India", singleStoryRequest = false\)/,
+  "the news formatter must accept explicit single-story intent");
+assert.match(source, /const prefix = singleStoryRequest[\s\S]{0,100}\? "एक तारीख़-जाँची खबर:"/,
+  "single-story requests must use singular wording");
+assert.match(source, /const shortfall = !singleStoryRequest && count < 5/,
+  "single-story requests must not display a five-story shortfall");
+assert.equal((source.match(/isGlobalNewsQuery\(userText\), requestedNewsScope \|\| "India", isSingleRequestedNewsStory\(userText\)\)/g) || []).length, 2,
+  "both first-pass and repair summaries must receive single-story intent");
+
 // News JSON repair must preserve exact story-to-source ordering.
 const normalizeNewsSummaryRepairText = (() => {
   const start = source.indexOf("function normalizeNewsSummaryRepairText(");
