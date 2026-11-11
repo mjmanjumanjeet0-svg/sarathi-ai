@@ -116,8 +116,8 @@ async function isRateLimited(request, env, action) {
   }
 }
 
-function getIndiaDateTime() {
-  const now = new Date();
+function getIndiaDateTime(now = new Date()) {
+  now = now instanceof Date ? now : new Date(now);
 
   const parts = new Intl.DateTimeFormat("en-GB", {
     timeZone: INDIA_TIME_ZONE,
@@ -126,7 +126,7 @@ function getIndiaDateTime() {
     year: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-    hour12: false,
+    hourCycle: "h23",
   }).formatToParts(now);
 
   const result = {};
