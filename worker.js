@@ -994,6 +994,24 @@ function hasHeadlineSummaryTopicConflict(headline, summary, sourceTitle) {
   );
 }
 
+function hasUnsupportedNewsLocationClaim(generatedText, sourceEvidence) {
+  const generated = String(generatedText || "");
+  const evidence = String(sourceEvidence || "");
+  // Check only explicit, named places. A summary may not move an event to a
+  // different city, state, or country unless that place appears in its source.
+  const locations = [
+    /(?:पटना|patna)/i, /(?:सिवान|siwan)/i, /(?:रांची|ranchi)/i,
+    /(?:मुंबई|mumbai)/i, /(?:दिल्ली|नई दिल्ली|new delhi|delhi)/i,
+    /(?:कोलकाता|kolkata)/i, /(?:चेन्नई|chennai)/i, /(?:बेंगलुरु|बेंगलुरू|bengaluru|bangalore)/i,
+    /(?:बिहार|bihar)/i, /(?:झारखंड|jharkhand)/i, /(?:उत्तर प्रदेश|uttar pradesh)/i,
+    /(?:नेपाल|nepal)/i, /(?:बांग्लादेश|bangladesh)/i, /(?:पाकिस्तान|pakistan)/i,
+    /(?:चीन|china)/i, /(?:रूस|रशिया|russia)/i, /(?:यूक्रेन|ukraine)/i,
+    /(?:इजराइल|इज़राइल|israel)/i, /(?:गाजा|ग़ाज़ा|gaza)/i, /(?:ईरान|iran)/i,
+    /(?:अमेरिका|संयुक्त राज्य|united states|\bUSA\b)/i
+  ];
+  return locations.some(pattern => pattern.test(generated) && !pattern.test(evidence));
+}
+
 function hasUnsupportedNewsSummaryTopic(generatedText, sourceEvidence) {
   const g=String(generatedText||""), s=String(sourceEvidence||"");
   const groups=[
@@ -2424,6 +2442,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     const generatedText = entry.headline + " " + entry.summary;
     if (isNewsResultPageTitleMismatch(items[index])) { rejectCounts.headlineGrounding++; continue; }
     if (hasUnsupportedNewsSummaryTopic(entry.summary, sourceEvidence)) { rejectCounts.missingEvidence++; continue; }
+    if (hasUnsupportedNewsLocationClaim(generatedText, sourceEvidence)) { rejectCounts.locationMismatch = (rejectCounts.locationMismatch || 0) + 1; continue; }
     if (hasHeadlineSummaryTopicConflict(entry.headline, entry.summary, items[index]?.title || "")) { rejectCounts.missingEvidence++; continue; }
     if (hasUnsupportedCourtDisposition(generatedText, sourceEvidence)) { rejectCounts.unsupportedCourtOutcome++; continue; }
     const isAgniveerExtension = /agniveer|अग्निवीर/i.test(sourceEvidence) &&
