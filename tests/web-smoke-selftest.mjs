@@ -205,7 +205,7 @@ const formatCurrentNewsSummaryReply = new Function(
   "dedupeNewsResults", "cleanText", "formatNewsPublishedAt",
   "hasMixedScriptToken", "hasUnsupportedNumericClaim", "hasUnsupportedCertaintyClaim",
   "hasUnsupportedNewsHeadlineMix", "hasUntranslatedEnglishHeadline", "hasIncorrectOverallAqiCategory", "isIndiaFocusedNewsItem", "isNewsItemWithinRequestedScope", "hasKnownContradictedNewsFact", "hasUnsupportedCourtDisposition",
-  "classifyRequestedNewsCategory", "getIndiaDayStartTimestamp", "isNewsResultPageTitleMismatch", "hasUnsupportedNewsSummaryTopic", "hasHeadlineSummaryTopicConflict", "isMultiTopicNewsDigestTitle",
+  "classifyRequestedNewsCategory", "getIndiaDayStartTimestamp", "getNewsFreshnessStartTimestamp", "isNewsResultPageTitleMismatch", "hasUnsupportedNewsSummaryTopic", "hasHeadlineSummaryTopicConflict", "isMultiTopicNewsDigestTitle",
   worker.slice(newsFormatterStart, newsFormatterEnd + 3) + "\nreturn formatCurrentNewsSummaryReply;"
 )(
   newsFormatHelpers.formatHindiNewsCount,
@@ -225,6 +225,7 @@ const formatCurrentNewsSummaryReply = new Function(
   () => false,
   classifyRequestedNewsCategory,
   getIndiaDayStartTimestamp,
+  (query, now) => freshnessFunctions.isLast48HoursNewsQuery(query) ? now - 48 * 60 * 60 * 1000 : getIndiaDayStartTimestamp(now),
   sourceGroundingFns.isNewsResultPageTitleMismatch,
   sourceGroundingFns.hasUnsupportedNewsSummaryTopic,
   sourceGroundingFns.hasHeadlineSummaryTopicConflict,
