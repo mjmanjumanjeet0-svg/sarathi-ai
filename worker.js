@@ -1459,10 +1459,16 @@ function getIndiaDayStartTimestamp(now = Date.now()) {
   return Date.UTC(Number(date.year), Number(date.month) - 1, Number(date.day)) - 330 * 60 * 1000;
 }
 
-function filterFreshNewsResults(results, now = Date.now()) {
-  // Include only articles published on the current India-local calendar day.
-  // Reject yesterday's articles, future timestamps, and undated results.
-  const earliestAllowed = getIndiaDayStartTimestamp(now);
+function isLast48HoursNewsQuery(query) {
+  return /(?:पिछले|गत|last)\s*48\s*(?:घंटों?|घंटे|hours?)/i.test(String(query || ""));
+}
+
+function getNewsFreshnessStartTimestamp(query, now = Date.now()) {
+  return isLast48HoursNewsQuery(query) ? now - 48 * 60 * 60 * 1000 : getIndiaDayStartTimestamp(now);
+}
+
+function filterFreshNewsResults(results, now = Date.now(), query = "") {
+  const earliestAllowed = getNewsFreshnessStartTimestamp(query, now);
   return (Array.isArray(results) ? results : []).filter(item => {
     const publishedAt = item && typeof item.publishedAt === "string" ? item.publishedAt.trim() : "";
     if (!publishedAt) return false;
@@ -2259,14 +2265,14 @@ function buildNewsDigestNote(shortfall = "") {
   return "ध्यान दें: " + notes.join(" ");
 }
 
-function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false, allowGlobalNews = false, requestedScope = "India", singleStoryRequest = false) {
+function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false, allowGlobalNews = false, requestedScope = "India", singleStoryRequest = false, newsQuery = "") {
   let items = dedupeNewsResults(results).filter(item => {
     const title = cleanText(item?.title || "");
     const publishedAt = Date.parse(item?.publishedAt || "");
     const now = Date.now();
     // Enforce today's India-local calendar date again at the final display boundary.
     if (!title || isMultiTopicNewsDigestTitle(title) || isNewsResultPageTitleMismatch(item) || !Number.isFinite(publishedAt) ||
-        publishedAt < getIndiaDayStartTimestamp(now) || publishedAt > now + 5 * 60 * 1000 ||
+        publishedAt < getNewsFreshnessStartTimestamp(newsQuery, now) || publishedAt > now + 5 * 60 * 1000 ||
         (!allowGlobalNews && !isNewsItemWithinRequestedScope(item, requestedScope))) return false;
     try {
       const url = new URL(item?.url || "");
@@ -2280,7 +2286,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
   if (requireFiveCategories) {
     const latestByCategory = new Map();
     const now = Date.now();
-    const earliestAllowed = getIndiaDayStartTimestamp(now);
+    const earliestAllowed = getNewsFreshnessStartTimestamp(newsQuery, now);
     const latestAllowed = now + 5 * 60 * 1000;
     for (const item of items) {
       const category = classifyRequestedNewsCategory(item);
@@ -2489,7 +2495,7 @@ function buildCurrentNewsHeadlineReply(results, query = "") {
     const publishedAt = Date.parse(item?.publishedAt || "");
     const now = Date.now();
     if (!title || !Number.isFinite(publishedAt) ||
-        publishedAt < getIndiaDayStartTimestamp(now) || publishedAt > now + 5 * 60 * 1000 ||
+        publishedAt < getNewsFreshnessStartTimestamp(query, now) || publishedAt > now + 5 * 60 * 1000 ||
         (!isGlobalNewsQuery(query) && !isIndiaFocusedNewsItem(item))) return false;
     try {
       const url = new URL(item?.url || "");
@@ -2499,7 +2505,7 @@ function buildCurrentNewsHeadlineReply(results, query = "") {
   if (!items.length) return "आज की ताज़ा खबरों के लिए तारीख़-जाँचे हुए भरोसेमंद समाचार परिणाम नहीं मिले। कृपया कुछ देर बाद फिर कोशिश करें।";
   if (isFiveCategoryNewsQuery(query)) {
     const required = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
-    const selected = selectLatestFiveCategoryNewsItems(items);
+    const selected = selectLatestFiveCategoryNewsItems(items, query);
     const byCategory = new Map(selected.map(item => [item.requestedCategory, item]));
     const missing = required.filter(category => !byCategory.has(category));
     const lines = required.filter(category => byCategory.has(category)).map(category => {
@@ -2523,10 +2529,10 @@ function buildCurrentNewsHeadlineReply(results, query = "") {
   if (items.length < 5) return "आज केवल " + items.length + " अलग-अलग, तारीख़-जाँचे समाचार स्रोत मिले। पाँच अलग खबरों की सूची पूरी करने के लिए पर्याप्त स्रोत नहीं मिले; इसलिए अपुष्ट खबरें नहीं जोड़ी गईं।";
   return "आज 5 तारीख़-जाँचे समाचार परिणाम मिले, लेकिन हिंदी सार स्रोत-जाँच में सफल नहीं हुआ। इसलिए अपुष्ट सार नहीं दिया जा रहा।";
 }
-function selectLatestFiveCategoryNewsItems(results) {
+function selectLatestFiveCategoryNewsItems(results, query = "") {
   const requiredCategories = ["सरकार", "अर्थव्यवस्था", "अदालत", "विज्ञान", "खेल"];
   const now = Date.now();
-  const earliestAllowed = getIndiaDayStartTimestamp(now);
+  const earliestAllowed = getNewsFreshnessStartTimestamp(query, now);
   const latestAllowed = now + 5 * 60 * 1000;
   const byCategory = new Map();
   for (const item of dedupeNewsResults(Array.isArray(results) ? results : [])) {
@@ -2542,9 +2548,9 @@ function selectLatestFiveCategoryNewsItems(results) {
   return requiredCategories.map(category => byCategory.get(category)).filter(Boolean);
 }
 
-function buildCompactNewsSourceContext(results, requireFiveCategories = false) {
+function buildCompactNewsSourceContext(results, requireFiveCategories = false, query = "") {
   let sourceItems = requireFiveCategories
-    ? selectLatestFiveCategoryNewsItems(results)
+    ? selectLatestFiveCategoryNewsItems(results, query)
     : dedupeNewsResults(Array.isArray(results) ? results : []);
   return sourceItems.slice(0, 5).map((item, index) => {
     const title = cleanText(item?.title || "").slice(0, 240);
@@ -3098,7 +3104,7 @@ export default {
         });
         // Keep the newest same-day report for a repeated event, then deduplicate
         // event headlines and publishers. Exa relevance order is not chronological.
-        searchResults = groupNewsByEvent(sortNewsByPublicationTime(filterFreshNewsResults(searchResults)));
+        searchResults = groupNewsByEvent(sortNewsByPublicationTime(filterFreshNewsResults(searchResults, Date.now(), userText)));
         // Apply the user's exact geography before summaries are generated.
         // Regional requests must never be widened to India-wide coverage, and
         // world-only requests must never fall back to India-focused headlines.
@@ -3191,7 +3197,7 @@ export default {
               const targeted = await searchInternet(searchQuery, env, 10);
               if (!Array.isArray(targeted.results) || !targeted.results.length) return [];
               const relevant = filterRelevantSearchResults(userText, targeted.results);
-              const fresh = filterFreshNewsResults(relevant);
+              const fresh = filterFreshNewsResults(relevant, Date.now(), userText);
               return fresh.map(item => ({ ...item, _targetedCategory: category }));
             }));
             categoryCandidates = groupNewsByEvent(sortNewsByPublicationTime([
@@ -3631,7 +3637,7 @@ export default {
     let activeGroqModel = GROQ_MODEL;
     try {
       if (isCurrentNewsReply) {
-        const newsMessage = "सवाल: " + userText + "\n\nकेवल इन वास्तविक खोज परिणामों का हिंदी सार वैध JSON object में दो। stories नाम की array वाला JSON object दो; हर वस्तु में number, category, headline और summary नाम के fields हों। के समान संरचना रखो। केवल खोज परिणामों के तथ्य लिखो; अतिरिक्त पाठ मत दो।\n\n" + buildCompactNewsSourceContext(searchResults, isFiveCategoryNewsQuery(userText));
+        const newsMessage = "सवाल: " + userText + "\n\nकेवल इन वास्तविक खोज परिणामों का हिंदी सार वैध JSON object में दो। stories नाम की array वाला JSON object दो; हर वस्तु में number, category, headline और summary नाम के fields हों। के समान संरचना रखो। केवल खोज परिणामों के तथ्य लिखो; अतिरिक्त पाठ मत दो।\n\n" + buildCompactNewsSourceContext(searchResults, isFiveCategoryNewsQuery(userText), userText);
         // GPT-OSS defaults to medium reasoning. For a short news digest, use low
         // reasoning so the completion budget is spent on the Hindi summary itself.
         groqResponse = await sendGroqRequest(
@@ -3945,7 +3951,7 @@ export default {
     // The summary parser itself validates every source-summary pair. Avoid a
     // separate brittle heading counter that can reject harmless punctuation.
     let formattedNewsReply = isCurrentNewsReply && !looksLikeRawEnglishArticle
-      ? formatCurrentNewsSummaryReply(normalizeNewsSummaryRepairText(rawReply), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText), isGlobalNewsQuery(userText), requestedNewsScope || "India", isSingleRequestedNewsStory(userText))
+      ? formatCurrentNewsSummaryReply(normalizeNewsSummaryRepairText(rawReply), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText), isGlobalNewsQuery(userText), requestedNewsScope || "India", isSingleRequestedNewsStory(userText), userText)
       : "";
 
     // If the first completion used an unexpected layout, make one constrained
@@ -3966,7 +3972,7 @@ export default {
             ? repairContent.map(part => typeof part === "string" ? part : (part?.text || part?.content || "")).join("")
             : repairContent;
           return typeof repairText === "string" && repairText.trim()
-            ? formatCurrentNewsSummaryReply(normalizeNewsSummaryRepairText(repairText.trim()), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText), isGlobalNewsQuery(userText), requestedNewsScope || "India", isSingleRequestedNewsStory(userText))
+            ? formatCurrentNewsSummaryReply(normalizeNewsSummaryRepairText(repairText.trim()), searchResults, requireTwoSentenceNews, isFiveCategoryNewsQuery(userText), isGlobalNewsQuery(userText), requestedNewsScope || "India", isSingleRequestedNewsStory(userText), userText)
             : "";
         };
         let repairResponse;
