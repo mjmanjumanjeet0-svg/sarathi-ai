@@ -2442,7 +2442,7 @@ function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = 
     const generatedText = entry.headline + " " + entry.summary;
     if (isNewsResultPageTitleMismatch(items[index])) { rejectCounts.headlineGrounding++; continue; }
     if (hasUnsupportedNewsSummaryTopic(entry.summary, sourceEvidence)) { rejectCounts.missingEvidence++; continue; }
-    if (hasUnsupportedNewsLocationClaim(generatedText, sourceEvidence)) { rejectCounts.locationMismatch = (rejectCounts.locationMismatch || 0) + 1; continue; }
+    if (hasUnsupportedNewsLocationClaim(entry.summary, sourceEvidence)) { rejectCounts.locationMismatch = (rejectCounts.locationMismatch || 0) + 1; continue; }
     if (hasHeadlineSummaryTopicConflict(entry.headline, entry.summary, items[index]?.title || "")) { rejectCounts.missingEvidence++; continue; }
     if (hasUnsupportedCourtDisposition(generatedText, sourceEvidence)) { rejectCounts.unsupportedCourtOutcome++; continue; }
     const isAgniveerExtension = /agniveer|अग्निवीर/i.test(sourceEvidence) &&
