@@ -163,7 +163,7 @@ assert.equal(sourceGroundingFns.hasHeadlineSummaryTopicConflict("दिल्ल
 assert.equal(sourceGroundingFns.hasUnsupportedNewsSummaryTopic("मुंबई के डोंगरी में आग लगी","Major fire breaks out in Mumbai's Dongri. Firefighters doused the blaze."),false);
 assert.equal(sourceGroundingFns.hasUnsupportedNewsSummaryTopic("CEO की पत्नी से जुड़ा अफेयर","Nvidia investigates CEO over suspected Chinese spy links"),true);
 
-const newsFormatterStart = worker.indexOf("function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false, allowGlobalNews = false, requestedScope = \"India\") {");
+const newsFormatterStart = worker.indexOf("function formatCurrentNewsSummaryReply(rawReply, results, requireTwoSentences = false, requireFiveCategories = false, allowGlobalNews = false, requestedScope = \"India\", singleStoryRequest = false) {");
 const newsFormatterEnd = worker.indexOf("\n}\n", newsFormatterStart);
 assert.ok(newsFormatterStart >= 0 && newsFormatterEnd > newsFormatterStart, "daily-news formatter must exist");
 const untranslatedHeadlineStart = worker.indexOf("function hasUntranslatedEnglishHeadline(text, sourceEvidence = \"\") {");
