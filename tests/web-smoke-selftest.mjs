@@ -727,7 +727,7 @@ assert.ok(worker.includes("fallbackAttempted: true") && worker.includes("fallbac
 assert.ok(worker.includes("वैकल्पिक खोज") && worker.includes("fallbackErrorCode: search.fallbackErrorCode ?? null"), "empty news diagnostics must disclose the GDELT attempt and failure code");
 assert.ok(worker.includes("indexedAt: String(article?.seendate || \"\""), "GDELT observation time must be kept separate from publisher publication time");
 assert.ok(worker.includes("const undatedCandidates = searchResults.filter(item =>") && worker.includes("const enrichedCandidates = await enrichNewsArticleEvidence("), "undated GDELT/Exa candidates must still pass bounded original publisher date enrichment");
-assert.ok(worker.includes("filterFreshNewsResults(searchResults)"), "GDELT candidates must still pass the strict India-day publication filter");
+assert.ok(worker.includes("filterFreshNewsResults(searchResults, Date.now(), userText)"), "GDELT candidates must pass the requested freshness-window publication filter");
 
 assert.match(worker, /livehindustan\\.com|prabhatkhabar\\.com|bhaskar\\.com|etvbharat\\.com/, "regional Indian news publishers must be allowed by the trusted-news filter");
 assert.match(worker, /livehindustan\.com.*prabhatkhabar\.com.*bhaskar\.com.*etvbharat\.com/, "regional publishers must be included in the search-domain allowlist");
