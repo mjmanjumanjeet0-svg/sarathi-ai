@@ -338,7 +338,7 @@ assert.match(source, /isFiveCategoryNewsQuery\(userText\) \? buildFiveCategoryNe
   "five-category search must receive the requested geographic scope");
 assert.ok(source.includes('timeZone: "Asia/Kolkata"'), "news publication window must use the current India calendar day");
 assert.match(source, /function isLast48HoursNewsQuery\(query\)/, "explicit rolling 48-hour requests must be detected");
-assert.match(source, /return isLast48HoursNewsQuery\(query\) \? now - 48 \* 60 \* 60 \* 1000 : getIndiaDayStartTimestamp\(now\)/,
+assert.match(source, /if \(isLast48HoursNewsQuery\(query\)\) return now - 48 \* 60 \* 60 \* 1000;[\s\S]*if \(isYesterdayNewsQuery\(query\)\) return todayStart - 24 \* 60 \* 60 \* 1000;[\s\S]*return todayStart;/,
   "rolling 48-hour requests must use an exact 48-hour lower bound while other news stays India-day scoped");
 assert.match(source, /filterFreshNewsResults\(searchResults, Date\.now\(\), userText\)/,
   "initial freshness filtering must receive the user's time window");
