@@ -70,6 +70,20 @@ assert.ok(worker.includes("publishedAt > now") && worker.includes("const latestA
   "both final news validation paths must reject every future timestamp without a grace period");
 
 assert.equal(freshnessFunctions.isLast48HoursNewsQuery("news from the last 48 hours"), true, "English rolling 48-hour requests must be recognized");
+const gdeltWindowStart = worker.indexOf("function getGdeltNewsStartTimestamp(searchOptions = {}, now = new Date()) {");
+const gdeltWindowEnd = worker.indexOf("\\n}\\n", gdeltWindowStart);
+assert.ok(gdeltWindowStart >= 0 && gdeltWindowEnd > gdeltWindowStart, "GDELT must calculate its provider-side date window");
+const getGdeltNewsStartTimestamp = new Function(
+  "isLast48HoursNewsQuery", "getIndiaDayStartTimestamp",
+  worker.slice(gdeltWindowStart, gdeltWindowEnd + 3) + "\\nreturn getGdeltNewsStartTimestamp;"
+)(freshnessFunctions.isLast48HoursNewsQuery, getIndiaDayStartTimestamp);
+const gdeltSampleNow = new Date("2026-11-08T18:00:00.000Z");
+assert.equal(new Date(getGdeltNewsStartTimestamp({ query: "पिछले 48 घंटों की खबरें" }, gdeltSampleNow)).toISOString(),
+  "2026-11-06T18:00:00.000Z", "GDELT must search the full rolling 48-hour window, including the previous India-local date");
+assert.equal(new Date(getGdeltNewsStartTimestamp({ query: "आज की खबरें" }, gdeltSampleNow)).toISOString(),
+  "2026-11-07T18:30:00.000Z", "ordinary news searches must remain scoped to midnight India time");
+assert.match(worker, /searchFreeNewsFallback\\(\\{ \.\.\.searchOptions, query: searchQuery \\}\\)/,
+  "the exact user query must reach the free GDELT fallback");
 
 const geoScopeStart = worker.indexOf("function getRequestedNewsGeographicScope(text) {");
 const geoScopeEnd = worker.indexOf("\n}", geoScopeStart);
