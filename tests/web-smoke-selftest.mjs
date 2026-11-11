@@ -351,7 +351,7 @@ const incompleteFiveCategoryReply = formatCurrentNewsSummaryReply(fiveNewsDraft.
 assert.match(incompleteFiveCategoryReply, /आज 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं/, "five-category request must retain the four individually verified stories when one generated entry is missing");
 assert.match(incompleteFiveCategoryReply, /इन श्रेणियों की खबर स्रोत-जाँच में सफल नहीं हुई: खेल/, "partial five-category output must name the category whose story failed validation");
 assert.equal([...incompleteFiveCategoryReply.matchAll(/खबर [1-5]/g)].length, 4, "an incomplete five-category response must never be padded with an unverified fifth story");
-const futureNewsSources = fiveNewsSources.map((item, index) => index === 0
+const futureNewsSources = fiveNewsSources.map((item, index) => index === 4
   ? { ...item, publishedAt: new Date(Date.now() + 60 * 1000).toISOString() }
   : item);
 const futureNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, futureNewsSources, true);
