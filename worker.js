@@ -461,15 +461,20 @@ function getGdeltNewsQuery(scope) {
   return "India";
 }
 
+function getGdeltNewsStartTimestamp(searchOptions = {}, now = new Date()) {
+  const nowTimestamp = now instanceof Date ? now.getTime() : new Date(now).getTime();
+  if (!Number.isFinite(nowTimestamp)) return Date.now() - 48 * 60 * 60 * 1000;
+  if (isLast48HoursNewsQuery(searchOptions.query)) return nowTimestamp - 48 * 60 * 60 * 1000;
+  return getIndiaDayStartTimestamp(nowTimestamp);
+}
+
 async function searchGdeltNewsFallback(searchOptions = {}) {
   // GDELT DOC is a public news-index fallback; it needs no API key and does
   // not create a second metered search-provider account.
   const now = new Date();
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit"
-  }).formatToParts(now);
-  const date = Object.fromEntries(parts.map(part => [part.type, part.value]));
-  const istStartUtc = Date.UTC(Number(date.year), Number(date.month) - 1, Number(date.day)) - 330 * 60 * 1000;
+  // Pass the user's exact query into the free fallback so GDELT searches the
+  // same rolling 48-hour window as Exa and the final publication-date filters.
+  const istStartUtc = getGdeltNewsStartTimestamp(searchOptions, now);
   const stamp = value => {
     const d = new Date(value);
     return d.getUTCFullYear().toString() +
@@ -688,7 +693,7 @@ async function searchInternet(query, env, maxResults = null, searchOptions = {})
       // available through the public GDELT index. All publisher-date,
       // trusted-source, duplicate-event and summary validators still run later.
       if (response.status === 402 && isNewsQuery && searchOptions.news !== false) {
-        const fallback = await searchFreeNewsFallback(searchOptions);
+        const fallback = await searchFreeNewsFallback({ ...searchOptions, query: searchQuery });
         // Return the fallback attempt even when it yields zero candidates.
         // Otherwise the caller reports only Exa HTTP 402 and hides whether GDELT
         // was reached, what HTTP status it returned, and whether it found articles.
