@@ -309,6 +309,19 @@ assert.equal(hasHeadlineSummaryTopicConflict("रेलवे ने नई ट�
 assert.equal(hasHeadlineSummaryTopicConflict("सरकार ने महंगाई पर कदम उठाया", "मुद्रास्फीति पर नई आर्थिक नीति घोषित हुई।", "Government announces inflation measures"), false,
   "related economy wording must remain valid when grounded in the source title");
 
+const locationGuardStart = source.indexOf("function hasUnsupportedNewsLocationClaim(");
+const locationGuardEnd = source.indexOf("\nfunction hasUnsupportedNewsSummaryTopic", locationGuardStart);
+assert.ok(locationGuardStart >= 0 && locationGuardEnd > locationGuardStart, "news location grounding guard must exist");
+const hasUnsupportedNewsLocationClaim = new Function(source.slice(locationGuardStart, locationGuardEnd) + "\nreturn hasUnsupportedNewsLocationClaim;")();
+assert.equal(hasUnsupportedNewsLocationClaim("पटना में घटना हुई।", "दिल्ली में घटना हुई।"), true,
+  "a summary must not move a Delhi event to Patna");
+assert.equal(hasUnsupportedNewsLocationClaim("बिहार में घटना हुई।", "पटना, बिहार में घटना हुई।"), false,
+  "a broader location already supported by the article must remain valid");
+assert.equal(hasUnsupportedNewsLocationClaim("घटना में प्रशासन ने कार्रवाई की।", "दिल्ली में प्रशासन ने कार्रवाई की।"), false,
+  "a summary without an extra named place must not be rejected");
+assert.equal(hasUnsupportedNewsLocationClaim("नेपाल में बैठक हुई।", "भारत में बैठक हुई।"), true,
+  "a summary must not substitute a different country");
+
 const courtOutcomeStart = source.indexOf("function hasUnsupportedCourtDisposition(");
 const courtOutcomeEnd = source.indexOf("\nfunction formatCurrentNewsSummaryReply", courtOutcomeStart);
 assert.ok(courtOutcomeStart >= 0 && courtOutcomeEnd > courtOutcomeStart, "court disposition guard must exist");
