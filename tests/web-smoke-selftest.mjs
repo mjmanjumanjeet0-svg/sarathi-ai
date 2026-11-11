@@ -28,6 +28,16 @@ const indiaDayStartStart = worker.indexOf("function getIndiaDayStartTimestamp(no
 const indiaDayStartEnd = worker.indexOf("\n}\n", indiaDayStartStart);
 assert.ok(indiaDayStartStart >= 0 && indiaDayStartEnd > indiaDayStartStart, "India-local day boundary helper must exist");
 const getIndiaDayStartTimestamp = new Function("INDIA_TIME_ZONE", worker.slice(indiaDayStartStart, indiaDayStartEnd + 3) + "\nreturn getIndiaDayStartTimestamp;")("Asia/Kolkata");
+const indiaDateTimeStart = worker.indexOf("function getIndiaDateTime(now = new Date()) {");
+const indiaDateTimeEnd = worker.indexOf("\n}\n", indiaDateTimeStart);
+assert.ok(indiaDateTimeStart >= 0 && indiaDateTimeEnd > indiaDateTimeStart, "India date-time helper must accept a deterministic timestamp");
+const getIndiaDateTime = new Function("INDIA_TIME_ZONE", worker.slice(indiaDateTimeStart, indiaDateTimeEnd + 3) + "\nreturn getIndiaDateTime;")("Asia/Kolkata");
+assert.deepEqual(getIndiaDateTime("2026-11-08T18:29:59.000Z"), {
+  date: "08-11-2026", weekday: "रविवार", time: "23:59"
+}, "one second before India midnight must remain on the previous local date");
+assert.deepEqual(getIndiaDateTime("2026-11-08T18:30:00.000Z"), {
+  date: "09-11-2026", weekday: "सोमवार", time: "00:00"
+}, "India midnight must roll to the next local date and render as 00:00, never 24:00");
 const sampleNow = Date.parse("2026-11-08T18:00:00.000Z");
 assert.equal(new Date(getIndiaDayStartTimestamp(sampleNow)).toISOString(), "2026-11-07T18:30:00.000Z", "India news day must begin at midnight IST");
 const freshnessHelpersStart = worker.indexOf("function isLast48HoursNewsQuery(query) {");
