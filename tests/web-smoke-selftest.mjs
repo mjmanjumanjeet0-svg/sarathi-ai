@@ -340,6 +340,22 @@ const wrappedJsonHindiDigits = normalizeNewsSummaryRepairText(JSON.stringify({
 assert.equal([...formatCurrentNewsSummaryReply(wrappedJsonHindiDigits, fiveNewsSources, true, true).matchAll(/खबर [1-5](?: \([^)]*\))?:/g)].length, 5, "Hindi Devanagari story numbers must normalize and preserve all five checked stories");
 assert.match(worker, /response_format:\s*\{\s*type:\s*"json_object"\s*\}/, "compact news requests must enable Groq JSON mode");
 assert.match(completeFiveNewsReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "five-category request must return all five stories only when all five summaries pass");
+const rolling48HourSources = fiveNewsSources.map((item, index) => ({
+  ...item,
+  publishedAt: new Date(Date.now() - (index === 2 ? 49 : 10) * 60 * 60 * 1000).toISOString()
+}));
+const rolling48HourReply = formatCurrentNewsSummaryReply(
+  fiveNewsDraft,
+  rolling48HourSources,
+  true,
+  false,
+  false,
+  "India",
+  false,
+  "पिछले 48 घंटों की खबरें"
+);
+assert.match(rolling48HourReply, /आज 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं:/, "final news formatting must retain eligible stories while rejecting a story older than the requested rolling 48-hour window");
+assert.doesNotMatch(rolling48HourReply, /खबर 3:/, "final news formatting must not display an article older than 48 hours");
 const todayOnlySources = fiveNewsSources.map(item => ({
   ...item,
   publishedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString()
