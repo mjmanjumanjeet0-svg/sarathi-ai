@@ -44,6 +44,8 @@ public class MainActivity extends Activity {
     private boolean voiceRequestInProgress = false;
     // Pause foreground recognition when Sarathi is covered; resume only after Sarathi returns.
     private boolean nativeListeningPausedForAppPause = false;
+    // True only between Activity onResume/onPause; bridge callbacks may arrive asynchronously.
+    private boolean activityResumed = false;
     private int voiceRecognitionRetryAttempt = 0;
     private Runnable voiceRecognitionRetry;
     private static final String APP_HOST = "mjmanjumanjeet0-svg.github.io";
@@ -238,6 +240,8 @@ public class MainActivity extends Activity {
     }
 
     private void startListening() {
+        // JavaScript bridge callbacks must not reactivate microphone capture in the background.
+        if (!activityResumed || isFinishing() || isDestroyed()) return;
         nativeListeningPausedForAppPause = false;
         voiceRequestInProgress = false;
         voiceConversationActive = true;
@@ -261,6 +265,7 @@ public class MainActivity extends Activity {
     }
 
     private void beginListeningWithSelectedLanguage() {
+        if (!voiceConversationActive || !activityResumed || nativeListeningPausedForAppPause || isFinishing() || isDestroyed()) return;
         if (!hasMicrophonePermission()) {
             pendingListen = true;
             requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, REQUEST_RECORD_AUDIO);
@@ -279,6 +284,7 @@ public class MainActivity extends Activity {
     }
 
     private void showOnlineVoiceConsent(String message) {
+        if (!voiceConversationActive || !activityResumed || nativeListeningPausedForAppPause || isFinishing() || isDestroyed()) return;
         new android.app.AlertDialog.Builder(this)
                 .setTitle("आवाज़ पहचान")
                 .setMessage(message)
@@ -322,6 +328,7 @@ public class MainActivity extends Activity {
     }
 
     private void launchSystemSpeechActivity() {
+        if (!voiceConversationActive || !activityResumed || nativeListeningPausedForAppPause || isFinishing() || isDestroyed()) return;
         speechActivityFallbackLaunched = true;
         SpeechRecognizer current = speechRecognizer;
         speechRecognizer = null;
@@ -374,14 +381,14 @@ public class MainActivity extends Activity {
 
     private void scheduleVoiceRecognitionRetry(boolean online) {
         // A delayed retry must never restart microphone capture while the Activity is backgrounded.
-        if (!voiceConversationActive || nativeListeningPausedForAppPause || isFinishing()) return;
+        if (!voiceConversationActive || !activityResumed || nativeListeningPausedForAppPause || isFinishing() || isDestroyed()) return;
         if (voiceRecognitionRetry != null) mainHandler.removeCallbacks(voiceRecognitionRetry);
         voiceRecognitionRetryAttempt = Math.min(voiceRecognitionRetryAttempt + 1, 6);
         long delayMs = Math.min(900L * voiceRecognitionRetryAttempt, 5000L);
         notifyVoice("onStatus", "सारथी सुन रहा है। आवाज़ साफ़ नहीं मिली तो अपने-आप फिर कोशिश करेगा…");
         voiceRecognitionRetry = () -> {
             voiceRecognitionRetry = null;
-            if (!voiceConversationActive || nativeListeningPausedForAppPause || isFinishing()) return;
+            if (!voiceConversationActive || !activityResumed || nativeListeningPausedForAppPause || isFinishing() || isDestroyed()) return;
             startRecognition(online);
         };
         mainHandler.postDelayed(voiceRecognitionRetry, delayMs);
@@ -679,6 +686,7 @@ public class MainActivity extends Activity {
     @Override
     protected void onResume() {
         super.onResume();
+        activityResumed = true;
         if (nativeListeningPausedForAppPause && voiceConversationActive) {
             nativeListeningPausedForAppPause = false;
             if (!voiceRequestInProgress) startListening();
@@ -687,6 +695,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onPause() {
+        activityResumed = false;
         if (voiceConversationActive && !speechActivityFallbackLaunched) {
             nativeListeningPausedForAppPause = true;
             if (voiceRecognitionRetry != null) mainHandler.removeCallbacks(voiceRecognitionRetry);
