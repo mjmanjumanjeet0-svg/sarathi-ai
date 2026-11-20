@@ -89,7 +89,7 @@ const loginStart = app.indexOf("async function loginWorker()");
 const loginEnd = app.indexOf("/* ========================================\n   SAFE TEXT FORMATTING", loginStart);
 assert.ok(loginStart >= 0 && loginEnd > loginStart, "login function boundaries must be present");
 assert.equal(app.slice(loginStart, loginEnd).includes("window.prompt("), false, "web login must not expose passwords in a plain-text browser prompt");
-assert.ok(java.includes("APP_HOST.equalsIgnoreCase(pageUri.getHost())"), "Android login prompt must be restricted to the Sarathi host");
+assert.ok(java.includes("isTrustedAppUrl(pageUri)") && java.includes("APP_HOST.equalsIgnoreCase(uri.getHost())"), "Android login prompt must use the centralized strict Sarathi origin validator");
 const manifest = await readFile(new URL("../android-app/app/src/main/AndroidManifest.xml", import.meta.url), "utf8");
 assert.ok(!manifest.includes("WakeWordService") && !manifest.includes("FOREGROUND_SERVICE") && !manifest.includes("POST_NOTIFICATIONS"), "manifest must not declare a background microphone service or its notification permissions");
 assert.ok(!manifest.includes("SYSTEM_ALERT_WINDOW") && !manifest.includes("READ_EXTERNAL_STORAGE") && !manifest.includes("WRITE_EXTERNAL_STORAGE") && !manifest.includes("MANAGE_EXTERNAL_STORAGE"), "manifest must not request overlays or broad storage access");
