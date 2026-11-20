@@ -373,14 +373,15 @@ public class MainActivity extends Activity {
 }
 
     private void scheduleVoiceRecognitionRetry(boolean online) {
-        if (!voiceConversationActive || isFinishing()) return;
+        // A delayed retry must never restart microphone capture while the Activity is backgrounded.
+        if (!voiceConversationActive || nativeListeningPausedForAppPause || isFinishing()) return;
         if (voiceRecognitionRetry != null) mainHandler.removeCallbacks(voiceRecognitionRetry);
         voiceRecognitionRetryAttempt = Math.min(voiceRecognitionRetryAttempt + 1, 6);
         long delayMs = Math.min(900L * voiceRecognitionRetryAttempt, 5000L);
         notifyVoice("onStatus", "सारथी सुन रहा है। आवाज़ साफ़ नहीं मिली तो अपने-आप फिर कोशिश करेगा…");
         voiceRecognitionRetry = () -> {
             voiceRecognitionRetry = null;
-            if (!voiceConversationActive || isFinishing()) return;
+            if (!voiceConversationActive || nativeListeningPausedForAppPause || isFinishing()) return;
             startRecognition(online);
         };
         mainHandler.postDelayed(voiceRecognitionRetry, delayMs);
@@ -392,6 +393,8 @@ public class MainActivity extends Activity {
     }
 
     private void startRecognition(boolean useOnlineService) {
+        // All recognition entry points, including callbacks and retries, share this foreground guard.
+        if (!voiceConversationActive || nativeListeningPausedForAppPause || isFinishing()) return;
         nativeStopRequested = false;
         try {
             // Re-check permission immediately before starting the speech service.
