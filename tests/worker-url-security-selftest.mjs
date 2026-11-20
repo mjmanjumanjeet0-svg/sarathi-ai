@@ -8,7 +8,7 @@ assert.match(app, /const TRUSTED_WORKER_ORIGIN = "https:\/\/sarathi-ai\.mjmanjum
   "the app must pin its official Worker origin");
 assert.match(app, /function isTrustedWorkerUrl\(value\)[\s\S]*?parsed\.protocol === "https:"[\s\S]*?parsed\.origin === TRUSTED_WORKER_ORIGIN[\s\S]*?parsed\.username === ""[\s\S]*?parsed\.password === ""[\s\S]*?parsed\.search === ""[\s\S]*?parsed\.hash === ""/,
   "Worker URL validation must reject other origins, credentials, paths, queries, and fragments");
-assert.match(app, /function getWorkerUrl\(\)[\s\S]*?isTrustedWorkerUrl\(configured\)[\s\S]*?return TRUSTED_WORKER_ORIGIN/,
+assert.match(app, /function getWorkerUrl\(\)[\s\S]*?isTrustedWorkerUrl\(configured\)[\s\S]*?return DEFAULT_SETTINGS.workerUrl/,
   "tampered local settings must fall back to the official Worker");
 assert.match(app, /if \(!isTrustedWorkerUrl\(workerUrl\)\)[\s\S]*?केवल सारथी AI का आधिकारिक Worker URL स्वीकार है/,
   "the settings form must reject untrusted Worker URLs");
