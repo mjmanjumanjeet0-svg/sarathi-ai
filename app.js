@@ -1035,7 +1035,7 @@ async function sendMessage(text) {
     if (window.SarathiVoice?.isActive?.()) window.SarathiVoice.stop();
     else window.SarathiNative?.endVoiceConversation?.();
     if (window.speechSynthesis) window.speechSynthesis.cancel();
-    setStatus("ठीक है। बातचीत समाप्त। दोबारा बुलाने के लिए “हेलो सारथी” कहें।");
+    setStatus("ठीक है। बातचीत समाप्त। दोबारा शुरू करने के लिए माइक बटन दबाएँ। माइक्रोफोन बंद होने पर सारथी आपकी आवाज़ नहीं सुनता।");
     const input = $("messageInput");
     if (input) { input.value = ""; input.style.height = ""; }
     return;
