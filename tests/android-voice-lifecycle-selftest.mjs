@@ -15,3 +15,15 @@ assert.match(activity, /protected void onResume\(\)[\s\S]*?if \(nativeListeningP
   "an explicitly active session may resume only after the Activity returns");
 
 console.log("Android voice foreground-lifecycle self-test passed.");
+
+assert.match(activity, /private void startListening\(\) \{[\s\S]*?if \(!activityResumed \|\| isFinishing\(\) \|\| isDestroyed\(\)\) return;[\s\S]*?nativeListeningPausedForAppPause = false;/,
+  "late JavaScript bridge callbacks must not clear the background pause and restart the microphone");
+assert.match(activity, /protected void onPause\(\) \{\s*activityResumed = false;/,
+  "the Activity must mark itself backgrounded before pausing recognition");
+assert.match(activity, /protected void onResume\(\) \{\s*super\.onResume\(\);\s*activityResumed = true;/,
+  "the Activity must become eligible for recognition only after onResume");
+assert.match(activity, /private void beginListeningWithSelectedLanguage\(\) \{\s*if \(!voiceConversationActive \|\| !activityResumed \|\| nativeListeningPausedForAppPause/,
+  "permission callbacks must not open speech consent or begin recognition while backgrounded");
+assert.match(activity, /private void showOnlineVoiceConsent\(String message\) \{\s*if \(!voiceConversationActive \|\| !activityResumed \|\| nativeListeningPausedForAppPause/,
+  "online speech consent must never appear while the Activity is backgrounded");
+console.log("Android voice foreground-entry self-test passed.");
