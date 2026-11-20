@@ -38,6 +38,8 @@ const sendSource = app.slice(sendStart, sendEnd);
 assert.ok(sendSource.includes("window.SarathiVoice.stop()") && sendSource.includes("endVoiceConversation"), "quiet voice command must stop the active browser or Android voice session");
 assert.doesNotMatch(sendSource, /SarathiNative\.endConversation\(/, "quiet voice command must not call a nonexistent Android bridge method");
 assert.ok(sendSource.includes("finishVoiceTurn(message)") && sendSource.includes("if (!workerUrl)"), "missing Worker URL must not leave a voice reply paused");
+assert.ok(sendSource.includes("दोबारा शुरू करने के लिए माइक बटन दबाएँ") && sendSource.includes("माइक्रोफोन बंद होने पर सारथी आपकी आवाज़ नहीं सुनता"), "stopping voice must explain manual mic restart and must not imply background wake-word listening");
+assert.doesNotMatch(sendSource, /दोबारा बुलाने के लिए[\s\S]{0,30}हेलो सारथी/, "stopped voice session must not imply that background wake-word listening remains active");
 const voiceCallbackStart = app.indexOf("window.SarathiVoice = {");
 const voiceCallbackEnd = app.indexOf("/* ========================================\n   ATTACHMENTS", voiceCallbackStart);
 const voiceCallbacks = app.slice(voiceCallbackStart, voiceCallbackEnd);
