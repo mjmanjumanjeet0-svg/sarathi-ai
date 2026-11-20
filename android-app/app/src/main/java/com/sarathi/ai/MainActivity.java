@@ -129,8 +129,7 @@ public class MainActivity extends Activity {
             public boolean onJsPrompt(WebView view, String url, String message,
                     String defaultValue, JsPromptResult result) {
                 Uri pageUri = Uri.parse(url == null ? "" : url);
-                if (!"https".equalsIgnoreCase(pageUri.getScheme())
-                        || !APP_HOST.equalsIgnoreCase(pageUri.getHost())) {
+                if (!isTrustedAppUrl(pageUri)) {
                     result.cancel();
                     return true;
                 }
@@ -152,6 +151,10 @@ public class MainActivity extends Activity {
 
             @Override
             public boolean onJsConfirm(WebView view, String url, String message, JsResult result) {
+                if (!isTrustedAppUrl(Uri.parse(url == null ? "" : url))) {
+                    result.cancel();
+                    return true;
+                }
                 new android.app.AlertDialog.Builder(MainActivity.this)
                         .setTitle("सारथी AI की अनुमति")
                         .setMessage(message == null ? "क्या यह कार्रवाई करनी है?" : message)
@@ -187,19 +190,38 @@ public class MainActivity extends Activity {
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
-            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
-                Uri uri = request.getUrl();
-                String scheme = uri.getScheme();
-                String host = uri.getHost();
-                if ("https".equalsIgnoreCase(scheme) && APP_HOST.equalsIgnoreCase(host)) {
-                    return false;
+            public void onPageStarted(WebView view, String url, android.graphics.Bitmap favicon) {
+                Uri uri = Uri.parse(url == null ? "" : url);
+                if (!isTrustedAppUrl(uri)) {
+                    view.stopLoading();
+                    return;
                 }
-                // बाहरी लिंक से दूसरे ऐप/ब्राउज़र को अपने-आप नहीं खोलते।
-                return true;
+                super.onPageStarted(view, url, favicon);
+            }
+
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                return !isTrustedAppUrl(request.getUrl());
             }
         });
 
         webView.loadUrl("https://" + APP_HOST + "/sarathi-ai/");
+    }
+
+    // The JavaScript bridge is privileged: trust only the exact Sarathi Pages
+    // origin and app entry paths, never a sibling path, custom port, or user-info URL.
+    private boolean isTrustedAppUrl(Uri uri) {
+        if (uri == null
+                || !"https".equalsIgnoreCase(uri.getScheme())
+                || !APP_HOST.equalsIgnoreCase(uri.getHost())
+                || (uri.getPort() != -1 && uri.getPort() != 443)
+                || uri.getUserInfo() != null) {
+            return false;
+        }
+        String path = uri.getPath();
+        return "/sarathi-ai".equals(path)
+                || "/sarathi-ai/".equals(path)
+                || "/sarathi-ai/index.html".equals(path);
     }
 
     private void notifyVoice(String callback, String message) {
