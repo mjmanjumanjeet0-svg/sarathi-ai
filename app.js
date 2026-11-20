@@ -94,7 +94,7 @@ function getWorkerUrl() {
   const configured = String(getSettings().workerUrl || "").trim();
   // A modified localStorage value must never redirect credentials or bearer
   // tokens to an arbitrary HTTPS endpoint.
-  return isTrustedWorkerUrl(configured) ? TRUSTED_WORKER_ORIGIN : TRUSTED_WORKER_ORIGIN;
+  return isTrustedWorkerUrl(configured) ? TRUSTED_WORKER_ORIGIN : DEFAULT_SETTINGS.workerUrl;
 }
 
 function activeChat() {
