@@ -3991,10 +3991,11 @@ export default {
       const requestedCity = bullionCityAliases.find(city => city.re.test(userText));
       if (requestedCity) {
         const pricedLines = rawReply.split(/\r?\n/).filter(line => /₹|\bINR\b|रु\.?/i.test(line));
-        // City attribution may appear in the source/note rather than beside the numeric row.
-        // If a priced answer cites another city's market, reject the whole local-city quote.
+        // A foreign city mentioned only in a source note must not invalidate
+        // a correctly attributed local price. Reject only if a priced line names it.
         const foreignCity = pricedLines.length
-          ? bullionCityAliases.find(city => city.key !== requestedCity.key && city.re.test(rawReply))
+          ? bullionCityAliases.find(city => city.key !== requestedCity.key &&
+              pricedLines.some(line => city.re.test(line)))
           : null;
         if (foreignCity) {
           rawReply = requestedCity.label + " के स्थानीय सोना-चाँदी भाव उपलब्ध खोज परिणामों से विश्वसनीय रूप से सत्यापित नहीं हो सके। खोज में " +
