@@ -401,7 +401,7 @@ public class MainActivity extends Activity {
 
     private void startRecognition(boolean useOnlineService) {
         // All recognition entry points, including callbacks and retries, share this foreground guard.
-        if (!voiceConversationActive || nativeListeningPausedForAppPause || isFinishing()) return;
+        if (!voiceConversationActive || !activityResumed || nativeListeningPausedForAppPause || isFinishing() || isDestroyed()) return;
         nativeStopRequested = false;
         try {
             // Re-check permission immediately before starting the speech service.
