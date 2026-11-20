@@ -9,6 +9,7 @@ on:
       - "tests/web-smoke-selftest.mjs"
       - "tests/sarathi-selftest.mjs"
       - "android-app/app/src/main/java/com/sarathi/ai/MainActivity.java"
+      - "tests/android-webview-security-selftest.mjs"
       - "android-app/app/src/main/java/com/sarathi/ai/WakeWordService.java"
       - "voice.js"
       - "worker.js"
@@ -50,6 +51,7 @@ jobs:
           node tests/app-launch-selftest.mjs
           node tests/web-smoke-selftest.mjs
           node tests/sarathi-selftest.mjs
+          node tests/android-webview-security-selftest.mjs
 
       - name: Check required web files
         run: |
