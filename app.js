@@ -12,8 +12,10 @@ const SETTINGS_KEY = "sarathi_ai_settings_v1";
 let sessionAuthToken = null;
 let messageLoginGranted = false;
 
+const TRUSTED_WORKER_ORIGIN = "https://sarathi-ai.mjmanjumanjeet0.workers.dev";
+
 const DEFAULT_SETTINGS = {
-  workerUrl: "https://sarathi-ai.mjmanjumanjeet0.workers.dev",
+  workerUrl: TRUSTED_WORKER_ORIGIN,
   assistantName: "सारथी"
 };
 
@@ -73,10 +75,26 @@ function saveSettings(settings) {
   return saveJSON(SETTINGS_KEY, settings);
 }
 
+function isTrustedWorkerUrl(value) {
+  try {
+    const parsed = new URL(String(value || "").trim());
+    return parsed.protocol === "https:"
+      && parsed.origin === TRUSTED_WORKER_ORIGIN
+      && parsed.username === ""
+      && parsed.password === ""
+      && (parsed.pathname === "/" || parsed.pathname === "")
+      && parsed.search === ""
+      && parsed.hash === "";
+  } catch {
+    return false;
+  }
+}
+
 function getWorkerUrl() {
-  return String(getSettings().workerUrl || "")
-    .trim()
-    .replace(/\/+$/, "");
+  const configured = String(getSettings().workerUrl || "").trim();
+  // A modified localStorage value must never redirect credentials or bearer
+  // tokens to an arbitrary HTTPS endpoint.
+  return isTrustedWorkerUrl(configured) ? TRUSTED_WORKER_ORIGIN : DEFAULT_SETTINGS.workerUrl;
 }
 
 function activeChat() {
@@ -1379,18 +1397,12 @@ function handleSettingsSubmit(event) {
     return;
   }
 
-  try {
-    const parsed = new URL(workerUrl);
-    if (parsed.protocol !== "https:") {
-      setStatus("Worker URL https:// से शुरू होना चाहिए।");
-      return;
-    }
-  } catch {
-    setStatus("Worker URL सही नहीं है।");
+  if (!isTrustedWorkerUrl(workerUrl)) {
+    setStatus("सुरक्षा के लिए केवल सारथी AI का आधिकारिक Worker URL स्वीकार है।");
     return;
   }
 
-  saveSettings({ workerUrl, assistantName });
+  saveSettings({ workerUrl: TRUSTED_WORKER_ORIGIN, assistantName });
   $("settingsDialog")?.close();
   setStatus("सेटिंग्स सेव हो गईं।");
   renderMessages();
