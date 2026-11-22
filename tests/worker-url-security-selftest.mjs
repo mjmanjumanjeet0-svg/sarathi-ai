@@ -10,7 +10,6 @@ assert.match(app, /function isTrustedWorkerUrl\(value\)[\s\S]*?parsed\.protocol 
   "Worker URL validation must reject other origins, credentials, paths, queries, and fragments");
 assert.ok(app.includes("return isTrustedWorkerUrl(configured) ? TRUSTED_WORKER_ORIGIN : DEFAULT_SETTINGS.workerUrl;"),
   "tampered local settings must fall back to the official Worker");
-  "tampered local settings must fall back to the official Worker");
 assert.match(app, /if \(!isTrustedWorkerUrl\(workerUrl\)\)[\s\S]*?केवल सारथी AI का आधिकारिक Worker URL स्वीकार है/,
   "the settings form must reject untrusted Worker URLs");
 assert.match(app, /saveSettings\(\{ workerUrl: TRUSTED_WORKER_ORIGIN, assistantName \}\)/,
