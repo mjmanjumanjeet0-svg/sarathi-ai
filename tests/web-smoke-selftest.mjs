@@ -331,7 +331,7 @@ const fiveNewsDraft = fiveNewsSources.map((_, index) =>
   "खबर " + (index + 1) + ": अलग समाचार घटना " + (index + 1) +
   "\nसार: यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।"
 ).join("\n");
-const completeFiveNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, fiveNewsSources, true, true);
+const completeFiveNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, fiveNewsSources, true, true, false, "India", false, "पिछले 48 घंटों की खबरें");
 const normalizeNewsSummaryRepairText = new Function(
   "cleanText",
   worker.slice(worker.indexOf("function normalizeNewsSummaryRepairText("), worker.indexOf("\n}\n", worker.indexOf("function normalizeNewsSummaryRepairText(")) + 3) + "\nreturn normalizeNewsSummaryRepairText;"
@@ -343,7 +343,7 @@ const wrappedJsonNews = normalizeNewsSummaryRepairText(JSON.stringify({
     summary: ["यह पहली पुष्ट जानकारी है।", "यह दूसरी पुष्ट जानकारी है।"]
   })) }
 }));
-assert.equal([...formatCurrentNewsSummaryReply(wrappedJsonNews, fiveNewsSources, true, true).matchAll(/खबर [1-5](?: \([^)]*\))?:/g)].length, 5, "nested JSON envelopes and sentence-array summaries must normalize into all five checked stories");
+assert.equal([...formatCurrentNewsSummaryReply(wrappedJsonNews, fiveNewsSources, true, true, false, "India", false, "पिछले 48 घंटों की खबरें").matchAll(/खबर [1-5](?: \([^)]*\))?:/g)].length, 5, "nested JSON envelopes and sentence-array summaries must normalize into all five checked stories");
 const wrappedJsonHindiDigits = normalizeNewsSummaryRepairText(JSON.stringify({
   stories: fiveNewsSources.map((source, index) => ({
     number: "०१२३४५"[index + 1], category: fiveNewsCategories[index],
@@ -351,7 +351,7 @@ const wrappedJsonHindiDigits = normalizeNewsSummaryRepairText(JSON.stringify({
     summary: "यह पहली पुष्ट जानकारी है। यह दूसरी पुष्ट जानकारी है।"
   }))
 }));
-assert.equal([...formatCurrentNewsSummaryReply(wrappedJsonHindiDigits, fiveNewsSources, true, true).matchAll(/खबर [1-5](?: \([^)]*\))?:/g)].length, 5, "Hindi Devanagari story numbers must normalize and preserve all five checked stories");
+assert.equal([...formatCurrentNewsSummaryReply(wrappedJsonHindiDigits, fiveNewsSources, true, true, false, "India", false, "पिछले 48 घंटों की खबरें").matchAll(/खबर [1-5](?: \([^)]*\))?:/g)].length, 5, "Hindi Devanagari story numbers must normalize and preserve all five checked stories");
 assert.match(worker, /response_format:\s*\{\s*type:\s*"json_object"\s*\}/, "compact news requests must enable Groq JSON mode");
 assert.match(completeFiveNewsReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "five-category request must return all five stories only when all five summaries pass");
 const rolling48HourSources = fiveNewsSources.map((item, index) => ({
