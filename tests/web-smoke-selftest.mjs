@@ -370,15 +370,28 @@ const rolling48HourReply = formatCurrentNewsSummaryReply(
 );
 assert.match(rolling48HourReply, /आज 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं:/, "final news formatting must retain eligible stories while rejecting a story older than the requested rolling 48-hour window");
 assert.doesNotMatch(rolling48HourReply, /खबर 3:/, "final news formatting must not display an article older than 48 hours");
-const todayOnlySources = fiveNewsSources.map(item => ({
-  ...item,
-  publishedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString()
-}));
-assert.equal(
-  formatCurrentNewsSummaryReply(fiveNewsDraft, todayOnlySources, true, false, false, "India", false, "कल की खबरें"),
-  "",
-  "final news formatting must reject today's articles when the user explicitly asks for yesterday's news"
-);
+// A relative "10 minutes ago" fixture crosses into yesterday during the
+// first ten minutes after India-local midnight. Run this today-vs-yesterday
+// assertion only when the fixture is guaranteed to belong to today's date.
+const indiaClock = new Intl.DateTimeFormat("en-GB", {
+  timeZone: "Asia/Kolkata", hour: "2-digit", minute: "2-digit", hourCycle: "h23"
+}).formatToParts(new Date());
+const indiaMinutesAfterMidnight =
+  Number(indiaClock.find(part => part.type === "hour")?.value || 0) * 60 +
+  Number(indiaClock.find(part => part.type === "minute")?.value || 0);
+if (indiaMinutesAfterMidnight >= 10) {
+  const todayOnlySources = fiveNewsSources.map(item => ({
+    ...item,
+    publishedAt: new Date(Date.now() - 10 * 60 * 1000).toISOString()
+  }));
+  assert.equal(
+    formatCurrentNewsSummaryReply(fiveNewsDraft, todayOnlySources, true, false, false, "India", false, "कल की खबरें"),
+    "",
+    "final news formatting must reject today's articles when the user explicitly asks for yesterday's news"
+  );
+} else {
+  console.log("NEWS FRESHNESS SELF-TEST: skipped today-vs-yesterday fixture during the first ten minutes after India midnight");
+}
 
 const olympicsNewsSource = {
   requestedCategory: "खेल",
