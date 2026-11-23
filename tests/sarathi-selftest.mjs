@@ -9,6 +9,21 @@ const appSource = await readFile(new URL("../app.js", import.meta.url), "utf8");
 assert.match(source, /model\.startsWith\("openai\/gpt-oss-"\)[\s\S]*include_reasoning: false[\s\S]*reasoning_format: "hidden"/, "GPT-OSS must use include_reasoning=false while non-GPT-OSS reasoning models use reasoning_format=hidden");
 assert.match(source, /reasoning_effort: reasoningEffort/, "reasoning effort must remain enabled when requested");
  
+// Literary, religious-text and philosophy accuracy safeguards.
+for (const rule of [
+  "साहित्यिक, धार्मिक और दार्शनिक पुस्तकों के नाम",
+  "प्रवचन-संकलन और स्वयं लिखी पुस्तक में अंतर रखो",
+  "The Book of ...",
+  "संभोग से समाधि की ओर",
+  "वाल्मीकि रामायण का सुंदरकाण्ड",
+  "रामचरितमानस का सुंदरकाण्ड",
+  "तीन गुण सत्त्व, रजस् और तमस् हैं",
+  "मोह स्वयं इन तीन गुणों में से एक नहीं है"
+]) {
+  assert.ok(source.includes(rule), "system prompt must include literary/philosophy accuracy rule: " + rule);
+}
+
+ 
 // Deterministic arithmetic, discount and India-date regression tests.
 function extractWorkerFunction(name, nextName) {
   const start = source.indexOf("function " + name + "(");
