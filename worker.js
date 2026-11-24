@@ -3519,8 +3519,7 @@ export default {
         const retryableSearchFailure = search.retryable === true;
         return jsonResponse({
           success: true,
-          reply: "मैंने वेब पर खोजने की कोशिश की, लेकिन अभी उपयोग करने योग्य परिणाम नहीं मिले। " + searchWarning + " इसलिए कोई तथ्य या लिंक गढ़कर नहीं बताऊँगा। " +
-            (retryableSearchFailure ? "थोड़ी देर बाद फिर कोशिश करें।" : "आप चाहें तो सवाल को दूसरे शब्दों में पूछ सकते हैं।"),
+          reply: "मैंने इंटरनेट पर खोजने की कोशिश की, लेकिन अभी इस सवाल के लिए भरोसेमंद और उपयोगी परिणाम नहीं मिले। इसलिए मैं कोई अपुष्ट जानकारी या अनुमान नहीं दूँगा। कृपया कुछ देर बाद फिर प्रयास करें।",
           ...dateTime,
           webSearch: true,
           searchAttempted: true,
