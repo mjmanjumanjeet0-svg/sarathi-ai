@@ -611,7 +611,8 @@ for (const rule of [
   assert.ok(source.includes(rule), "PR #114 factual safeguard must remain in the system prompt: " + rule);
 }
 
-\n// Osho place-name and biography regressions: prevent fabricated "Osho Nagar"
+
+// Osho place-name and biography regressions: prevent fabricated "Osho Nagar"
 // locations, unrelated census entries, and unsupported claims about centers.
 for (const rule of [
   "ओशो के जीवन और उनसे जुड़े स्थानों पर विशेष सावधानी रखो",
