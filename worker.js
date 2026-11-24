@@ -3425,8 +3425,8 @@ export default {
           // failures. Targeted category searches are useful only while Exa is
           // available and the initial search actually used it successfully.
           const canRunTargetedCategorySearches = Boolean(env.EXA_API_KEY) &&
-            search.primaryProvider !== "Exa" ? false :
-            Boolean(env.EXA_API_KEY) && search.primaryHttpStatus !== 402;
+            search.httpStatus === 200 && !search.errorCode &&
+            search.primaryHttpStatus !== 402;
           if (missingQueries.length && canRunTargetedCategorySearches) {
             const targetedBatches = await Promise.all(missingQueries.map(async ({ category, searchQuery }) => {
               const targeted = await searchInternet(searchQuery, env, 10);
