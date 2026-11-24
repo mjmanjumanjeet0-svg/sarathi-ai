@@ -810,7 +810,8 @@ assert.ok(worker.includes('response.status === 402 && isNewsQuery && searchOptio
 assert.ok(worker.includes('fetch("https://api.gdeltproject.org/api/v2/doc/doc?'), "GDELT fallback must use its public DOC API");
 assert.ok(worker.includes('primaryProvider: "Exa"') && worker.includes('primaryHttpStatus: 402'), "fallback diagnostics must preserve the primary Exa failure");
 assert.ok(worker.includes("fallbackAttempted: true") && worker.includes("fallbackHttpStatus: fallback.httpStatus ?? null"), "GDELT attempt status must be returned even when no articles are found");
-assert.ok(worker.includes("वैकल्पिक खोज") && worker.includes("fallbackErrorCode: search.fallbackErrorCode ?? null"), "empty news diagnostics must disclose the GDELT attempt and failure code");
+assert.ok(worker.includes("fallbackErrorCode: search.fallbackErrorCode ?? null") && worker.includes("searchDiagnostics:"), "internal news diagnostics must remain available to developer tooling");
+assert.ok(worker.includes("बिना पुष्टि वाली खबरें शामिल नहीं की गई हैं।") && !worker.includes("reply: todayLabel + \" के लिए आज ही प्रकाशित और तारीख-जाँचे गए भरोसेमंद समाचार परिणाम नहीं मिले। \" +"), "user-facing news failure must hide provider and HTTP diagnostics");
 assert.ok(worker.includes("indexedAt: String(article?.seendate || \"\""), "GDELT observation time must be kept separate from publisher publication time");
 assert.ok(worker.includes("const undatedCandidates = searchResults.filter(item =>") && worker.includes("const enrichedCandidates = await enrichNewsArticleEvidence("), "undated GDELT/Exa candidates must still pass bounded original publisher date enrichment");
 assert.ok(worker.includes("filterFreshNewsResults(searchResults, Date.now(), userText)"), "GDELT candidates must pass the requested freshness-window publication filter");
