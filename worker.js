@@ -1737,7 +1737,7 @@ function courtRecordPartyNames(value) {
     .replace(/\b(?:[A-Z][A-Za-z.'’&-]*\s+)?(?:High Court|Supreme Court)\b/gi, " ")
     .replace(/\b(?:photo(?:graph)?\s*(?:credit|by)|image\s*credit|byline|written\s*by|reported\s*by|correspondent|reporter|staff\s*reporter|advocate|senior\s*advocate|counsel|court\s*master|justice|judge)\b[^.\n]{0,180}/gi, " ");
   const names = new Set();
-  const namePart = "[A-Z][A-Za-z.'’&-]*(?:\s+(?!(?:v\\.?|versus|PIL|WP|SLP|WPC|CRL|CIVIL|CASE|PETITION|ORDER|JUDGMENT|[Cc]ivil|[Jj]udge|[Aa]ppointment|[Jj]udicial|[Gg]old|[Ll]oan|[Ll]ow|[Vv]ision|[Pp]ledged|[Jj]ewellery|[Ww]oman|[Ww]aits|RBI)\\b)(?:[A-Z][A-Za-z.'’&-]*|of|the|and|&)){1,7}";
+  const namePart = "[A-Z][A-Za-z.'’&-]*(?:\\s+(?!(?:v\\.?|versus|PIL|WP|SLP|WPC|CRL|CIVIL|CASE|PETITION|ORDER|JUDGMENT|[Cc]ivil|[Jj]udge|[Aa]ppointment|[Jj]udicial|[Gg]old|[Ll]oan|[Ll]ow|[Vv]ision|[Pp]ledged|[Jj]ewellery|[Ww]oman|[Ww]aits|RBI)\\b)(?:[A-Z][A-Za-z.'’&-]*|of|the|and|&)){1,7}";
   const add = value => {
     const cleaned = cleanText(value).replace(/^(?:the\s+)?/i, "").replace(/\s+/g, " ").replace(/[.,;:]+$/g, "").trim();
     const words = cleaned.split(" ").filter(Boolean);
@@ -1747,7 +1747,7 @@ function courtRecordPartyNames(value) {
       names.add(cleaned.toLocaleLowerCase("en-IN"));
     }
   };
-  const caption = new RegExp("(" + namePart + ")\s+(?:v\\.?|versus)\s+(" + namePart + ")", "g");
+  const caption = new RegExp("(" + namePart + ")\\s+(?:v\\.?|versus)\\s+(" + namePart + ")", "g");
   for (const match of text.matchAll(caption)) {
     add(match[1]);
     add(match[2]);
