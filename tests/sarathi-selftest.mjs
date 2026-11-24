@@ -622,7 +622,10 @@ assert.ok(source.includes("const priorOshoNagarMisinfo = immediatelyPreviousTurn
 assert.ok(source.includes("const followup = immediatelyPreviousTurnIsOshoNagar"));
 assert.ok(source.includes("neutralFollowup + (priorOshoNagarMisinfo ? correction : \"\")"));
 assert.ok(source.includes("पिछले उत्तर में गुजरात/अहमदाबाद और जनगणना की जानकारी बिना पुष्टि के दी गई थी"));
-assert.ok(source.includes("उसके स्थापना-वर्ष के दावे की मैं अभी विश्वसनीय स्रोत से पुष्टि नहीं कर पा रहा हूँ"));
+assert.ok(source.includes("ओशो न्यूज़ के ऐतिहासिक लेख के अनुसार, न्यूयॉर्क में ओशो की ध्यान गतिविधियाँ 1977 से थीं"));
+  assert.ok(source.includes("Padma Meditation & Holistic Centre, 6 West 14th Street पर खुला"));
+  assert.ok(source.includes("आज भी वही केंद्र या पता चालू है, इसकी पुष्टि मेरे पास नहीं है"));
+  assert.ok(!source.includes("उसके स्थापना-वर्ष के दावे की मैं अभी विश्वसनीय स्रोत से पुष्टि नहीं कर पा रहा हूँ"));
 assert.ok(!source.includes("पहले दिया गया स्थापना-वर्ष स्वतंत्र पुष्टि के बिना प्रमाणित न मानें"), "Do not append a correction when no earlier year was stated");
 
 // Osho place-name and biography regressions: prevent fabricated "Osho Nagar"
@@ -633,7 +636,7 @@ for (const rule of [
   "\"ओशो नगर\" को \"रजनीशपुरम\" मत समझो।",
   "गाँव, ब्लॉक, जनसंख्या, जिला या Census का विवरण तभी दो जब ठीक उसी स्थान की आधिकारिक/विश्वसनीय प्रविष्टि सत्यापित हो।",
   "रजनीशपुरम को ओरेगन, अमेरिका में 1980 के दशक के दौरान ओशो के अनुयायियों द्वारा विकसित समुदाय के रूप में बताओ",
-  "न्यूयॉर्क या किसी अन्य शहर में केंद्र होने का दावा अनुमान से मत करो।"
+  "न्यूयॉर्क में ओशो न्यूज़ के ऐतिहासिक लेखों के अनुसार ध्यान गतिविधियाँ 1977 से थीं; Satya Priya ने Barrow Street स्थित अपने घर में केंद्र शुरू किया था और 1 जुलाई 2018 को Padma Meditation & Holistic Centre, 6 West 14th Street पर खुला। इसे ऐतिहासिक जानकारी के रूप में बताओ; आज भी वही केंद्र या पता चालू है, ऐसा बिना ताज़ा पुष्टि के मत कहो। अन्य शहरों के केंद्रों का दावा अनुमान से मत करो।"
 ]) {
   assert.ok(source.includes(rule), "Osho place-name safeguard must remain in the system prompt: " + rule);
 }
