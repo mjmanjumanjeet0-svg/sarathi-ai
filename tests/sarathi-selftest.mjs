@@ -563,9 +563,9 @@ assert.equal(recurringRailStories.length, 2, "similar recurring event headlines 
 
 // Publisher RSS XML parser regression: capture ordinary text between XML tags.
 const rssTagStart = source.indexOf("function rssTagValue(block, tagNames) {");
-const rssTagEnd = source.indexOf("\\nasync function searchPublisherRssFallback", rssTagStart);
+const rssTagEnd = source.indexOf("\nasync function searchPublisherRssFallback", rssTagStart);
 assert.ok(rssTagStart >= 0 && rssTagEnd > rssTagStart, "RSS tag helper must exist");
-const rssTagValue = new Function(source.slice(rssTagStart, rssTagEnd) + "\\nreturn rssTagValue;")();
+const rssTagValue = new Function(source.slice(rssTagStart, rssTagEnd) + "\nreturn rssTagValue;")();
 assert.equal(rssTagValue("<item><title>India announces new policy</title><pubDate>Tue, 24 Nov 2026 08:00:00 GMT</pubDate></item>", ["title"]), "India announces new policy", "RSS parser must capture normal text, not only whitespace or literal S characters");
 assert.equal(rssTagValue("<item><description><![CDATA[Useful news summary]]></description></item>", ["description"]), "<![CDATA[Useful news summary]]>", "RSS parser must preserve CDATA for the XML decoder");
 
