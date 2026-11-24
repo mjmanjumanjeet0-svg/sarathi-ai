@@ -567,6 +567,8 @@ const shouldShowSearchSources = new Function(
 });
 assert.equal(shouldShowSearchSources({ searchAttempted: true, sources: [{ title: "Official notice", url: "https://example.gov.in/notice" }] }), true, "sources from automatic Worker search must be shown even when the web toggle is off");
 assert.equal(shouldShowSearchSources({ searchAttempted: false, sources: [{ title: "Unrequested", url: "https://example.com" }] }), false, "sources must not be shown when the Worker did not search");
+assert.equal(shouldShowSearchSources({ searchAttempted: false, showSources: true, sources: [{ title: "Osho News article", url: "https://www.oshonews.com/2018/06/24/padma-nyc-meditation-center/" }] }), true, "explicitly curated sources must be shown without implying a live search");
+assert.equal(shouldShowSearchSources({ searchAttempted: false, showSources: false, sources: [{ title: "Unrequested", url: "https://example.com" }] }), false, "ordinary unrequested sources must remain hidden");
 assert.equal(shouldShowSearchSources({ searchAttempted: true, sources: [] }), false, "empty search results must not create an empty source list");
 assert.equal(shouldShowSearchSources({ searchAttempted: true, reply: "खबर 1: भारत की खबर\\nप्रकाशक: example.com\\nमूल लिंक:", sources: [{ title: "India news", url: "https://example.com/india" }] }), true, "show source cards if inline news links are missing");
 assert.equal(shouldShowSearchSources({ searchAttempted: true, reply: "खबर 1: भारत की खबर\\nप्रकाशक: example.com\\nप्रकाशित: आज\\nमूल लिंक: https://example.com/india", sources: [{ title: "India news", url: "https://example.com/india" }] }), false, "avoid duplicate source cards when inline news links are present");
