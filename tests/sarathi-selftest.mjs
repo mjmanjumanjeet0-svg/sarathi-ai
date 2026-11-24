@@ -625,6 +625,9 @@ assert.ok(source.includes("पिछले उत्तर में गुज�
 assert.ok(source.includes("ओशो न्यूज़ के ऐतिहासिक लेख के अनुसार, न्यूयॉर्क में ओशो की ध्यान गतिविधियाँ 1977 से थीं"));
   assert.ok(source.includes("Padma Meditation & Holistic Centre, 6 West 14th Street पर खुला"));
   assert.ok(source.includes("आज भी वही केंद्र या पता चालू है, इसकी पुष्टि मेरे पास नहीं है"));
+assert.ok(source.includes("https://www.oshonews.com/2018/06/24/padma-nyc-meditation-center/"), "Expose the original Osho News article as a source link");
+assert.ok(source.includes('publisher: "Osho News"'));
+assert.ok(source.includes('publishedAt: "2018-06-24"'));
   assert.ok(!source.includes("उसके स्थापना-वर्ष के दावे की मैं अभी विश्वसनीय स्रोत से पुष्टि नहीं कर पा रहा हूँ"));
 assert.ok(!source.includes("पहले दिया गया स्थापना-वर्ष स्वतंत्र पुष्टि के बिना प्रमाणित न मानें"), "Do not append a correction when no earlier year was stated");
 
