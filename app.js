@@ -1314,7 +1314,8 @@ async function sendMessage(text) {
 
     // Keep search failures visible in the chat, not only in the temporary status line.
     if (!((data.providerBusy === true || data.newsSummaryUnverified === true) && Array.isArray(data.sources) && data.sources.length > 0) &&
-        shouldShowSearchWarning(data) && !cleanAnswer.includes(data.searchWarning)) {
+        shouldShowSearchWarning(data) && !cleanAnswer.includes(data.searchWarning) &&
+        !/(?:भरोसेमंद समाचार परिणाम नहीं मिले|सत्यापित खोज परिणाम नहीं मिला|खोज परिणाम नहीं मिले|परिणाम नहीं मिले)/i.test(cleanAnswer)) {
       cleanAnswer += "\n\n⚠️ इंटरनेट खोज: " + data.searchWarning;
     }
 
