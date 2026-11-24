@@ -224,6 +224,18 @@ function solveBasicArithmetic(text) {
 }
 
 
+function isOshoNagarPlaceQuestion(text) {
+  const q = String(text || "").toLocaleLowerCase("hi-IN").trim();
+  return /(?:ओशो\\s*नगर|ओ\\s*नगर|osho\\s*nagar|o\\s*nagar)/i.test(q);
+}
+
+function isOshoNewYorkCenterQuestion(text) {
+  const q = String(text || "").toLocaleLowerCase("hi-IN").trim();
+  return /ओशो|osho|rajneesh/i.test(q) &&
+    /न्यू\\s*यॉर्क|न्यूयॉर्क|new\\s*york/i.test(q) &&
+    /ध्यान\\s*केंद्र|मेडिटेशन\\s*सेंटर|meditation\\s*center/i.test(q);
+}
+
 function isSarathiCreatorQuestion(text) {
   const q = String(text || "").toLocaleLowerCase("hi-IN").trim();
   const target = /सारथी(?:\s*AI)?|इस\s+ऐप|यह\s+ऐप|तुम्हें|तुमको|आपको|(?:तुम्हारा|तुम्हारी|आपका|आपकी)\s+(?:निर्माता|creator|maker)|(?:this\s+app|sarathi(?:\s*ai)?|\byou\b)/i;
@@ -2900,6 +2912,36 @@ export default {
     }
 
     const dateTime = getIndiaDateTime();
+
+    // Fail closed on ambiguous Osho Nagar queries; never invent a district or census entry.
+    const asksOshoNagar = isOshoNagarPlaceQuestion(userText);
+    const priorOshoNagarQuestion = messages.some(message =>
+      message?.role === "user" && isOshoNagarPlaceQuestion(message.content)
+    );
+    if (asksOshoNagar) {
+      const followup = priorOshoNagarQuestion &&
+        /(?:अभी|आज|अब|मौजूद|है क्या|कहाँ|कहां|still|exists|exist)/i.test(userText);
+      return jsonResponse({
+        success: true,
+        reply: followup
+          ? "मैं अभी यह पुष्टि नहीं कर पा रहा कि आपके बताए स्थानीय 'ओ नगर' नाम का कोई विशिष्ट स्थान कौन-सा है। कृपया उसका पूरा नाम या जिला बताइए। पिछले उत्तर में गुजरात/अहमदाबाद और जनगणना की जानकारी बिना पुष्टि के दी गई थी; उसे सही न मानें।"
+          : "ओशो द्वारा 'ओशो नगर' नाम का कोई शहर बसाने का विश्वसनीय प्रमाण मेरे पास नहीं है। इसे राजस्थान, गुजरात, भोपाल या किसी अन्य जिले से जोड़ना सही नहीं होगा। क्या आपका मतलब अमेरिका के ओरेगन स्थित रजनीशपुरम से है, जिसे 1980 के दशक में ओशो के अनुयायियों ने विकसित किया था?",
+        ...dateTime,
+        webSearch: false,
+        sources: []
+      });
+    }
+
+    // Do not assert a founding year or address for the New York center without verified evidence.
+    if (isOshoNewYorkCenterQuestion(userText)) {
+      return jsonResponse({
+        success: true,
+        reply: "न्यूयॉर्क में ओशो से जुड़ा ध्यान केंद्र होने और उसके स्थापना-वर्ष के दावे की मैं अभी विश्वसनीय स्रोत से पुष्टि नहीं कर पा रहा हूँ। इसलिए 1990, पता या संस्थापक के बारे में निश्चित दावा नहीं करूँगा। पहले दिया गया स्थापना-वर्ष स्वतंत्र पुष्टि के बिना प्रमाणित न मानें।",
+        ...dateTime,
+        webSearch: false,
+        sources: []
+      });
+    }
  
     // Answer maker/creator questions deterministically so fallback models cannot
     // misidentify Sarathi as Gemini or attribute the app to another company.
