@@ -616,6 +616,8 @@ for (const rule of [
 assert.ok(source.includes("function isOshoNagarPlaceQuestion(text)"));
 assert.ok(source.includes("function isOshoNewYorkCenterQuestion(text)"));
 assert.ok(source.includes("immediatelyPreviousTurnIsOshoNagar"));
+assert.ok(source.includes("function hasOshoNagarLocationMisinformation(text)"));
+assert.ok(source.includes("hasOshoNagarLocationMisinformation(priorAssistant.content)"));
 assert.ok(source.includes("const priorOshoNagarMisinfo = immediatelyPreviousTurnIsOshoNagar"));
 assert.ok(source.includes("const followup = immediatelyPreviousTurnIsOshoNagar"));
 assert.ok(source.includes("neutralFollowup + (priorOshoNagarMisinfo ? correction : \"\")"));
