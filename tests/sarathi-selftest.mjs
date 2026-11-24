@@ -610,3 +610,16 @@ for (const rule of [
 ]) {
   assert.ok(source.includes(rule), "PR #114 factual safeguard must remain in the system prompt: " + rule);
 }
+
+\n// Osho place-name and biography regressions: prevent fabricated "Osho Nagar"
+// locations, unrelated census entries, and unsupported claims about centers.
+for (const rule of [
+  "ओशो के जीवन और उनसे जुड़े स्थानों पर विशेष सावधानी रखो",
+  "\"ओशो नगर\", \"ओ नगर\", \"ओशो का नगर\" या मिलते-जुलते अस्पष्ट स्थान-नाम को अपने-आप भोपाल, बिहार या किसी अन्य जगह से मत जोड़ो।",
+  "\"ओशो नगर\" को \"रजनीशपुरम\" मत समझो।",
+  "गाँव, ब्लॉक, जनसंख्या, जिला या Census का विवरण तभी दो जब ठीक उसी स्थान की आधिकारिक/विश्वसनीय प्रविष्टि सत्यापित हो।",
+  "रजनीशपुरम को ओरेगन, अमेरिका में 1980 के दशक के दौरान ओशो के अनुयायियों द्वारा विकसित समुदाय के रूप में बताओ",
+  "न्यूयॉर्क या किसी अन्य शहर में केंद्र होने का दावा अनुमान से मत करो।"
+]) {
+  assert.ok(source.includes(rule), "Osho place-name safeguard must remain in the system prompt: " + rule);
+}
