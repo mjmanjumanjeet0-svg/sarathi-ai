@@ -2915,16 +2915,30 @@ export default {
 
     // Fail closed on ambiguous Osho Nagar queries; never invent a district or census entry.
     const asksOshoNagar = isOshoNagarPlaceQuestion(userText);
-    const priorOshoNagarQuestion = messages.slice(0, -1).some(message =>
-      message?.role === "user" && isOshoNagarPlaceQuestion(message.content)
-    );
+    const priorMessages = messages.slice(0, -1);
+    let lastUserAskedOshoNagar = false;
+    let priorOshoNagarMisinfo = false;
+    for (const message of priorMessages) {
+      if (message?.role === "user") {
+        lastUserAskedOshoNagar = isOshoNagarPlaceQuestion(message.content);
+      } else if (message?.role === "assistant" && lastUserAskedOshoNagar) {
+        priorOshoNagarMisinfo =
+          /अहमदाबाद|गुजरात|जनगणना|census/i.test(String(message.content || ""));
+        lastUserAskedOshoNagar = false;
+      }
+    }
     if (asksOshoNagar) {
-      const followup = priorOshoNagarQuestion &&
-        /(?:अभी|आज|अब|मौजूद|है क्या|कहाँ|कहां|still|exists|exist)/i.test(userText);
+      const followup = priorMessages.some(message =>
+        message?.role === "user" && isOshoNagarPlaceQuestion(message.content)
+      ) && /(?:अभी|आज|अब|मौजूद|है क्या|कहाँ|कहां|still|exists|exist)/i.test(userText);
+      const neutralFollowup =
+        "मैं अभी यह पुष्टि नहीं कर पा रहा कि आपके बताए स्थानीय 'ओ नगर' नाम का कोई विशिष्ट स्थान कौन-सा है। कृपया उसका पूरा नाम या जिला बताइए।";
+      const correction =
+        " पिछले उत्तर में गुजरात/अहमदाबाद और जनगणना की जानकारी बिना पुष्टि के दी गई थी; उसे सही न मानें।";
       return jsonResponse({
         success: true,
         reply: followup
-          ? "मैं अभी यह पुष्टि नहीं कर पा रहा कि आपके बताए स्थानीय 'ओ नगर' नाम का कोई विशिष्ट स्थान कौन-सा है। कृपया उसका पूरा नाम या जिला बताइए। पिछले उत्तर में गुजरात/अहमदाबाद और जनगणना की जानकारी बिना पुष्टि के दी गई थी; उसे सही न मानें।"
+          ? neutralFollowup + (priorOshoNagarMisinfo ? correction : "")
           : "ओशो द्वारा 'ओशो नगर' नाम का कोई शहर बसाने का विश्वसनीय प्रमाण मेरे पास नहीं है। इसे राजस्थान, गुजरात, भोपाल या किसी अन्य जिले से जोड़ना सही नहीं होगा। क्या आपका मतलब अमेरिका के ओरेगन स्थित रजनीशपुरम से है, जिसे 1980 के दशक में ओशो के अनुयायियों ने विकसित किया था?",
         ...dateTime,
         webSearch: false,
