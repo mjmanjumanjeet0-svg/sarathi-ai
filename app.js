@@ -720,8 +720,11 @@ function shouldShowSearchSources(data) {
   const hasVerifiedSources = Array.isArray(data?.sources) &&
     data.sources.some(source => safeSourceUrl(source?.url) && String(source?.title || "").trim());
   const hasLegacySourceList = replyText.includes("खोज में मिले मूल शीर्षक:");
-  return Boolean(data && data.searchAttempted === true && hasVerifiedSources &&
-    (!isInlineNewsList || !hasInlineArticleUrl || hasLegacySourceList));
+  // Explicitly curated source records (for deterministic historical answers) are
+  // allowed without claiming that a live web search was performed.
+  const sourcesAreExplicitlyProvided = data?.showSources === true;
+  return Boolean(data && (data.searchAttempted === true || sourcesAreExplicitlyProvided) &&
+    hasVerifiedSources && (!isInlineNewsList || !hasInlineArticleUrl || hasLegacySourceList));
 }
 
 function safeSourceUrl(value) {
