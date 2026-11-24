@@ -93,5 +93,5 @@ jobs:
           console.log("Service:", body.service);
           console.log("Status:", body.status);
           console.log("Zero-cost mode:", zeroCostMode);
-          console.log("Required endpoints:", requiredEndpoints.join(", "));
+          console.log("Required endpoints:", ["/api/login", "/api/chat"].join(", "));
           NODE
