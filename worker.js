@@ -229,6 +229,19 @@ function isOshoNagarPlaceQuestion(text) {
   return /(?:ओशो\s*नगर|ओ\s*नगर|osho\s*nagar|o\s*nagar)/i.test(q);
 }
 
+function hasOshoNagarLocationMisinformation(text) {
+  // Mentioning a place while explicitly denying the connection is not misinformation.
+  // Only treat a sentence as a prior false claim when it affirmatively links
+  // Osho Nagar to Ahmedabad/Gujarat or attaches an unverified census/location fact.
+  const sentences = String(text || "").split(/[।.!?\n]+/).map(part => part.trim()).filter(Boolean);
+  return sentences.some(sentence => {
+    const namesOshoNagar = /(?:ओशो\\s*नगर|ओ\\s*नगर|osho\\s*nagar|o\\s*nagar)/i.test(sentence);
+    const namesUnsupportedPlace = /(?:अहमदाबाद|गुजरात|जनगणना|census)/i.test(sentence);
+    const explicitlyRejectsClaim = /(?:नहीं|मत|गलत|बिना\\s+पुष्टि|सही\\s+नहीं|प्रमाण\\s+नहीं|पुष्टि\\s+नहीं|नहीं\\s+होगा|नहीं\\s+है)/i.test(sentence);
+    return namesOshoNagar && namesUnsupportedPlace && !explicitlyRejectsClaim;
+  });
+}
+
 function isOshoNewYorkCenterQuestion(text) {
   const q = String(text || "").toLocaleLowerCase("hi-IN").trim();
   return /ओशो|osho|rajneesh/i.test(q) &&
@@ -2926,7 +2939,7 @@ export default {
       priorAssistant?.role === "assistant" &&
       isOshoNagarPlaceQuestion(priorUser.content);
     const priorOshoNagarMisinfo = immediatelyPreviousTurnIsOshoNagar &&
-      /अहमदाबाद|गुजरात|जनगणना|census/i.test(String(priorAssistant.content || ""));
+      hasOshoNagarLocationMisinformation(priorAssistant.content);
     if (asksOshoNagar) {
       const followup = immediatelyPreviousTurnIsOshoNagar &&
         /(?:अभी|आज|अब|मौजूद|है क्या|कहाँ|कहां|still|exists|exist)/i.test(userText);
