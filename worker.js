@@ -3418,7 +3418,16 @@ export default {
           // paying for five searches when the broad result set is already complete.
           let categoryCandidates = searchResults;
           const missingQueries = buildMissingCategoryNewsQueries(categoryCandidates, userText);
-          if (missingQueries.length) {
+          // The free GDELT + publisher-RSS fallback is already the complete
+          // public news search for this request. Re-running it once per missing
+          // category multiplies 25 feed fetches into as many as 125 concurrent
+          // requests, adds no independent coverage, and can cause Worker fetch
+          // failures. Targeted category searches are useful only while Exa is
+          // available and the initial search actually used it successfully.
+          const canRunTargetedCategorySearches = Boolean(env.EXA_API_KEY) &&
+            search.primaryProvider !== "Exa" ? false :
+            Boolean(env.EXA_API_KEY) && search.primaryHttpStatus !== 402;
+          if (missingQueries.length && canRunTargetedCategorySearches) {
             const targetedBatches = await Promise.all(missingQueries.map(async ({ category, searchQuery }) => {
               const targeted = await searchInternet(searchQuery, env, 10);
               if (!Array.isArray(targeted.results) || !targeted.results.length) return [];
