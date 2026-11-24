@@ -651,13 +651,33 @@ async function searchInternet(query, env, maxResults = null, searchOptions = {})
   const searchQuery = String(query || "").trim().slice(0, 1024);
   if (!searchQuery) return { results: [], warning: "खोज का सवाल खाली है।", attempted: false, errorCode: "EMPTY_QUERY" };
 
-  // Use only the explicitly configured Exa provider. Exa usage may be metered
-  // by its account plan; never silently fall back to Cloudflare AI Gateway or
-  // another provider that could create separate charges.
+  const isNewsQuery = /(खबर|समाचार|news|breaking|latest|ताज़ा|ताजा)/i.test(searchQuery);
+
+  // News has a public, zero-key fallback. Do not stop at a missing Exa secret:
+  // use GDELT + publisher RSS, then let the existing strict publication-date,
+  // trusted-source and duplicate-event filters decide what can be shown.
   if (!env.EXA_API_KEY) {
+    if (isNewsQuery && searchOptions.news !== false) {
+      const fallback = await searchFreeNewsFallback({ ...searchOptions, query: searchQuery });
+      return {
+        ...fallback,
+        warning: fallback.results?.length
+          ? "Exa key उपलब्ध नहीं; सार्वजनिक GDELT और प्रकाशक RSS से परिणाम मिले।"
+          : "Exa key उपलब्ध नहीं और सार्वजनिक GDELT/RSS से सत्यापित समाचार परिणाम नहीं मिले।",
+        primaryProvider: "Exa",
+        primaryHttpStatus: null,
+        fallbackAttempted: true,
+        fallbackProvider: fallback.provider || "GDELT + Publisher RSS",
+        fallbackHttpStatus: fallback.httpStatus ?? null,
+        fallbackErrorCode: fallback.errorCode ?? (fallback.results?.length ? null : "NO_FALLBACK_CANDIDATES"),
+        fallbackFeedDiagnostics: fallback.feedDiagnostics || [],
+        attempted: true,
+        retryable: false
+      };
+    }
     return {
       results: [],
-      warning: "Exa सर्च की API Key उपलब्ध नहीं है। Cloudflare में EXA_API_KEY Secret की जाँच आवश्यक है।",
+      warning: "वेब खोज की Exa API Key उपलब्ध नहीं है।",
       errorCode: "MISSING_API_KEY",
       retryable: false,
       attempted: false
