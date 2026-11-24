@@ -2916,21 +2916,20 @@ export default {
     // Fail closed on ambiguous Osho Nagar queries; never invent a district or census entry.
     const asksOshoNagar = isOshoNagarPlaceQuestion(userText);
     const priorMessages = messages.slice(0, -1);
-    let lastUserAskedOshoNagar = false;
-    let priorOshoNagarMisinfo = false;
-    for (const message of priorMessages) {
-      if (message?.role === "user") {
-        lastUserAskedOshoNagar = isOshoNagarPlaceQuestion(message.content);
-      } else if (message?.role === "assistant" && lastUserAskedOshoNagar) {
-        priorOshoNagarMisinfo =
-          /अहमदाबाद|गुजरात|जनगणना|census/i.test(String(message.content || ""));
-        lastUserAskedOshoNagar = false;
-      }
-    }
+    // A follow-up must refer to the immediately preceding user/assistant turn.
+    // Older Osho Nagar messages elsewhere in chat history must never trigger
+    // a stale correction or make an unrelated question look like a follow-up.
+    const priorAssistant = priorMessages[priorMessages.length - 1];
+    const priorUser = priorMessages[priorMessages.length - 2];
+    const immediatelyPreviousTurnIsOshoNagar =
+      priorUser?.role === "user" &&
+      priorAssistant?.role === "assistant" &&
+      isOshoNagarPlaceQuestion(priorUser.content);
+    const priorOshoNagarMisinfo = immediatelyPreviousTurnIsOshoNagar &&
+      /अहमदाबाद|गुजरात|जनगणना|census/i.test(String(priorAssistant.content || ""));
     if (asksOshoNagar) {
-      const followup = priorMessages.some(message =>
-        message?.role === "user" && isOshoNagarPlaceQuestion(message.content)
-      ) && /(?:अभी|आज|अब|मौजूद|है क्या|कहाँ|कहां|still|exists|exist)/i.test(userText);
+      const followup = immediatelyPreviousTurnIsOshoNagar &&
+        /(?:अभी|आज|अब|मौजूद|है क्या|कहाँ|कहां|still|exists|exist)/i.test(userText);
       const neutralFollowup =
         "मैं अभी यह पुष्टि नहीं कर पा रहा कि आपके बताए स्थानीय 'ओ नगर' नाम का कोई विशिष्ट स्थान कौन-सा है। कृपया उसका पूरा नाम या जिला बताइए।";
       const correction =
