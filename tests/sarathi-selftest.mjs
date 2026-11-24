@@ -592,3 +592,21 @@ assert.ok(source.includes("अंग्रेज़ी में अचानक
 assert.ok(source.includes("शोध में मदद") && source.includes("खोज वास्तव में न हुई हो तो स्रोत देखने का दावा मत करो"), "research capability must be described honestly");
 assert.ok(source.includes("2–4 सरल, व्यावहारिक कदम") && source.includes("लंबी दस-बिंदु सूची"), "mental-health answers must be concise and empathetic");
 assert.ok(source.includes("क्रमांक दोहराकर") && source.includes("छोटे सवाल का जवाब 1–3 वाक्यों में"), "response length and repeated numbering must be controlled");
+
+
+// PR #114 factual-answer guardrails: keep the historical, Indian-society,
+// geography, source-honesty and location-ambiguity protections in regression tests.
+for (const rule of [
+  "इतिहास के उत्तरों में सभ्यता, संस्कृति, समाज, राजवंश, साम्राज्य और औपनिवेशिक शासन को अलग-अलग अवधारणाएँ मानो।",
+  "मौर्य, गुप्त और मुगल को साम्राज्य/राजवंश के रूप में बताओ",
+  "संविधान की आठवीं अनुसूची में 22 अनुसूचित भाषाएँ हैं",
+  "जातियों की कुल संख्या या \"16 प्रमुख जाति-समूह\" जैसी संख्या अनुमान से कभी मत बनाओ।",
+  "थार मरुस्थल मुख्यतः उत्तर-पश्चिम भारत में है, दक्षिण भारत में नहीं",
+  "ओशो या किसी अन्य वक्ता के बारे में \"600 से अधिक पुस्तकें लिखीं\" जैसा दावा मत दो",
+  "Wikipedia या Britannica का नाम केवल तभी स्रोत बताओ जब उसी उत्तर के लिए वास्तव में संबंधित लेख देखा और सत्यापित किया हो।",
+  "स्रोत\" का दिखावा, नकली उद्धरण या मनगढ़ंत लिंक मत दो।",
+  "\"अभी हम कहाँ हैं?\" जैसे वाक्य का अर्थ संदर्भ से स्पष्ट न हो तो पहले छोटा स्पष्टीकरण पूछो",
+  "विनाशकारी घटनाओं के उदाहरणों की सूची, संभावित तरीकों, साधनों, कमजोरियों या बड़े पैमाने पर नुकसान की परिस्थितियों का वर्णन मत करो"
+]) {
+  assert.ok(source.includes(rule), "PR #114 factual safeguard must remain in the system prompt: " + rule);
+}
