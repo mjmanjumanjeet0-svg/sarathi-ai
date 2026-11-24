@@ -665,4 +665,24 @@ assert.ok(source.includes("function isBiharCapitalQuestion(text)"), "Bihar capit
 assert.ok(source.includes("reply: \"बिहार की राजधानी पटना है।\""), "Bihar capital must return a clean deterministic answer");
 assert.ok(source.includes("refersToPriorContext"), "old chat history must be passed only for explicit follow-ups");
 assert.ok(source.includes("के लिए आज ही प्रकाशित और तारीख-जाँचे गए भरोसेमंद समाचार परिणाम नहीं मिले। बिना पुष्टि वाली खबरें शामिल नहीं की गई हैं।"), "news search failures must not expose provider diagnostics");
+
+// Execute the real deterministic handlers: the user's exact wording must match,
+// and the answer must contain correct rights/duties counts without stale totals.
+const constitutionStart = source.indexOf("function solveConstitution10MarkQuestion(text) {");
+const constitutionEnd = source.indexOf("\nfunction isBiharCapitalQuestion(text) {", constitutionStart);
+assert.ok(constitutionStart >= 0 && constitutionEnd > constitutionStart, "constitution solver must be extractable");
+const constitutionSolver = new Function(source.slice(constitutionStart, constitutionEnd) + "\nreturn solveConstitution10MarkQuestion;")();
+const constitutionAnswer = constitutionSolver("भारतीय संविधान पर 10 अंकों का उत्तर लिखो।");
+assert.ok(constitutionAnswer, "the exact 10-mark wording must trigger the deterministic constitution answer");
+assert.match(constitutionAnswer, /छह व्यापक श्रेणियों/);
+assert.match(constitutionAnswer, /11 मौलिक कर्तव्य/);
+assert.match(constitutionAnswer, /26 नवंबर 1949/);
+assert.match(constitutionAnswer, /26 जनवरी 1950/);
+assert.doesNotMatch(constitutionAnswer, /13 मौलिक अधिकार|448 अनुच्छेद|8 अनुसूचियाँ/);
+
+const biharStart = source.indexOf("function isBiharCapitalQuestion(text) {");
+const biharEnd = source.indexOf("\nfunction solveNewtonFirstLawQuestion(text) {", biharStart);
+const biharMatcher = new Function(source.slice(biharStart, biharEnd) + "\nreturn isBiharCapitalQuestion;")();
+assert.equal(biharMatcher("बिहार की राजधानी क्या है?"), true, "Bihar capital handler must match the exact Hindi question");
+
 assert.ok(!source.includes("तकनीकी स्थिति: मुख्य खोज Exa HTTP"), "technical search diagnostics must not appear in the user-facing reply");
