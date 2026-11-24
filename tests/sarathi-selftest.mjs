@@ -646,3 +646,13 @@ for (const rule of [
 ]) {
   assert.ok(source.includes(rule), "Osho place-name safeguard must remain in the system prompt: " + rule);
 }
+
+// Full-test regressions: Newton, 1857, fractions, context isolation and user-safe search failures.
+
+assert.ok(source.includes("function solveNewtonFirstLawQuestion(text)"), "Newton's first law must have a deterministic correct Hindi answer");
+assert.ok(source.includes("न्यूटन का पहला गति नियम (जड़त्व का नियम)"), "Newton's first law must use the correct Hindi name");
+assert.ok(source.includes("function solveRevolt1857Question(text)"), "1857 causes must use a deterministic fact-checked answer");
+assert.ok(source.includes("function solveFractionPercentQuestion(text)"), "fraction-to-percent questions must have a deterministic solver");
+assert.ok(source.includes("return match[1] + \"/\" + match[2] + \" = \" + percent + \"%\""), "fraction conversion must include the percentage sign");
+assert.ok(source.includes("पुराने संदेशों की सामग्री को वर्तमान प्रश्न का उत्तर समझकर न दोहराओ"), "the latest user question must not be polluted by previous-turn answers");
+assert.ok(source.includes("HTTP कोड, प्रदाता के आंतरिक नाम, खाते के क्रेडिट, RSS/GDELT diagnostics"), "search provider diagnostics must stay out of normal user-facing answers");
