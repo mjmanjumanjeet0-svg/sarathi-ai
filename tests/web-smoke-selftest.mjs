@@ -770,6 +770,9 @@ assert.ok(worker.includes("Roman Urdu"), "Roman-script language input must be id
 assert.ok(worker.includes('zeroCostMode: true'), "disabled media APIs must clearly identify zero-cost mode");
 assert.ok(worker.includes('"/api/media/image"') && worker.includes('"/api/media/understand"'), "media API routes must be explicit and auditable");
 assert.ok(worker.includes("if (!env.EXA_API_KEY)"), "web search must report a missing configured Exa key rather than silently assuming search is available");
+assert.ok(worker.includes('if (isNewsQuery && searchOptions.news !== false)'), "news requests must use the free fallback when the Exa key is missing");
+assert.ok(worker.includes('searchFreeNewsFallback({ ...searchOptions, query: searchQuery })'), "missing Exa key news requests must reach the public GDELT and publisher RSS fallback");
+assert.ok(worker.includes('fallbackAttempted: true') && worker.includes('fallbackFeedDiagnostics: fallback.feedDiagnostics || []'), "missing-key news fallback must retain diagnostics");
 
 
 // Search APIs may omit publishedDate while the original publisher exposes it.
