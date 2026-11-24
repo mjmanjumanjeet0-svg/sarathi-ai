@@ -561,6 +561,14 @@ const recurringRailStories = groupNewsByEvent([
 assert.equal(recurringRailStories.length, 2, "similar recurring event headlines more than 72 hours apart must remain separate");
 
 
+// Publisher RSS XML parser regression: capture ordinary text between XML tags.
+const rssTagStart = source.indexOf("function rssTagValue(block, tagNames) {");
+const rssTagEnd = source.indexOf("\\nasync function searchPublisherRssFallback", rssTagStart);
+assert.ok(rssTagStart >= 0 && rssTagEnd > rssTagStart, "RSS tag helper must exist");
+const rssTagValue = new Function(source.slice(rssTagStart, rssTagEnd) + "\\nreturn rssTagValue;")();
+assert.equal(rssTagValue("<item><title>India announces new policy</title><pubDate>Tue, 24 Nov 2026 08:00:00 GMT</pubDate></item>", ["title"]), "India announces new policy", "RSS parser must capture normal text, not only whitespace or literal S characters");
+assert.equal(rssTagValue("<item><description><![CDATA[Useful news summary]]></description></item>", ["description"]), "<![CDATA[Useful news summary]]>", "RSS parser must preserve CDATA for the XML decoder");
+
 // News fallback must search the requested geography and interleave publisher RSS
 // with GDELT so a large un-enrichable index batch cannot crowd it out.
 const gdeltQueryStart = source.indexOf("function getGdeltNewsQuery(scope) {");
