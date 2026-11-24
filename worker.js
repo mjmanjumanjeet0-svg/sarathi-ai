@@ -2915,7 +2915,7 @@ export default {
 
     // Fail closed on ambiguous Osho Nagar queries; never invent a district or census entry.
     const asksOshoNagar = isOshoNagarPlaceQuestion(userText);
-    const priorOshoNagarQuestion = messages.some(message =>
+    const priorOshoNagarQuestion = messages.slice(0, -1).some(message =>
       message?.role === "user" && isOshoNagarPlaceQuestion(message.content)
     );
     if (asksOshoNagar) {
