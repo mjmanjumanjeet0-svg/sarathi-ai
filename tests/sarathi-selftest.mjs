@@ -622,9 +622,12 @@ assert.ok(source.includes("const priorOshoNagarMisinfo = immediatelyPreviousTurn
 assert.ok(source.includes("const followup = immediatelyPreviousTurnIsOshoNagar"));
 assert.ok(source.includes("neutralFollowup + (priorOshoNagarMisinfo ? correction : \"\")"));
 assert.ok(source.includes("पिछले उत्तर में गुजरात/अहमदाबाद और जनगणना की जानकारी बिना पुष्टि के दी गई थी"));
-assert.ok(source.includes("ओशो न्यूज़ के ऐतिहासिक लेख के अनुसार, न्यूयॉर्क में ओशो की ध्यान गतिविधियाँ 1977 से थीं"));
+assert.ok(source.includes("ऐतिहासिक रूप से हाँ। Osho News के 24 जून 2018 के लेख के अनुसार, न्यूयॉर्क में ओशो की ध्यान गतिविधियाँ 1977 से थीं"));
   assert.ok(source.includes("Padma Meditation & Holistic Centre, 6 West 14th Street पर खुला"));
-  assert.ok(source.includes("आज भी वही केंद्र या पता चालू है, इसकी पुष्टि मेरे पास नहीं है"));
+  assert.ok(source.includes("आज (वर्तमान समय में) यह केंद्र चालू है या नहीं, इसकी विश्वसनीय ताज़ा पुष्टि मेरे पास नहीं है"));
+assert.ok(source.includes("function isOshoNewYorkCenterFollowup(text)"));
+assert.ok(source.includes("immediatelyPreviousTurnIsOshoNewYork"));
+assert.ok(source.includes("15 East 12th Street पते और केंद्र के बंद होने के दावे की भी पुष्टि नहीं मिली; उन्हें सही न मानें"));
 assert.ok(source.includes("https://www.oshonews.com/2018/06/24/padma-nyc-meditation-center/"), "Expose the original Osho News article as a source link");
 assert.ok(source.includes('publisher: "Osho News"'));
 assert.ok(source.includes('publishedAt: "2018-06-24"'));
