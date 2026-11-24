@@ -400,7 +400,7 @@ function decodeNewsXmlText(value) {
 function rssTagValue(block, tagNames) {
   for (const rawTag of tagNames) {
     const tag = rawTag.replace(/[^a-z0-9:_-]/gi, "");
-    const match = block.match(new RegExp("<" + tag + "(?:\s[^>]*)?>([\s\\S]*?)</" + tag + "\s*>", "i"));
+    const match = block.match(new RegExp("<" + tag + "(?:\s[^>]*)?>([\s\S]*?)</" + tag + "\s*>", "i"));
     if (match) return match[1];
   }
   return "";
