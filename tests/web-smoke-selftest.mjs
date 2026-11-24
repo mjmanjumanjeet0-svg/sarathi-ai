@@ -402,7 +402,7 @@ const olympicsNewsSource = {
 };
 const wrongOlympicsCityReply = formatCurrentNewsSummaryReply(
   "खबर 1 (खेल): खिलाड़ियों को ओलंपिक छात्रवृत्ति\nसार: यह योजना 2028 एथेंस ओलंपिक के खिलाड़ियों को सहायता देगी। खिलाड़ियों को प्रशिक्षण सहायता मिलेगी।",
-  [olympicsNewsSource], true, true
+  [olympicsNewsSource], true, true, false, "India", false, "पिछले 48 घंटों की खबरें"
 );
 assert.doesNotMatch(wrongOlympicsCityReply, /एथेंस|Athens/i,
   "a sports summary must be rejected if it invents Athens as the 2028 Olympic host city");
@@ -416,24 +416,28 @@ assert.equal(hasKnownContradictedNewsFact("यह योजना 2028 लॉस
 assert.equal(hasKnownContradictedNewsFact("खिलाड़ियों को 2028 ओलंपिक की तैयारी में सहायता मिलेगी।"), false,
   "a summary that does not name a host city must remain acceptable");
 const splitHeadlineDraft = fiveNewsDraft.replace(/खबर ([1-5]): (.+)\\nसार:/g, "खबर $1\\nशीर्षक: $2\\nसार:");
-const splitHeadlineReply = formatCurrentNewsSummaryReply(splitHeadlineDraft, fiveNewsSources, true, true);
+const splitHeadlineReply = formatCurrentNewsSummaryReply(splitHeadlineDraft, fiveNewsSources, true, true, false, "India", false, "पिछले 48 घंटों की खबरें");
 assert.match(splitHeadlineReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "parser must accept category models that put the headline on a separate line");
 const fiveNewsSourcesWithoutTransientTags = fiveNewsSources.map(({ requestedCategory, ...item }) => item);
 const recoveredCategoryReply = formatCurrentNewsSummaryReply(
   fiveNewsDraft,
   fiveNewsSourcesWithoutTransientTags,
   true,
-  true
+  true,
+  false,
+  "India",
+  false,
+  "पिछले 48 घंटों की खबरें"
 );
 assert.match(recoveredCategoryReply, /आज की 5 अलग-अलग, तारीख़-जाँची खबरें:/, "final validation must re-derive missing category tags from the article title and snippet");
-const incompleteFiveCategoryReply = formatCurrentNewsSummaryReply(fiveNewsDraft.replace("खबर 5:", "खबर 4:"), fiveNewsSources, true, true);
+const incompleteFiveCategoryReply = formatCurrentNewsSummaryReply(fiveNewsDraft.replace("खबर 5:", "खबर 4:"), fiveNewsSources, true, true, false, "India", false, "पिछले 48 घंटों की खबरें");
 assert.match(incompleteFiveCategoryReply, /आज 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं/, "five-category request must retain the four individually verified stories when one generated entry is missing");
 assert.match(incompleteFiveCategoryReply, /इन श्रेणियों की खबर स्रोत-जाँच में सफल नहीं हुई: खेल/, "partial five-category output must name the category whose story failed validation");
 assert.equal([...incompleteFiveCategoryReply.matchAll(/खबर [1-5]/g)].length, 4, "an incomplete five-category response must never be padded with an unverified fifth story");
 const staleCourtNewsSources = fiveNewsSources.map((item, index) => index === 2
   ? { ...item, publishedAt: new Date(Date.now() - 49 * 60 * 60 * 1000).toISOString() }
   : item);
-const staleCourtNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, staleCourtNewsSources, true, true);
+const staleCourtNewsReply = formatCurrentNewsSummaryReply(fiveNewsDraft, staleCourtNewsSources, true, true, false, "India", false, "पिछले 48 घंटों की खबरें");
 assert.match(staleCourtNewsReply, /आज 4 अलग-अलग, तारीख़-जाँची खबरें मिलीं/, "five-category request must retain the four eligible stories when the court source is older than 48 hours");
 assert.match(staleCourtNewsReply, /इन श्रेणियों की खबर स्रोत-जाँच में सफल नहीं हुई: अदालत/, "five-category request must explicitly disclose that the stale court story is unavailable");
 assert.doesNotMatch(staleCourtNewsReply, /खबर \\d+ \\(अदालत\\):/, "a court story older than the requested 48-hour window must never be displayed");
