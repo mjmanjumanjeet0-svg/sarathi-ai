@@ -2965,7 +2965,12 @@ export default {
         reply: "हाँ। ओशो न्यूज़ के ऐतिहासिक लेख के अनुसार, न्यूयॉर्क में ओशो की ध्यान गतिविधियाँ 1977 से थीं; Satya Priya ने Barrow Street स्थित अपने घर में केंद्र शुरू किया था। बाद में 1 जुलाई 2018 को Padma Meditation & Holistic Centre, 6 West 14th Street पर खुला। यह ऐतिहासिक जानकारी है; आज भी वही केंद्र या पता चालू है, इसकी पुष्टि मेरे पास नहीं है।",
         ...dateTime,
         webSearch: false,
-        sources: []
+        sources: [{
+          title: "Celebration in Downtown Manhattan — Osho News",
+          url: "https://www.oshonews.com/2018/06/24/padma-nyc-meditation-center/",
+          publisher: "Osho News",
+          publishedAt: "2018-06-24"
+        }]
       });
     }
  
