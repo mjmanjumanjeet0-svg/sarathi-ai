@@ -623,6 +623,7 @@ assert.ok(source.includes("const followup = immediatelyPreviousTurnIsOshoNagar")
 assert.ok(source.includes("neutralFollowup + (priorOshoNagarMisinfo ? correction : \"\")"));
 assert.ok(source.includes("पिछले उत्तर में गुजरात/अहमदाबाद और जनगणना की जानकारी बिना पुष्टि के दी गई थी"));
 assert.ok(source.includes("उसके स्थापना-वर्ष के दावे की मैं अभी विश्वसनीय स्रोत से पुष्टि नहीं कर पा रहा हूँ"));
+assert.ok(!source.includes("पहले दिया गया स्थापना-वर्ष स्वतंत्र पुष्टि के बिना प्रमाणित न मानें"), "Do not append a correction when no earlier year was stated");
 
 // Osho place-name and biography regressions: prevent fabricated "Osho Nagar"
 // locations, unrelated census entries, and unsupported claims about centers.
