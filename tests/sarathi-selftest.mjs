@@ -613,10 +613,10 @@ for (const rule of [
 
 
 // Deterministic Osho place-name guards must intercept ambiguous place questions.
-assert.match(source, /function isOshoNagarPlaceQuestion\\(text\\)/);
-assert.match(source, /function isOshoNewYorkCenterQuestion\\(text\\)/);
-assert.match(source, /गुजरात\\/अहमदाबाद और जनगणना की जानकारी बिना पुष्टि के दी गई थी/);
-assert.match(source, /स्थापना-वर्ष की मैं अभी विश्वसनीय स्रोत से पुष्टि नहीं कर पा रहा हूँ/);
+assert.ok(source.includes("function isOshoNagarPlaceQuestion(text)"));
+assert.ok(source.includes("function isOshoNewYorkCenterQuestion(text)"));
+assert.ok(source.includes("पिछले उत्तर में गुजरात/अहमदाबाद और जनगणना की जानकारी बिना पुष्टि के दी गई थी"));
+assert.ok(source.includes("स्थापना-वर्ष की मैं अभी विश्वसनीय स्रोत से पुष्टि नहीं कर पा रहा हूँ"));
 
 // Osho place-name and biography regressions: prevent fabricated "Osho Nagar"
 // locations, unrelated census entries, and unsupported claims about centers.
