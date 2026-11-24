@@ -656,3 +656,13 @@ assert.ok(source.includes("function solveFractionPercentQuestion(text)"), "fract
 assert.ok(source.includes("return match[1] + \"/\" + match[2] + \" = \" + percent + \"%\""), "fraction conversion must include the percentage sign");
 assert.ok(source.includes("पुराने संदेशों की सामग्री को वर्तमान प्रश्न का उत्तर समझकर न दोहराओ"), "the latest user question must not be polluted by previous-turn answers");
 assert.ok(source.includes("HTTP कोड, प्रदाता के आंतरिक नाम, खाते के क्रेडिट, RSS/GDELT diagnostics"), "search provider diagnostics must stay out of normal user-facing answers");
+
+// Follow-up regression tests from the user's full app test.
+assert.ok(source.includes("function solveConstitution10MarkQuestion(text)"), "10-mark constitution answers must use a deterministic fact-checked template");
+assert.ok(source.includes("मौलिक अधिकारों के 6 व्यापक वर्ग") || source.includes("मौलिक अधिकारों के छह"), "constitution guidance must use six broad classes of fundamental rights");
+assert.ok(source.includes("मौलिक कर्तव्य 11 हैं"), "constitution guidance must state eleven fundamental duties");
+assert.ok(source.includes("function isBiharCapitalQuestion(text)"), "Bihar capital questions must be isolated from old conversation history");
+assert.ok(source.includes("reply: \"बिहार की राजधानी पटना है।\""), "Bihar capital must return a clean deterministic answer");
+assert.ok(source.includes("refersToPriorContext"), "old chat history must be passed only for explicit follow-ups");
+assert.ok(source.includes("के लिए आज ही प्रकाशित और तारीख-जाँचे गए भरोसेमंद समाचार परिणाम नहीं मिले। बिना पुष्टि वाली खबरें शामिल नहीं की गई हैं।"), "news search failures must not expose provider diagnostics");
+assert.ok(!source.includes("तकनीकी स्थिति: मुख्य खोज Exa HTTP"), "technical search diagnostics must not appear in the user-facing reply");
