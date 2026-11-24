@@ -249,6 +249,12 @@ function isOshoNewYorkCenterQuestion(text) {
     /ध्यान\s*केंद्र|मेडिटेशन\s*सेंटर|meditation\s*center/i.test(q);
 }
 
+function isOshoNewYorkCenterFollowup(text) {
+  const q = String(text || "").toLocaleLowerCase("hi-IN").trim();
+  return /(?:देख|जाँच|जांच|पता|confirm|check|verify|बताओ|बताइए)/i.test(q) &&
+    /(?:है\s*कि\s*नहीं|है\s*या\s*नहीं|अभी|आज|वर्तमान|चल\s*रहा|मौजूद|still|currently|open|closed|exists?)/i.test(q);
+}
+
 function isSarathiCreatorQuestion(text) {
   const q = String(text || "").toLocaleLowerCase("hi-IN").trim();
   const target = /सारथी(?:\s*AI)?|इस\s+ऐप|यह\s+ऐप|तुम्हें|तुमको|आपको|(?:तुम्हारा|तुम्हारी|आपका|आपकी)\s+(?:निर्माता|creator|maker)|(?:this\s+app|sarathi(?:\s*ai)?|\byou\b)/i;
@@ -2958,11 +2964,22 @@ export default {
       });
     }
 
-    // Answer from documented historical reporting; do not imply the center is still operating today.
-    if (isOshoNewYorkCenterQuestion(userText)) {
+    // Keep Osho/New York follow-ups tied only to the immediately preceding turn.
+    // Historical existence is supported; current operation and the unrelated
+    // "15 East 12th Street" claim are not established by the cited 2018 article.
+    const priorMessagesForOsho = messages.slice(0, -1);
+    const priorAssistantForOsho = priorMessagesForOsho[priorMessagesForOsho.length - 1];
+    const priorUserForOsho = priorMessagesForOsho[priorMessagesForOsho.length - 2];
+    const immediatelyPreviousTurnIsOshoNewYork =
+      priorUserForOsho?.role === "user" &&
+      priorAssistantForOsho?.role === "assistant" &&
+      isOshoNewYorkCenterQuestion(priorUserForOsho.content);
+
+    if (isOshoNewYorkCenterQuestion(userText) ||
+        (immediatelyPreviousTurnIsOshoNewYork && isOshoNewYorkCenterFollowup(userText))) {
       return jsonResponse({
         success: true,
-        reply: "हाँ। ओशो न्यूज़ के ऐतिहासिक लेख के अनुसार, न्यूयॉर्क में ओशो की ध्यान गतिविधियाँ 1977 से थीं; Satya Priya ने Barrow Street स्थित अपने घर में केंद्र शुरू किया था। बाद में 1 जुलाई 2018 को Padma Meditation & Holistic Centre, 6 West 14th Street पर खुला। यह ऐतिहासिक जानकारी है; आज भी वही केंद्र या पता चालू है, इसकी पुष्टि मेरे पास नहीं है।",
+        reply: "ऐतिहासिक रूप से हाँ। Osho News के 24 जून 2018 के लेख के अनुसार, न्यूयॉर्क में ओशो की ध्यान गतिविधियाँ 1977 से थीं; Satya Priya ने Barrow Street स्थित अपने घर में केंद्र शुरू किया था। 1 जुलाई 2018 को Padma Meditation & Holistic Centre, 6 West 14th Street पर खुला था। लेकिन आज (वर्तमान समय में) यह केंद्र चालू है या नहीं, इसकी विश्वसनीय ताज़ा पुष्टि मेरे पास नहीं है। पिछले उत्तर में बताए गए 15 East 12th Street पते और केंद्र के बंद होने के दावे की भी पुष्टि नहीं मिली; उन्हें सही न मानें।",
         ...dateTime,
         webSearch: false,
         showSources: true,
