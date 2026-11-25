@@ -368,9 +368,9 @@ const HINDI_WEEKDAYS = ["रविवार", "सोमवार", "मंग�
 
 function solveWeekdaysInYearQuestion(text) {
   const q = String(text || "").toLocaleLowerCase("hi-IN").replace(/[०-९]/g, digit => String("०१२३४५६७८९".indexOf(digit)));
-  const yearMatch = q.match(/(?:^|\\D)(\\d{4})(?:\\D|$)/);
-  if (!yearMatch || !/(कुल\\s*(?:कितने|संख्या)|सभी|पूरे\\s*वर्ष|all|total)/i.test(q) ||
-      !/(तारीख|दिन|dates?|how\\s*many)/i.test(q)) return null;
+  const yearMatch = q.match(/(?:^|\D)(\d{4})(?:\D|$)/);
+  if (!yearMatch || !/(कुल\s*(?:कितने|संख्या)|सभी|पूरे\s*वर्ष|all|total)/i.test(q) ||
+      !/(तारीख|दिन|dates?|how\s*many)/i.test(q)) return null;
   const year = Number(yearMatch[1]);
   if (!Number.isInteger(year) || year < 1000 || year > 9999) return null;
   const weekdayAliases = [
@@ -395,9 +395,9 @@ function solveWeekdaysInYearQuestion(text) {
   const total = datesByMonth.reduce((sum, dates) => sum + dates.length, 0);
   const details = datesByMonth.map((dates, month) =>
     monthNames[month] + ": " + dates.map(day => day + " " + monthNames[month]).join(", ")
-  ).join("\\n");
-  return year + " में कुल " + total + " " + weekday.label + " होंगे।\\n\\n" +
-    weekday.label + " की सभी तारीखें:\\n" + details;
+  ).join("\n");
+  return year + " में कुल " + total + " " + weekday.label + " होंगे।\n\n" +
+    weekday.label + " की सभी तारीखें:\n" + details;
 }
 
 
