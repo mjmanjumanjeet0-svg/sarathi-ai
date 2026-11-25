@@ -694,3 +694,30 @@ const biharMatcher = new Function(source.slice(biharStart, biharEnd) + "\nreturn
 assert.equal(biharMatcher("बिहार की राजधानी क्या है?"), true, "Bihar capital handler must match the exact Hindi question");
 
 assert.ok(!source.includes("तकनीकी स्थिति: मुख्य खोज Exa HTTP"), "technical search diagnostics must not appear in the user-facing reply");
+
+// Deterministic calendar arithmetic regressions: UTC date math avoids host timezone drift,
+// while relative "today" is anchored to the Indian calendar date.
+const calendarStart = source.indexOf("const HINDI_MONTHS = {");
+const calendarEnd = source.indexOf("\nfunction explicitlyRequestsWebSearch(", calendarStart);
+assert.ok(calendarStart >= 0 && calendarEnd > calendarStart, "deterministic calendar helpers must exist");
+const calendar = new Function(
+  "INDIA_TIME_ZONE",
+  source.slice(calendarStart, calendarEnd) + "\nreturn { solveCalendarDateQuestion };"
+)("Asia/Kolkata");
+const hundredDays = calendar.solveCalendarDateQuestion("15 अगस्त 2026 से 100 दिन बाद कौन-सी तारीख और कौन-सा वार होगा?");
+assert.match(hundredDays || "", /23 नवंबर 2026/, "15 August 2026 + 100 days must be 23 November 2026");
+assert.match(hundredDays || "", /सोमवार/, "23 November 2026 must be Monday");
+const thirtyDays = calendar.solveCalendarDateQuestion("आज 25 नवंबर 2026 है। आज से 30 दिन बाद कौन-सी तारीख और कौन-सा वार होगा?");
+assert.match(thirtyDays || "", /25 दिसंबर 2026/, "25 November 2026 + 30 days must be 25 December 2026");
+assert.match(thirtyDays || "", /शुक्रवार/, "25 December 2026 must be Friday");
+const todayRelative = calendar.solveCalendarDateQuestion(
+  "आज से 30 दिन बाद",
+  new Date("2026-11-25T12:00:00.000Z")
+);
+assert.match(todayRelative || "", /25 दिसंबर 2026/, "today-relative arithmetic must use the Asia/Kolkata date");
+assert.equal(calendar.solveCalendarDateQuestion("31 फरवरी 2026 से 10 दिन बाद"), null,
+  "invalid calendar dates must be rejected instead of normalized");
+assert.equal(calendar.solveCalendarDateQuestion("आज मौसम कैसा है?"), null,
+  "ordinary questions must not trigger calendar arithmetic");
+assert.match(source, /const calendarArithmeticReply = solveCalendarDateQuestion\(userText\)/,
+  "calendar arithmetic must be intercepted deterministically before the model");
