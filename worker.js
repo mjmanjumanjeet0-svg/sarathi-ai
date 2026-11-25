@@ -257,7 +257,7 @@ function solveBasicArithmetic(text) {
 
 
 function isOshoNagarPlaceQuestion(text) {
-  const q = String(text || "").toLocaleLowerCase("hi-IN").trim();
+  const q = String(text || "").toLocaleLowerCase("hi-IN").replace(/[“”‘’"\u0027]/g, "").trim();
   return /(?:ओशो\s*नगर|ओ\s*नगर|osho\s*nagar|o\s*nagar)/i.test(q);
 }
 
