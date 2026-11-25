@@ -697,7 +697,7 @@ assert.ok(!source.includes("तकनीकी स्थिति: मुख्�
 
 // Deterministic calendar arithmetic regressions: UTC date math avoids host timezone drift,
 // while relative "today" is anchored to the Indian calendar date.
-const calendarStart = source.indexOf("const HINDI_MONTHS = {");
+const calendarStart = source.indexOf("function solveWeekdaysInMonthQuestion(text, now = new Date()) {");
 const calendarEnd = source.indexOf("\nfunction explicitlyRequestsWebSearch(", calendarStart);
 assert.ok(calendarStart >= 0 && calendarEnd > calendarStart, "deterministic calendar helpers must exist");
 const calendar = new Function(
