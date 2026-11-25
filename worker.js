@@ -306,9 +306,8 @@ function isIndiaCapitalQuestion(text) {
 
 function isDateQuestion(text) {
   const q = String(text || "").toLocaleLowerCase("hi-IN").trim();
-  return /^(?:(?:आज|अभी)\\s+(?:की\\s+)?तारीख(?:\\s+और\\s+(?:वार|दिन))?(?:\\s+(?:क्या\\s+है|बताओ|बताइए))?|(?:आज|अभी)\\s+(?:कौन.?सा|कवन\\s*सा)\\s+दिन(?:\\s+और\\s+तारीख)?(?:\\s+है)?|(?:आज|अभी)\\s+का\\s+दिन\\s+(?:कौन.?सा|कवन\\s*सा)\\s+है|(?:आज|अभी)\\s+(?:की\\s+)?डेट\\s+(?:क्या\\s+है|बताओ|बताइए)|(?:आज|अभी)\\s+(?:कवन|कौन)\\s+सा\\s+दिन\\s+और\\s+तारीख\\s+है|वर्तमान\\s+तारीख\\s+(?:क्या\\s+है|बताओ|बताइए)|current\\s+date|today.?s\\s+date|what\\s+is\\s+today.?s\\s+date|what\\s+day\\s+is\\s+it\\s+today)\\s*[?।.!]*$/i.test(q);
+  return /^(?:(?:आज|अभी)\s+(?:की\s+)?तारीख(?:\s+और\s+(?:वार|दिन))?(?:\s+(?:क्या\s+है|बताओ|बताइए))?|(?:आज|अभी)\s+(?:कौन.?सा|कवन\s*सा)\s+दिन(?:\s+और\s+तारीख)?(?:\s+है)?|(?:आज|अभी)\s+का\s+दिन\s+(?:कौन.?सा|कवन\s*सा)\s+है|(?:आज|अभी)\s+(?:की\s+)?डेट\s+(?:क्या\s+है|बताओ|बताइए)|(?:आज|अभी)\s+(?:कवन|कौन)\s+सा\s+दिन\s+और\s+तारीख\s+है|वर्तमान\s+तारीख\s+(?:क्या\s+है|बताओ|बताइए)|current\s+date|today.?s\s+date|what\s+is\s+today.?s\s+date|what\s+day\s+is\s+it\s+today)\s*[?।.!]*$/i.test(q);
 }
-
 
 function solveWeekdaysInMonthQuestion(text, now = new Date()) {
   const q = String(text || "").toLocaleLowerCase("hi-IN");
