@@ -702,7 +702,7 @@ const calendarEnd = source.indexOf("\nfunction explicitlyRequestsWebSearch(", ca
 assert.ok(calendarStart >= 0 && calendarEnd > calendarStart, "deterministic calendar helpers must exist");
 const calendar = new Function(
   "INDIA_TIME_ZONE",
-  source.slice(calendarStart, calendarEnd) + "\nreturn { solveCalendarDateQuestion };"
+  source.slice(calendarStart, calendarEnd) + "\nreturn { solveCalendarDateQuestion, solveWeekdaysInMonthQuestion };"
 )("Asia/Kolkata");
 const hundredDays = calendar.solveCalendarDateQuestion("15 अगस्त 2026 से 100 दिन बाद कौन-सी तारीख और कौन-सा वार होगा?");
 assert.match(hundredDays || "", /23 नवंबर 2026/, "15 August 2026 + 100 days must be 23 November 2026");
