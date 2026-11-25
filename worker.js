@@ -306,73 +306,57 @@ function isIndiaCapitalQuestion(text) {
 
 function isDateQuestion(text) {
   const q = String(text || "").toLocaleLowerCase("hi-IN").trim();
-  // Match only direct date/day questions. Do not treat phrases such as
-  // "आज का दिन अच्छा बनाने के लिए..." as requests for the calendar date.
-  return /^(?:आज\s+की\s+तारीख(?:\s+(?:क्या\s+है|बताओ|बताइए))?|आज\s+कौन.?सा\s+दिन(?:\s+है)?|आज\s+का\s+दिन\s+(?:कौन.?सा\s+है|क्या\s+है)|आज\s+(?:की\s+)?डेट\s+(?:क्या\s+है|बताओ|बताइए)|आज\s+तारीख\s+(?:क्या\s+है|बताओ|बताइए)|वर्तमान\s+तारीख\s+(?:क्या\s+है|बताओ|बताइए)|current\s+date|today.?s\s+date|what\s+is\s+today.?s\s+date|what\s+day\s+is\s+it\s+today)\s*[?।.!]*$/i.test(q);
+  return /^(?:(?:आज|अभी)\\s+(?:की\\s+)?तारीख(?:\\s+और\\s+(?:वार|दिन))?(?:\\s+(?:क्या\\s+है|बताओ|बताइए))?|(?:आज|अभी)\\s+(?:कौन.?सा|कवन\\s*सा)\\s+दिन(?:\\s+और\\s+तारीख)?(?:\\s+है)?|(?:आज|अभी)\\s+का\\s+दिन\\s+(?:कौन.?सा|कवन\\s*सा)\\s+है|(?:आज|अभी)\\s+(?:की\\s+)?डेट\\s+(?:क्या\\s+है|बताओ|बताइए)|(?:आज|अभी)\\s+(?:कवन|कौन)\\s+सा\\s+दिन\\s+और\\s+तारीख\\s+है|वर्तमान\\s+तारीख\\s+(?:क्या\\s+है|बताओ|बताइए)|current\\s+date|today.?s\\s+date|what\\s+is\\s+today.?s\\s+date|what\\s+day\\s+is\\s+it\\s+today)\\s*[?।.!]*$/i.test(q);
 }
 
 
-const HINDI_MONTHS = {
-  "जनवरी": 0, "फरवरी": 1, "मार्च": 2, "अप्रैल": 3, "मई": 4, "जून": 5,
-  "जुलाई": 6, "अगस्त": 7, "सितंबर": 8, "सितम्बर": 8, "अक्टूबर": 9,
-  "नवंबर": 10, "नवम्बर": 10, "दिसंबर": 11, "दिसम्बर": 11
-};
-const HINDI_WEEKDAYS = ["रविवार", "सोमवार", "मंगलवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
+function solveWeekdaysInMonthQuestion(text, now = new Date()) {
+  const q = String(text || "").toLocaleLowerCase("hi-IN");
+  const weekdayAliases = [
+    { re: /रविवार|इतवार|sunday/i, day: 0, label: "रविवार" },
+    { re: /सोमवार|monday/i, day: 1, label: "सोमवार" },
+    { re: /मंगलवार|tuesday/i, day: 2, label: "मंगलवार" },
+    { re: /बुधवार|wednesday/i, day: 3, label: "बुधवार" },
+    { re: /गुरुवार|बृहस्पतिवार|thursday/i, day: 4, label: "गुरुवार" },
+    { re: /शुक्रवार|friday/i, day: 5, label: "शुक्रवार" },
+    { re: /शनिवार|saturday/i, day: 6, label: "शनिवार" }
+  ];
+  const weekday = weekdayAliases.find(item => item.re.test(q));
+  if (!weekday || !/(कब|किस तारीख|तारीखें|कौन.?सी तारीख|when|dates?)/i.test(q)) return null;
 
-function parseHindiCalendarDate(text) {
-  const q = String(text || "").replace(/[०-९]/g, digit => String("०१२३४५६७८९".indexOf(digit)));
+  let year, month;
   const monthPattern = Object.keys(HINDI_MONTHS).join("|");
-  const hindiDate = q.match(new RegExp("(?:^|[^0-9])(\\d{1,2})\\s*(" + monthPattern + ")\\s*(\\d{4})(?:$|[^0-9])", "i"));
-  let year, month, day;
-  if (hindiDate) {
-    day = Number(hindiDate[1]);
-    month = HINDI_MONTHS[hindiDate[2]];
-    year = Number(hindiDate[3]);
-  } else {
-    const numericDate = q.match(new RegExp("(?:^|[^0-9])(\\d{1,2})[/-](\\d{1,2})[/-](\\d{4})(?:$|[^0-9])"));
-    if (!numericDate) return null;
-    day = Number(numericDate[1]);
-    month = Number(numericDate[2]) - 1;
-    year = Number(numericDate[3]);
+  const explicit = q.match(new RegExp("(" + monthPattern + ")\\s*(\\d{4})?", "i"));
+  if (explicit) {
+    month = HINDI_MONTHS[explicit[1]];
+    year = explicit[2] ? Number(explicit[2]) : null;
   }
-  if (!Number.isInteger(year) || year < 1000 || year > 9999 || month < 0 || month > 11 || day < 1 || day > 31) return null;
-  const date = new Date(Date.UTC(year, month, day));
-  if (date.getUTCFullYear() !== year || date.getUTCMonth() !== month || date.getUTCDate() !== day) return null;
-  return date;
-}
-
-function solveCalendarDateQuestion(text, now = new Date()) {
-  const q = String(text || "").trim();
-  const dayMatch = q.match(new RegExp("(?:से\\s*)?(\\d{1,4})\\s*(?:दिन|days?)\\s*(?:बाद|के\\s*बाद|later|from\\s*now)", "i"));
-  if (!dayMatch) return null;
-  const days = Number(dayMatch[1]);
-  if (!Number.isSafeInteger(days) || days < 0 || days > 100000) return null;
-
-  let start = parseHindiCalendarDate(q);
-  if (!start && /आज|today/i.test(q)) {
+  if (month === undefined && /(इस महीने|इसी महीने|this month)/i.test(q)) {
     const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit", day: "2-digit"
+      timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit"
     }).formatToParts(now);
     const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
-    start = new Date(Date.UTC(Number(values.year), Number(values.month) - 1, Number(values.day)));
+    month = Number(values.month) - 1;
+    year = Number(values.year);
   }
-  if (!start) return null;
+  if (month === undefined || month < 0 || month > 11) return null;
+  if (!year) {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: INDIA_TIME_ZONE, year: "numeric"
+    }).formatToParts(now);
+    year = Number(parts.find(part => part.type === "year")?.value);
+  }
+  if (!Number.isInteger(year) || year < 1000 || year > 9999) return null;
 
-  const end = new Date(start.getTime() + days * 86400000);
-  const formatDate = date => new Intl.DateTimeFormat("hi-IN", {
-    timeZone: "UTC", day: "numeric", month: "long", year: "numeric"
-  }).format(date);
-  const weekday = HINDI_WEEKDAYS[end.getUTCDay()];
-  const startWeekday = HINDI_WEEKDAYS[start.getUTCDay()];
-  const dateText = formatDate(end);
-  const remainder = days % 7;
-  return "गणना:\\n" +
-    "शुरुआती तारीख: " + formatDate(start) + " (" + startWeekday + ")\\n" +
-    "जोड़ने वाले दिन: " + days + " दिन\\n" +
-    days + " दिन = " + Math.floor(days / 7) + " सप्ताह" + (remainder ? " + " + remainder + " दिन" : "") + "\\n" +
-    "अंतिम तारीख: " + dateText + "\\n" +
-    "वार: " + weekday + "\\n\\n" +
-    "उत्तर: " + dateText + ", " + weekday + "।";
+  const dates = [];
+  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+  for (let day = 1; day <= daysInMonth; day++) {
+    if (new Date(Date.UTC(year, month, day)).getUTCDay() === weekday.day) dates.push(day);
+  }
+  const monthLabel = new Intl.DateTimeFormat("hi-IN", { timeZone: "UTC", month: "long" })
+    .format(new Date(Date.UTC(year, month, 1)));
+  return monthLabel + " " + year + " में " + weekday.label + " की तारीखें: " +
+    dates.map(day => day + " " + monthLabel).join(", ") + "।";
 }
 
 function explicitlyRequestsWebSearch(text) {
@@ -3130,6 +3114,11 @@ export default {
         webSearch: false,
         sources: []
       });
+    }
+
+    const monthWeekdayReply = solveWeekdaysInMonthQuestion(userText);
+    if (monthWeekdayReply) {
+      return jsonResponse({ success: true, reply: monthWeekdayReply, ...dateTime, webSearch: false, sources: [] });
     }
 
     const calendarArithmeticReply = solveCalendarDateQuestion(userText);
