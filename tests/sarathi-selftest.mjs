@@ -721,3 +721,18 @@ assert.equal(calendar.solveCalendarDateQuestion("आज मौसम कैस�
   "ordinary questions must not trigger calendar arithmetic");
 assert.match(source, /const calendarArithmeticReply = solveCalendarDateQuestion\(userText\)/,
   "calendar arithmetic must be intercepted deterministically before the model");
+
+// Date phrasing and month-weekday queries must bypass free-form model guessing.
+assert.equal(isDateQuestion("आज कवन सा दिन और तारीख है"), true,
+  "common Bhojpuri date question must use the deterministic India date path");
+assert.equal(isDateQuestion("आज कौन-सा दिन और तारीख है"), true,
+  "combined Hindi date-and-weekday question must be recognized");
+const novemberFridays = calendar.solveWeekdaysInMonthQuestion(
+  "इस महीने में शुक्रवार कब है",
+  new Date("2026-11-25T12:00:00.000Z")
+);
+assert.match(novemberFridays || "", /6 नवंबर, 13 नवंबर, 20 नवंबर, 27 नवंबर/,
+  "November 2026 Fridays must be calculated from the calendar, not guessed");
+const explicitNovemberFridays = calendar.solveWeekdaysInMonthQuestion("नवंबर 2026 के शुक्रवार कब हैं");
+assert.match(explicitNovemberFridays || "", /6 नवंबर, 13 नवंबर, 20 नवंबर, 27 नवंबर/,
+  "explicit month and year weekday lookup must return all matching dates");
