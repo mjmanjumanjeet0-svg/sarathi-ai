@@ -729,6 +729,8 @@ assert.equal(isDateQuestion("आज कौन-सा दिन और तार�
   "combined Hindi date-and-weekday question must be recognized");
 assert.equal(isDateQuestion("आज की तारीख क्या है और आज कौन-सा वार है?"), true,
   "combined date-first question must use deterministic India date and weekday");
+assert.equal(isDateQuestion("आज की तारीख क्या है और आज कौन-सा वार है?”"), true,
+  "curly closing quote must not bypass deterministic India date and weekday");
 const novemberFridays = calendar.solveWeekdaysInMonthQuestion(
   "इस महीने में शुक्रवार कब है",
   new Date("2026-11-25T12:00:00.000Z")
