@@ -417,53 +417,6 @@ function solveCalendarDateQuestion(text, now = new Date()) {
     "उत्तर: " + formatDate(end) + ", " + HINDI_WEEKDAYS[end.getUTCDay()] + "।";
 }
 
-function solveWeekdaysInMonthQuestion(text, now = new Date()) {
-  const q = String(text || "").toLocaleLowerCase("hi-IN");
-  const weekdayAliases = [
-    { re: /रविवार|इतवार|sunday/i, day: 0, label: "रविवार" },
-    { re: /सोमवार|monday/i, day: 1, label: "सोमवार" },
-    { re: /मंगलवार|tuesday/i, day: 2, label: "मंगलवार" },
-    { re: /बुधवार|wednesday/i, day: 3, label: "बुधवार" },
-    { re: /गुरुवार|बृहस्पतिवार|thursday/i, day: 4, label: "गुरुवार" },
-    { re: /शुक्रवार|friday/i, day: 5, label: "शुक्रवार" },
-    { re: /शनिवार|saturday/i, day: 6, label: "शनिवार" }
-  ];
-  const weekday = weekdayAliases.find(item => item.re.test(q));
-  if (!weekday || !/(कब|किस तारीख|तारीखें|कौन.?सी तारीख|when|dates?)/i.test(q)) return null;
-  let year, month;
-  const monthPattern = Object.keys(HINDI_MONTHS).join("|");
-  const explicit = q.match(new RegExp("(" + monthPattern + ")\\s*(\\d{4})?", "i"));
-  if (explicit) {
-    month = HINDI_MONTHS[explicit[1]];
-    year = explicit[2] ? Number(explicit[2]) : null;
-  }
-  if (month === undefined && /(इस महीने|इसी महीने|this month)/i.test(q)) {
-    const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: INDIA_TIME_ZONE, year: "numeric", month: "2-digit"
-    }).formatToParts(now);
-    const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
-    month = Number(values.month) - 1;
-    year = Number(values.year);
-  }
-  if (month === undefined || month < 0 || month > 11) return null;
-  if (!year) {
-    const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: INDIA_TIME_ZONE, year: "numeric"
-    }).formatToParts(now);
-    year = Number(parts.find(part => part.type === "year")?.value);
-  }
-  if (!Number.isInteger(year) || year < 1000 || year > 9999) return null;
-  const dates = [];
-  const daysInMonth = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
-  for (let day = 1; day <= daysInMonth; day++) {
-    if (new Date(Date.UTC(year, month, day)).getUTCDay() === weekday.day) dates.push(day);
-  }
-  const monthLabel = new Intl.DateTimeFormat("hi-IN", { timeZone: "UTC", month: "long" })
-    .format(new Date(Date.UTC(year, month, 1)));
-  return monthLabel + " " + year + " में " + weekday.label + " की तारीखें: " +
-    dates.map(day => day + " " + monthLabel).join(", ") + "।";
-}
-
 function explicitlyRequestsWebSearch(text) {
   const q = String(text || "").toLocaleLowerCase("hi-IN").trim();
 
