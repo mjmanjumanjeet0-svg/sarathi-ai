@@ -702,7 +702,7 @@ const calendarEnd = source.indexOf("\nfunction explicitlyRequestsWebSearch(", ca
 assert.ok(calendarStart >= 0 && calendarEnd > calendarStart, "deterministic calendar helpers must exist");
 const calendar = new Function(
   "INDIA_TIME_ZONE",
-  source.slice(calendarStart, calendarEnd) + "\nreturn { solveCalendarDateQuestion, solveWeekdaysInMonthQuestion };"
+  source.slice(calendarStart, calendarEnd) + "\nreturn { solveCalendarDateQuestion, solveWeekdaysInMonthQuestion, solveWeekdaysInYearQuestion };"
 )("Asia/Kolkata");
 const hundredDays = calendar.solveCalendarDateQuestion("15 अगस्त 2026 से 100 दिन बाद कौन-सी तारीख और कौन-सा वार होगा?");
 assert.match(hundredDays || "", /23 नवंबर 2026/, "15 August 2026 + 100 days must be 23 November 2026");
@@ -740,3 +740,14 @@ assert.match(novemberFridays || "", /6 नवंबर, 13 नवंबर, 20 �
 const explicitNovemberFridays = calendar.solveWeekdaysInMonthQuestion("नवंबर 2026 के शुक्रवार कब हैं");
 assert.match(explicitNovemberFridays || "", /6 नवंबर, 13 नवंबर, 20 नवंबर, 27 नवंबर/,
   "explicit month and year weekday lookup must return all matching dates");
+
+const sundays2027 = calendar.solveWeekdaysInYearQuestion(
+  "2027 में 1 जनवरी से 31 दिसंबर तक कुल कितने रविवार होंगे? सभी रविवारों की तारीखें बताओ।"
+);
+assert.match(sundays2027 || "", /2027 में कुल 52 रविवार होंगे/, "2027 must contain 52 Sundays");
+assert.match(sundays2027 || "", /जनवरी: 3 जनवरी, 10 जनवरी, 17 जनवरी, 24 जनवरी, 31 जनवरी/, "January 2027 Sundays must all be listed");
+assert.match(sundays2027 || "", /फरवरी: 7 फरवरी, 14 फरवरी, 21 फरवरी, 28 फरवरी/, "February 2027 Sundays must all be listed");
+assert.match(sundays2027 || "", /दिसंबर: 5 दिसंबर, 12 दिसंबर, 19 दिसंबर, 26 दिसंबर/, "December 2027 Sundays must all be listed");
+assert.equal(calendar.solveWeekdaysInYearQuestion("आज मौसम कैसा है?"), null,
+  "year weekday solver must not intercept unrelated questions");
+
