@@ -366,6 +366,41 @@ const HINDI_MONTHS = {
 };
 const HINDI_WEEKDAYS = ["रविवार", "सोमवार", "मंगलवार", "बुधवार", "गुरुवार", "शुक्रवार", "शनिवार"];
 
+function solveWeekdaysInYearQuestion(text) {
+  const q = String(text || "").toLocaleLowerCase("hi-IN").replace(/[०-९]/g, digit => String("०१२३४५६७८९".indexOf(digit)));
+  const yearMatch = q.match(/(?:^|\\D)(\\d{4})(?:\\D|$)/);
+  if (!yearMatch || !/(कुल\\s*(?:कितने|संख्या)|सभी|पूरे\\s*वर्ष|all|total)/i.test(q) ||
+      !/(तारीख|दिन|dates?|how\\s*many)/i.test(q)) return null;
+  const year = Number(yearMatch[1]);
+  if (!Number.isInteger(year) || year < 1000 || year > 9999) return null;
+  const weekdayAliases = [
+    { re: /रविवार|इतवार|sunday/i, day: 0, label: "रविवार" },
+    { re: /सोमवार|monday/i, day: 1, label: "सोमवार" },
+    { re: /मंगलवार|tuesday/i, day: 2, label: "मंगलवार" },
+    { re: /बुधवार|wednesday/i, day: 3, label: "बुधवार" },
+    { re: /गुरुवार|बृहस्पतिवार|thursday/i, day: 4, label: "गुरुवार" },
+    { re: /शुक्रवार|friday/i, day: 5, label: "शुक्रवार" },
+    { re: /शनिवार|saturday/i, day: 6, label: "शनिवार" }
+  ];
+  const weekday = weekdayAliases.find(item => item.re.test(q));
+  if (!weekday) return null;
+
+  const monthNames = Array.from({ length: 12 }, (_, month) =>
+    new Intl.DateTimeFormat("hi-IN", { timeZone: "UTC", month: "long" })
+      .format(new Date(Date.UTC(year, month, 1))));
+  const datesByMonth = monthNames.map(() => []);
+  for (let date = new Date(Date.UTC(year, 0, 1)); date.getUTCFullYear() === year; date.setUTCDate(date.getUTCDate() + 1)) {
+    if (date.getUTCDay() === weekday.day) datesByMonth[date.getUTCMonth()].push(date.getUTCDate());
+  }
+  const total = datesByMonth.reduce((sum, dates) => sum + dates.length, 0);
+  const details = datesByMonth.map((dates, month) =>
+    monthNames[month] + ": " + dates.map(day => day + " " + monthNames[month]).join(", ")
+  ).join("\\n");
+  return year + " में कुल " + total + " " + weekday.label + " होंगे।\\n\\n" +
+    weekday.label + " की सभी तारीखें:\\n" + details;
+}
+
+
 function parseHindiCalendarDate(text) {
   const q = String(text || "").replace(/[०-९]/g, digit => String("०१२३४५६७८९".indexOf(digit)));
   const monthPattern = Object.keys(HINDI_MONTHS).join("|");
@@ -3172,6 +3207,11 @@ export default {
         webSearch: false,
         sources: []
       });
+    }
+
+    const yearWeekdayReply = solveWeekdaysInYearQuestion(userText);
+    if (yearWeekdayReply) {
+      return jsonResponse({ success: true, reply: yearWeekdayReply, ...dateTime, webSearch: false, sources: [] });
     }
 
     const monthWeekdayReply = solveWeekdaysInMonthQuestion(userText);
