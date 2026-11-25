@@ -329,7 +329,7 @@ function parseHindiCalendarDate(text) {
     month = HINDI_MONTHS[hindiDate[2]];
     year = Number(hindiDate[3]);
   } else {
-    const numericDate = q.match(/(?:^|[^0-9])(\\d{1,2})[\\/-](\\d{1,2})[\\/-](\\d{4})(?:$|[^0-9])/);
+    const numericDate = q.match(new RegExp("(?:^|[^0-9])(\\d{1,2})[/-](\\d{1,2})[/-](\\d{4})(?:$|[^0-9])"));
     if (!numericDate) return null;
     day = Number(numericDate[1]);
     month = Number(numericDate[2]) - 1;
@@ -343,8 +343,8 @@ function parseHindiCalendarDate(text) {
 
 function solveCalendarDateQuestion(text, now = new Date()) {
   const q = String(text || "").trim();
-  const dayMatch = q.match(/(?:से\\s*)?(\\d{1,4})\\s*(?:दिन|days?)\\s*(?:बाद|के\\s*बाद|later|from\\s*now)/i);
-  if (!dayMatch || !/(बाद|later|from\\s*now)/i.test(q)) return null;
+  const dayMatch = q.match(new RegExp("(?:से\\\\s*)?(\\\\d{1,4})\\\\s*(?:दिन|days?)\\\\s*(?:बाद|के\\\\s*बाद|later|from\\\\s*now)", "i"));
+  if (!dayMatch) return null;
   const days = Number(dayMatch[1]);
   if (!Number.isSafeInteger(days) || days < 0 || days > 100000) return null;
 
