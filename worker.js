@@ -343,7 +343,7 @@ function parseHindiCalendarDate(text) {
 
 function solveCalendarDateQuestion(text, now = new Date()) {
   const q = String(text || "").trim();
-  const dayMatch = q.match(new RegExp("(?:से\\\\s*)?(\\\\d{1,4})\\\\s*(?:दिन|days?)\\\\s*(?:बाद|के\\\\s*बाद|later|from\\\\s*now)", "i"));
+  const dayMatch = q.match(new RegExp("(?:से\\s*)?(\\d{1,4})\\s*(?:दिन|days?)\\s*(?:बाद|के\\s*बाद|later|from\\s*now)", "i"));
   if (!dayMatch) return null;
   const days = Number(dayMatch[1]);
   if (!Number.isSafeInteger(days) || days < 0 || days > 100000) return null;
