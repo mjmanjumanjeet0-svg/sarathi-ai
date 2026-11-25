@@ -385,9 +385,8 @@ function solveWeekdaysInYearQuestion(text) {
   const weekday = weekdayAliases.find(item => item.re.test(q));
   if (!weekday) return null;
 
-  const monthNames = Array.from({ length: 12 }, (_, month) =>
-    new Intl.DateTimeFormat("hi-IN", { timeZone: "UTC", month: "long" })
-      .format(new Date(Date.UTC(year, month, 1))));
+  const monthNames = ["जनवरी", "फरवरी", "मार्च", "अप्रैल", "मई", "जून",
+    "जुलाई", "अगस्त", "सितंबर", "अक्टूबर", "नवंबर", "दिसंबर"];
   const datesByMonth = monthNames.map(() => []);
   for (let date = new Date(Date.UTC(year, 0, 1)); date.getUTCFullYear() === year; date.setUTCDate(date.getUTCDate() + 1)) {
     if (date.getUTCDay() === weekday.day) datesByMonth[date.getUTCMonth()].push(date.getUTCDate());
